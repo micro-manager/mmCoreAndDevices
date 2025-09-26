@@ -29,7 +29,7 @@ const char* g_DeviceNameArduinoDA1 = "Arduino-DAC1";
 const char* g_DeviceNameArduinoDA2 = "Arduino-DAC2";
 const char* g_DeviceNameArduinoInput = "Arduino-Input";
 const char* g_DeviceNameArduinoMagnifier = "Arduino-Magnifier";
-// 在文件顶部定义新的设备名称
+// Define a new device name
 const char* g_DeviceNameArduinoDA3 = "Arduino-DAC3";
 const char* g_DeviceNameArduinoDA4 = "Arduino-DAC4";
 
@@ -58,8 +58,8 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DeviceNameArduinoShutter, MM::ShutterDevice, "Shutter");
    RegisterDevice(g_DeviceNameArduinoDA1, MM::SignalIODevice, "DAC channel 1");
    RegisterDevice(g_DeviceNameArduinoDA2, MM::SignalIODevice, "DAC channel 2");
-   RegisterDevice(g_DeviceNameArduinoDA3, MM::SignalIODevice, "DAC channel 3"); // 新增
-   RegisterDevice(g_DeviceNameArduinoDA4, MM::SignalIODevice, "DAC channel 4"); // 新增
+   RegisterDevice(g_DeviceNameArduinoDA3, MM::SignalIODevice, "DAC channel 3"); // add new
+   RegisterDevice(g_DeviceNameArduinoDA4, MM::SignalIODevice, "DAC channel 4"); // add new
    RegisterDevice(g_DeviceNameArduinoInput, MM::GenericDevice, "ADC");
    RegisterDevice(g_DeviceNameArduinoMagnifier, MM::MagnifierDevice, "Magnifier(needs ADC)");
 }
@@ -89,11 +89,11 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new CArduinoDA(2); // channel 2
    }
-   else if (strcmp(deviceName, g_DeviceNameArduinoDA3) == 0) // 新增
+   else if (strcmp(deviceName, g_DeviceNameArduinoDA3) == 0) // add new
    {
       return new CArduinoDA(3); // channel 3
    }
-   else if (strcmp(deviceName, g_DeviceNameArduinoDA4) == 0) // 新增
+   else if (strcmp(deviceName, g_DeviceNameArduinoDA4) == 0) // add new
    {
       return new CArduinoDA(4); // channel 4
    }
@@ -1990,4 +1990,5 @@ void ArduinoInputMonitorThread::Start()
    stop_ = false;
    activate();
 }
+
 
