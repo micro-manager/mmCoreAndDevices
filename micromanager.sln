@@ -522,6 +522,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openUC2", "DeviceAdapters\O
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PriorPureFocus", "DeviceAdapters\PriorPureFocus\PriorPureFocus.vcxproj", "{BF5D938C-60E9-400E-8BBB-D9D2C058B4FC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CairnOptoSpinUCSF", "DeviceAdapters\CairnOptoSpinUCSF\CairnOptoSpinUCSF.vcxproj", "{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1568,6 +1570,10 @@ Global
 		{BF5D938C-60E9-400E-8BBB-D9D2C058B4FC}.Debug|x64.Build.0 = Debug|x64
 		{BF5D938C-60E9-400E-8BBB-D9D2C058B4FC}.Release|x64.ActiveCfg = Release|x64
 		{BF5D938C-60E9-400E-8BBB-D9D2C058B4FC}.Release|x64.Build.0 = Release|x64
+		{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}.Debug|x64.ActiveCfg = Debug|x64
+		{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}.Debug|x64.Build.0 = Debug|x64
+		{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}.Release|x64.ActiveCfg = Release|x64
+		{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
