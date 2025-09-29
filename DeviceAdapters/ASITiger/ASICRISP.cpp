@@ -19,9 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp and others
-//
-
 
 #include "ASICRISP.h"
 #include "ASIHub.h"
@@ -177,6 +174,10 @@ int CCRISP::Initialize()
        CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
        UpdateProperty(g_CRISPDitherErrorPropertyName);
    }
+
+   // Always read
+   CreateSumProperty();
+   CreateDitherErrorProperty();
 
    // LK M requires firmware version 3.39 or higher.
    // Enable these properties as a group to modify calibration settings.
@@ -863,6 +864,8 @@ int CCRISP::OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     return DEVICE_OK;
 }
+
+// Advanced Properties
 
 int CCRISP::OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
