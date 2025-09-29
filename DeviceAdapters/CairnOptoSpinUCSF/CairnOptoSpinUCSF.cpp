@@ -21,8 +21,9 @@
 #include <iostream>
 #include "ftd2xx.h"
 
-const char* g_CairnOptospinName = "OptospinWheel";
-const char* g_CairnOptospinHubName = "CairnOptospinController";
+const char* g_CairnOptospinName = "Filter wheel";
+const char* g_CairnOptospinHubName = "Optospin Controller";
+const char* g_SerialNumber = "Optospin serial number";
 
 using namespace std;
 
@@ -57,7 +58,7 @@ MODULE_API void InitializeModuleData()
          {
             if (ID == 0x156b0003)
             {
-               RegisterDevice(g_CairnOptospinHubName, MM::HubDevice, "CairnOptospinController");
+               RegisterDevice(g_CairnOptospinHubName, MM::HubDevice, "Optospin Hub");
                return;
             }
          }
@@ -76,10 +77,11 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       // deviceName is expected to be of the formn "OptospinWheel_#" where # is the wheel number
       int wheelNumber = 0;
-      const char* underscore = strchr(deviceName, '_');
+      const char* underscore = strchr(deviceName, ' ');
       if (underscore != 0)
       {
-         wheelNumber = atoi(underscore + 1);
+         char lastChar = deviceName[strlen(deviceName) - 1];
+         wheelNumber = lastChar - '0';
       }
       if (wheelNumber >= 1 && wheelNumber <= 4)
       {
@@ -109,7 +111,6 @@ CairnHub::CairnHub() :
    // We need to query for available Controllers based on VID and PID and 
    // then populate the SerialNumber property
    CPropertyAction* pAct = new CPropertyAction(this, &CairnHub::OnSerialNumber);
-   CreateProperty("SerialNumber", "0", MM::String, false, pAct, true);
 
    // We look for VID 156B, PID 0003
    // Description: "Cairn Optospin"
@@ -122,6 +123,7 @@ CairnHub::CairnHub() :
    DWORD LocId;
    char SerialNumber[16];
    char Description[64];
+   std::vector<std::string> serialNumbers;
 
    // create the device information list
    ftStatus = FT_CreateDeviceInfoList(&numDevs);
@@ -134,9 +136,23 @@ CairnHub::CairnHub() :
          {
             if (ID == 0x156b0003)
             {
-               AddAllowedValue("SerialNumber", SerialNumber);
+               serialNumbers.push_back(std::string(SerialNumber));
             }
          }
+      }
+   }
+   if (serialNumbers.size() == 0)
+   {
+      // No devices found, but we still create the property
+      CreateProperty(g_SerialNumber, "0", MM::String, false, pAct, true);
+   }
+   else
+   {
+      // One or more devices found, populate allowed values
+      CreateProperty(g_SerialNumber, serialNumbers[0].c_str(), MM::String, false, pAct, true);
+      for (size_t i = 0; i < serialNumbers.size(); i++)
+      {
+         AddAllowedValue(g_SerialNumber, serialNumbers[i].c_str());
       }
    }
 }
@@ -280,8 +296,9 @@ int CairnHub::Initialize()
    CPropertyAction* pAct = new CPropertyAction(this, &CairnHub::OnSoftwareVersion);
    CreateProperty("SoftwareVersion", "0", MM::Integer, true, pAct);
 
+   // Duplicate serial number property so that it can be seen in Device Property Browser
    pAct = new CPropertyAction(this, &CairnHub::OnSerialNumber);
-   CreateProperty("Controller_SerialNumber", "0", MM::String, false, pAct);
+   CreateProperty("Controller_SerialNumber", serialNumber_.c_str(), MM::String, true, pAct);
 
    return DEVICE_OK;
 }
@@ -457,7 +474,8 @@ CairnOptospin::CairnOptospin(long wheelNumber) :
    initialized_(false),
    numPos_(6),
    serialNumber_(0),
-   wheelNumber_(wheelNumber)
+   wheelNumber_(wheelNumber),
+   wheelMode_("Independent mode")
 {
    InitializeDefaultErrorMessages();
 
@@ -466,11 +484,14 @@ CairnOptospin::CairnOptospin(long wheelNumber) :
 
    // Name
    std::ostringstream os;
-   os << g_CairnOptospinName << "_" << wheelNumber_;
+   os << g_CairnOptospinName << " " << wheelNumber_;
    CreateProperty(MM::g_Keyword_Name, os.str().c_str(), MM::String, true);
 
    // Description
    CreateProperty(MM::g_Keyword_Description, "Cairn Optospin - UCSF Device adapter", MM::String, true);
+
+   CPropertyAction* pAct = new CPropertyAction(this, &CairnOptospin::OnWheelMode);
+   CreateProperty("Wheel Mode", wheelMode_.c_str(), MM::String, false, pAct, true);
 
    LogMessage("Loaded Cairn OptoSpin UCSF Device adapter", false);
 }
@@ -483,7 +504,7 @@ CairnOptospin::~CairnOptospin()
 void CairnOptospin::GetName(char* pszName) const
 {
    std::ostringstream os;
-   os << g_CairnOptospinName << "_" << wheelNumber_;
+   os << g_CairnOptospinName << " " << wheelNumber_;
    CDeviceUtils::CopyLimitedString(pszName, os.str().c_str());
 }
 
@@ -566,6 +587,17 @@ int CairnOptospin::OnWheelNumber(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet) {
       pProp->Get(wheelNumber_);
+   }
+   return DEVICE_OK;
+}
+
+int CairnOptospin::OnWheelMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet) {
+      pProp->Set(wheelMode_.c_str());
+   }
+   else if (eAct == MM::AfterSet) {
+      pProp->Get(wheelMode_);
    }
    return DEVICE_OK;
 }
