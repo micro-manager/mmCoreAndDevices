@@ -21,8 +21,9 @@
 #include <iostream>
 #include "ftd2xx.h"
 
-const char* g_CairnOptospinName = "OptospinWheel";
-const char* g_CairnOptospinHubName = "CairnOptospinController";
+const char* g_CairnOptospinName = "Filter wheel";
+const char* g_CairnOptospinHubName = "Optospin Hub";
+const char* g_SerialNumber = "serial number";
 
 using namespace std;
 
@@ -57,7 +58,7 @@ MODULE_API void InitializeModuleData()
          {
             if (ID == 0x156b0003)
             {
-               RegisterDevice(g_CairnOptospinHubName, MM::HubDevice, "CairnOptospinController");
+               RegisterDevice(g_CairnOptospinHubName, MM::HubDevice, "Optospin Controller");
                return;
             }
          }
@@ -109,7 +110,6 @@ CairnHub::CairnHub() :
    // We need to query for available Controllers based on VID and PID and 
    // then populate the SerialNumber property
    CPropertyAction* pAct = new CPropertyAction(this, &CairnHub::OnSerialNumber);
-   CreateProperty("SerialNumber", "0", MM::String, false, pAct, true);
 
    // We look for VID 156B, PID 0003
    // Description: "Cairn Optospin"
@@ -122,6 +122,7 @@ CairnHub::CairnHub() :
    DWORD LocId;
    char SerialNumber[16];
    char Description[64];
+   std::vector<std::string> serialNumbers;
 
    // create the device information list
    ftStatus = FT_CreateDeviceInfoList(&numDevs);
@@ -134,9 +135,28 @@ CairnHub::CairnHub() :
          {
             if (ID == 0x156b0003)
             {
-               AddAllowedValue("SerialNumber", SerialNumber);
+               serialNumbers.push_back(std::string(SerialNumber));
             }
          }
+      }
+   }
+   if (serialNumbers.size() == 0)
+   {
+      // No devices found, but we still create the property
+      CreateProperty(g_SerialNumber, "0", MM::String, false, pAct, true);
+   }
+   else if (serialNumbers.size() == 1)
+   {
+      serialNumber_ = serialNumbers[0];
+      CreateProperty(g_SerialNumber, serialNumber_.c_str(), MM::String, false, pAct, true);
+   }
+   else
+   {
+      // Multiple devices found, populate allowed values
+      CreateProperty(g_SerialNumber, serialNumbers[0].c_str(), MM::String, false, pAct, true);
+      for (size_t i = 0; i < serialNumbers.size(); i++)
+      {
+         AddAllowedValue(g_SerialNumber, serialNumbers[i].c_str());
       }
    }
 }
@@ -280,6 +300,7 @@ int CairnHub::Initialize()
    CPropertyAction* pAct = new CPropertyAction(this, &CairnHub::OnSoftwareVersion);
    CreateProperty("SoftwareVersion", "0", MM::Integer, true, pAct);
 
+   // Duplicate serial number property so that it can be seen in Device Property Browser
    pAct = new CPropertyAction(this, &CairnHub::OnSerialNumber);
    CreateProperty("Controller_SerialNumber", "0", MM::String, false, pAct);
 
@@ -466,7 +487,7 @@ CairnOptospin::CairnOptospin(long wheelNumber) :
 
    // Name
    std::ostringstream os;
-   os << g_CairnOptospinName << "_" << wheelNumber_;
+   os << g_CairnOptospinName << " " << wheelNumber_;
    CreateProperty(MM::g_Keyword_Name, os.str().c_str(), MM::String, true);
 
    // Description
