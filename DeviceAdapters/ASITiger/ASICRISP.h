@@ -59,18 +59,13 @@ public:
     int OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnSum(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
-    // For backwards compatibility with Tiger firmware < 3.40
-    int OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     int UpdateFocusState();
