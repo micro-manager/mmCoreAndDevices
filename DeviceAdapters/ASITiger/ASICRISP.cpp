@@ -19,9 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp and others
-//
-
 
 #include "ASICRISP.h"
 #include "ASIHub.h"
@@ -153,30 +150,9 @@ int CCRISP::Initialize()
     UpdateProperty(g_CRISPInFocusRangePropertyName);
    }
 
-   // Note: Older firmware could only query the properties "Dither Error" and "Sum" through EXTRA X?, 
-   // new firmware has commands to query the values much faster.
-   if (FirmwareVersionAtLeast(3.40))
-   {
-       LogMessage("CRISP: firmware >= 3.40; use LK T? and LK Y? for the \"Sum\" and \"Dither Error\" properties.", true);
-       pAct = new CPropertyAction(this, &CCRISP::OnSum);
-       CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-       UpdateProperty(g_CRISPSumPropertyName);
-
-       pAct = new CPropertyAction(this, &CCRISP::OnDitherError);
-       CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
-       UpdateProperty(g_CRISPDitherErrorPropertyName);
-   }
-   else
-   {
-       LogMessage("CRISP: firmware < 3.40; use EXTRA X? for both the \"Sum\" and \"Dither Error\" properties.", true);
-       pAct = new CPropertyAction(this, &CCRISP::OnSumLegacy);
-       CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-       UpdateProperty(g_CRISPSumPropertyName);
-
-       pAct = new CPropertyAction(this, &CCRISP::OnDitherErrorLegacy);
-       CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
-       UpdateProperty(g_CRISPDitherErrorPropertyName);
-   }
+   // Always read
+   CreateSumProperty();
+   CreateDitherErrorProperty();
 
    // LK M requires firmware version 3.39 or higher.
    // Enable these properties as a group to modify calibration settings.
@@ -200,7 +176,6 @@ bool CCRISP::Busy()
     // not sure how to define it, Nico's ASIStage adapter hard-codes it false so I'll do same thing
     return false;
 }
-
 
 int CCRISP::SetContinuousFocusing(bool state)
 {
@@ -665,44 +640,6 @@ int CCRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-// always read
-int CCRISP::OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        long tmp = 0;
-        std::ostringstream command;
-        command << addressChar_ << "LK Y?";
-        RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
-        RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition3(tmp));
-
-        if (!pProp->Set(tmp))
-        {
-            return DEVICE_INVALID_PROPERTY_VALUE;
-        }
-    }
-    return DEVICE_OK;
-}
-
-// always read
-int CCRISP::OnSum(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        long tmp = 0;
-        std::ostringstream command;
-        command << addressChar_ << "LK T?";
-        RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
-        RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition3(tmp));
-
-        if (!pProp->Set(tmp))
-        {
-            return DEVICE_INVALID_PROPERTY_VALUE;
-        }
-    }
-    return DEVICE_OK;
-}
-
 int CCRISP::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     //std::ostringstream command;
@@ -822,47 +759,119 @@ int CCRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-// Provide support for Tiger firmware < 3.40
-int CCRISP::OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        std::ostringstream command;
-        command << addressChar_ << "EXTRA X?";
-        RETURN_ON_MM_ERROR(hub_->QueryCommand(command.str()));
-        std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
-        if (vReply.size() <= 2)
-        {
-            return DEVICE_INVALID_PROPERTY_VALUE;
-        }
-        if (!pProp->Set(vReply[2].c_str()))
-        {
-            return DEVICE_INVALID_PROPERTY_VALUE;
-        }
+// Read-only Properties
+
+// Always read
+void CCRISP::CreateSumProperty() {
+    const std::string propertyName = "Sum";
+
+    if (FirmwareVersionAtLeast(3.40)) {
+        // The LOCK command can query the value directly
+        // The command responds with => ":A 0 \r\n"
+        LogMessage("CRISP: firmware >= 3.40; use LK T? for the "
+            + propertyName + " property.", true);
+
+        const std::string command = addressChar_ + "LK T?";
+
+        CreateIntegerProperty(
+            propertyName.c_str(), 0, true,
+            new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+                if (eAct == MM::BeforeGet) {
+                    long tmp = 0;
+                    RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
+                    RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition3(tmp));
+                    if (!pProp->Set(tmp)) {
+                        return DEVICE_INVALID_PROPERTY_VALUE;
+                    }
+                }
+                return DEVICE_OK;
+            }
+        ));
+
+    } else { // Firmware < 3.40
+
+        // The old version uses the EXTRA command and requires parsing
+        // The command responds with => "I    0    0 \r\n"
+        LogMessage("CRISP: firmware < 3.40; use EXTRA X? for the "
+            + propertyName + " property.", true);
+
+        const std::string command = addressChar_ + "EXTRA X?";
+
+        CreateIntegerProperty(
+            propertyName.c_str(), 0, true,
+            new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+                if (eAct == MM::BeforeGet) {
+                    RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
+                    std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
+                    if (vReply.size() <= 2) {
+                        return DEVICE_INVALID_PROPERTY_VALUE;
+                    }
+                    if (!pProp->Set(vReply[1].c_str())) {
+                        return DEVICE_INVALID_PROPERTY_VALUE;
+                    }
+                }
+                return DEVICE_OK;
+            }
+        ));
     }
-    return DEVICE_OK;
 }
 
-// Provide support for Tiger firmware < 3.40
-int CCRISP::OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        std::ostringstream command;
-        command << addressChar_ << "EXTRA X?";
-        RETURN_ON_MM_ERROR(hub_->QueryCommand(command.str()));
-        std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
-        if (vReply.size() <= 2)
-        {
-            return DEVICE_INVALID_PROPERTY_VALUE;
-        }
-        if (!pProp->Set(vReply[1].c_str()))
-        {
-            return DEVICE_INVALID_PROPERTY_VALUE;
-        }
+// Always read
+void CCRISP::CreateDitherErrorProperty() {
+    const std::string propertyName = "Dither Error";
+
+    if (FirmwareVersionAtLeast(3.40)) {
+        // The LOCK command can query the value directly
+        // The command responds with => ":A 0 \r\n"
+        LogMessage("CRISP: firmware >= 3.40; use LK Y? for the "
+            + propertyName + " property.", true);
+
+        const std::string command = addressChar_ + "LK Y?";
+
+        CreateIntegerProperty(
+            propertyName.c_str(), 0, true,
+            new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+                if (eAct == MM::BeforeGet) {
+                    long tmp = 0;
+                    RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
+                    RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition3(tmp));
+                    if (!pProp->Set(tmp)) {
+                        return DEVICE_INVALID_PROPERTY_VALUE;
+                    }
+                }
+                return DEVICE_OK;
+            }
+        ));
+
+    } else { // Firmware < 3.40
+
+        // The old version uses the EXTRA command and requires parsing
+        // The command responds with => "I    0    0 \r\n"
+        LogMessage("CRISP: firmware < 3.40; use EXTRA X? for the "
+            + propertyName + " property.", true);
+
+        const std::string command = addressChar_ + "EXTRA X?";
+
+        CreateIntegerProperty(
+            propertyName.c_str(), 0, true,
+            new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+                if (eAct == MM::BeforeGet) {
+                    RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
+                    std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
+                    if (vReply.size() <= 2) {
+                        return DEVICE_INVALID_PROPERTY_VALUE;
+                    }
+                    if (!pProp->Set(vReply[2].c_str())) {
+                        return DEVICE_INVALID_PROPERTY_VALUE;
+                    }
+                }
+                return DEVICE_OK;
+            }
+        ));
     }
-    return DEVICE_OK;
 }
+
+// Advanced Properties
 
 int CCRISP::OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
