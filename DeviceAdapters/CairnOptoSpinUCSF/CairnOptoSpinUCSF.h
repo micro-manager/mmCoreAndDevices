@@ -92,12 +92,14 @@ public:
 
    // pre-init properties
    int OnWheelNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnWheelMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    bool initialized_;
    long numPos_;
    long serialNumber_; // Serial number of the controller, obtained through USB API
    long wheelNumber_; // Wheel number  (1 - 4)
+   std::string wheelMode_; // Wheel mode (Independent or Synchronized)
 };
 
 #endif // _CairnOptospin_UCSF_H_
