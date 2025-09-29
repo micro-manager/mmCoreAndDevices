@@ -2127,7 +2127,6 @@ int CZStage::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct
 
 int CZStage::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       if (ttl_trigger_enabled_)
