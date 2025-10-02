@@ -26,19 +26,23 @@ jobs:
         os:
           - windows
           - macos
+          - macos-intel
           - ubuntu
         cppstd:  # Test the oldest and newest standards we support
           - c++14
           - c++17
         include:
           - os: windows
-            runner: windows-2025
+            runner: windows-latest
             cxx: cl
           - os: macos
-            runner: macos-13
+            runner: macos-latest
+            cxx: clang++
+          - os: macos-intel
+            runner: macos-15-intel
             cxx: clang++
           - os: ubuntu
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             cxx: g++
     name: ${{ matrix.runner }}-${{ matrix.cxx }}-${{ matrix.cppstd }}
     runs-on: ${{ matrix.runner }}
@@ -48,7 +52,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: Install tools
         run: |
           python -m pip install --upgrade pip meson ninja
