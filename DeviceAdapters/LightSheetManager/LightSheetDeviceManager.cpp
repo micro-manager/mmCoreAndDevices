@@ -135,12 +135,19 @@ void LightSheetDeviceManager::CreateCameraProperties() {
             SetAllowedValues(propertyName.c_str(), devices_.at(MM::CameraDevice));
         }
     } else {
-        // multiple simultaneous cameras per imaging path =>
-        // "Imaging1Camera1, Imaging1Camera2, Imaging2Camera1, Imaging2Camera2"
+        // multiple simultaneous cameras; multiple imaging paths =>
+        // "Imaging1Camera1", "Imaging1Camera2", "Imaging2Camera1", "Imaging2Camera2"
+        // multiple simultaneous cameras; single imaging path =>
+        // "ImagingCamera1", "ImagingCamera2"
         for (int imagingPath = 1; imagingPath <= numImagingPaths_; imagingPath++) {
             for (int cameraNum = 1; cameraNum <= numSimultaneousCameras_; cameraNum++) {
-                const std::string propertyName = 
-                    "Imaging" + std::to_string(imagingPath) + "Camera" + std::to_string(cameraNum);
+                std::string propertyName;
+                if (numImagingPaths_ > 1) {
+                    propertyName = "Imaging" + std::to_string(imagingPath)
+                        + "Camera" + std::to_string(cameraNum);
+                } else {
+                    propertyName = "ImagingCamera" + std::to_string(cameraNum);
+                }
                 CreateStringProperty(propertyName.c_str(), gUndefined, false);
                 SetAllowedValues(propertyName.c_str(), devices_.at(MM::CameraDevice));
             }
@@ -162,7 +169,7 @@ std::vector<std::string> LightSheetDeviceManager::GetLoadedDevicesOfType(const M
     char deviceName[MM::MaxStrLength];
     for (;;) {
         GetLoadedDeviceOfType(deviceType, deviceName, index++);
-        if (strlen(deviceName)) {
+        if (deviceName[0] != '\0') {
             devices.push_back(deviceName);
         } else {
             break;
