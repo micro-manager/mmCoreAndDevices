@@ -36,26 +36,22 @@
 #include <unordered_map>
 
 enum {
-    ERR_NO_ERROR = 10000,
-    ERR_INITIALIZATION,
-    ERR_INVALID_COMMAND,
-    ERR_INVALID_OPERAND,
-    ERR_MISSING_TRAILING_R,
-    ERR_DEVICE_NOT_INIT,
-    ERR_VALVE_FAILURE,
-    ERR_PLUNGER_OVERLOAD,
-    ERR_VALVE_OVERLOAD,
-    ERR_MOVE_NOT_ALLOWED,
-    ERR_PLUNGER_FAILURE,
-    ERR_AD_CONVERTER_FAILURE,
-    ERR_COMMAND_OVERFLOW,
-    ERR_UNEXPECTED_RESPONSE
+    AMF_ERR_UNKNOWN_COMMAND = 10128,
+    AMF_ERR_NOT_HOMED = 10144,
+    AMF_ERR_MOVE_OUT_RANGE = 10145,
+    AMF_ERR_SPEED_OUT_RANGE = 146,
+    AMF_ERR_BLOCKED = 10224,
+    AMF_ERR_SENSOR = 10225,
+    AMF_ERR_MISSING_MAIN_REFERENCE = 10226,
+    AMF_ERR_MISSING_REFERENCE = 10227,
+    AMF_ERR_BAD_POLARITY = 10227
 };
 
 enum class AMF_Command {
 	// Generic
 	Initialize,
-	Get_status,
+	Get_pump_status,
+    Get_valve_status,
 	Get_firmware_version,
 	Is_initialized,
 	Stop,
@@ -89,7 +85,7 @@ namespace {
     const char* AMF_Baud = "9600";
     const char* AMF_Parity = "None";
     const char* AMF_StopBits = "1";
-    const char* AMF_EOL = "\r";
+    const char* AMF_EOL = "\n";
 
     const char* AMF_Hub_Name = "AMF Hub";
     const char* AMF_LSP_Hub_Name = "AMF LSP Hub";
@@ -101,6 +97,10 @@ namespace {
     const char* AMF_TERM = "\r";
     const char AMF_ACK = 0;
     const char AMF_NACK = 1;
+
+	const char* AMF_Rotation_Shortest = "Shortest";
+	const char* AMF_Rotation_Clockwise = "Clockwise";
+	const char* AMF_Rotation_CounterClockwise = "Counterclockwise";
 
     bool AMF_ERROR_INITIALIZED = false;
 
@@ -115,8 +115,11 @@ namespace {
         case AMF_Command::Initialize:
             cmd_string += "ZR";
             break;
-        case AMF_Command::Get_status:
-            cmd_string += "Q";
+        case AMF_Command::Get_pump_status:
+            cmd_string += "?9100";
+            break;
+        case AMF_Command::Get_valve_status:
+            cmd_string += "?9200";
             break;
         case AMF_Command::Get_firmware_version:
             cmd_string += "?23";
@@ -155,7 +158,6 @@ namespace {
         case AMF_Command::Move_plunger_dispense:
             cmd_string += "D" + std::to_string(value) + "R";
             break;
-        case AMF_Command::Set_acceleration:
             cmd_string += "L" + std::to_string(value) + "R";
             break;
         case AMF_Command::Set_deceleration:
@@ -177,13 +179,10 @@ namespace {
             cmd_string += "?27";
             break;
         case AMF_Command::Get_n_steps:
-            cmd_string += "28?";
+            cmd_string += "?28";
             break;
         case AMF_Command::Get_flowrate:
             cmd_string += "?2";
-            break;
-        case AMF_Command::Get_pump_info:
-            cmd_string += "?9100";
             break;
         }
         return cmd_string;
@@ -193,39 +192,6 @@ namespace {
         if (AMF_ERROR_INITIALIZED) { return DEVICE_OK; }
         AMF_ERROR_INITIALIZED = true;
         return DEVICE_OK;
-    }
-
-    int AMF_Parse_Status(char status) {
-        switch (status) {
-        case '@': case '`':
-            return DEVICE_OK;
-        case 'A': case 'a':
-            return ERR_INITIALIZATION;
-        case 'B': case 'b':
-            return ERR_INVALID_COMMAND;
-        case 'C': case 'c':
-            return ERR_INVALID_OPERAND;
-        case 'D': case 'd':
-            return ERR_MISSING_TRAILING_R;
-        case 'G': case 'g':
-            return ERR_DEVICE_NOT_INIT;
-        case 'H': case 'h':
-            return ERR_VALVE_FAILURE;
-        case 'I': case 'i':
-            return ERR_PLUNGER_OVERLOAD;
-        case 'J': case 'j':
-            return ERR_VALVE_OVERLOAD;
-        case 'K': case 'k':
-            return ERR_MOVE_NOT_ALLOWED;
-        case 'L': case 'l':
-            return ERR_PLUNGER_FAILURE;
-        case 'N': case 'n':
-            return ERR_AD_CONVERTER_FAILURE;
-        case 'O': case 'o':
-            return ERR_COMMAND_OVERFLOW;
-        default:
-            return ERR_UNEXPECTED_RESPONSE;
-        }
     }
 }
 #endif //_AMF_COMMANDS_H_
