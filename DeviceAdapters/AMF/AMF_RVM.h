@@ -65,7 +65,7 @@ public:
 	int Shutdown();
 	void GetName(char* pName) const;
 	bool Busy();
-	unsigned long GetNumberOfPositions()const { return nPos_; };
+	unsigned long GetNumberOfPositions()const { return nPos_; }
 
 	// Action Handlers
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -74,6 +74,8 @@ public:
 	int OnRotationDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 	// Utility Members
+	int Home();
+	bool IsHomed();
 	int GetValvePosition(long& pos);
 	int SetValvePosition(long pos);
 	int GetNValves(long& pos);
@@ -87,13 +89,14 @@ private:
 	long address_ = 1; // Default address
 	long nPos_ = 0;
 	long position_ = 0;
-	RotationDirection rotationDirection_ = SHORTEST;
+	std::string rotationDirection_ = AMF_Rotation_Shortest;
 	MM::MMTime changedTime_;
 	std::string version_;
 
 	// Serial utility members
 	std::string port_;
 	int SendRecv(AMF_Command cmd, long& value);
+	int CheckStatus();
 };
 
 #endif //_AMF_RVM_H_

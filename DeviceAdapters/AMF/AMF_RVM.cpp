@@ -27,6 +27,7 @@
 
 #include "AMF_RVM.h" // Should be first, otherwise winsock.h is loaded before boost asio tries to load winsock.h
 #include "AMF_Commands.h"
+#include "AMF_LSP_Hub.h"
 #include "ModuleInterface.h"
 #include "DeviceUtils.h"
 
@@ -55,15 +56,11 @@ AMF_RVM::AMF_RVM() :
     busy_(false),
     position_(0)
 {
-    AMF_Initialize_Error_Messages();
-    SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
-    EnableDelay(); // signals that the dealy setting will be used
-
-    // COM Port
-    if (!GetParentHub()) {
-		CPropertyAction* pAct = new CPropertyAction(this, &AMF_RVM::OnPort);
-		CreateStringProperty(MM::g_Keyword_Port, "COM1", false, pAct, true);
-    }
+    // Number of positions
+    CPropertyAction* pAct = new CPropertyAction(this, &AMF_RVM::OnNumberOfStates);
+    CreateIntegerProperty("Number of ports", 6, false, pAct, true);
+    std::vector<std::string> values = { "2", "4", "6", "8", "10", "12" };
+    SetAllowedValues("Number of ports", values);
 }
 
 AMF_RVM::~AMF_RVM()
@@ -82,13 +79,35 @@ int AMF_RVM::Initialize()
     if (initialized_)
         return DEVICE_OK;
 
-    // Initialize valve
-    long value = 0;
-    int ret = SendRecv(AMF_Command::Initialize, value);
-    if (DEVICE_OK != ret) { return ret; }
+    // Link to parent Hub
+    AMF_LSP_Hub* pHub = static_cast<AMF_LSP_Hub*>(GetParentHub());
+    if (pHub)
+    {
+        char hubLabel[MM::MaxStrLength];
+        pHub->GetLabel(hubLabel);
+        SetParentID(hubLabel); // for backward comp.
+    }
+    else {
+        LogMessage("Parent Hub not defined.");
+    }
+    pHub->GetPort(port_); // Get COM-port from Hub
 
+    // If RVM is part of LSP pump, the device might already be
+    // homing. Just wait for the valve to be available.
+    while (Busy()) {
+        CDeviceUtils::SleepMs(100);
+    }
+    LogMessage("Passed busy wait step.");
+
+    // Initialize valve
+    if (!IsHomed()) {
+        Home();
+        while (Busy()) { CDeviceUtils::SleepMs(100); }
+        LogMessage("Finished homing.");
+    }
+    LogMessage("Homing step passed.");
     // Name
-    ret = CreateStringProperty(MM::g_Keyword_Name, AMF_RVM_Name, true);
+    int ret = CreateStringProperty(MM::g_Keyword_Name, AMF_RVM_Name, true);
     if (DEVICE_OK != ret) { return ret; }
 
     // Description
@@ -96,15 +115,24 @@ int AMF_RVM::Initialize()
     if (DEVICE_OK != ret) { return ret; }
 
     // Number of positions
-    ret = GetNValves(nPos_);
-    if (ret != DEVICE_OK) { return ret; }
+    long temp = 0;
+    ret = GetNValves(temp);
+    if (DEVICE_OK != ret) { return ret; }
     LogMessage(("Number of positions: " + to_string(nPos_)).c_str());
-    CreateIntegerProperty("Number of positions", nPos_, true);
+    if (nPos_ != temp) {
+        LogMessage("Provided number of ports does not correspond to the number of ports\n" +
+            std::string("by the pump. Please enter the correct number of ports."));
+        return DEVICE_INVALID_PROPERTY_VALUE;
+    }
 
     // Rotation direction
     CPropertyAction* pAct = new CPropertyAction(this, &AMF_RVM::OnRotationDirection);
-    vector<string> allowedDirections = { "Shortest rotation direction", "Clockwise", "Counterclockwise" };
-    ret = CreateStringProperty(AMF_Rotation_Property, "Shortest rotation direction", false, pAct);
+    vector<string> allowedDirections = {
+        AMF_Rotation_Shortest,
+        AMF_Rotation_Clockwise,
+        AMF_Rotation_CounterClockwise
+    };
+    ret = CreateStringProperty(AMF_Rotation_Property, AMF_Rotation_Shortest, false, pAct);
     SetAllowedValues(AMF_Rotation_Property, allowedDirections);
 
     // create default positions and labels
@@ -122,20 +150,19 @@ int AMF_RVM::Initialize()
     // -----
     pAct = new CPropertyAction(this, &AMF_RVM::OnState);
     ret = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
-    if (ret != DEVICE_OK) { return ret; }
+    if (DEVICE_OK != ret) { return ret; }
 
     // Label
     // -----
     pAct = new CPropertyAction(this, &CStateBase::OnLabel);
     ret = CreateStringProperty(MM::g_Keyword_Label, "", false, pAct);
-    if (ret != DEVICE_OK) { return ret; }
+    if (DEVICE_OK != ret) { return ret; }
 
 
     ret = UpdateStatus();
-    if (ret != DEVICE_OK) { return ret; }
+    if (DEVICE_OK != ret) { return ret; }
 
     initialized_ = true;
-
     return DEVICE_OK;
 }
 
@@ -157,6 +184,7 @@ int AMF_RVM::Shutdown()
     }
     return DEVICE_OK;
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
@@ -218,13 +246,11 @@ int AMF_RVM::OnRotationDirection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        pProp->Set(RotationDirectionToString(rotationDirection_).c_str());
+        pProp->Set(rotationDirection_.c_str());
     }
     else if (eAct == MM::AfterSet)
     {
-        string temp;
-        pProp->Get(temp);
-        rotationDirection_ = RotationDirectionFromString(temp);
+        pProp->Get(rotationDirection_);
     }
 
     return DEVICE_OK;
@@ -238,32 +264,78 @@ int AMF_RVM::SendRecv(AMF_Command cmd, long& value)
 {
     std::string cmd_string = AMF_get_command_string(address_, cmd, value);
     int ret = SendSerialCommand(port_.c_str(), cmd_string.c_str(), AMF_TERM);
-    if (ret != DEVICE_OK) {
+    if (DEVICE_OK != ret) {
         LogMessage("Could not send serial command.");
         return DEVICE_SERIAL_COMMAND_FAILED;
     }
 
     std::string answer = "";
-    ret = GetSerialAnswer(port_.c_str(), AMF_TERM, answer);
-    if (ret != DEVICE_OK) {
+    ret = GetSerialAnswer(port_.c_str(), AMF_EOL, answer);
+    if (DEVICE_OK != ret) {
         LogMessage("Could not receive response to serial command.");
         return DEVICE_SERIAL_INVALID_RESPONSE;
     }
 
-    ret = AMF_Parse_Status(answer[3]);
-    if (ret != DEVICE_OK) { return ret; }
-
-    if (answer.size() == 6) { return ret; }
-    value = std::stol(answer.substr(4, answer.size() - 3));
+    if (answer.size() == 5) {
+        value = 0;
+    }
+    else {
+        value = std::stol(answer.substr(3, answer.size() - 5));
+    }
     return DEVICE_OK;
+}
+
+int AMF_RVM::CheckStatus()
+{
+    // Check for error
+    long value = 0;
+    std::string cmd_string = AMF_get_command_string(address_, AMF_Command::Get_valve_status, value);
+    int ret = SendSerialCommand(port_.c_str(), cmd_string.c_str(), AMF_TERM);
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not send status check of pump.");
+        return DEVICE_SERIAL_COMMAND_FAILED;
+    }
+
+    std::string status = "";
+    ret = GetSerialAnswer(port_.c_str(), AMF_EOL, status);
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not receive status of pump.");
+        return DEVICE_SERIAL_INVALID_RESPONSE;
+    }
+
+    int status_val = std::stol(status.substr(3, status.size() - 5));
+    if (255 == status_val) { busy_ = true; }
+    else if (0 == status_val) { busy_ = false; }
+    else { return DEVICE_ERR + 10000; }
+	return DEVICE_OK;
+}
+
+
+int AMF_RVM::Home()
+{
+    long value = 0;
+    int ret = SendRecv(AMF_Command::Initialize, value);
+    ret = CheckStatus();
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not home the valve.");
+        return ret;
+    }
+    return DEVICE_OK;
+}
+
+bool AMF_RVM::IsHomed()
+{
+    long value = 0;
+    SendRecv(AMF_Command::Is_initialized, value);
+    return (value == 1);
 }
 
 int AMF_RVM::GetValvePosition(long& pos) {
     long value = 0;
     int ret = SendRecv(AMF_Command::Get_valve_position, value);
-    if (ret != DEVICE_OK) { return ret; }
+    ret = CheckStatus();
+    if (DEVICE_OK != ret) { return ret; }
     pos = value;
-
     return DEVICE_OK;
 }
 
@@ -274,48 +346,33 @@ int AMF_RVM::SetValvePosition(long pos)
         return DEVICE_INVALID_PROPERTY_VALUE;
     }
     int ret = DEVICE_OK;
-    switch (rotationDirection_)
-    {
-    case SHORTEST:
+    if (AMF_Rotation_Shortest == rotationDirection_) {
         ret = SendRecv(AMF_Command::Move_valve_shortest, pos);
-        break;
-    case CLOCKWISE:
+    }
+    else if (AMF_Rotation_Clockwise == rotationDirection_) {
         ret = SendRecv(AMF_Command::Move_valve_cw, pos);
-        break;
-    case COUNTERCLOCKWISE:
+    }
+    else if (AMF_Rotation_CounterClockwise == rotationDirection_) {
         ret = SendRecv(AMF_Command::Move_valve_ccw, pos);
-        break;
+    }
+    else {
+        LogMessage("Invalid rotation direction, defaulted to shortest");
+        rotationDirection_ = AMF_Rotation_Shortest;
+        ret = SendRecv(AMF_Command::Move_valve_shortest, pos);
+    }
+    ret = CheckStatus();
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not set valve position.");
+        return ret;
     }
     LogMessage("Set valve to position: " + to_string(pos) + ".");
     return ret;
 }
 
-std::string AMF_RVM::RotationDirectionToString(RotationDirection rd)
-{
-    switch (rd)
-    {
-    case CLOCKWISE:
-        return "Clockwise";
-    case COUNTERCLOCKWISE:
-        return "Counterclockwise";
-    case SHORTEST:
-        return "Shortest rotation direction";
-    }
-    return "";
-}
-
-RotationDirection AMF_RVM::RotationDirectionFromString(std::string& s) {
-    if (s == "Clockwise")
-        return CLOCKWISE;
-    else if (s == "Counterclockwise")
-        return COUNTERCLOCKWISE;
-    else
-        return SHORTEST;
-}
-
 int AMF_RVM::GetNValves(long& nPos)
 {
     int ret = SendRecv(AMF_Command::Get_n_valves, nPos);
+    ret = CheckStatus();
     if (DEVICE_OK != ret) {
         LogMessage("Could not get number of valves.");
     }
@@ -325,6 +382,7 @@ int AMF_RVM::GetNValves(long& nPos)
 int AMF_RVM::GetAddress(long& address)
 {
     int ret = SendRecv(AMF_Command::Get_address, address);
+    ret = CheckStatus();
     if (DEVICE_OK != ret) {
         LogMessage("Could not get address.");
     }

@@ -39,22 +39,37 @@
 #include <string>
 #include <vector>
 
+double AMF_LSP_SPEED_STEP_STANDARD = 0.00745;
+double AMF_LSP_SPEED_STEP_HD = 0.000552;
+int AMF_LSP_SPEED_MAX_STANDARD = 214750;
+int AMF_LSP_SPEED_MAX_HD = 905970;
+int AMF_LSP_SPEED_MIN_STANDARD = 1;
+int AMF_LSP_SPEED_MIN_HD = 13;
+int AMF_LSP_ACCELERATION_MIN = 100;
+int AMF_LSP_ACCELERATION_MAX = 59590;
+int AMF_LSP_N_STEPS = 24000;
+
 ///////////////////////////////////////////////////////////////////////////////
 //  AMF_LSP_Pump class
 //  Device adapter for AMF LSP pumps.
 ///////////////////////////////////////////////////////////////////////////////
 
 AMF_LSP_Pump::AMF_LSP_Pump() :
-    initialized_(false),
-    busy_(false)
+    initialized_(false)
 {
     // parent ID display
     CreateHubIDProperty();
 
+    // Get pump type
+    std::vector<std::string> allowedTypes = { "Standard", "HD" };
+    CPropertyAction* pAct = new CPropertyAction(this, &AMF_LSP_Pump::OnPumpType);
+    CreateStringProperty("Pump Type", "Standard", false, pAct, true);
+    SetAllowedValues("Pump Type", allowedTypes);
+
     // Get maximum volume
     std::vector<std::string> allowedMaxVolumes = { "25", "50", "100", "250", "500", "1000", "2500", "5000" };
-    CPropertyAction* pAct = new CPropertyAction(this, &AMF_LSP_Pump::OnMaxVolume);
-    CreateFloatProperty(MM::g_Keyword_Max_Volume, maxVolumeUl_, false, pAct, true);
+    pAct = new CPropertyAction(this, &AMF_LSP_Pump::OnMaxVolume);
+    CreateIntegerProperty(MM::g_Keyword_Max_Volume, (long)maxVolumeUl_, false, pAct, true);
     SetAllowedValues(MM::g_Keyword_Max_Volume, allowedMaxVolumes);
 }
 
@@ -109,19 +124,50 @@ int AMF_LSP_Pump::Initialize()
     ret = CreateIntegerProperty("Home pump", 0, false, pAct);
     SetAllowedValues("Home pump", allowedHomeValues);
 
+    if (!IsHomed()) {
+		Home();
+        while (IsPumping()) { CDeviceUtils::SleepMs(100); }
+    }
+
     // Step size
-    std::vector<std::string> allowedStepSizes = { "3000", "24000" };
-    pAct = new CPropertyAction(this, &AMF_LSP_Pump::OnNSteps);
-    ret = CreateIntegerProperty("Number of steps", 10, false, pAct);
-    SetAllowedValues("Number of steps", allowedStepSizes);
+    SetNSteps(AMF_LSP_N_STEPS);
+    GetNSteps(nSteps_);
+    stepVolumeUl_ = maxVolumeUl_ / AMF_LSP_N_STEPS;
 
     // Current volume
     pAct = new CPropertyAction(this, &AMF_LSP_Pump::OnCurrentVolume);
     ret = CreateFloatProperty(MM::g_Keyword_Current_Volume, volumeUl_, true, pAct);
 
     // Flow rate
+    if ("Standard" == pumpType_) {
+        maxFlowrate_ = PulsesToFlowrate(AMF_LSP_SPEED_MAX_STANDARD);
+    }
+    else {
+        maxFlowrate_ = PulsesToFlowrate(AMF_LSP_SPEED_MAX_HD);
+    }
     pAct = new CPropertyAction(this, &AMF_LSP_Pump::OnFlowrate);
     ret = CreateFloatProperty(MM::g_Keyword_Flowrate, flowrateUlperSecond_, false, pAct);
+    SetPropertyLimits(MM::g_Keyword_Flowrate, -maxFlowrate_, maxFlowrate_);
+
+    // Acceleration
+    ret = GetAcceleration(acceleration_);
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not get acceleration during initialization.");
+        return ret;
+    }
+    pAct = new CPropertyAction(this, &AMF_LSP_Pump::OnAcceleration);
+    ret = CreateIntegerProperty("Pump Acceleration", acceleration_, false, pAct);
+    SetPropertyLimits("Pump Acceleration", AMF_LSP_ACCELERATION_MIN, AMF_LSP_ACCELERATION_MAX);
+
+    // Deceleration
+    ret = GetDeceleration(deceleration_);
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not get deceleration during initialization.");
+        return ret;
+    }
+    pAct = new CPropertyAction(this, &AMF_LSP_Pump::OnDeceleration);
+    ret = CreateIntegerProperty("Pump Deceleration", deceleration_, false, pAct);
+    SetPropertyLimits("Pump Deceleration", AMF_LSP_ACCELERATION_MIN, AMF_LSP_ACCELERATION_MAX);
 
     // Run
     std::vector<std::string> allowedRunValues = { "0", "1" };
@@ -129,7 +175,7 @@ int AMF_LSP_Pump::Initialize()
     ret = CreateIntegerProperty("Run", 0, false, pAct);
     SetAllowedValues("Run", allowedRunValues);
 
-    return DEVICE_ERR;
+    return ret;
 }
 
 int AMF_LSP_Pump::Shutdown()
@@ -148,7 +194,7 @@ void AMF_LSP_Pump::GetName(char* pName) const
 
 bool AMF_LSP_Pump::Busy()
 {
-    return IsPumping();
+    return busy_;
 }
 
 
@@ -197,6 +243,7 @@ int AMF_LSP_Pump::GetVolumeUl(double& volUl)
 {
     long value = 0;
     int ret = SendRecv(AMF_Command::Get_plunger_position, value);
+    ret = CheckStatus();
     if (ret != DEVICE_OK) {
         LogMessage("Could not get the current volume.");
         return ret;
@@ -233,7 +280,8 @@ int AMF_LSP_Pump::SetFlowrateUlPerSecond(double flowrate)
 {
     // Set flowrate
     // Withdraw/dispense is controlled by different commands. Flowrate stays positive.
-    long value = VolumeToSteps(abs(flowrate));
+    long value = FlowrateToPulses((abs(flowrate)));
+    LogMessage(std::string("Setting flowrate to: " + std::to_string(value)));
     int ret = SendRecv(AMF_Command::Set_flowrate, value);
     if (ret != DEVICE_OK) {
         LogMessage("Could not set flowrate.");
@@ -247,14 +295,16 @@ int AMF_LSP_Pump::SetFlowrateUlPerSecond(double flowrate)
         return ret;
     }
     // Make sure flowrate has correct sign.
-    flowrateUlperSecond_ = (flowrate > 0) ? StepsToVolume(value) : -StepsToVolume(value);
+    flowrateUlperSecond_ = (flowrate > 0) ?
+        PulsesToFlowrate(value) : -PulsesToFlowrate(value);
+    LogMessage("Actual flowrate: " + std::to_string(flowrateUlperSecond_));
     return ret;
 }
 
 int AMF_LSP_Pump::Start()
 {
     if (IsPumping()) { return DEVICE_PUMP_IS_RUNNING; }
-    long position = (flowrateUlperSecond_ < 0) ? nSteps_ : 0;
+    long position = (flowrateUlperSecond_ < 0) ? AMF_LSP_N_STEPS : 0;
     return MovePlunger(position);
 }
 
@@ -325,41 +375,20 @@ int AMF_LSP_Pump::OnHome(MM::PropertyBase* pProp, MM::ActionType eAct)
     return ret;
 }
 
-int AMF_LSP_Pump::OnNSteps(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    int ret = DEVICE_OK;
-    switch (eAct) {
-    case MM::AfterSet: {
-        if (IsPumping()) { return DEVICE_PUMP_IS_RUNNING; }
-
-        long nSteps = 0;
-        pProp->Get(nSteps);
-        ret = SetNSteps(nSteps);
-        if (DEVICE_OK != ret) { return ret; }
-        ret = GetNSteps(nSteps_);
-        if (DEVICE_OK != ret) { return ret; }
-        stepVolumeUl_ = maxVolumeUl_ / nSteps_;
-        break;
-    }
-    case MM::BeforeGet:
-        pProp->Set(nSteps_);
-        break;
-    }
-    return ret;
-}
-
 int AMF_LSP_Pump::OnMaxVolume(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     switch (eAct) {
     case MM::AfterSet: {
         long value = 0;
         pProp->Get(value);
-        maxVolumeUl_ = value;
+        maxVolumeUl_ = (double)value;
         break;
     }
-    case MM::BeforeGet:
-        pProp->Set(maxVolumeUl_);
+    case MM::BeforeGet: {
+        long value = (long)maxVolumeUl_;
+        pProp->Set(value);
         break;
+    }
     }
     return DEVICE_OK;
 }
@@ -413,11 +442,67 @@ int AMF_LSP_Pump::OnRun(MM::PropertyBase* pProp, MM::ActionType eAct)
         else if (value == 0 and run_ == 1) {
             ret = Stop();
         }
-        run_ = value;
+
+        if (DEVICE_OK == ret) {
+			run_ = value;
+        }
         break;
     }
     case MM::BeforeGet: {
         pProp->Set(run_);
+        break;
+    }
+    }
+    return ret;
+}
+
+int AMF_LSP_Pump::OnPumpType(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    switch (eAct) {
+    case MM::AfterSet:
+        pProp->Get(pumpType_);
+        break;
+    case MM::BeforeGet:
+        pProp->Set(pumpType_.c_str());
+        break;
+    }
+    return DEVICE_OK;
+}
+
+int AMF_LSP_Pump::OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    int ret = DEVICE_OK;
+    switch (eAct) {
+    case MM::AfterSet: {
+        long value = 0;
+        pProp->Get(value);
+        ret = SetAcceleration(value);
+        break;
+    }
+    case MM::BeforeGet: {
+        long value = 0;
+        ret = GetAcceleration(value);
+        pProp->Set(value);
+        break;
+    }
+    }
+    return ret;
+}
+
+int AMF_LSP_Pump::OnDeceleration(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    int ret = DEVICE_OK;
+    switch (eAct) {
+    case MM::AfterSet: {
+        long value = 0;
+        pProp->Get(value);
+        ret = SetDeceleration(value);
+        break;
+    }
+    case MM::BeforeGet: {
+        long value = 0;
+        ret = GetDeceleration(value);
+        pProp->Set(value);
         break;
     }
     }
@@ -440,18 +525,44 @@ int AMF_LSP_Pump::SendRecv(AMF_Command cmd, long& value)
     }
 
     std::string answer = "";
-    ret = GetSerialAnswer(port_.c_str(), AMF_TERM, answer);
+    ret = GetSerialAnswer(port_.c_str(), AMF_EOL, answer);
     if (ret != DEVICE_OK) {
         LogMessage("Could not receive response to serial command.");
         return DEVICE_SERIAL_INVALID_RESPONSE;
     }
 
-    ret = AMF_Parse_Status(answer[3]);
-    if (ret != DEVICE_OK) { return ret; }
-
-    if (answer.size() == 6) { return ret; }
-    value = std::stol(answer.substr(4, answer.size() - 3));
+    if (answer.size() == 5) {
+        value = 0;
+    }
+    else {
+		value = std::stol(answer.substr(3, answer.size() - 5));
+    }
     return DEVICE_OK;
+}
+
+int AMF_LSP_Pump::CheckStatus()
+{
+    // Check for error
+    long value = 0;
+    std::string cmd_string = AMF_get_command_string(address_, AMF_Command::Get_pump_status, value);
+    int ret = SendSerialCommand(port_.c_str(), cmd_string.c_str(), AMF_TERM);
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not send status check of pump.");
+        return DEVICE_SERIAL_COMMAND_FAILED;
+    }
+
+    std::string status = "";
+    ret = GetSerialAnswer(port_.c_str(), AMF_EOL, status);
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not receive status of pump.");
+        return DEVICE_SERIAL_INVALID_RESPONSE;
+    }
+
+    int status_val = std::stol(status.substr(3, status.size() - 5));
+    if (255 == status_val) { isPumping_ = true; }
+    else if (0 == status_val) { isPumping_ = false; }
+    else { return DEVICE_ERR + 10000; }
+	return DEVICE_OK;
 }
 
 double AMF_LSP_Pump::StepsToVolume(int steps)
@@ -464,42 +575,75 @@ int AMF_LSP_Pump::VolumeToSteps(double volume)
     return (int)(volume / stepVolumeUl_);
 }
 
+double AMF_LSP_Pump::PulsesToFlowrate(int pulses)
+{
+    if ("Standard" == pumpType_) {
+        return pulses * AMF_LSP_SPEED_STEP_STANDARD * maxVolumeUl_ / 3000;
+    }
+	return pulses * AMF_LSP_SPEED_STEP_HD * maxVolumeUl_ / 3000;
+}
+
+int AMF_LSP_Pump::FlowrateToPulses(double flowrate)
+{
+    if ("Standard" == pumpType_) {
+        return (int)(3000.0 * flowrate / (AMF_LSP_SPEED_STEP_STANDARD * maxVolumeUl_));
+    }
+    return (int)(3000.0 * flowrate / (AMF_LSP_SPEED_STEP_HD * maxVolumeUl_));
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //  AMF_LSP_Pump class
 //  Utility methods
 ///////////////////////////////////////////////////////////////////////////////
 
 
+bool AMF_LSP_Pump::IsHomed()
+{
+    long value = 0;
+    int ret = SendRecv(AMF_Command::Is_initialized, value);
+    ret = CheckStatus();
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not determine whether pump is homed.");
+        return ret;
+    }
+    return (value == 0) ? false : true;
+}
+
+
 bool AMF_LSP_Pump::IsPumping()
 {
     long value = 0;
-    int ret = SendRecv(AMF_Command::Get_pump_info, value);
+    int ret = SendRecv(AMF_Command::Get_pump_status, value);
+    ret = CheckStatus();
     if (ret != DEVICE_OK) {
         LogMessage("Could not get pump info.");
         return ret;
     }
-    return (value == 0) ? false : true;
+    return (value == 255);
 }
 
 int AMF_LSP_Pump::GetAddress(long& address)
 {
     long value = 0;
     int ret = SendRecv(AMF_Command::Get_address, value);
+    address = value;
+    ret = CheckStatus();
     if (ret != DEVICE_OK) {
         LogMessage("Could not obtain the device address.");
         return ret;
     }  
-    address = value;
     return ret;
 }
 
 int AMF_LSP_Pump::MovePlunger(long position)
 {
+    LogMessage("Set plunger position to: " + std::to_string(position));
     if (position < 0 || position > nSteps_) {
         LogMessage("Plunger position outside of range. Please check remaining volume in pump.");
         return DEVICE_INVALID_INPUT_PARAM;
     }
     int ret = SendRecv(AMF_Command::Move_plunger_absolute, position);
+    ret = CheckStatus();
     if (ret != DEVICE_OK) {
         LogMessage("Could not start the pump.");
     }
@@ -510,11 +654,38 @@ int AMF_LSP_Pump::GetNSteps(long& nSteps)
 {
     long value = 0;
     int ret = SendRecv(AMF_Command::Get_n_steps, value);
+    ret = CheckStatus();
     if (DEVICE_OK != ret) {
         LogMessage("Could not get number of steps");
         return ret;
     }
-    nSteps = (value == 0) ? 3000 : 24000;
+    nSteps = (value == 0) ? 3000 : AMF_LSP_N_STEPS;
+    return ret;
+}
+
+int AMF_LSP_Pump::GetAcceleration(long& acc)
+{
+    long value = 0;
+    int ret = SendRecv(AMF_Command::Get_acceleration, value);
+    ret = CheckStatus();
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not get the acceleration.");
+        return ret;
+    }
+    acc = value;
+    return ret;
+}
+
+int AMF_LSP_Pump::GetDeceleration(long& decel)
+{
+    long value = 0;
+    int ret = SendRecv(AMF_Command::Get_deceleration, value);
+    ret = CheckStatus();
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not get the deceleration.");
+        return ret;
+    }
+    decel = value;
     return ret;
 }
 
@@ -522,8 +693,33 @@ int AMF_LSP_Pump::SetNSteps(long nSteps)
 {
     long value = (nSteps == 3000) ? 0 : 1;
 	int ret = SendRecv(AMF_Command::Set_n_steps, value);
+    ret = CheckStatus();
 	if (ret != DEVICE_OK) {
 		LogMessage("Could not change stepsize");
 	}
+    return ret;
+}
+
+int AMF_LSP_Pump::SetAcceleration(long acc)
+{
+    int ret = SendRecv(AMF_Command::Set_acceleration, acc);
+    ret = CheckStatus();
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not set acceleration.");
+        return ret;
+    }
+    acceleration_ = acc;
+    return ret;
+}
+
+int AMF_LSP_Pump::SetDeceleration(long decel)
+{
+    int ret = SendRecv(AMF_Command::Set_deceleration, decel);
+    ret = CheckStatus();
+    if (DEVICE_OK != ret) {
+        LogMessage("Could not set the deceleration.");
+        return ret;
+    }
+    deceleration_ = decel;
     return ret;
 }

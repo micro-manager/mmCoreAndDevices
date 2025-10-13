@@ -68,31 +68,43 @@ public:
 
     // Action Handlers
     int OnHome(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnNSteps(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnMaxVolume(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnCurrentVolume(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnFlowrate(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnRun(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnPumpType(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnDeceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     // Utility methods (internal use only)
     int SendRecv(AMF_Command cmd, long& value);
+    int CheckStatus();
     double StepsToVolume(int steps);
     int VolumeToSteps(double volume);
+    double PulsesToFlowrate(int pulses);
+    int FlowrateToPulses(double flowrate);
 
     // AMF commands
     bool IsPumping();
+    bool IsHomed();
     int MovePlunger(long position);
     int GetAddress(long& address);
     int GetNSteps(long& nSteps);
+    int GetAcceleration(long& acc);
+    int GetDeceleration(long& decel);
     int SetNSteps(long nSteps);
+    int SetAcceleration(long acc);
+    int SetDeceleration(long decel);
 
     // Communication class variables
     bool initialized_;
-    bool busy_;
+    bool busy_ = false;
+    bool isPumping_ = false;
     std::string port_;
     long address_ = -1;
     std::string name_;
+    std::string pumpType_ = "Standard";
 
     // Pump state class variables
     bool isHomed_ = false;
@@ -101,8 +113,12 @@ private:
     double volumeUl_ = 0;
     double stepVolumeUl_ = 0;
     double flowrateUlperSecond_ = 0;
+    double pulseVolumeUl_ = 0;
+    double maxFlowrate_ = 0;
     int currStep_ = 0;
-    long nSteps_ = 3000;
+    long nSteps_ = 24000;
     long run_ = 0;
+    long acceleration_ = 0;
+    long deceleration_ = 0;
 };
 #endif // _AMF_LSP_PUMP_H_
