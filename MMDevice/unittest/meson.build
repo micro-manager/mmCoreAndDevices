@@ -14,6 +14,7 @@ mmdevice_test_sources = files(
     'FloatPropertyTruncation-Tests.cpp',
     'MMTime-Tests.cpp',
     'RegisteredDeviceCollection-Tests.cpp',
+    'XYStageStepsUm-Tests.cpp',
 )
 
 mmdevice_test_exe = executable(
