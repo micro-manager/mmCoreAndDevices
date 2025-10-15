@@ -4,11 +4,6 @@
 
 const char* g_AFShutterName = "CephlaAFShutter";
 
-extern const int MCU_PINS_AF_LASER;
-extern const uint8_t CMD_LENGTH;
-extern const int CMD_SET_PIN_LEVEL;
-
-
 SquidAFShutter::SquidAFShutter() :
    initialized_ (false),
    name_(g_AFShutterName),
