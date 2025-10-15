@@ -8,9 +8,9 @@
 //                
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes, Paris, France
 //
-// YEAR:          2024
+// YEAR:          2025
 //                
-// VERSION:       0.1
+// VERSION:       1.0
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -23,7 +23,7 @@
 //                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    26.02.2024 LK
+//LAST UPDATE:    15.10.2025 LK
 
 #ifndef _AMF_RVM_H_
 #define _AMF_RVM_H_

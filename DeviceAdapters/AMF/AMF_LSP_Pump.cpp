@@ -9,7 +9,7 @@
 //
 // YEAR:          2025
 //                
-// VERSION:       0.1
+// VERSION:       1.0
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -22,7 +22,7 @@
 //                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    04.04.2025 LK
+//LAST UPDATE:    10.15.2025 LK
 
 
 #include "AMF_Commands.h"

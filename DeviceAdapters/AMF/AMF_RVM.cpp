@@ -8,9 +8,9 @@
 //                
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes, Paris, France
 //
-// YEAR:          2024
+// YEAR:          2025
 //                
-// VERSION:       0.1
+// VERSION:       1.0
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -23,7 +23,7 @@
 //                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    26.02.2024 LK
+//LAST UPDATE:    15.10.2025 LK
 
 #include "AMF_RVM.h" // Should be first, otherwise winsock.h is loaded before boost asio tries to load winsock.h
 #include "AMF_Commands.h"
@@ -120,8 +120,8 @@ int AMF_RVM::Initialize()
     if (DEVICE_OK != ret) { return ret; }
     LogMessage(("Number of positions: " + to_string(nPos_)).c_str());
     if (nPos_ != temp) {
-        LogMessage("Provided number of ports does not correspond to the number of ports\n" +
-            std::string("by the pump. Please enter the correct number of ports."));
+        LogMessage("Provided number of ports (" + std::to_string(nPos_) + ") does not correspond to the number of ports\n" +
+            std::string("by the pump (" + std::to_string(temp) + "). Please enter the correct number of ports."));
         return DEVICE_INVALID_PROPERTY_VALUE;
     }
 
