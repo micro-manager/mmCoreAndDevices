@@ -14,9 +14,12 @@
 
 extern const char* g_HubDeviceName;
 extern const char* g_ShutterName;
+extern const char* g_AFShutterName;
 extern const char* g_XYStageName;
 extern const char* g_ZStageName;
 extern const char* g_DAName;
+
+const uint8_t CMD_LENGTH = 8;
 
 const unsigned char CMD_MOVE_X = 0;
 const unsigned char CMD_MOVE_Y = 1;
@@ -58,6 +61,8 @@ const int ILLUMINATION_SOURCE_LED_ARRAY_LEFTB_RIGHTR = 3;
 const int ILLUMINATION_SOURCE_LED_ARRAY_LOW_NA = 4;
 const int ILLUMINATION_SOURCE_LED_ARRAY_LEFT_DOT = 5;
 const int ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_DOT = 6;
+
+const int MCU_PINS_AF_LASER = 15;
 
 const unsigned char AXIS_X = 0;
 const unsigned char AXIS_Y = 1;
@@ -200,6 +205,33 @@ private:
    uint8_t cmdNr_;
 };
 
+class SquidAFShutter : public CShutterBase<SquidAFShutter>
+{
+public:
+   SquidAFShutter();
+   ~SquidAFShutter();
+
+   int Initialize();
+   int Shutdown();
+
+   void GetName(char* pszName) const;
+   bool Busy();
+
+   // Shutter API
+   int SetOpen(bool open = true);
+   int GetOpen(bool& open);
+   int Fire(double deltaT);
+
+   // action interface
+   int OnOnOff(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   SquidHub* hub_;
+   bool initialized_;
+   std::string name_;
+   MM::MMTime changedTime_;
+   bool isOpen_;
+};
 
 class SquidXYStage : public CXYStageBase<SquidXYStage>
 {

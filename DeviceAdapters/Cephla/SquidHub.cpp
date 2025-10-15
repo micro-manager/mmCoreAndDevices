@@ -21,6 +21,7 @@ MODULE_API void InitializeModuleData()
 {
    RegisterDevice(g_HubDeviceName, MM::HubDevice, g_HubDeviceName);
    RegisterDevice(g_ShutterName, MM::ShutterDevice, "Light-Control");
+   RegisterDevice(g_AFShutterName, MM::ShutterDevice, "AutofocusLight");
    RegisterDevice(g_XYStageName, MM::XYStageDevice, "XY-Stage");
    RegisterDevice(g_ZStageName, MM::StageDevice, "Z-Stage");
    for (int i = 1; i < 9; i++)
@@ -42,6 +43,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if (strcmp(deviceName, g_ShutterName) == 0)
    {
       return new SquidShutter();
+   }
+   else if (strcmp(deviceName, g_AFShutterName) == 0)
+   {
+      return new SquidAFShutter();
    }
    else if (strcmp(deviceName, g_XYStageName) == 0)
    {
@@ -199,6 +204,7 @@ int SquidHub::DetectInstalledDevices()
       std::vector<std::string> peripherals;
       peripherals.clear();
       peripherals.push_back(g_ShutterName);
+      peripherals.push_back(g_AFShutterName);
       peripherals.push_back(g_XYStageName);
       peripherals.push_back(g_ZStageName);
       for (int i = 1; i < 9; i++)

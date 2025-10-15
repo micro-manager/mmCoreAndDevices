@@ -210,10 +210,6 @@ int SquidShutter::Initialize()
 
    SetOpen(isOpen_);  // we can not read the state from the device, at least get it in sync with us
 
-   //ret = UpdateStatus();
-   //if (ret != DEVICE_OK)
-   //   return ret;
-
    changedTime_ = GetCurrentMMTime();
    initialized_ = true;
 
