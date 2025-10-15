@@ -50,9 +50,6 @@ int SquidAFShutter::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
-   // set shutter into the off state
-   //WriteToPort(0);
-
    std::vector<std::string> vals;
    vals.push_back("0");
    vals.push_back("1");
@@ -93,7 +90,7 @@ int SquidAFShutter::GetOpen(bool& open)
    return DEVICE_OK;
 }
 
-int SquidAFShutter::Fire(double deltaT)
+int SquidAFShutter::Fire(double)
 {
    return DEVICE_UNSUPPORTED_COMMAND;
 }
