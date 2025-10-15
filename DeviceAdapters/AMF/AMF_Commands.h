@@ -158,6 +158,7 @@ namespace {
         case AMF_Command::Move_plunger_dispense:
             cmd_string += "D" + std::to_string(value) + "R";
             break;
+        case AMF_Command::Set_acceleration:
             cmd_string += "L" + std::to_string(value) + "R";
             break;
         case AMF_Command::Set_deceleration:

@@ -28,6 +28,8 @@
 #define _AMF_LSP_HUB_H_
 
 #include "DeviceBase.h"
+#include "AMF_LSP_Pump.h"
+#include "AMF_RVM.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // AMF LSP Hub

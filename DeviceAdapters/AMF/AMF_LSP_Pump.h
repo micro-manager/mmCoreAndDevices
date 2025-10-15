@@ -98,12 +98,12 @@ private:
     int SetDeceleration(long decel);
 
     // Communication class variables
-    bool initialized_;
+    bool initialized_ = false;
     bool busy_ = false;
     bool isPumping_ = false;
-    std::string port_;
+    std::string port_ = "";
     long address_ = -1;
-    std::string name_;
+    std::string name_ = "";
     std::string pumpType_ = "Standard";
 
     // Pump state class variables

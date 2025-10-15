@@ -54,8 +54,7 @@ int AMF_LSP_N_STEPS = 24000;
 //  Device adapter for AMF LSP pumps.
 ///////////////////////////////////////////////////////////////////////////////
 
-AMF_LSP_Pump::AMF_LSP_Pump() :
-    initialized_(false)
+AMF_LSP_Pump::AMF_LSP_Pump()
 {
     // parent ID display
     CreateHubIDProperty();
@@ -278,6 +277,11 @@ int AMF_LSP_Pump::GetFlowrateUlPerSecond(double& flowrate)
 
 int AMF_LSP_Pump::SetFlowrateUlPerSecond(double flowrate)
 {
+    isPumping_ = IsPumping();
+    if (isPumping_) {
+        Stop();
+    }
+
     // Set flowrate
     // Withdraw/dispense is controlled by different commands. Flowrate stays positive.
     long value = FlowrateToPulses((abs(flowrate)));
@@ -298,6 +302,10 @@ int AMF_LSP_Pump::SetFlowrateUlPerSecond(double flowrate)
     flowrateUlperSecond_ = (flowrate > 0) ?
         PulsesToFlowrate(value) : -PulsesToFlowrate(value);
     LogMessage("Actual flowrate: " + std::to_string(flowrateUlperSecond_));
+
+    if (isPumping_) {
+        Start();
+    }
     return ret;
 }
 
