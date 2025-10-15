@@ -231,7 +231,6 @@ private:
    std::string name_;
    MM::MMTime changedTime_;
    bool isOpen_;
-   uint8_t cmdNr_;
 };
 
 class SquidXYStage : public CXYStageBase<SquidXYStage>
