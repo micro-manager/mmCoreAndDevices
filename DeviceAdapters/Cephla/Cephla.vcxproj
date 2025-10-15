@@ -92,6 +92,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="SquidAFShutter.cpp" />
     <ClCompile Include="SquidDA.cpp" />
     <ClCompile Include="SquidShutter.cpp" />
     <ClCompile Include="SquidMonitoringThread.cpp" />
