@@ -82,6 +82,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AutoFocus.cpp" />
     <ClCompile Include="DAGalvo.cpp" />
     <ClCompile Include="SerialDTRShutter.cpp" />
     <ClCompile Include="AutoFocusStage.cpp" />

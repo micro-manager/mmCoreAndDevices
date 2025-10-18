@@ -119,4 +119,32 @@ int AutoFocus::Initialize()
    AddAllowedValue("Algorithm", "Standard");
 
 
+   initialized_ = true;
+   return DEVICE_OK;
+
+ }
+
+int AutoFocus::OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet) {
+      pProp->Set(shutter_.c_str());
+   }
+   else if (eAct == MM::AfterSet) {
+      pProp->Get(shutter_);
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet) {
+      pProp->Set(camera_.c_str());
+   }
+   else if (eAct == MM::AfterSet) {
+      pProp->Get(camera_);
+   }
+   return DEVICE_OK;
+}
+
+
 

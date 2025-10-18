@@ -86,7 +86,7 @@ int AutoFocusStage::Initialize()
       defaultAutoFocus = availableAutoFocusDevices_[0];
    CreateProperty("AutoFocus Device", defaultAutoFocus.c_str(), MM::String, false, pAct, false);
    if (availableAutoFocusDevices_.size() >= 1)
-      SetAllowedValues("AutoFocus Device", availableAutoFocusDevices_);
+      SetAllowedValues("AutoFocus Device", availableAutoFocusDevices_);d
    else
       return ERR_NO_AUTOFOCUS_DEVICE_FOUND;
 
