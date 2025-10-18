@@ -916,5 +916,56 @@ private:
    bool initialized_;
 };
 
+/**
+ * Hardware-based autofocus device that uses a shutter (to 
+  * switch IR light source on/off) and a camera to determine
+  * the location/size of the reflection spot.  Since images
+  * will be read out snap by snap, this will not be 
+  * extremely fast, but more a proof of concept.
+  * Multiples algorithms can be used to determine the
+  * location of the best focus.
+  */
+class AutoFocus : public CAutoFocusBase<AutoFocus>
+{
+   public:
+      AutoFocus();
+      ~AutoFocus();
+      // Device API
+      // ----------
+      int Initialize();
+      int Shutdown();
+      void GetName(char* name) const;
+      bool Busy();
+      // AutoFocus API
+      // -------------
+      int SetContinuousFocusing(bool on);
+      int GetContinuousFocusing(bool& on);
+      bool IsContinuousFocusLocked();
+      int FullFocus();
+      int IncrementalFocus();
+      int GetLastFocusScore(double& score) = 0;
+      int GetCurrentFocusScore(double& score) = 0;
+      int SetOffset(double offset);
+      int GetOffset(double& offset);
+
+      // action interface
+      int OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnCamera(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+      int SnapAndAnalyze();
+      int AnalyzeImage(int algorithm, double& score, double& x, double& y);
+      std::vector<std::string> availableShutters_;
+      std::string shutter_;
+      std::vector<std::string> availableCameras_;
+      std::string camera_;
+      bool initialized_;
+      bool continuousFocusing_;
+      double offset_;
+      int algorithm_;
+      ImgBuffer img_;
+};
+
 
 #endif //_UTILITIES_H_
