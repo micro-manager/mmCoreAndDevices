@@ -55,6 +55,7 @@ const char* g_DeviceNameMultiDAStateDevice = "Multi DA State Device";
 const char* g_DeviceNameAutoFocusStage = "AutoFocus Stage";
 const char* g_DeviceNameStateDeviceShutter = "State Device Shutter";
 const char* g_DeviceNameSerialDTRShutter = "Serial port DTR Shutter";
+const char* g_DeviceNameAutofocus = "AutoFocus";
 
 const char* g_PropertyMinUm = "Stage Low Position(um)";
 const char* g_PropertyMaxUm = "Stage High Position(um)";
@@ -90,6 +91,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DeviceNameStateDeviceShutter, MM::ShutterDevice, "State device used as a shutter");
    RegisterDevice(g_DeviceNamePropertyShutter, MM::ShutterDevice, "Any device property used as a shutter");
    RegisterDevice(g_DeviceNameSerialDTRShutter, MM::ShutterDevice, "Serial port DTR used as a shutter");
+   RegisterDevice(g_DeviceNameAutofocus, MM::AutoFocusDevice, "Hardware-based autofocus using a camera and a shutter");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)                  
@@ -129,6 +131,8 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       return new PropertyShutter();
    } else if (strcmp(deviceName, g_DeviceNameSerialDTRShutter) == 0) {
       return new SerialDTRShutter();
+   } else if (strcmp(deviceName, g_DeviceNameAutofocus) == 0) {
+      return new AutoFocus();
    }
 
    return 0;

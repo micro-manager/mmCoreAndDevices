@@ -30,6 +30,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <opencv2/opencv.hpp>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -941,10 +942,10 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
       int SetContinuousFocusing(bool on);
       int GetContinuousFocusing(bool& on);
       bool IsContinuousFocusLocked();
-      int FullFocus();
+      int FullFocus(); 
       int IncrementalFocus();
-      int GetLastFocusScore(double& score) = 0;
-      int GetCurrentFocusScore(double& score) = 0;
+      int GetLastFocusScore(double& score);
+      int GetCurrentFocusScore(double& score);
       int SetOffset(double offset);
       int GetOffset(double& offset);
 
@@ -952,10 +953,18 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
       int OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnCamera(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct);
+      /*
+      int OnROIX(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnROIY(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnROIWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnROIHeight(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
+      */
 
 private:
       int SnapAndAnalyze();
-      int AnalyzeImage(int algorithm, double& score, double& x, double& y);
+      cv::Mat GetImageFromBuffer();
+      int AnalyzeImage(cv::Mat, double& score, double& x, double& y);
       std::vector<std::string> availableShutters_;
       std::string shutter_;
       std::vector<std::string> availableCameras_;
@@ -963,7 +972,7 @@ private:
       bool initialized_;
       bool continuousFocusing_;
       double offset_;
-      int algorithm_;
+      std::string algorithm_;
       ImgBuffer img_;
 };
 

@@ -29,15 +29,17 @@
 #endif
 
 #include "Utilities.h"
+#include <opencv2/opencv.hpp>
+
+const char* g_Camera = "Camera";
+const char* g_Alg = "Algorithm";
+const char* g_Alg_Standard = "Standard";
 
 AutoFocus::AutoFocus() :
    initialized_(false),
    continuousFocusing_(false),
    offset_(0.0),
-   workingDistance_(0.0),
-   maxStepSizeUm_(10.0),
-   stepSizeUm_(1.0),
-   algorithm_(0)
+   algorithm_(g_Alg_Standard)
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_NO_PHYSICAL_CAMERA, "No physical camera found.  Please select a valid camera in the Camera property.");
@@ -55,6 +57,14 @@ AutoFocus::~AutoFocus()
 {
    if (initialized_)
       Shutdown();
+}
+
+int AutoFocus::Shutdown()
+{
+   if (!initialized_)
+      return DEVICE_OK;
+   initialized_ = false;
+   return DEVICE_OK;
 }
 
 void AutoFocus::GetName(char* name) const
@@ -105,18 +115,18 @@ int AutoFocus::Initialize()
    std::string defaultCamera = "Undefined";
    if (availableCameras_.size() >= 1)
       defaultCamera = availableCameras_[0];
-   CreateProperty("Camera", defaultCamera.c_str(), MM::String, false, pAct, false);
+   CreateProperty(g_Camera, defaultCamera.c_str(), MM::String, false, pAct, false);
    if (availableCameras_.size() >= 1)
-      SetAllowedValues("Camera", availableCameras_);
+      SetAllowedValues(g_Camera, availableCameras_);
    else
       return ERR_NO_PHYSICAL_CAMERA;
    // This is needed, otherwise Camera_ is not always set resulting in crashes
    // This could lead to strange problems if multiple camera devices are loaded
-   SetProperty("Camera", defaultCamera.c_str());
+   SetProperty(g_Camera, defaultCamera.c_str());
 
    pAct = new CPropertyAction(this, &AutoFocus::OnAlgorithm);
-   CreateProperty("Algorithm", "", MM::String, false, pAct);
-   AddAllowedValue("Algorithm", "Standard");
+   CreateProperty(g_Alg, g_Alg_Standard, MM::String, false, pAct);
+   AddAllowedValue(g_Alg, g_Alg_Standard);
 
 
    initialized_ = true;
@@ -146,5 +156,174 @@ int AutoFocus::OnCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int AutoFocus::OnAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet) {
+      pProp->Set(algorithm_.c_str());
+   }
+   else if (eAct == MM::AfterSet) {
+      pProp->Get(algorithm_);
+   }
+   return DEVICE_OK;
+}
+
+bool AutoFocus::Busy()
+{
+   return false;
+}
+
+int AutoFocus::SetContinuousFocusing(bool on)
+{
+   continuousFocusing_ = on;
+   return DEVICE_OK;
+}
+
+int AutoFocus::GetContinuousFocusing(bool& on)
+{
+   on = continuousFocusing_;
+   return DEVICE_OK;
+}
+
+bool AutoFocus::IsContinuousFocusLocked()
+{
+   return false;
+}
+
+int AutoFocus::SetOffset(double offset)
+{
+   offset_ = offset;
+   return DEVICE_OK;
+}
+
+int AutoFocus::GetOffset(double& offset)
+{
+   offset = offset_;
+   return DEVICE_OK;
+}
+
+int AutoFocus::FullFocus()
+{
+   return SnapAndAnalyze();
+}
+
+int AutoFocus::IncrementalFocus()
+{
+   return SnapAndAnalyze();
+}
+
+int AutoFocus::GetLastFocusScore(double& score)
+{
+   //return AnalyzeImage(algorithm_ == g_Alg_Standard ? 0 : 0, score, score, score);
+   return DEVICE_ERR;
+}
+
+int AutoFocus::GetCurrentFocusScore(double& score)
+{
+   //return AnalyzeImage(algorithm_ == g_Alg_Standard ? 0 : 0, score, score, score);
+   return DEVICE_ERR;
+}
+
+int AutoFocus::SnapAndAnalyze()
+{
+   // Get shutter device
+   MM::Shutter* shutter = static_cast<MM::Shutter*>(GetDevice(shutter_.c_str()));
+   if (shutter == nullptr)
+      return ERR_NO_SHUTTER_DEVICE_FOUND;
+   // Get camera device
+   MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+   if (camera == nullptr)
+      return ERR_NO_PHYSICAL_CAMERA;
+
+   // Close shutter to block IR light
+   shutter->SetOpen(false);
+   CDeviceUtils::SleepMs(10); // wait for shutter to close
+   // Snap image with shutter closed
+   camera->SnapImage();
+   // TODO: take dark image only once
+   cv::Mat darkImage = GetImageFromBuffer();
+
+   shutter->SetOpen(true);
+   CDeviceUtils::SleepMs(10); // wait for shutter to open
+   // Snap image with shutter open
+   camera->SnapImage();
+   cv::Mat lightImage = GetImageFromBuffer();
+
+   cv::Mat resultImage;
+
+   // Subtract image2 from image1
+   cv::subtract(lightImage, darkImage, resultImage);
+
+   double scoreOpen;
+   double xOpen, yOpen;
+   AnalyzeImage(resultImage, scoreOpen, xOpen, yOpen);
+
+   // Here we would implement the logic to adjust focus based on scores
+   // For now, we just return OK
+   return DEVICE_OK;
+}
+
+cv::Mat AutoFocus::GetImageFromBuffer()
+{
+   // Get camera device
+   MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+   if (camera == nullptr)
+      return cv::Mat();
+   // Get image buffer
+   const unsigned int width = camera->GetImageWidth();
+   const unsigned int height = camera->GetImageHeight();
+   const unsigned int bpp = camera->GetImageBytesPerPixel();
+   const unsigned char* imgBuffer = camera->GetImageBuffer();
+   if (imgBuffer == nullptr || width == 0 || height == 0)
+      return cv::Mat();
+   cv::Mat image(height, width, CV_16UC3, (void *) imgBuffer);
+   return image;
+}
+
+int AutoFocus::AnalyzeImage(cv::Mat image, double& score, double& x, double& y)
+{
+   // convert grayscale to binary image
+   cv::Mat thr;
+   cv::threshold(image, thr, 100, 65000, cv::THRESH_BINARY);
+
+   // find moments of the image
+   cv::Moments m = moments(thr, true);
+   cv::Point p(m.m10 / m.m00, m.m01 / m.m00);
+
+   // coordinates of centroid
+   std::ostringstream os;
+   os << p.x << p.y ;
+   this->LogMessage(os.str().c_str());
+   
+
+/*
+   // Simple analysis: compute center of mass as focus point
+   double sumX = 0.0;
+   double sumY = 0.0;
+   double sumIntensity = 0.0;
+   for (unsigned int yPos = 0; yPos < height; ++yPos)
+   {
+      for (unsigned int xPos = 0; xPos < width; ++xPos)
+      {
+         unsigned char intensity = imgBuffer[yPos * width + xPos];
+         sumX += xPos * intensity;
+         sumY += yPos * intensity;
+         sumIntensity += intensity;
+      }
+   }
+   if (sumIntensity > 0)
+   {
+      x = sumX / sumIntensity;
+      y = sumY / sumIntensity;
+      score = sumIntensity / (width * height); // average intensity as score
+   }
+   else
+   {
+      x = 0.0;
+      y = 0.0;
+      score = 0.0;
+   }
+   */
+   return DEVICE_OK;
+}
 
 
