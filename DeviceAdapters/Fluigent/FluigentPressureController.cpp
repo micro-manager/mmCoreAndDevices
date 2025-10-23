@@ -22,7 +22,7 @@
 //                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    08.04.2025 LK
+//LAST UPDATE:    15.10.2025 LK
 
 #include "FluigentPressureController.h"
 
@@ -37,9 +37,6 @@
 
 const char* g_FluigentChannelName = "FluigentChannel";
 const char* g_FluigentHubName = "FluigentHub";
-const char* g_Calibrate = "Calibrate";
-const char* g_Imposed = "Imposed Pressure";
-const char* g_Measured = "Measured Pressure";
 
 ///////////////////////////////////////////////////////////////////////////////
 //  MMDevice API
@@ -92,8 +89,10 @@ FluigentHub::FluigentHub() :
 
 FluigentHub::~FluigentHub()
 {
-    if (initialized_)
+    if (initialized_) {
         fgt_close();
+    }
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -291,12 +290,12 @@ int FluigentChannel::Initialize()
     // Imposed pressure
     GetPressureLimits(Pmin_, Pmax_);
     CPropertyAction* pAct = new CPropertyAction(this, &FluigentChannel::OnImposedPressure);
-    ret = CreateFloatProperty("Imposed Pressure", 0, false, pAct);
-    SetPropertyLimits("Imposed Pressure", Pmin_, Pmax_);
+    ret = CreateFloatProperty(MM::g_Keyword_Pressure_Imposed, 0, false, pAct);
+    SetPropertyLimits(MM::g_Keyword_Pressure_Imposed, Pmin_, Pmax_);
 
     // Measured pressure
     pAct = new CPropertyAction(this, &FluigentChannel::OnMeasuredPressure);
-    ret = CreateFloatProperty("Measured Pressure", 0, true, pAct);
+    ret = CreateFloatProperty(MM::g_Keyword_Pressure_Measured, 0, true, pAct);
     return ret;
 }
 
