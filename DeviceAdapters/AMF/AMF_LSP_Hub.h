@@ -1,15 +1,15 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          AMF_Hub.h
+// FILE:          AMF_LSP.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Hub for AMF Devices
+// DESCRIPTION:   Hub for AMF LSP pump.
 //                 
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes, Paris, France
 //
 // YEAR:          2025
 //                
-// VERSION:       0.1
+// VERSION:       1.0
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -22,21 +22,23 @@
 //                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    04.04.2025 LK
+//LAST UPDATE:    15.10.2025 LK
 
-#ifndef _AMF_HUB_H_
-#define _AMF_HUB_H_
+#ifndef _AMF_LSP_HUB_H_
+#define _AMF_LSP_HUB_H_
 
 #include "DeviceBase.h"
+#include "AMF_LSP_Pump.h"
+#include "AMF_RVM.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-// AMF Hub API
+// AMF LSP Hub
 ///////////////////////////////////////////////////////////////////////////////
 
-class AMF_Hub : public HubBase<AMF_Hub> {
+class AMF_LSP_Hub : public HubBase<AMF_LSP_Hub> {
 public:
-	AMF_Hub();
-	~AMF_Hub() {}
+	AMF_LSP_Hub();
+	~AMF_LSP_Hub() {}
 
 	// Device API
 	int Initialize();
@@ -48,13 +50,15 @@ public:
 	int DetectInstalledDevices();
 
 	// Action Handlers
-	int OnRVMCount(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnLSPCount(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnPort(MM::PropertyBase* pAct, MM::ActionType eAct);
 
+	// AMF LSP API
+	int GetPort(std::string& port);
+	
 private:
 	bool initialized_ = false;
-	long nRVM_ = 0;
-	long nLSP_ = 0;
+	std::string port_;
 };
 
-#endif // _AMF_HUB_H_
+
+#endif // _AMF_LSP_HUB_H_
