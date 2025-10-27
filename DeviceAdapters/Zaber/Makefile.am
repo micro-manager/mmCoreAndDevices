@@ -1,4 +1,4 @@
-AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) $(ZML_CPPFLAGS)
+AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) $(ZML_CPPFLAGS) -std=c++17
 
 deviceadapter_LTLIBRARIES = libmmgr_dal_Zaber.la
 libmmgr_dal_Zaber_la_SOURCES = \

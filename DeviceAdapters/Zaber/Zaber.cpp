@@ -160,7 +160,7 @@ void ZaberBase::resetConnection() {
 		// the connection destructor can throw in the rarest occasions
 		connection_ = nullptr;
 	}
-	catch (const zmlbase::MotionLibException e)
+	catch (const zmlexc::MotionLibException e)
 	{
 	}
 }
@@ -425,17 +425,17 @@ int ZaberBase::handleException(std::function<void()> wrapped) {
 		wrapped();
 		return DEVICE_OK;
 	}
-	catch (const zmlbase::ConnectionFailedException e) {
+	catch (const zmlexc::ConnectionFailedException e) {
 		core_->LogMessage(device_, e.what(), true);
 		resetConnection();
 		return DEVICE_NOT_CONNECTED;
 	}
-	catch (const zmlbase::ConnectionClosedException e) {
+	catch (const zmlexc::ConnectionClosedException e) {
 		core_->LogMessage(device_, e.what(), true);
 		resetConnection();
 		return DEVICE_NOT_CONNECTED;
 	}
-	catch (const zmlbase::CommandFailedException e) {
+	catch (const zmlexc::CommandFailedException e) {
 		core_->LogMessage(device_, e.what(), true);
 		auto reason = e.getDetails().getResponseData();
 		if (reason == "BADCOMMAND") {
@@ -452,19 +452,19 @@ int ZaberBase::handleException(std::function<void()> wrapped) {
 		}
 		return ERR_COMMAND_REJECTED;
 	}
-	catch (const zmlbase::RequestTimeoutException e) {
+	catch (const zmlexc::RequestTimeoutException e) {
 		core_->LogMessage(device_, e.what(), true);
 		return DEVICE_NOT_CONNECTED;
 	}
-	catch (const zmlbase::MovementFailedException e) {
+	catch (const zmlexc::MovementFailedException e) {
 		core_->LogMessage(device_, e.what(), true);
 		return ERR_MOVEMENT_FAILED;
 	}
-	catch (const zmlbase::InvalidOperationException e) {
+	catch (const zmlexc::InvalidOperationException e) {
 		core_->LogMessage(device_, e.what(), true);
 		return ERR_INVALID_OPERATION;
 	}
-	catch (const zmlbase::MotionLibException e) {
+	catch (const zmlexc::MotionLibException e) {
 		core_->LogMessage(device_, e.what(), true);
 		return DEVICE_ERR;
 	}
