@@ -18,7 +18,7 @@ std::shared_ptr<zml::Connection> ConnectionManager::getConnection(std::string po
 		std::regex parser("^share:\\/\\/([^:\\/]+)(:\\d+)?(\\/.*)?$", std::regex_constants::ECMAScript);
 		std::smatch partMatch;
 		if (!std::regex_match(port, partMatch, parser)) {
-			throw zmlbase::InvalidArgumentException("Invalid network share connection string: " + port);
+			throw zmlexc::InvalidArgumentException("Invalid network share connection string: " + port);
 		}
 
 		std::string host = partMatch[1].str();
@@ -37,7 +37,7 @@ std::shared_ptr<zml::Connection> ConnectionManager::getConnection(std::string po
 	}
 
 	auto id = connection->getInterfaceId();
-	connection->getDisconnected().subscribe([=, this](std::shared_ptr<zmlbase::MotionLibException>) {
+	connection->setDisconnectedCallback([this, port, id](std::shared_ptr<zmlexc::MotionLibException>) {
 		removeConnection(port, id);
 	});
 	connections_[port] = connection;
