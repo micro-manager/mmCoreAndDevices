@@ -1474,6 +1474,7 @@ namespace MM {
       /**
        * \brief   Creates a new dataset
        *
+       * \param   handle Unique dataset handle assigned by MMCore
        * \param   path The path where the dataset will be created (parent directory)
        * \param   name The name of the dataset (may be modified by the implementation to avoid overwriting existing datasets)
        * \param   numberOfDimensions Number of dimensions in the dataset
@@ -1481,7 +1482,6 @@ namespace MM {
        * \param   pixType The data type for pixel storage
        * \param   meta Dataset metadata string
        * \param   metaLength length of the metadata
-       * \param   [out] handle Output parameter for the dataset handle
        * \return  Status code indicating success or failure
        *
        * \note    - Dimensions are ordered from slowest changing to fastest changing.
@@ -1489,8 +1489,8 @@ namespace MM {
        *          - Some implementation may allow non-image data to be stored
        *          - Declared size for the slowest (first) dimension can be exceeded during acquisition
        */
-      virtual int Create(const char* path, const char* name, int numberOfDimensions, const int shape[],
-                         MM::StorageDataType pixType, const char* meta, int metaLength, int* handle) = 0;
+      virtual int Create(int handle, const char* path, const char* name, int numberOfDimensions, const int shape[],
+                         MM::StorageDataType pixType, const char* meta, int metaLength) = 0;
 
       /**
        * \brief   Retrieves the filesystem path of an opened dataset
@@ -1567,11 +1567,11 @@ namespace MM {
        * \details Loaded datasets are immutable and cannot accept new images.
        *          Implementation may use lazy loading for efficiency.
        *
+       * \param   handle Unique dataset handle assigned by MMCore
        * \param   path Path to the dataset
-       * \param   [out] handle Output parameter for the dataset handle
        * \return  Status code indicating success or failure
        */
-      virtual int Load(const char* path, int* handle) = 0;
+      virtual int Load(int handle, const char* path) = 0;
 
       /**
        * \brief   Checks if the device can load a dataset at the specified path

@@ -36,10 +36,8 @@
 /**
  * Default class constructor
  */
-G2SBigTiffStorage::G2SBigTiffStorage() : initialized(false), handleCounter(-1)
+G2SBigTiffStorage::G2SBigTiffStorage()
 {
-   supportedFormats = { "g2s" };
-
    InitializeDefaultErrorMessages();
 
    // set device specific error messages
@@ -139,6 +137,7 @@ int G2SBigTiffStorage::Shutdown() noexcept
  * Dataset storage descriptor will open a file handle, to close a file handle call Close()
  * Dataset storage descriptor will reside in device driver cache
  * If the file already exists this method will fail with 'DEVICE_DUPLICATE_PROPERTY' status code
+ * @param handle
  * @param path Absolute file path (TIFF file)
  * @param name Dataset name
  * @param numberOfDimensions Number of dimensions
@@ -146,10 +145,9 @@ int G2SBigTiffStorage::Shutdown() noexcept
  * @param pixType Pixel format
  * @param meta Metadata
  * @param metaLength length of the metadata string
- * @param handle [out]
  * @return Status code
  */
-int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, int* handle) noexcept
+int G2SBigTiffStorage::Create(int handle, const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength) noexcept
 {
    if(path == nullptr)
       return ERR_TIFF_INVALID_PATH;
@@ -157,8 +155,8 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 		return ERR_TIFF_INVALID_DIMENSIONS;
 	if(!(pixType == MM::StorageDataType::StorageDataType_GRAY16 || pixType == MM::StorageDataType::StorageDataType_GRAY8 || pixType == MM::StorageDataType::StorageDataType_RGB32)) 
 		return ERR_TIFF_INVALID_PIXEL_TYPE;
-	if(shape == nullptr || handle == nullptr)
-		return DEVICE_INVALID_INPUT_PARAM;
+   if (shape == nullptr)
+      return DEVICE_INVALID_INPUT_PARAM;
 
 	try
 	{
@@ -180,9 +178,6 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 			dsname += ".g2s";
 		std::filesystem::path saveRoot = std::filesystem::u8path(path);
 		std::filesystem::path dsName = saveRoot / dsname;
-	
-		// Create dataset storage descriptor
-		*handle = ++handleCounter;
   
 		// Create a file on disk and store the file handle
 		auto fhandle = new G2SBigTiffDataset();
@@ -230,7 +225,7 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 			std::vector<std::uint32_t> vshape;
 			vshape.assign(shape, shape + numberOfDimensions);
 			fhandle->setUID(guid);
-			fhandle->setHandle(*handle);
+			fhandle->setHandle(handle);
 			fhandle->setShape(vshape);
 			std::string metadataStr(meta, metaLength);
 			fhandle->setMetadata(metadataStr);
@@ -251,18 +246,18 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
 		}
 
 		// Append dataset storage descriptor to cache
-		auto it = cache.insert(std::make_pair(*handle, sdesc));
+		auto it = cache.insert({ handle, sdesc });
 		if(it.first == cache.end())
 		{
 			delete fhandle;
-			LogMessage("Adding BigTIFF dataset to cache failed. Path: " + dsName.u8string() + ", handle: " + std::to_string(*handle));
+			LogMessage("Adding BigTIFF dataset to cache failed. Path: " + dsName.u8string() + ", handle: " + std::to_string(handle));
 			return ERR_TIFF_CACHE_INSERT;
 		}
 		if(!it.second)
 		{
 			// Dataset already exists
 			delete fhandle;
-			LogMessage("Adding BigTIFF dataset to cache failed. Path: " + dsName.u8string() + ", handle: " + std::to_string(*handle));
+			LogMessage("Adding BigTIFF dataset to cache failed. Path: " + dsName.u8string() + ", handle: " + std::to_string(handle));
 			return ERR_TIFF_CACHE_INSERT;
 		}
 
@@ -281,13 +276,13 @@ int G2SBigTiffStorage::Create(const char* path, const char* name, int numberOfDi
  * Dataset storage descriptor will open a file handle, to close a file handle call Close()
  * Dataset storage descriptor will reside in device driver cache
  * @param path Absolute file path (TIFF file) / Absolute dataset folder path
+ * @param handle
  * @param name Dataset name
- * @param handle Entry GUID [out]
  * @return Status code
  */
-int G2SBigTiffStorage::Load(const char* path, int* handle) noexcept
+int G2SBigTiffStorage::Load(int handle, const char* path) noexcept
 {
-   if(path == nullptr || handle == nullptr)
+   if(path == nullptr)
       return DEVICE_INVALID_INPUT_PARAM;
 
 	try
@@ -393,7 +388,7 @@ int G2SBigTiffStorage::Load(const char* path, int* handle) noexcept
 			G2SStorageEntry sdesc(std::filesystem::absolute(actpath).u8string());
 			sdesc.FileHandle = fhandle;
 
-			auto it = cache.insert(std::make_pair(++handleCounter, sdesc));
+			auto it = cache.insert({ handle, sdesc });
 			if(it.first == cache.end())
 			{
 				delete fhandle;
@@ -401,8 +396,6 @@ int G2SBigTiffStorage::Load(const char* path, int* handle) noexcept
 				return DEVICE_OUT_OF_MEMORY;
 			}
 		}
-
-		*handle = handleCounter;
 		return DEVICE_OK;
 	}
 	catch(std::exception& e)

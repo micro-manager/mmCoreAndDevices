@@ -47,11 +47,11 @@ public:
 
    // Storage API
    // -----------
-   int Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, int* handle);
+   int Create(int handle, const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength);
    int ConfigureDimension(int handle, int dimension, const char* name, const char* meaning);
    int ConfigureCoordinate(int handle, int dimension, int coordinate, const char* name);
    int Close(int handle);
-   int Load(const char* path, int* handle);
+   int Load(int handle, const char* path);
    int GetShape(int handle, int shape[]);
    int GetDataType(int handle, MM::StorageDataType& pixelDataType) { return dataType; }
 
@@ -83,7 +83,8 @@ private:
    MM::StorageDataType dataType;
    std::vector<int> currentCoordinate;
    int currentImageNumber;
-   int streamHandle;
+   bool datasetIsOpen = false; // May be redundant with zarrStream != nullptr
+   int theHandle = -1; // Only one dataset/handle supported at a time
    std::string getErrorMessage(int code);
    void destroyStream();
    int ConvertToZarrType(MM::StorageDataType type);

@@ -55,12 +55,12 @@ public:
    //=========================================================================================================================
    // Public interface - Storage API
    //=========================================================================================================================
-   int                                             Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType,
-                                                          const char* meta, int metaLength, int* handle) noexcept;
+   int                                             Create(int handle, const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType,
+                                                          const char* meta, int metaLength) noexcept;
    int                                             ConfigureDimension(int handle, int dimension, const char* name, const char* meaning) noexcept;
    int                                             ConfigureCoordinate(int handle, int dimension, int coordinate, const char* name) noexcept;
    int                                             Close(int handle) noexcept;
-   int                                             Load(const char* path, int* handle) noexcept;
+   int                                             Load(int handle, const char* path) noexcept;
    int                                             GetShape(int handle, int shape[]) noexcept;
    int                                             GetDataType(int handle, MM::StorageDataType& pixelDataType) noexcept;
    int                                             Delete(int handle) noexcept;
@@ -96,8 +96,7 @@ private:
    //=========================================================================================================================
    // Data members
    //=========================================================================================================================
-   std::map<int, G2SStorageEntry>          cache;                                         ///< Storage entries cache
-   std::vector<std::string>                        supportedFormats;                      ///< Supported file formats
-   bool                                            initialized;                           ///< Is driver initialized
-   int                                             handleCounter;                         ///< generates a handle unique for the session
+   std::map<int, G2SStorageEntry>          cache;                                 ///< Storage entries cache
+   std::vector<std::string>                supportedFormats = { "g2s" };          ///< Supported file formats
+   bool                                    initialized = false;                   ///< Is driver initialized
 };

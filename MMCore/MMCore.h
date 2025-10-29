@@ -90,7 +90,6 @@ typedef unsigned char* STORAGEIMG;
 typedef unsigned short* STORAGEIMG16;
 typedef unsigned char* STORAGEIMGOUT;
 typedef unsigned char* STORAGEMETA;
-typedef std::pair<std::string, int> DatasetEntry; // string - device name, int - handle
 
 class CPluginManager;
 class CircularBuffer;
@@ -716,8 +715,10 @@ private:
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
    CircularBuffer* cbuf_;
-   std::map<int, DatasetEntry> openDatasets_;
-   int datasetHandleCounter_;
+
+   // Map open dataset handles to their storage devices
+   std::map<int, std::weak_ptr<StorageInstance>> openDatasetDevices_;
+   int nextDatasetHandle_ = 0;
 
    std::shared_ptr<CPluginManager> pluginManager_;
    std::shared_ptr<mm::DeviceManager> deviceManager_;
@@ -758,7 +759,10 @@ private:
    void initializeAllDevicesSerial() throw (CMMError);
    void initializeAllDevicesParallel() throw (CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
-   std::pair<std::shared_ptr<StorageInstance>, int> getStorageInstanceFromHandle(int coreHandle);
+   std::shared_ptr<StorageInstance> getStorageInstanceFromHandle(int handle);
+   int createDatasetImpl(std::shared_ptr<StorageInstance> pStorage, const char* path, const char* name,
+      const std::vector<long>& shape, MM::StorageDataType pixelType, const char* meta, int metaLength) throw (CMMError);
+   int loadDatasetImpl(std::shared_ptr<StorageInstance> pStorage, const char* path) throw (CMMError);
 };
 
 #if defined(__GNUC__) && !defined(__clang__)

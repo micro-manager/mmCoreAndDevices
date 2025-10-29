@@ -21,11 +21,11 @@
 
 #include "StorageInstance.h"
 
-int StorageInstance::Create(const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, int metaLength, int& handle)
+int StorageInstance::Create(int handle, const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, int metaLength)
 {
    RequireInitialized(__func__);
 
-   int ret = GetImpl()->Create(path, name, (int)shape.size(), &shape[0], pixType, meta, metaLength, &handle);
+   int ret = GetImpl()->Create(handle, path, name, (int)shape.size(), &shape[0], pixType, meta, metaLength);
    if (ret != DEVICE_OK)
       return ret;
    
@@ -53,11 +53,11 @@ int StorageInstance::Close(int handle)
    return GetImpl()->Close(handle);
 }
 
-int StorageInstance::Load(const char* path, int& handle)
+int StorageInstance::Load(int handle, const char* path)
 {
    RequireInitialized(__func__);
 
-   int ret = GetImpl()->Load(path, &handle);
+   int ret = GetImpl()->Load(handle, path);
    if (ret != DEVICE_OK)
       return ret;
    

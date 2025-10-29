@@ -36,12 +36,12 @@ public:
       mm::logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Storage>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger) {}
 
-   int Create(const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, int metaLength, int& handle);
+   int Create(int handle, const char* path, const char* name, const std::vector<int>& shape, MM::StorageDataType pixType, const char* meta, int metaLength);
    int ConfigureDimension(int handle, int dimension, const char* name, const char* meaning);
    int ConfigureCoordinate(int handle, int dimension, int coordinate, const char* name);
 	int GetPath(int handle, std::string& path);
    int Close(int handle);
-   int Load(const char* path, int& handle);
+   int Load(int handle, const char* path);
    int GetShape(int handle, std::vector<long>& shape);
    int GetPixelType(int handle, MM::StorageDataType& dataType);
    int Delete(int handle);

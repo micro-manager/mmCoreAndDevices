@@ -42,7 +42,7 @@ using namespace std;
 // Zarr storage
 
 AcqZarrStorage::AcqZarrStorage() :
-   initialized(false), zarrStream(nullptr), currentImageNumber(0), dataType(MM::StorageDataType_UNKNOWN), streamHandle(-1)
+   initialized(false), zarrStream(nullptr), currentImageNumber(0), dataType(MM::StorageDataType_UNKNOWN)
 {
    InitializeDefaultErrorMessages();
 
@@ -116,6 +116,7 @@ bool AcqZarrStorage::Busy()
 /**
  * Creates Zarr dataset
  * 
+ * \param handle - handle to the dataset.
  * \param path - parent directory of the dataset
  * \param name - name of the dataset (the actual name will follow the micro-manager convention for not overwriting)
  * \param numberOfDimensions - how many dimensions
@@ -123,12 +124,11 @@ bool AcqZarrStorage::Busy()
  * \param pixType - pixel type
  * \param meta - JSON encoded string representing "summary" metadata. Can be empty.
  * \param metaLength - length of the metadata
- * \param handle - handle to the dataset.
  * \return 
  */
-int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength, int* handle)
+int AcqZarrStorage::Create(int handle, const char* path, const char* name, int numberOfDimensions, const int shape[], MM::StorageDataType pixType, const char* meta, int metaLength)
 {
-   if (zarrStream)
+   if (zarrStream || datasetIsOpen)
    {
       LogMessage("Another stream is already open. Currently this device supports only one stream.");
       return ERR_ZARR_NUMDIMS;
@@ -277,13 +277,14 @@ int AcqZarrStorage::Create(const char* path, const char* name, int numberOfDimen
    }
 
    dataType = pixType;
-   streamHandle++;
    streamDimensions.clear();
    for (int i = 0; i < numberOfDimensions; i++) streamDimensions.push_back(shape[i]);
    // TODO: allow many streams
 
    currentImageNumber = 0;
-   *handle = streamHandle;
+
+   datasetIsOpen = true;
+   theHandle = handle;
 
    ZarrStreamSettings_destroy(settings);
 
@@ -309,7 +310,7 @@ int AcqZarrStorage::Close(int handle)
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_CLOSE;
    }
-   if (handle != streamHandle)
+   if (handle != theHandle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_CLOSE;
@@ -317,11 +318,13 @@ int AcqZarrStorage::Close(int handle)
 
    streamPath.clear();
    destroyStream();
+   datasetIsOpen = false;
+   theHandle = -1;
 
    return DEVICE_OK;
 }
 
-int AcqZarrStorage::Load(const char* path, int* handle)
+int AcqZarrStorage::Load(int handle, const char* path)
 {
    return DEVICE_NOT_YET_IMPLEMENTED;
 }
@@ -333,7 +336,7 @@ int AcqZarrStorage::GetShape(int handle, int shape[])
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_ACCESS;
    }
-   if (streamHandle != handle)
+   if (theHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -369,7 +372,7 @@ int AcqZarrStorage::AppendImage(int handle, int sizeInBytes, unsigned char* pixe
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_ACCESS;
    }
-   if (streamHandle != handle)
+   if (theHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -409,7 +412,7 @@ int AcqZarrStorage::GetSummaryMeta(int handle, char** meta)
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_ACCESS;
    }
-   if (streamHandle != handle)
+   if (theHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -429,7 +432,7 @@ int AcqZarrStorage::GetImageMeta(int handle, int coordinates[], int numCoordinat
       LogMessage("No stream is currently open.");
       return ERR_ZARR_STREAM_ACCESS;
    }
-   if (streamHandle != handle)
+   if (theHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -449,7 +452,7 @@ const unsigned char* AcqZarrStorage::GetImage(int handle, int coordinates[], int
       LogMessage("No stream is currently open.");
       return nullptr;
    }
-   if (streamHandle != handle)
+   if (theHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return nullptr;
@@ -460,7 +463,7 @@ const unsigned char* AcqZarrStorage::GetImage(int handle, int coordinates[], int
 
 int AcqZarrStorage::GetNumberOfDimensions(int handle, int& numDimensions)
 {
-   if (streamHandle != handle)
+   if (theHandle != handle)
    {
       LogMessage("Handle is not valid.");
       return ERR_ZARR_STREAM_ACCESS;
@@ -485,7 +488,7 @@ int AcqZarrStorage::GetImageCount(int handle, int& imgcount)
 
 bool AcqZarrStorage::IsOpen(int handle)
 {
-   if (streamHandle != handle)
+   if (theHandle != handle)
    {
       return false;
    }
@@ -534,9 +537,3 @@ int AcqZarrStorage::ConvertToZarrType(MM::StorageDataType type)
    }
    return (int)ztype;
 }
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Action handlers
-///////////////////////////////////////////////////////////////////////////////
-
