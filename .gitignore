@@ -20,6 +20,8 @@ tags
 ipch/
 .vs/
 .vscode/
+# Solution filters are sometimes handy but don't belong in official repo
+*.slnf
 
 # GNU build system
 *.cache
