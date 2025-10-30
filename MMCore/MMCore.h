@@ -717,7 +717,7 @@ private:
    CircularBuffer* cbuf_;
 
    // Map open dataset handles to their storage devices
-   std::map<int, std::weak_ptr<StorageInstance>> openDatasetDevices_;
+   std::map<int, std::weak_ptr<StorageInstance> > openDatasetDevices_;
    int nextDatasetHandle_ = 0;
 
    std::shared_ptr<CPluginManager> pluginManager_;
