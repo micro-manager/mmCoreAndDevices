@@ -674,9 +674,6 @@ public:
    void snapAndAppendToDataset(int handle, const std::vector<long>& coordinates, const char* imageMeta, int imageMetaLength) throw (CMMError);
    void appendNextToDataset(int handle, const std::vector<long>& coordinates, const char* imageMeta, int imageMetaLength) throw (CMMError);
    STORAGEIMGOUT appendAndGetNextToDataset(int handle, const std::vector<long>& coordinates, const char* imageMeta, int imageMetaLength) throw (CMMError);
-   void attachDatasetToCircularBuffer(int handle) throw (CMMError);
-   std::string getAttachedDataset();
-   std::string getLastAttachedDatasetError();
 
    ///@}
 

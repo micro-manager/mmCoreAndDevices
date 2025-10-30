@@ -8754,41 +8754,6 @@ STORAGEIMGOUT CMMCore::appendAndGetNextToDataset(int handle, const std::vector<l
    return const_cast<unsigned char*>(img->GetPixels()); // returns the image buffer
 }
 
-/**
- * Connects currently open dataset to circular buffer and streams images to disk.
- * All images currently in the buffer and entering the buffer in the future will be sent to the storage.
- * This remains in effect until the connection is canceled by calling the same function with the null or empty handle.
- * 
- * Metadata and coordinates are automatically generated, therefore images should be acquired in the order
- * specified in the shape.
- * 
- * If any error happens during the storage action, streaming to disk will stop, and the connection will be broken.
- * To check the status of the attached storage, use getAttachedStorage() and getLastAttachedStorageError();
- */
-void CMMCore::attachDatasetToCircularBuffer(int handle)  throw (CMMError)
-{
-   // TODO
-   throw CMMError("Feature not supported", MMERR_GENERIC);
-}
-
-/**
- * Return the handle for the currently attached dataset.
- * \return - storage handle, or empty string if no storage is attached
- */
-std::string CMMCore::getAttachedDataset()
-{
-   return std::string();
-}
-
-/**
- * Returns the last error that occured during background streaming.
- */
-std::string CMMCore::getLastAttachedDatasetError()
-{
-   // TODO:
-   return std::string();
-}
-
 std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const char* deviceLabel) throw (CMMError)
 {
    std::shared_ptr<HubInstance> pHub =
