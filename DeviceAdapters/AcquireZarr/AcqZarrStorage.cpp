@@ -24,7 +24,7 @@
 //                Chan Zuckerberg Initiative (CZI)
 // 
 ///////////////////////////////////////////////////////////////////////////////
-#include "G2SStorage.h"
+#include "AcqZarrAdapter.h"
 #include "AcqZarrStorage.h"
 #include "zarr.h"
 #include "nlohmann/json.hpp"

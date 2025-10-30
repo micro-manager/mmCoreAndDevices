@@ -1,12 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          G2SStorage.cpp
+// FILE:          AcqZarrAdapter.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Go2Scope devices. Includes the experimental StorageDevice
 //
-// AUTHOR:        Nenad Amodaj <nenad@go2scope.com>
-//						Milos Jovanovic <milos@tehnocad.rs>
+// AUTHORS:       Milos Jovanovic <milos@tehnocad.rs>
+//						Nenad Amodaj <nenad@go2scope.com>
 //
 // COPYRIGHT:     Nenad Amodaj, Chan Zuckerberg Initiative, 2024
 //
@@ -25,31 +25,24 @@
 //                Chan Zuckerberg Initiative (CZI)
 // 
 ///////////////////////////////////////////////////////////////////////////////
-#include "G2SStorage.h"
-#include "ModuleInterface.h"
-#include "G2SBigTiffStorage.h"
+#pragma once
+#include "MMDevice.h"
+#include "DeviceBase.h"
 
+//////////////////////////////////////////////////////////////////////////////
+// Error codes
+//
+//////////////////////////////////////////////////////////////////////////////
+#define ERR_INTERNAL                 144002
+#define ERR_FAILED_CREATING_FILE     144003
 
-///////////////////////////////////////////////////////////////////////////////
-// Exported MMDevice API
-///////////////////////////////////////////////////////////////////////////////
-MODULE_API void InitializeModuleData()
-{
-	RegisterDevice(g_BigTiffStorage, MM::StorageDevice, "BigTIFF storage based on Go2Scope");
-}
+#define ERR_ZARR                     140100
+#define ERR_ZARR_SETTINGS            140101
+#define ERR_ZARR_NUMDIMS             140102
+#define ERR_ZARR_STREAM_CREATE       140103
+#define ERR_ZARR_STREAM_CLOSE        140104
+#define ERR_ZARR_STREAM_LOAD         140105
+#define ERR_ZARR_STREAM_APPEND       140106
+#define ERR_ZARR_STREAM_ACCESS       140107
 
-MODULE_API MM::Device* CreateDevice(const char* deviceName)
-{
-   if(deviceName == 0)
-      return 0;
-
-	if(strcmp(deviceName, g_BigTiffStorage) == 0)
-		return new G2SBigTiffStorage();
-
-   return 0;
-}
-
-MODULE_API void DeleteDevice(MM::Device* pDevice)
-{
-   delete pDevice;
-}
+static const char* g_AcqZarrStorage = "AcquireZarrStorage";

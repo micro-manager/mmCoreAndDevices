@@ -215,7 +215,7 @@ int main(int argc, char** argv)
 		// Load storage driver
 		std::cout << "Loading storage driver..." << std::endl;
 		if(storageEngine == ENGINE_ZARR)
-			core.loadDevice("Store", "go2scope", "AcquireZarrStorage");
+			core.loadDevice("Store", "AcquireZarr", "AcquireZarrStorage");
 		else
 			core.loadDevice("Store", "go2scope", "G2SBigTiffStorage");
 

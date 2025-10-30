@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          G2SStorage.cpp
+// FILE:          AcqZarrAdapter.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -25,9 +25,9 @@
 //                Chan Zuckerberg Initiative (CZI)
 // 
 ///////////////////////////////////////////////////////////////////////////////
-#include "G2SStorage.h"
+#include "AcqZarrAdapter.h"
 #include "ModuleInterface.h"
-#include "G2SBigTiffStorage.h"
+#include "AcqZarrStorage.h"
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,7 +35,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 MODULE_API void InitializeModuleData()
 {
-	RegisterDevice(g_BigTiffStorage, MM::StorageDevice, "BigTIFF storage based on Go2Scope");
+   RegisterDevice(g_AcqZarrStorage, MM::StorageDevice, "Zarr storage based on Acquire");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -43,8 +43,8 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    if(deviceName == 0)
       return 0;
 
-	if(strcmp(deviceName, g_BigTiffStorage) == 0)
-		return new G2SBigTiffStorage();
+   if(strcmp(deviceName, g_AcqZarrStorage) == 0)
+		return new AcqZarrStorage();
 
    return 0;
 }

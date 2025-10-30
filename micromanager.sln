@@ -514,6 +514,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "G2SStorageTest", "Tests\G2S
 		{36571628-728C-4ACD-A47F-503BA91C5D43} = {36571628-728C-4ACD-A47F-503BA91C5D43}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AcquireZarr", "DeviceAdapters\AcquireZarr\AcquireZarr.vcxproj", "{293B79CE-124B-4323-A21A-E2DCC8994D52}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1536,6 +1538,10 @@ Global
 		{C87F7284-62EF-4331-9444-9951DB12A57A}.Debug|x64.Build.0 = Debug|x64
 		{C87F7284-62EF-4331-9444-9951DB12A57A}.Release|x64.ActiveCfg = Release|x64
 		{C87F7284-62EF-4331-9444-9951DB12A57A}.Release|x64.Build.0 = Release|x64
+		{293B79CE-124B-4323-A21A-E2DCC8994D52}.Debug|x64.ActiveCfg = Debug|x64
+		{293B79CE-124B-4323-A21A-E2DCC8994D52}.Debug|x64.Build.0 = Debug|x64
+		{293B79CE-124B-4323-A21A-E2DCC8994D52}.Release|x64.ActiveCfg = Release|x64
+		{293B79CE-124B-4323-A21A-E2DCC8994D52}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

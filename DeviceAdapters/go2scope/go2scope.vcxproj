@@ -61,7 +61,6 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\czi\acquire-zarr\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -69,8 +68,6 @@
       <SubSystem>Windows</SubSystem>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\CZI\acquire-zarr\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>acquire-zarr.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -83,7 +80,6 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\czi\acquire-zarr\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -93,8 +89,6 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\CZI\acquire-zarr\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>acquire-zarr.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -103,10 +97,8 @@
     <ClCompile Include="G2SBigTiffStorage.cpp" />
     <ClCompile Include="G2SBigTiffStream.cpp" />
     <ClCompile Include="G2SStorage.cpp" />
-    <ClCompile Include="AcqZarrStorage.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AcqZarrStorage.h" />
     <ClInclude Include="G2SBigTiffDataset.h" />
     <ClInclude Include="G2SBigTiffStorage.h" />
     <ClInclude Include="G2SBigTiffStream.h" />

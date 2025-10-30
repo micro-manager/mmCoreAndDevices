@@ -12,9 +12,6 @@
     <ClCompile Include="G2SStorage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AcqZarrStorage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="G2SBigTiffStorage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -29,9 +26,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AcqZarrStorage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="G2SStorage.h">
       <Filter>Header Files</Filter>
     </ClInclude>

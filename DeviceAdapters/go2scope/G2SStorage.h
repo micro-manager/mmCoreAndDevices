@@ -33,17 +33,7 @@
 // Error codes
 //
 //////////////////////////////////////////////////////////////////////////////
-#define ERR_PARAMETER_ERROR          144001
 #define ERR_INTERNAL						 144002
-#define ERR_FAILED_CREATING_FILE		 144003
-#define ERR_ZARR                     140100
-#define ERR_ZARR_SETTINGS            140101
-#define ERR_ZARR_NUMDIMS             140102
-#define ERR_ZARR_STREAM_CREATE       140103
-#define ERR_ZARR_STREAM_CLOSE        140104
-#define ERR_ZARR_STREAM_LOAD         140105
-#define ERR_ZARR_STREAM_APPEND       140106
-#define ERR_ZARR_STREAM_ACCESS       140107
 
 #define ERR_TIFF                     140500
 #define ERR_TIFF_STREAM_UNAVAILABLE  140501
@@ -72,8 +62,6 @@
 #define MAX_CACHE_SIZE					1024
 #define CACHE_HARD_LIMIT				0
 
-static const char* g_Go2Scope = "Go2Scope";
-static const char* g_AcqZarrStorage = "AcquireZarrStorage";
 static const char* g_BigTiffStorage = "G2SBigTiffStorage";
 
 /**
