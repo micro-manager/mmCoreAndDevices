@@ -2563,20 +2563,3 @@ class CPressurePumpBase : public CDeviceBase<MM::PressurePump, U>
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 };
-
-
-// _t, a macro for timing single lines.
-// This macros logs the text of the line, x, measures
-// the time it takes, and then logs that time.
-// Usage example:
-// _t( ex = GetExposure(); )
-
-
-#define _t(x) \
-   { \
-      LogMessage(#x, true); \
-      _start_time = GetCurrentMMTime(); \
-      x; \
-      _end_time = GetCurrentMMTime(); \
-      LogTimeDiff(_start_time,_end_time, true); \
-   }
