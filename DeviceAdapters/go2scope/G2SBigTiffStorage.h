@@ -80,6 +80,7 @@ public:
 	bool                                            IsReadOnly(int handle) noexcept;
    int                                             GetPath(int handle, char* path, int maxPathLength) noexcept;
 	bool															CanLoad(const char* path) noexcept;
+   void                                            ReleaseStringBuffer(char* buffer) { delete[] buffer; }
 
 protected:
    //=========================================================================================================================

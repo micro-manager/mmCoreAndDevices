@@ -71,7 +71,7 @@ public:
    int GetPath(int handle, char* path, int maxPathLength);
 	int SetCustomMetadata(int handle, const char* key, const char* content, int contentLength) { return DEVICE_UNSUPPORTED_COMMAND; }
 	int GetCustomMetadata(int handle, const char* key, char** content) { return DEVICE_UNSUPPORTED_COMMAND; }
-
+   void ReleaseStringBuffer(char* buffer) { delete[] buffer; }
 
    // action interface
    // ----------------
