@@ -1584,15 +1584,6 @@ namespace MM {
       virtual bool CanLoad(const char* path) = 0;
 
       /**
-       * \brief Gets the progress of the current operation
-       *
-       * \param handle Dataset handle
-       * \return Progress value (0-100), or -1 if idle or not implemented
-       * \note Assumes single operation execution at a time
-       */
-      virtual int GetProgress(int handle) = 0;
-
-      /**
        * \brief   Deletes a dataset
        *
        * \details The dataset is permanently removed from storage.

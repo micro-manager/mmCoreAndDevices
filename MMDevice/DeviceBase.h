@@ -2488,7 +2488,6 @@ class CStorageBase : public CDeviceBase<MM::Storage, U>
 {
 public:
    bool CanLoad(const char* /*path*/) { return false; }
-   int GetProgress(int /*handle*/) { return -1; }
    int Freeze(int /*handle*/) { return DEVICE_UNSUPPORTED_COMMAND; }
 };
 
