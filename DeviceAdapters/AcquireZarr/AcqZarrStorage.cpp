@@ -27,7 +27,6 @@
 #include "AcqZarrAdapter.h"
 #include "AcqZarrStorage.h"
 #include "zarr.h"
-#include "nlohmann/json.hpp"
 #include <random>
 #include <sstream>
 #include <iomanip>
