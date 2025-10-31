@@ -506,7 +506,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TeensyPulseGenerator", "Dev
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Elveflow", "DeviceAdapters\Elveflow\Elveflow.vcxproj", "{A4BA201A-BDA5-45F0-8F56-9CE8E1C81123}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Go2Scope", "DeviceAdapters\go2scope\go2scope.vcxproj", "{2916E620-1157-4154-8223-887D383E9DE6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Go2ScopeTmp", "DeviceAdapters\Go2ScopeTmp\Go2ScopeTmp.vcxproj", "{2916E620-1157-4154-8223-887D383E9DE6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "G2SStorageTest", "Tests\G2SStorageTest\G2SStorageTest.vcxproj", "{C87F7284-62EF-4331-9444-9951DB12A57A}"
 	ProjectSection(ProjectDependencies) = postProject
