@@ -11,9 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>Go2ScopeTmp</ProjectName>
+    <ProjectName>Go2Scope</ProjectName>
     <ProjectGuid>{2916e620-1157-4154-8223-887d383e9de6}</ProjectGuid>
-    <RootNamespace>Go2ScopeTmp</RootNamespace>
+    <RootNamespace>Go2Scope</RootNamespace>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>

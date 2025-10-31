@@ -217,7 +217,7 @@ int main(int argc, char** argv)
 		if(storageEngine == ENGINE_ZARR)
 			core.loadDevice("Store", "AcquireZarr", "AcquireZarrStorage");
 		else
-			core.loadDevice("Store", "Go2ScopeTmp", "G2SBigTiffStorage");
+			core.loadDevice("Store", "Go2Scope", "G2SBigTiffStorage");
 
 		// Load camera driver
 		if(selectedTest != TEST_READ)
