@@ -90,6 +90,9 @@ public:
     MicroscopeModel();
     ~MicroscopeModel();
 
+    // Gets current time in microseconds
+    static long long SteadyMicroseconds();
+
     // Device presence
     void SetDevicePresent(DeviceType type, bool present);
     bool IsDevicePresent(DeviceType type) const;

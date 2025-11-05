@@ -33,6 +33,14 @@ MicroscopeModel::~MicroscopeModel()
 {
 }
 
+long long MicroscopeModel::SteadyMicroseconds()
+{
+   using namespace std::chrono;
+   auto now = steady_clock::now().time_since_epoch();
+   auto usec = duration_cast<microseconds>(now);
+   return usec.count();
+}
+
 void MicroscopeModel::SetDevicePresent(DeviceType type, bool present)
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -50,7 +58,8 @@ void MicroscopeModel::SetPosition(DeviceType type, long position)
     std::lock_guard<std::mutex> lock(mutex_);
     auto& state = GetOrCreateState(type);
     state.currentPos = position;
-    state.lastUpdateTime = MM::MMTime(MM::MMTime::now());
+    GetCurrentTime();
+    state.lastUpdateTime = MM::MMTime::fromUs(SteadyMicroseconds());
 }
 
 long MicroscopeModel::GetPosition(DeviceType type) const
@@ -70,7 +79,7 @@ void MicroscopeModel::SetTargetPosition(DeviceType type, long position)
     std::lock_guard<std::mutex> lock(mutex_);
     auto& state = GetOrCreateState(type);
     state.targetPos = position;
-    state.lastRequestTime = MM::MMTime(MM::MMTime::now());
+    state.lastRequestTime = MM::MMTime::fromUs(SteadyMicroseconds());
 }
 
 long MicroscopeModel::GetTargetPosition(DeviceType type) const
