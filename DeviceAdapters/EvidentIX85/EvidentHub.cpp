@@ -50,6 +50,8 @@ EvidentHub::EvidentHub() :
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Device not available on this microscope");
     SetErrorText(ERR_POSITION_UNKNOWN, "Device position is unknown");
     SetErrorText(ERR_MONITOR_THREAD_FAILED, "Failed to start monitoring thread");
+    SetErrorText(ERR_PORT_NOT_SET, "Serial port not set");
+    SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, "Cannot change serial port after initialization");
 
     // Pre-initialization properties
     CPropertyAction* pAct = new CPropertyAction(this, &EvidentHub::OnPort);
