@@ -107,6 +107,9 @@ int EvidentHub::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
+    // Start monitoring thread
+    StartMonitoring();
+
     // Switch to remote mode
     ret = SetRemoteMode();
     if (ret != DEVICE_OK)
@@ -128,9 +131,6 @@ int EvidentHub::Initialize()
     ret = DoDeviceDetection();
     if (ret != DEVICE_OK)
        return ret;
-
-    // Start monitoring thread
-    StartMonitoring();
 
     initialized_ = true;
     return DEVICE_OK;
@@ -889,10 +889,8 @@ void EvidentHub::MonitorThreadFunc()
 
             if (!buffer.empty())
             {
-                std::string tag = ExtractTag(buffer);
-
                 // Determine if this is a notification or command response
-                if (IsNotificationTag(tag))
+                if (IsNotificationTag(buffer))
                 {
                     // This is a notification - process it
                     LogMessage(("Notification: " + buffer).c_str(), true);
@@ -922,22 +920,34 @@ void EvidentHub::MonitorThreadFunc()
     LogMessage("Monitor thread function exiting", true);
 }
 
-bool EvidentHub::IsNotificationTag(const std::string& tag) const
+bool EvidentHub::IsNotificationTag(const std::string& message) const
 {
-    // Notification tags are the ones that start with 'N' and are in the notify command list
-    return (tag == CMD_FOCUS_NOTIFY ||
-            tag == CMD_NOSEPIECE_NOTIFY ||
-            tag == CMD_MAGNIFICATION_NOTIFY ||
-            tag == CMD_CONDENSER_TURRET_NOTIFY ||
-            tag == CMD_DIA_APERTURE_NOTIFY ||
-            tag == CMD_DIA_ILLUMINATION_NOTIFY ||
-            tag == CMD_POLARIZER_NOTIFY ||
-            tag == CMD_DIC_RETARDATION_NOTIFY ||
-            tag == CMD_DIC_LOCALIZED_NOTIFY ||
-            tag == CMD_MIRROR_UNIT_NOTIFY1 ||
-            tag == CMD_MIRROR_UNIT_NOTIFY2 ||
-            tag == CMD_RIGHT_PORT_NOTIFY ||
-            tag == CMD_OFFSET_LENS_NOTIFY);
+    // Extract tag from the message
+    std::string tag = ExtractTag(message);
+
+    // Check if it's a known notification tag
+    bool isNotifyTag = (tag == CMD_FOCUS_NOTIFY ||
+                        tag == CMD_NOSEPIECE_NOTIFY ||
+                        tag == CMD_MAGNIFICATION_NOTIFY ||
+                        tag == CMD_CONDENSER_TURRET_NOTIFY ||
+                        tag == CMD_DIA_APERTURE_NOTIFY ||
+                        tag == CMD_DIA_ILLUMINATION_NOTIFY ||
+                        tag == CMD_POLARIZER_NOTIFY ||
+                        tag == CMD_DIC_RETARDATION_NOTIFY ||
+                        tag == CMD_DIC_LOCALIZED_NOTIFY ||
+                        tag == CMD_MIRROR_UNIT_NOTIFY1 ||
+                        tag == CMD_MIRROR_UNIT_NOTIFY2 ||
+                        tag == CMD_RIGHT_PORT_NOTIFY ||
+                        tag == CMD_OFFSET_LENS_NOTIFY);
+
+    if (!isNotifyTag)
+        return false;
+
+    // It's a notify tag, but is it an acknowledgment or actual notification?
+    // Acknowledgments: "NCA +", "NFP !"
+    // Notifications: "NCA 1", "NFP 3110"
+    // Only treat as notification if it's NOT an acknowledgment
+    return !IsPositiveAck(message, tag.c_str()) && !IsNegativeAck(message, tag.c_str());
 }
 
 void EvidentHub::ProcessNotification(const std::string& message)

@@ -101,7 +101,7 @@ private:
     void StopMonitoring();
     void MonitorThreadFunc();
     void ProcessNotification(const std::string& message);
-    bool IsNotificationTag(const std::string& tag) const;
+    bool IsNotificationTag(const std::string& message) const;
 
     // Member variables
     bool initialized_;
