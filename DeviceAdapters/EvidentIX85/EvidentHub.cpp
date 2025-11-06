@@ -52,7 +52,8 @@ EvidentHub::EvidentHub() :
     initialized_(false),
     port_(""),
     answerTimeoutMs_(ANSWER_TIMEOUT_MS),
-    stopMonitoring_(false)
+    stopMonitoring_(false),
+    responseReady_(false)
 {
     InitializeDefaultErrorMessages();
 
@@ -297,63 +298,16 @@ int EvidentHub::GetResponse(std::string& response, long timeoutMs)
     if (timeoutMs < 0)
         timeoutMs = answerTimeoutMs_;
 
-    response.clear();
-    char c;
-    std::string line;
-    MM::MMTime startTime = GetCurrentMMTime();
+    // Wait for the monitoring thread to provide a response
+    std::unique_lock<std::mutex> lock(responseMutex_);
+    responseReady_ = false;
 
-    while ((GetCurrentMMTime() - startTime) < MM::MMTime::fromMs(timeoutMs))
+    if (responseCV_.wait_for(lock, std::chrono::milliseconds(timeoutMs),
+        [this] { return responseReady_; }))
     {
-        unsigned long read;
-        int ret = ReadFromComPort(port_.c_str(), (unsigned char*)&c, 1, read);
-        if (ret != DEVICE_OK)
-            return ret;
-
-        if (read == 1)
-        {
-            if (c == '\n')  // End of line
-            {
-                // Remove trailing \r if present
-                if (!line.empty() && line.back() == '\r')
-                    line.pop_back();
-
-                if (!line.empty())
-                {
-                    // Check if this is a notification or a response
-                    std::string tag = ExtractTag(line);
-
-                    // Skip notifications - they should be handled by monitoring thread
-                    // Notifications have format: "NTAG data" (e.g., "NCA 1", "NFP 3110")
-                    // Responses have format: "TAG +" or "TAG !" or "TAG data"
-                    // We only skip notifications (starting with 'N' and containing data, not +/!)
-                    if (tag.length() > 0 && tag[0] == 'N' &&
-                        (tag == CMD_FOCUS_NOTIFY || tag == CMD_NOSEPIECE_NOTIFY ||
-                         tag == CMD_MAGNIFICATION_NOTIFY || tag == CMD_CONDENSER_TURRET_NOTIFY ||
-                         tag == CMD_DIA_APERTURE_NOTIFY || tag == CMD_DIA_ILLUMINATION_NOTIFY ||
-                         tag == CMD_POLARIZER_NOTIFY || tag == CMD_DIC_RETARDATION_NOTIFY ||
-                         tag == CMD_DIC_LOCALIZED_NOTIFY || tag == CMD_MIRROR_UNIT_NOTIFY1 ||
-                         tag == CMD_MIRROR_UNIT_NOTIFY2 || tag == CMD_RIGHT_PORT_NOTIFY ||
-                         tag == CMD_OFFSET_LENS_NOTIFY) &&
-                        !IsPositiveAck(line, tag.c_str()) && !IsNegativeAck(line, tag.c_str()))
-                    {
-                        // This is a notification (not an ack) - log it and continue reading
-                        LogMessage(("Skipping notification during command: " + line).c_str(), true);
-                        line.clear();
-                        continue;
-                    }
-
-                    response = line;
-                    LogMessage(("Received: " + response).c_str(), true);
-                    return DEVICE_OK;
-                }
-            }
-            else
-            {
-                line += c;
-            }
-        }
-
-        CDeviceUtils::SleepMs(1);
+        response = pendingResponse_;
+        LogMessage(("Received: " + response).c_str(), true);
+        return DEVICE_OK;
     }
 
     return ERR_COMMAND_TIMEOUT;
@@ -479,6 +433,7 @@ int EvidentHub::EnableNotification(const char* cmd, bool enable)
 {
     std::string command = BuildCommand(cmd, enable ? 1 : 0);
     std::string response;
+
     int ret = ExecuteCommand(command, response);
     if (ret != DEVICE_OK)
         return ret;
@@ -888,6 +843,14 @@ void EvidentHub::StopMonitoring()
         return;  // Not running
 
     stopMonitoring_ = true;
+
+    // Wake up any waiting command threads
+    {
+        std::lock_guard<std::mutex> lock(responseMutex_);
+        responseReady_ = false;
+    }
+    responseCV_.notify_all();
+
     monitorThread_.join();
 
     LogMessage("Monitoring thread stopped", true);
@@ -895,38 +858,29 @@ void EvidentHub::StopMonitoring()
 
 void EvidentHub::MonitorThreadFunc()
 {
-    // This function runs in a separate thread and monitors for
-    // active notifications from the microscope
+    // This thread is the SOLE reader from the serial port
+    // It routes messages to either:
+    // - Command thread (via condition variable) for responses
+    // - Processes directly for notifications
 
     LogMessage("Monitor thread function started", true);
 
-    const int pollIntervalMs = 10;
     std::string buffer;
 
     while (!stopMonitoring_.load())
     {
-        // Read entire messages while holding the lock to prevent
-        // interleaving with command-response sequences
+        // Read one byte at a time from serial port
         unsigned char byte;
         unsigned long read;
-        bool gotByte = false;
+        int ret = ReadFromComPort(port_.c_str(), &byte, 1, read);
 
+        if (ret != DEVICE_OK || read == 0)
         {
-            std::lock_guard<std::mutex> lock(commandMutex_);
-            int ret = ReadFromComPort(port_.c_str(), &byte, 1, read);
-            if (ret == DEVICE_OK && read == 1)
-            {
-                gotByte = true;
-            }
-        }
-
-        if (!gotByte)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(pollIntervalMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
 
-        // Process received byte
+        // Build message byte by byte
         if (byte == '\n')
         {
             // End of line - remove trailing \r if present
@@ -935,54 +889,26 @@ void EvidentHub::MonitorThreadFunc()
 
             if (!buffer.empty())
             {
-                // Parse notification
                 std::string tag = ExtractTag(buffer);
-                std::vector<std::string> params = ParseParameters(buffer);
 
-                LogMessage(("Notification: " + buffer).c_str(), true);
-
-                // Update model based on notification
-                if (tag == CMD_FOCUS_NOTIFY && params.size() > 0)
+                // Determine if this is a notification or command response
+                if (IsNotificationTag(tag))
                 {
-                    long pos = ParseLongParameter(params[0]);
-                    if (pos >= 0)
-                    {
-                        model_.SetPosition(DeviceType_Focus, pos);
-                        // Check if we've reached the target position
-                        long targetPos = model_.GetTargetPosition(DeviceType_Focus);
-                        if (targetPos >= 0 && pos == targetPos)
-                        {
-                            model_.SetBusy(DeviceType_Focus, false);
-                        }
-                    }
+                    // This is a notification - process it
+                    LogMessage(("Notification: " + buffer).c_str(), true);
+                    ProcessNotification(buffer);
                 }
-                else if (tag == CMD_NOSEPIECE_NOTIFY && params.size() > 0)
+                else
                 {
-                    int pos = ParseIntParameter(params[0]);
-                    if (pos >= 0)
+                    // This is a command response - pass to waiting command thread
+                    LogMessage(("Response (from monitor): " + buffer).c_str(), true);
                     {
-                        model_.SetPosition(DeviceType_Nosepiece, pos);
-                        // Check if we've reached the target position
-                        long targetPos = model_.GetTargetPosition(DeviceType_Nosepiece);
-                        if (targetPos >= 0 && pos == targetPos)
-                        {
-                            model_.SetBusy(DeviceType_Nosepiece, false);
-                        }
+                        std::lock_guard<std::mutex> lock(responseMutex_);
+                        pendingResponse_ = buffer;
+                        responseReady_ = true;
                     }
+                    responseCV_.notify_one();
                 }
-                else if (tag == CMD_MAGNIFICATION_NOTIFY && params.size() > 0)
-                {
-                    int pos = ParseIntParameter(params[0]);
-                    if (pos >= 0)
-                    {
-                       model_.SetPosition(DeviceType_Magnification, pos);
-                       const MM::Device* pDev = usedDevices_.find(DeviceType_Magnification)->second;
-                       if (pDev != 0) {
-                          GetCoreCallback()->OnPropertyChanged(pDev, "State", CDeviceUtils::ConvertToString(pos));
-                       }
-                    }
-                }
-                // Add more notification handlers as needed
 
                 buffer.clear();
             }
@@ -991,10 +917,76 @@ void EvidentHub::MonitorThreadFunc()
         {
             buffer += static_cast<char>(byte);
         }
-
-        // Small delay to avoid busy-waiting
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     LogMessage("Monitor thread function exiting", true);
+}
+
+bool EvidentHub::IsNotificationTag(const std::string& tag) const
+{
+    // Notification tags are the ones that start with 'N' and are in the notify command list
+    return (tag == CMD_FOCUS_NOTIFY ||
+            tag == CMD_NOSEPIECE_NOTIFY ||
+            tag == CMD_MAGNIFICATION_NOTIFY ||
+            tag == CMD_CONDENSER_TURRET_NOTIFY ||
+            tag == CMD_DIA_APERTURE_NOTIFY ||
+            tag == CMD_DIA_ILLUMINATION_NOTIFY ||
+            tag == CMD_POLARIZER_NOTIFY ||
+            tag == CMD_DIC_RETARDATION_NOTIFY ||
+            tag == CMD_DIC_LOCALIZED_NOTIFY ||
+            tag == CMD_MIRROR_UNIT_NOTIFY1 ||
+            tag == CMD_MIRROR_UNIT_NOTIFY2 ||
+            tag == CMD_RIGHT_PORT_NOTIFY ||
+            tag == CMD_OFFSET_LENS_NOTIFY);
+}
+
+void EvidentHub::ProcessNotification(const std::string& message)
+{
+    std::string tag = ExtractTag(message);
+    std::vector<std::string> params = ParseParameters(message);
+
+    // Update model based on notification
+    if (tag == CMD_FOCUS_NOTIFY && params.size() > 0)
+    {
+        long pos = ParseLongParameter(params[0]);
+        if (pos >= 0)
+        {
+            model_.SetPosition(DeviceType_Focus, pos);
+            // Check if we've reached the target position
+            long targetPos = model_.GetTargetPosition(DeviceType_Focus);
+            if (targetPos >= 0 && pos == targetPos)
+            {
+                model_.SetBusy(DeviceType_Focus, false);
+            }
+        }
+    }
+    else if (tag == CMD_NOSEPIECE_NOTIFY && params.size() > 0)
+    {
+        int pos = ParseIntParameter(params[0]);
+        if (pos >= 0)
+        {
+            model_.SetPosition(DeviceType_Nosepiece, pos);
+            // Check if we've reached the target position
+            long targetPos = model_.GetTargetPosition(DeviceType_Nosepiece);
+            if (targetPos >= 0 && pos == targetPos)
+            {
+                model_.SetBusy(DeviceType_Nosepiece, false);
+            }
+        }
+    }
+    else if (tag == CMD_MAGNIFICATION_NOTIFY && params.size() > 0)
+    {
+        int pos = ParseIntParameter(params[0]);
+        if (pos >= 0)
+        {
+            model_.SetPosition(DeviceType_Magnification, pos);
+            auto it = usedDevices_.find(DeviceType_Magnification);
+            if (it != usedDevices_.end() && it->second != nullptr)
+            {
+                GetCoreCallback()->OnPropertyChanged(it->second, "State",
+                    CDeviceUtils::ConvertToString(pos - 1));  // Convert to 0-based
+            }
+        }
+    }
+    // Add more notification handlers as needed
 }

@@ -29,6 +29,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <condition_variable>
 #include <string>
 #include <vector>
 
@@ -99,6 +100,8 @@ private:
     void StartMonitoring();
     void StopMonitoring();
     void MonitorThreadFunc();
+    void ProcessNotification(const std::string& message);
+    bool IsNotificationTag(const std::string& tag) const;
 
     // Member variables
     bool initialized_;
@@ -109,7 +112,13 @@ private:
     // Threading
     std::thread monitorThread_;
     std::atomic<bool> stopMonitoring_;
-    mutable std::mutex commandMutex_;  // Protects serial communication
+    mutable std::mutex commandMutex_;  // Protects command sending only
+
+    // Response handling (monitoring thread passes responses to command thread)
+    std::mutex responseMutex_;
+    std::condition_variable responseCV_;
+    std::string pendingResponse_;
+    bool responseReady_;
 
     // State
     std::string version_;
