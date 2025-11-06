@@ -30,18 +30,18 @@ using namespace EvidentIX85;
 extern const char* g_HubDeviceName;
 
 // Device names
-const char* g_FocusDeviceName = "EvidentIX85-Focus";
-const char* g_NosepieceDeviceName = "EvidentIX85-Nosepiece";
-const char* g_MagnificationDeviceName = "EvidentIX85-Magnification";
-const char* g_LightPathDeviceName = "EvidentIX85-LightPath";
-const char* g_CondenserTurretDeviceName = "EvidentIX85-CondenserTurret";
-const char* g_DIAShutterDeviceName = "EvidentIX85-DIAShutter";
-const char* g_EPIShutter1DeviceName = "EvidentIX85-EPIShutter1";
-const char* g_MirrorUnit1DeviceName = "EvidentIX85-MirrorUnit1";
-const char* g_PolarizerDeviceName = "EvidentIX85-Polarizer";
-const char* g_DICPrismDeviceName = "EvidentIX85-DICPrism";
-const char* g_EPINDDeviceName = "EvidentIX85-EPIND";
-const char* g_CorrectionCollarDeviceName = "EvidentIX85-CorrectionCollar";
+const char* g_FocusDeviceName = "IX85-Focus";
+const char* g_NosepieceDeviceName = "IX85-Nosepiece";
+const char* g_MagnificationDeviceName = "IX85-Magnification";
+const char* g_LightPathDeviceName = "IX85-LightPath";
+const char* g_CondenserTurretDeviceName = "IX85-CondenserTurret";
+const char* g_DIAShutterDeviceName = "IX85-DIAShutter";
+const char* g_EPIShutter1DeviceName = "IX85-EPIShutter1";
+const char* g_MirrorUnit1DeviceName = "IX85-MirrorUnit1";
+const char* g_PolarizerDeviceName = "IX85-Polarizer";
+const char* g_DICPrismDeviceName = "IX85-DICPrism";
+const char* g_EPINDDeviceName = "IX85-EPIND";
+const char* g_CorrectionCollarDeviceName = "IX85-CorrectionCollar";
 
 ///////////////////////////////////////////////////////////////////////////////
 // MODULE_API - Exported MMDevice interface
@@ -521,6 +521,9 @@ int EvidentNosepiece::EnableNotifications(bool enable)
 // EvidentMagnification - Magnification Changer Implementation
 ///////////////////////////////////////////////////////////////////////////////
 
+// Static magnification values
+const double EvidentMagnification::magnifications_[3] = {1.0, 1.6, 2.0};
+
 EvidentMagnification::EvidentMagnification() :
     initialized_(false),
     name_(g_MagnificationDeviceName),
@@ -556,24 +559,19 @@ int EvidentMagnification::Initialize()
 
     numPos_ = hub->GetModel()->GetNumPositions(DeviceType_Magnification);
 
-    // Create properties
-    CPropertyAction* pAct = new CPropertyAction(this, &EvidentMagnification::OnState);
-    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, true, pAct);
+    // Create magnification property (read-only)
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentMagnification::OnMagnification);
+    int ret = CreateProperty(MM::g_Keyword_Magnification, "1.0", MM::Float, true, pAct);
     if (ret != DEVICE_OK)
         return ret;
 
-    SetPropertyLimits(MM::g_Keyword_State, 0, numPos_ - 1);
-
-    // Create label property
-    pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
-    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, true, pAct);
-    if (ret != DEVICE_OK)
-        return ret;
-
-    // Define labels (1x, 1.6x, 2x)
-    SetPositionLabel(0, "1x");
-    SetPositionLabel(1, "1.6x");
-    SetPositionLabel(2, "2x");
+    // Set allowed values
+    for (unsigned int i = 0; i < numPos_; i++)
+    {
+        std::ostringstream os;
+        os << magnifications_[i];
+        AddAllowedValue(MM::g_Keyword_Magnification, os.str().c_str());
+    }
 
     hub->RegisterDeviceAsUsed(DeviceType_Magnification, this);
 
@@ -606,29 +604,30 @@ bool EvidentMagnification::Busy()
     return hub->GetModel()->IsBusy(DeviceType_Magnification);
 }
 
-unsigned long EvidentMagnification::GetNumberOfPositions() const
+double EvidentMagnification::GetMagnification() const
 {
-    return numPos_;
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return 1.0;
+
+    long pos = hub->GetModel()->GetPosition(DeviceType_Magnification);
+    if (pos < 1 || pos > static_cast<long>(numPos_))
+        return 1.0;
+
+    // pos is 1-based, array is 0-based
+    return magnifications_[pos - 1];
 }
 
-int EvidentMagnification::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentMagnification::OnMagnification(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
     {
-        EvidentHub* hub = GetHub();
-        if (!hub)
-            return DEVICE_ERR;
-
-        long pos = hub->GetModel()->GetPosition(DeviceType_Magnification);
-        if (pos < 0)
-            return ERR_POSITION_UNKNOWN;
-
-        // Convert from 1-based to 0-based
-        pProp->Set(pos - 1);
+        double mag = GetMagnification();
+        pProp->Set(mag);
     }
     else if (eAct == MM::AfterSet)
     {
-       // nothing to do, this is a read-only property
+        // Read-only - nothing to do
     }
     return DEVICE_OK;
 }

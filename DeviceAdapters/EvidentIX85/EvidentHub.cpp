@@ -994,8 +994,13 @@ void EvidentHub::ProcessNotification(const std::string& message)
             auto it = usedDevices_.find(DeviceType_Magnification);
             if (it != usedDevices_.end() && it->second != nullptr)
             {
-                GetCoreCallback()->OnPropertyChanged(it->second, "State",
-                    CDeviceUtils::ConvertToString(pos - 1));  // Convert to 0-based
+                // Map position (1-based) to magnification value
+                const double magnifications[3] = {1.0, 1.6, 2.0};
+                if (pos >= 1 && pos <= 3)
+                {
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Magnification,
+                        CDeviceUtils::ConvertToString(magnifications[pos - 1]));
+                }
             }
         }
     }

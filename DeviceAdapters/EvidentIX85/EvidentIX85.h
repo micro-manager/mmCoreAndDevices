@@ -103,7 +103,7 @@ private:
 // Magnification Changer
 //////////////////////////////////////////////////////////////////////////////
 
-class EvidentMagnification : public CStateDeviceBase<EvidentMagnification>
+class EvidentMagnification : public CMagnifierBase<EvidentMagnification>
 {
 public:
     EvidentMagnification();
@@ -114,10 +114,12 @@ public:
     int Shutdown();
     void GetName(char* pszName) const;
     bool Busy();
-    unsigned long GetNumberOfPositions() const;
+
+    // CMagnifierBase API
+    double GetMagnification() const;
 
     // Action interface
-    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnMagnification(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     EvidentHub* GetHub();
@@ -126,6 +128,7 @@ private:
     bool initialized_;
     std::string name_;
     unsigned int numPos_;
+    static const double magnifications_[3];  // 1.0x, 1.6x, 2.0x
 };
 
 //////////////////////////////////////////////////////////////////////////////
