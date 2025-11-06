@@ -141,9 +141,7 @@ int EvidentHub::Shutdown()
 {
     if (initialized_)
     {
-        StopMonitoring();
-
-        // Disable all active notifications
+        // Disable all active notifications BEFORE stopping monitoring thread
         for (auto deviceType : availableDevices_)
         {
             // Disable notifications for devices that support them
@@ -164,9 +162,13 @@ int EvidentHub::Shutdown()
             }
         }
 
+        // Switch back to local mode
         std::string cmd = BuildCommand(CMD_LOGIN, 0);  // 0 = Local mode
         std::string response;
         ExecuteCommand(cmd, response);
+
+        // Now stop the monitoring thread (after all commands sent)
+        StopMonitoring();
 
         initialized_ = false;
     }
