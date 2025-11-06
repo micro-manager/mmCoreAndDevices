@@ -319,11 +319,13 @@ int EvidentHub::GetResponse(std::string& response, long timeoutMs)
 
                 if (!line.empty())
                 {
-                    // Check if this is a notification (starts with 'N') or a response
+                    // Check if this is a notification or a response
                     std::string tag = ExtractTag(line);
 
                     // Skip notifications - they should be handled by monitoring thread
-                    // Notifications: NFP, NOB, NCA, etc. - all start with 'N'
+                    // Notifications have format: "NTAG data" (e.g., "NCA 1", "NFP 3110")
+                    // Responses have format: "TAG +" or "TAG !" or "TAG data"
+                    // We only skip notifications (starting with 'N' and containing data, not +/!)
                     if (tag.length() > 0 && tag[0] == 'N' &&
                         (tag == CMD_FOCUS_NOTIFY || tag == CMD_NOSEPIECE_NOTIFY ||
                          tag == CMD_MAGNIFICATION_NOTIFY || tag == CMD_CONDENSER_TURRET_NOTIFY ||
@@ -331,9 +333,10 @@ int EvidentHub::GetResponse(std::string& response, long timeoutMs)
                          tag == CMD_POLARIZER_NOTIFY || tag == CMD_DIC_RETARDATION_NOTIFY ||
                          tag == CMD_DIC_LOCALIZED_NOTIFY || tag == CMD_MIRROR_UNIT_NOTIFY1 ||
                          tag == CMD_MIRROR_UNIT_NOTIFY2 || tag == CMD_RIGHT_PORT_NOTIFY ||
-                         tag == CMD_OFFSET_LENS_NOTIFY))
+                         tag == CMD_OFFSET_LENS_NOTIFY) &&
+                        !IsPositiveAck(line, tag.c_str()) && !IsNegativeAck(line, tag.c_str()))
                     {
-                        // This is a notification - log it and continue reading for the actual response
+                        // This is a notification (not an ack) - log it and continue reading
                         LogMessage(("Skipping notification during command: " + line).c_str(), true);
                         line.clear();
                         continue;
