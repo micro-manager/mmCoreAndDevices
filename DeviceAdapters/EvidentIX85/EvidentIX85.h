@@ -27,15 +27,19 @@
 #include "EvidentModel.h"
 #include "EvidentProtocol.h"
 
+
 //////////////////////////////////////////////////////////////////////////////
 // Focus Drive (Z-Stage)
 //////////////////////////////////////////////////////////////////////////////
+
+class EvidentHub;
 
 class EvidentFocus : public CStageBase<EvidentFocus>
 {
 public:
     EvidentFocus();
     ~EvidentFocus();
+
 
     // MMDevice API
     int Initialize();
@@ -50,8 +54,8 @@ public:
     int GetPositionSteps(long& steps);
     int SetOrigin();
     int GetLimits(double& lower, double& upper);
-    int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
-    bool IsContinuousFocusDrive() const { return false; }
+    int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; };
+    bool IsContinuousFocusDrive() const { return false; };
 
     // Action interface
     int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);

@@ -537,7 +537,7 @@ int EvidentMagnification::Initialize()
 
     // Create properties
     CPropertyAction* pAct = new CPropertyAction(this, &EvidentMagnification::OnState);
-    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, true, pAct);
     if (ret != DEVICE_OK)
         return ret;
 
@@ -545,7 +545,7 @@ int EvidentMagnification::Initialize()
 
     // Create label property
     pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
-    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, true, pAct);
     if (ret != DEVICE_OK)
         return ret;
 
@@ -553,6 +553,8 @@ int EvidentMagnification::Initialize()
     SetPositionLabel(0, "1x");
     SetPositionLabel(1, "1.6x");
     SetPositionLabel(2, "2x");
+
+    hub->RegisterDeviceAsUsed(DeviceType_Magnification, this);
 
     // Enable notifications
     ret = EnableNotifications(true);
@@ -568,6 +570,7 @@ int EvidentMagnification::Shutdown()
     if (initialized_)
     {
         EnableNotifications(false);
+        GetHub()->UnRegisterDeviceAsUsed(DeviceType_Magnification);
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -604,25 +607,7 @@ int EvidentMagnification::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     else if (eAct == MM::AfterSet)
     {
-        long pos;
-        pProp->Get(pos);
-
-        EvidentHub* hub = GetHub();
-        if (!hub)
-            return DEVICE_ERR;
-
-        // Convert from 0-based to 1-based
-        std::string cmd = BuildCommand(CMD_MAGNIFICATION, static_cast<int>(pos + 1));
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-            return ret;
-
-        if (!IsPositiveAck(response, CMD_MAGNIFICATION))
-            return ERR_NEGATIVE_ACK;
-
-        hub->GetModel()->SetTargetPosition(DeviceType_Magnification, pos + 1);
-        hub->GetModel()->SetBusy(DeviceType_Magnification, true);
+       // nothing to do, this is a read-only property
     }
     return DEVICE_OK;
 }

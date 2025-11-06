@@ -205,28 +205,28 @@ inline std::string BuildCommand(const char* tag)
 inline std::string BuildCommand(const char* tag, int param1)
 {
     std::ostringstream cmd;
-    cmd << tag << TAG_DELIMITER << param1 << TERMINATOR;
+    cmd << tag << TAG_DELIMITER << param1;
     return cmd.str();
 }
 
 inline std::string BuildCommand(const char* tag, int param1, int param2)
 {
     std::ostringstream cmd;
-    cmd << tag << TAG_DELIMITER << param1 << DATA_DELIMITER << param2 << TERMINATOR;
+    cmd << tag << TAG_DELIMITER << param1 << DATA_DELIMITER << param2;
     return cmd.str();
 }
 
 inline std::string BuildCommand(const char* tag, int param1, int param2, int param3)
 {
     std::ostringstream cmd;
-    cmd << tag << TAG_DELIMITER << param1 << DATA_DELIMITER << param2 << DATA_DELIMITER << param3 << TERMINATOR;
+    cmd << tag << TAG_DELIMITER << param1 << DATA_DELIMITER << param2 << DATA_DELIMITER << param3;
     return cmd.str();
 }
 
 inline std::string BuildQuery(const char* tag)
 {
     std::ostringstream cmd;
-    cmd << tag << "?" << TERMINATOR;
+    cmd << tag << "?";
     return cmd.str();
 }
 
@@ -235,6 +235,17 @@ inline bool IsPositiveAck(const std::string& response, const char* tag)
 {
     std::string expected = std::string(tag) + " +";
     return response.find(expected) == 0;
+}
+
+inline bool IsValidAnswer(const std::string& response, const char* tag)
+{
+   if (response.length() < 3)
+      return false;
+   if (response.substr(0, strlen(tag)) != tag)
+      return false;
+   if (response.substr(3, 1) == "!")
+      return false;
+   return true;
 }
 
 inline bool IsNegativeAck(const std::string& response, const char* tag)

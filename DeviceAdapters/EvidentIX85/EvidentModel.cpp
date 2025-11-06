@@ -58,7 +58,6 @@ void MicroscopeModel::SetPosition(DeviceType type, long position)
     std::lock_guard<std::mutex> lock(mutex_);
     auto& state = GetOrCreateState(type);
     state.currentPos = position;
-    GetCurrentTime();
     state.lastUpdateTime = MM::MMTime::fromUs(SteadyMicroseconds());
 }
 

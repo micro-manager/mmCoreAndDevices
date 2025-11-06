@@ -25,6 +25,7 @@
 #include "DeviceBase.h"
 #include "EvidentModel.h"
 #include "EvidentProtocol.h"
+#include "EvidentIX85.h"
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -43,6 +44,9 @@ public:
     void GetName(char* pszName) const;
     bool Busy();
 
+    // Hub API
+    int DetectInstalledDevices();
+
     // Action handlers
     int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnAnswerTimeout(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -56,11 +60,13 @@ public:
     int GetResponse(std::string& response, long timeoutMs = -1);
 
     // Device discovery
-    int DiscoverDevices();
     bool IsDevicePresent(EvidentIX85::DeviceType type) const;
 
     // Notification control
     int EnableNotification(const char* cmd, bool enable);
+
+    void RegisterDeviceAsUsed(EvidentIX85::DeviceType type, MM::Device* device) { usedDevices_[type] = device;};
+    void UnRegisterDeviceAsUsed(EvidentIX85::DeviceType type) { usedDevices_.erase(type); };
 
 private:
     // Initialization helpers
@@ -68,6 +74,7 @@ private:
     int GetVersion(std::string& version);
     int GetUnit(std::string& unit);
     int ClearPort();
+    int DoDeviceDetection();
 
     // Device query helpers
     int QueryFocus();
@@ -108,4 +115,8 @@ private:
     std::string version_;
     std::string unit_;
     std::vector<EvidentIX85::DeviceType> availableDevices_;
+    std::vector<std::string> detectedDevicesByName_;
+
+    // Child devices
+    std::map<EvidentIX85::DeviceType, MM::Device*> usedDevices_;
 };

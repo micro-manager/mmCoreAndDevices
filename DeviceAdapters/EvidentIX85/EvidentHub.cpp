@@ -30,6 +30,20 @@ using namespace EvidentIX85;
 
 const char* g_HubDeviceName = "EvidentIX85-Hub";
 
+// Device names
+extern const char* g_FocusDeviceName;
+extern const char* g_NosepieceDeviceName;
+extern const char* g_MagnificationDeviceName;
+extern const char* g_LightPathDeviceName;
+extern const char* g_CondenserTurretDeviceName;
+extern const char* g_DIAShutterDeviceName;
+extern const char* g_EPIShutter1DeviceName;
+extern const char* g_MirrorUnit1DeviceName;
+extern const char* g_PolarizerDeviceName;
+extern const char* g_DICPrismDeviceName;
+extern const char* g_EPINDDeviceName;
+extern const char* g_CorrectionCollarDeviceName;
+
 // Property names
 const char* g_PropPort = "Port";
 const char* g_PropAnswerTimeout = "AnswerTimeout";
@@ -81,39 +95,14 @@ int EvidentHub::Initialize()
     if (initialized_)
         return DEVICE_OK;
 
+    usedDevices_.clear();
+
     // Verify port is set
     if (port_.empty() || port_ == "Undefined")
         return ERR_PORT_NOT_SET;
 
-    // Set serial port properties
-    int ret = SetProperty(MM::g_Keyword_Handshaking, "Off");
-    if (ret != DEVICE_OK)
-        return ret;
-
-    ret = SetProperty(MM::g_Keyword_BaudRate, std::to_string(BAUD_RATE).c_str());
-    if (ret != DEVICE_OK)
-        return ret;
-
-    ret = SetProperty(MM::g_Keyword_DataBits, std::to_string(DATA_BITS).c_str());
-    if (ret != DEVICE_OK)
-        return ret;
-
-    std::string parity;
-    parity += PARITY;
-    ret = SetProperty(MM::g_Keyword_Parity, parity.c_str());
-    if (ret != DEVICE_OK)
-        return ret;
-
-    ret = SetProperty(MM::g_Keyword_StopBits, std::to_string(STOP_BITS).c_str());
-    if (ret != DEVICE_OK)
-        return ret;
-
-    ret = SetProperty(MM::g_Keyword_AnswerTimeout, std::to_string(answerTimeoutMs_).c_str());
-    if (ret != DEVICE_OK)
-        return ret;
-
     // Clear port buffers
-    ret = ClearPort();
+    int ret = ClearPort();
     if (ret != DEVICE_OK)
         return ret;
 
@@ -134,10 +123,10 @@ int EvidentHub::Initialize()
     LogMessage(("Microscope Version: " + version_).c_str(), false);
     LogMessage(("Microscope Unit: " + unit_).c_str(), false);
 
-    // Discover available devices
-    ret = DiscoverDevices();
+    // Detect available devices
+    ret = DoDeviceDetection();
     if (ret != DEVICE_OK)
-        return ret;
+       return ret;
 
     // Start monitoring thread
     StartMonitoring();
@@ -172,6 +161,10 @@ int EvidentHub::Shutdown()
                     break;
             }
         }
+
+        std::string cmd = BuildCommand(CMD_LOGIN, 0);  // 0 = Local mode
+        std::string response;
+        ExecuteCommand(cmd, response);
 
         initialized_ = false;
     }
@@ -241,17 +234,17 @@ int EvidentHub::SetRemoteMode()
 
 int EvidentHub::GetVersion(std::string& version)
 {
-    std::string cmd = BuildCommand(CMD_VERSION);
+    std::string cmd = BuildCommand(CMD_VERSION, 1); // 1 = Firmware version
     std::string response;
     int ret = ExecuteCommand(cmd, response);
     if (ret != DEVICE_OK)
         return ret;
 
-    if (IsPositiveAck(response, CMD_VERSION))
+    if (IsValidAnswer(response, CMD_VERSION))
     {
         // Response format: "V +" - version command doesn't return version number
         // Version is embedded in the response or needs separate query
-        version = "Unknown";
+        version = response.substr(2);
         return DEVICE_OK;
     }
 
@@ -343,9 +336,10 @@ int EvidentHub::GetResponse(std::string& response, long timeoutMs)
     return ERR_COMMAND_TIMEOUT;
 }
 
-int EvidentHub::DiscoverDevices()
+int EvidentHub::DoDeviceDetection()
 {
     availableDevices_.clear();
+    detectedDevicesByName_.clear();
 
     // Query each possible device to see if it's present
     // Start with essential devices
@@ -353,78 +347,102 @@ int EvidentHub::DiscoverDevices()
     if (QueryFocus() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_Focus);
+        detectedDevicesByName_.push_back(g_FocusDeviceName);
         model_.SetDevicePresent(DeviceType_Focus, true);
     }
 
     if (QueryNosepiece() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_Nosepiece);
+        detectedDevicesByName_.push_back(g_NosepieceDeviceName);
         model_.SetDevicePresent(DeviceType_Nosepiece, true);
     }
 
     if (QueryMagnification() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_Magnification);
+        detectedDevicesByName_.push_back(g_MagnificationDeviceName);
         model_.SetDevicePresent(DeviceType_Magnification, true);
     }
 
     if (QueryLightPath() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_LightPath);
+        detectedDevicesByName_.push_back(g_LightPathDeviceName);
         model_.SetDevicePresent(DeviceType_LightPath, true);
     }
 
     if (QueryCondenserTurret() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_CondenserTurret);
+        detectedDevicesByName_.push_back(g_CondenserTurretDeviceName);
         model_.SetDevicePresent(DeviceType_CondenserTurret, true);
     }
 
     if (QueryDIAAperture() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_DIAAperture);
+        detectedDevicesByName_.push_back(g_DIAShutterDeviceName);
         model_.SetDevicePresent(DeviceType_DIAAperture, true);
     }
 
     if (QueryPolarizer() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_Polarizer);
+        detectedDevicesByName_.push_back(g_PolarizerDeviceName);
         model_.SetDevicePresent(DeviceType_Polarizer, true);
     }
 
     if (QueryDICPrism() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_DICPrism);
+        detectedDevicesByName_.push_back(g_DICPrismDeviceName);
         model_.SetDevicePresent(DeviceType_DICPrism, true);
     }
 
     if (QueryEPIShutter1() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_EPIShutter1);
+        detectedDevicesByName_.push_back(g_EPIShutter1DeviceName);
         model_.SetDevicePresent(DeviceType_EPIShutter1, true);
     }
 
     if (QueryMirrorUnit1() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_MirrorUnit1);
+        detectedDevicesByName_.push_back(g_MirrorUnit1DeviceName);
         model_.SetDevicePresent(DeviceType_MirrorUnit1, true);
     }
 
     if (QueryEPIND() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_EPIND);
+        detectedDevicesByName_.push_back(g_EPINDDeviceName);
         model_.SetDevicePresent(DeviceType_EPIND, true);
     }
 
     if (QueryCorrectionCollar() == DEVICE_OK)
     {
         availableDevices_.push_back(DeviceType_CorrectionCollar);
+        detectedDevicesByName_.push_back(g_CorrectionCollarDeviceName);
         model_.SetDevicePresent(DeviceType_CorrectionCollar, true);
     }
 
     std::ostringstream msg;
     msg << "Discovered " << availableDevices_.size() << " devices";
     LogMessage(msg.str().c_str(), false);
+
+    return DEVICE_OK;
+}
+
+int EvidentHub::DetectInstalledDevices()
+{
+    for (size_t i=0; i < detectedDevicesByName_.size(); i++)
+    {
+       MM::Device* pDev = ::CreateDevice(detectedDevicesByName_[i].c_str());
+       if (pDev)
+          AddInstalledDevice(pDev);
+    }
 
     return DEVICE_OK;
 }
@@ -911,7 +929,13 @@ void EvidentHub::MonitorThreadFunc()
                 {
                     int pos = ParseIntParameter(params[0]);
                     if (pos >= 0)
-                        model_.SetPosition(DeviceType_Magnification, pos);
+                    {
+                       model_.SetPosition(DeviceType_Magnification, pos);
+                       const MM::Device* pDev = usedDevices_.find(DeviceType_Magnification)->second;
+                       if (pDev != 0) {
+                          GetCoreCallback()->OnPropertyChanged(pDev, "State", CDeviceUtils::ConvertToString(pos));
+                       }
+                    }
                 }
                 // Add more notification handlers as needed
 
