@@ -63,6 +63,7 @@ public:
 
 private:
     EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
 
     bool initialized_;
     std::string name_;
@@ -92,6 +93,7 @@ public:
 
 private:
     EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
     int SafeNosepieceChange(long targetPosition);
 
     bool initialized_;
@@ -124,6 +126,7 @@ public:
 
 private:
     EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
 
     bool initialized_;
     std::string name_;
@@ -180,6 +183,7 @@ public:
 
 private:
     EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
 
     bool initialized_;
     std::string name_;
@@ -270,6 +274,7 @@ public:
 
 private:
     EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
 
     bool initialized_;
     std::string name_;
@@ -298,6 +303,7 @@ public:
 
 private:
     EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
 
     bool initialized_;
     std::string name_;
@@ -326,6 +332,7 @@ public:
 
 private:
     EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
 
     bool initialized_;
     std::string name_;
@@ -354,6 +361,7 @@ public:
 
 private:
     EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
 
     bool initialized_;
     std::string name_;
