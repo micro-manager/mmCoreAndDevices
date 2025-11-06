@@ -25,6 +25,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <stdexcept>
 
 namespace EvidentIX85 {
 
@@ -301,16 +302,64 @@ inline std::vector<std::string> ParseParameters(const std::string& response)
 
 inline int ParseIntParameter(const std::string& param)
 {
+    // Handle empty string
+    if (param.empty())
+        return -1;
+
+    // Handle unknown/not-present indicators
     if (param == "X" || param == "x")
-        return -1;  // Unknown
-    return std::stoi(param);
+        return -1;
+
+    // Handle acknowledgment characters (shouldn't be parsed as numbers)
+    if (param == "+" || param == "!")
+        return -1;
+
+    // Try to parse as integer with exception handling
+    try
+    {
+        return std::stoi(param);
+    }
+    catch (const std::invalid_argument&)
+    {
+        // Not a valid integer
+        return -1;
+    }
+    catch (const std::out_of_range&)
+    {
+        // Number too large for int
+        return -1;
+    }
 }
 
 inline long ParseLongParameter(const std::string& param)
 {
+    // Handle empty string
+    if (param.empty())
+        return -1;
+
+    // Handle unknown/not-present indicators
     if (param == "X" || param == "x")
-        return -1;  // Unknown
-    return std::stol(param);
+        return -1;
+
+    // Handle acknowledgment characters (shouldn't be parsed as numbers)
+    if (param == "+" || param == "!")
+        return -1;
+
+    // Try to parse as long with exception handling
+    try
+    {
+        return std::stol(param);
+    }
+    catch (const std::invalid_argument&)
+    {
+        // Not a valid long
+        return -1;
+    }
+    catch (const std::out_of_range&)
+    {
+        // Number too large for long
+        return -1;
+    }
 }
 
 } // namespace EvidentIX85
