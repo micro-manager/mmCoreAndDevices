@@ -319,6 +319,26 @@ int EvidentHub::GetResponse(std::string& response, long timeoutMs)
 
                 if (!line.empty())
                 {
+                    // Check if this is a notification (starts with 'N') or a response
+                    std::string tag = ExtractTag(line);
+
+                    // Skip notifications - they should be handled by monitoring thread
+                    // Notifications: NFP, NOB, NCA, etc. - all start with 'N'
+                    if (tag.length() > 0 && tag[0] == 'N' &&
+                        (tag == CMD_FOCUS_NOTIFY || tag == CMD_NOSEPIECE_NOTIFY ||
+                         tag == CMD_MAGNIFICATION_NOTIFY || tag == CMD_CONDENSER_TURRET_NOTIFY ||
+                         tag == CMD_DIA_APERTURE_NOTIFY || tag == CMD_DIA_ILLUMINATION_NOTIFY ||
+                         tag == CMD_POLARIZER_NOTIFY || tag == CMD_DIC_RETARDATION_NOTIFY ||
+                         tag == CMD_DIC_LOCALIZED_NOTIFY || tag == CMD_MIRROR_UNIT_NOTIFY1 ||
+                         tag == CMD_MIRROR_UNIT_NOTIFY2 || tag == CMD_RIGHT_PORT_NOTIFY ||
+                         tag == CMD_OFFSET_LENS_NOTIFY))
+                    {
+                        // This is a notification - log it and continue reading for the actual response
+                        LogMessage(("Skipping notification during command: " + line).c_str(), true);
+                        line.clear();
+                        continue;
+                    }
+
                     response = line;
                     LogMessage(("Received: " + response).c_str(), true);
                     return DEVICE_OK;
@@ -882,19 +902,25 @@ void EvidentHub::MonitorThreadFunc()
 
     while (!stopMonitoring_.load())
     {
-        // Try to read available data without blocking command execution
-        // Only lock briefly to check for data
+        // Read entire messages while holding the lock to prevent
+        // interleaving with command-response sequences
         unsigned char byte;
         unsigned long read;
+        bool gotByte = false;
 
         {
             std::lock_guard<std::mutex> lock(commandMutex_);
             int ret = ReadFromComPort(port_.c_str(), &byte, 1, read);
-            if (ret != DEVICE_OK || read == 0)
+            if (ret == DEVICE_OK && read == 1)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(pollIntervalMs));
-                continue;
+                gotByte = true;
             }
+        }
+
+        if (!gotByte)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(pollIntervalMs));
+            continue;
         }
 
         // Process received byte
@@ -963,6 +989,7 @@ void EvidentHub::MonitorThreadFunc()
             buffer += static_cast<char>(byte);
         }
 
+        // Small delay to avoid busy-waiting
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
