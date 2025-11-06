@@ -156,10 +156,8 @@ int EvidentFocus::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
-    // Enable active notifications
-    ret = EnableNotifications(true);
-    if (ret != DEVICE_OK)
-        return ret;
+    // Note: Notifications (NFP) are sent automatically by the microscope
+    // No command needed to enable them
 
     initialized_ = true;
     return DEVICE_OK;
@@ -169,7 +167,6 @@ int EvidentFocus::Shutdown()
 {
     if (initialized_)
     {
-        EnableNotifications(false);
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -349,15 +346,6 @@ EvidentHub* EvidentFocus::GetHub()
     return dynamic_cast<EvidentHub*>(hub);
 }
 
-int EvidentFocus::EnableNotifications(bool enable)
-{
-    EvidentHub* hub = GetHub();
-    if (!hub)
-        return DEVICE_ERR;
-
-    return hub->EnableNotification(CMD_FOCUS_NOTIFY, enable);
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // EvidentNosepiece - Nosepiece Implementation
 ///////////////////////////////////////////////////////////////////////////////
@@ -428,10 +416,8 @@ int EvidentNosepiece::Initialize()
     AddAllowedValue("SafeNosepieceChange", "Disabled");
     AddAllowedValue("SafeNosepieceChange", "Enabled");
 
-    // Enable notifications
-    ret = EnableNotifications(true);
-    if (ret != DEVICE_OK)
-        return ret;
+    // Note: Notifications (NOB) are sent automatically by the microscope
+    // No command needed to enable them
 
     initialized_ = true;
     return DEVICE_OK;
@@ -441,7 +427,6 @@ int EvidentNosepiece::Shutdown()
 {
     if (initialized_)
     {
-        EnableNotifications(false);
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -525,15 +510,6 @@ EvidentHub* EvidentNosepiece::GetHub()
     if (!hub)
         return nullptr;
     return dynamic_cast<EvidentHub*>(hub);
-}
-
-int EvidentNosepiece::EnableNotifications(bool enable)
-{
-    EvidentHub* hub = GetHub();
-    if (!hub)
-        return DEVICE_ERR;
-
-    return hub->EnableNotification(CMD_NOSEPIECE_NOTIFY, enable);
 }
 
 int EvidentNosepiece::OnSafeChange(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -752,10 +728,8 @@ int EvidentMagnification::Initialize()
 
     hub->RegisterDeviceAsUsed(DeviceType_Magnification, this);
 
-    // Enable notifications
-    ret = EnableNotifications(true);
-    if (ret != DEVICE_OK)
-        return ret;
+    // Note: Notifications (NCA) are sent automatically by the microscope
+    // No command needed to enable them
 
     initialized_ = true;
     return DEVICE_OK;
@@ -765,7 +739,6 @@ int EvidentMagnification::Shutdown()
 {
     if (initialized_)
     {
-        EnableNotifications(false);
         GetHub()->UnRegisterDeviceAsUsed(DeviceType_Magnification);
         initialized_ = false;
     }
@@ -815,15 +788,6 @@ EvidentHub* EvidentMagnification::GetHub()
     if (!hub)
         return nullptr;
     return dynamic_cast<EvidentHub*>(hub);
-}
-
-int EvidentMagnification::EnableNotifications(bool enable)
-{
-    EvidentHub* hub = GetHub();
-    if (!hub)
-        return DEVICE_ERR;
-
-    return hub->EnableNotification(CMD_MAGNIFICATION_NOTIFY, enable);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1022,10 +986,8 @@ int EvidentCondenserTurret::Initialize()
         SetPositionLabel(i, label.str().c_str());
     }
 
-    // Enable notifications
-    ret = EnableNotifications(true);
-    if (ret != DEVICE_OK)
-        return ret;
+    // Note: Notifications (NTR) are sent automatically by the microscope
+    // No command needed to enable them
 
     initialized_ = true;
     return DEVICE_OK;
@@ -1035,7 +997,6 @@ int EvidentCondenserTurret::Shutdown()
 {
     if (initialized_)
     {
-        EnableNotifications(false);
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -1108,15 +1069,6 @@ EvidentHub* EvidentCondenserTurret::GetHub()
     if (!hub)
         return nullptr;
     return dynamic_cast<EvidentHub*>(hub);
-}
-
-int EvidentCondenserTurret::EnableNotifications(bool enable)
-{
-    EvidentHub* hub = GetHub();
-    if (!hub)
-        return DEVICE_ERR;
-
-    return hub->EnableNotification(CMD_CONDENSER_TURRET_NOTIFY, enable);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1602,10 +1554,8 @@ int EvidentPolarizer::Initialize()
         SetPositionLabel(i, label.str().c_str());
     }
 
-    // Enable notifications
-    ret = EnableNotifications(true);
-    if (ret != DEVICE_OK)
-        return ret;
+    // Note: Notifications (NPO) are sent automatically by the microscope
+    // No command needed to enable them
 
     initialized_ = true;
     return DEVICE_OK;
@@ -1615,7 +1565,6 @@ int EvidentPolarizer::Shutdown()
 {
     if (initialized_)
     {
-        EnableNotifications(false);
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -1687,15 +1636,6 @@ EvidentHub* EvidentPolarizer::GetHub()
     if (!hub)
         return nullptr;
     return dynamic_cast<EvidentHub*>(hub);
-}
-
-int EvidentPolarizer::EnableNotifications(bool enable)
-{
-    EvidentHub* hub = GetHub();
-    if (!hub)
-        return DEVICE_ERR;
-
-    return hub->EnableNotification(CMD_POLARIZER_NOTIFY, enable);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
