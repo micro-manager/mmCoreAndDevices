@@ -558,6 +558,7 @@ int EvidentHub::QueryCondenserTurret()
     {
         int pos = ParseIntParameter(params[0]);
         model_.SetPosition(DeviceType_CondenserTurret, pos);
+        model_.SetNumPositions(DeviceType_CondenserTurret, CONDENSER_TURRET_MAX_POS);
         return DEVICE_OK;
     }
 
@@ -624,6 +625,7 @@ int EvidentHub::QueryPolarizer()
     {
         int pos = ParseIntParameter(params[0]);
         model_.SetPosition(DeviceType_Polarizer, pos);
+        model_.SetNumPositions(DeviceType_Polarizer, POLARIZER_MAX_POS);
         return DEVICE_OK;
     }
 
@@ -646,6 +648,7 @@ int EvidentHub::QueryDICPrism()
     {
         int pos = ParseIntParameter(params[0]);
         model_.SetPosition(DeviceType_DICPrism, pos);
+        model_.SetNumPositions(DeviceType_DICPrism, DIC_PRISM_MAX_POS);
         return DEVICE_OK;
     }
 
@@ -734,6 +737,7 @@ int EvidentHub::QueryMirrorUnit1()
     {
         int pos = ParseIntParameter(params[0]);
         model_.SetPosition(DeviceType_MirrorUnit1, pos);
+        model_.SetNumPositions(DeviceType_MirrorUnit1, MIRROR_UNIT_MAX_POS);
         return DEVICE_OK;
     }
 
@@ -756,6 +760,7 @@ int EvidentHub::QueryMirrorUnit2()
     {
         int pos = ParseIntParameter(params[0]);
         model_.SetPosition(DeviceType_MirrorUnit2, pos);
+        model_.SetNumPositions(DeviceType_MirrorUnit2, MIRROR_UNIT_MAX_POS);
         return DEVICE_OK;
     }
 
@@ -778,6 +783,7 @@ int EvidentHub::QueryEPIND()
     {
         int pos = ParseIntParameter(params[0]);
         model_.SetPosition(DeviceType_EPIND, pos);
+        model_.SetNumPositions(DeviceType_EPIND, EPIND_MAX_POS);
         return DEVICE_OK;
     }
 

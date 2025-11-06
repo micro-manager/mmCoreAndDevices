@@ -179,6 +179,13 @@ const int NOSEPIECE_MAX_POS = 6;
 const int MAGNIFICATION_MIN_POS = 1;
 const int MAGNIFICATION_MAX_POS = 3;
 
+// Most turrets and state devices have up to 6 positions
+const int CONDENSER_TURRET_MAX_POS = 6;
+const int MIRROR_UNIT_MAX_POS = 6;
+const int POLARIZER_MAX_POS = 6;
+const int DIC_PRISM_MAX_POS = 6;
+const int EPIND_MAX_POS = 6;
+
 const int LIGHT_PATH_LEFT_PORT = 1;
 const int LIGHT_PATH_BI_50_50 = 2;
 const int LIGHT_PATH_BI_100 = 3;
