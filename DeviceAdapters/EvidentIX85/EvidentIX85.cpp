@@ -365,7 +365,8 @@ int EvidentFocus::EnableNotifications(bool enable)
 EvidentNosepiece::EvidentNosepiece() :
     initialized_(false),
     name_(g_NosepieceDeviceName),
-    numPos_(NOSEPIECE_MAX_POS)
+    numPos_(NOSEPIECE_MAX_POS),
+    safeNosepieceChange_(true)
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Nosepiece not available on this microscope");
@@ -418,6 +419,14 @@ int EvidentNosepiece::Initialize()
         label << "Position-" << (i + 1);
         SetPositionLabel(i, label.str().c_str());
     }
+
+    // Create SafeNosepieceChange property
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnSafeChange);
+    ret = CreateProperty("SafeNosepieceChange", "Enabled", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("SafeNosepieceChange", "Disabled");
+    AddAllowedValue("SafeNosepieceChange", "Enabled");
 
     // Enable notifications
     ret = EnableNotifications(true);
@@ -476,6 +485,13 @@ int EvidentNosepiece::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!hub)
             return DEVICE_ERR;
 
+        // Use safe nosepiece change if enabled
+        if (safeNosepieceChange_)
+        {
+            return SafeNosepieceChange(pos + 1);  // Convert 0-based to 1-based
+        }
+
+        // Direct nosepiece change (original behavior)
         // Set target position BEFORE sending command so notifications can check against it
         // Convert from 0-based to 1-based for the microscope
         hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, pos + 1);
@@ -518,6 +534,164 @@ int EvidentNosepiece::EnableNotifications(bool enable)
         return DEVICE_ERR;
 
     return hub->EnableNotification(CMD_NOSEPIECE_NOTIFY, enable);
+}
+
+int EvidentNosepiece::OnSafeChange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(safeNosepieceChange_ ? "Enabled" : "Disabled");
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+        safeNosepieceChange_ = (value == "Enabled");
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Check if Focus device is available
+    if (!hub->IsDevicePresent(DeviceType_Focus))
+    {
+        // No focus device - just do a regular nosepiece change
+        LogMessage("Focus device not available, skipping safe nosepiece change");
+        hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, targetPosition);
+        hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
+
+        std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPosition));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+            return ret;
+        }
+        if (!IsPositiveAck(response, CMD_NOSEPIECE))
+        {
+            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+            return ERR_NEGATIVE_ACK;
+        }
+        return DEVICE_OK;
+    }
+
+    // Get current focus position
+    long originalFocusPos = hub->GetModel()->GetPosition(DeviceType_Focus);
+    if (originalFocusPos < 0)
+    {
+        LogMessage("Focus position unknown, cannot perform safe nosepiece change");
+        return ERR_POSITION_UNKNOWN;
+    }
+
+    LogMessage("Safe nosepiece change: Moving focus to zero");
+
+    // Move focus to zero
+    hub->GetModel()->SetTargetPosition(DeviceType_Focus, 0);
+    hub->GetModel()->SetBusy(DeviceType_Focus, true);
+
+    std::string cmd = BuildCommand(CMD_FOCUS_GOTO, 0);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+    {
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
+        return ret;
+    }
+    if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+    {
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
+        return ERR_NEGATIVE_ACK;
+    }
+
+    // Wait for focus to reach zero (with timeout)
+    int focusWaitCount = 0;
+    const int maxWaitIterations = 100;  // 10 seconds max
+    while (hub->GetModel()->IsBusy(DeviceType_Focus) && focusWaitCount < maxWaitIterations)
+    {
+        CDeviceUtils::SleepMs(100);
+        focusWaitCount++;
+    }
+
+    if (focusWaitCount >= maxWaitIterations)
+    {
+        LogMessage("Timeout waiting for focus to reach zero");
+        return ERR_COMMAND_TIMEOUT;
+    }
+
+    LogMessage("Safe nosepiece change: Changing nosepiece position");
+
+    // Change nosepiece position
+    hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, targetPosition);
+    hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
+
+    cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPosition));
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+    {
+        hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+        // Try to restore focus position even if nosepiece change failed
+        hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
+        hub->GetModel()->SetBusy(DeviceType_Focus, true);
+        std::string focusCmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
+        std::string focusResponse;
+        hub->ExecuteCommand(focusCmd, focusResponse);
+        return ret;
+    }
+
+    if (!IsPositiveAck(response, CMD_NOSEPIECE))
+    {
+        hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+        // Try to restore focus position even if nosepiece change failed
+        hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
+        hub->GetModel()->SetBusy(DeviceType_Focus, true);
+        std::string focusCmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
+        std::string focusResponse;
+        hub->ExecuteCommand(focusCmd, focusResponse);
+        return ERR_NEGATIVE_ACK;
+    }
+
+    // Wait for nosepiece to complete (with timeout)
+    int nosepieceWaitCount = 0;
+    while (hub->GetModel()->IsBusy(DeviceType_Nosepiece) && nosepieceWaitCount < maxWaitIterations)
+    {
+        CDeviceUtils::SleepMs(100);
+        nosepieceWaitCount++;
+    }
+
+    if (nosepieceWaitCount >= maxWaitIterations)
+    {
+        LogMessage("Timeout waiting for nosepiece to complete");
+        return ERR_COMMAND_TIMEOUT;
+    }
+
+    LogMessage("Safe nosepiece change: Restoring focus position");
+
+    // Restore original focus position
+    hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
+    hub->GetModel()->SetBusy(DeviceType_Focus, true);
+
+    cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+    {
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
+        return ret;
+    }
+
+    if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+    {
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
+        return ERR_NEGATIVE_ACK;
+    }
+
+    LogMessage("Safe nosepiece change completed successfully");
+    return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

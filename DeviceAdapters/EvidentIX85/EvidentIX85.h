@@ -89,14 +89,17 @@ public:
 
     // Action interface
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSafeChange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     EvidentHub* GetHub();
     int EnableNotifications(bool enable);
+    int SafeNosepieceChange(long targetPosition);
 
     bool initialized_;
     std::string name_;
     unsigned int numPos_;
+    bool safeNosepieceChange_;  // When true, lower focus before changing nosepiece
 };
 
 //////////////////////////////////////////////////////////////////////////////
