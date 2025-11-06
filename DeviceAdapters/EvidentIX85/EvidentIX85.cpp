@@ -826,101 +826,1275 @@ int EvidentMagnification::EnableNotifications(bool enable)
     return hub->EnableNotification(CMD_MAGNIFICATION_NOTIFY, enable);
 }
 
-// Placeholder implementations for other devices
-// These can be expanded similarly to the above
+///////////////////////////////////////////////////////////////////////////////
+// EvidentLightPath - Light Path Selector Implementation
+///////////////////////////////////////////////////////////////////////////////
 
-EvidentLightPath::EvidentLightPath() : initialized_(false), name_(g_LightPathDeviceName) { CreateHubIDProperty(); }
-EvidentLightPath::~EvidentLightPath() { Shutdown(); }
-void EvidentLightPath::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentLightPath::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentLightPath::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentLightPath::Busy() { return false; }
-unsigned long EvidentLightPath::GetNumberOfPositions() const { return 4; }
-int EvidentLightPath::OnState(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentLightPath::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
+EvidentLightPath::EvidentLightPath() :
+    initialized_(false),
+    name_(g_LightPathDeviceName)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Light path selector not available on this microscope");
 
-EvidentCondenserTurret::EvidentCondenserTurret() : initialized_(false), name_(g_CondenserTurretDeviceName), numPos_(6) { CreateHubIDProperty(); }
-EvidentCondenserTurret::~EvidentCondenserTurret() { Shutdown(); }
-void EvidentCondenserTurret::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentCondenserTurret::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentCondenserTurret::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentCondenserTurret::Busy() { return false; }
-unsigned long EvidentCondenserTurret::GetNumberOfPositions() const { return numPos_; }
-int EvidentCondenserTurret::OnState(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentCondenserTurret::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
-int EvidentCondenserTurret::EnableNotifications(bool) { return DEVICE_OK; }
+    CreateHubIDProperty();
+}
 
-EvidentDIAShutter::EvidentDIAShutter() : initialized_(false), name_(g_DIAShutterDeviceName) { CreateHubIDProperty(); }
-EvidentDIAShutter::~EvidentDIAShutter() { Shutdown(); }
-void EvidentDIAShutter::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentDIAShutter::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentDIAShutter::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentDIAShutter::Busy() { return false; }
-int EvidentDIAShutter::SetOpen(bool) { return DEVICE_OK; }
-int EvidentDIAShutter::GetOpen(bool& open) { open = false; return DEVICE_OK; }
-int EvidentDIAShutter::Fire(double) { return DEVICE_OK; }
-int EvidentDIAShutter::OnState(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentDIAShutter::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
+EvidentLightPath::~EvidentLightPath()
+{
+    Shutdown();
+}
 
-EvidentEPIShutter1::EvidentEPIShutter1() : initialized_(false), name_(g_EPIShutter1DeviceName) { CreateHubIDProperty(); }
-EvidentEPIShutter1::~EvidentEPIShutter1() { Shutdown(); }
-void EvidentEPIShutter1::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentEPIShutter1::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentEPIShutter1::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentEPIShutter1::Busy() { return false; }
-int EvidentEPIShutter1::SetOpen(bool) { return DEVICE_OK; }
-int EvidentEPIShutter1::GetOpen(bool& open) { open = false; return DEVICE_OK; }
-int EvidentEPIShutter1::Fire(double) { return DEVICE_OK; }
-int EvidentEPIShutter1::OnState(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentEPIShutter1::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
+void EvidentLightPath::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
 
-EvidentMirrorUnit1::EvidentMirrorUnit1() : initialized_(false), name_(g_MirrorUnit1DeviceName), numPos_(6) { CreateHubIDProperty(); }
-EvidentMirrorUnit1::~EvidentMirrorUnit1() { Shutdown(); }
-void EvidentMirrorUnit1::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentMirrorUnit1::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentMirrorUnit1::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentMirrorUnit1::Busy() { return false; }
-unsigned long EvidentMirrorUnit1::GetNumberOfPositions() const { return numPos_; }
-int EvidentMirrorUnit1::OnState(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentMirrorUnit1::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
-int EvidentMirrorUnit1::EnableNotifications(bool) { return DEVICE_OK; }
+int EvidentLightPath::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
 
-EvidentPolarizer::EvidentPolarizer() : initialized_(false), name_(g_PolarizerDeviceName), numPos_(6) { CreateHubIDProperty(); }
-EvidentPolarizer::~EvidentPolarizer() { Shutdown(); }
-void EvidentPolarizer::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentPolarizer::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentPolarizer::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentPolarizer::Busy() { return false; }
-unsigned long EvidentPolarizer::GetNumberOfPositions() const { return numPos_; }
-int EvidentPolarizer::OnState(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentPolarizer::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
-int EvidentPolarizer::EnableNotifications(bool) { return DEVICE_OK; }
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
 
-EvidentDICPrism::EvidentDICPrism() : initialized_(false), name_(g_DICPrismDeviceName), numPos_(6) { CreateHubIDProperty(); }
-EvidentDICPrism::~EvidentDICPrism() { Shutdown(); }
-void EvidentDICPrism::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentDICPrism::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentDICPrism::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentDICPrism::Busy() { return false; }
-unsigned long EvidentDICPrism::GetNumberOfPositions() const { return numPos_; }
-int EvidentDICPrism::OnState(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentDICPrism::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
+    if (!hub->IsDevicePresent(DeviceType_LightPath))
+        return ERR_DEVICE_NOT_AVAILABLE;
 
-EvidentEPIND::EvidentEPIND() : initialized_(false), name_(g_EPINDDeviceName), numPos_(6) { CreateHubIDProperty(); }
-EvidentEPIND::~EvidentEPIND() { Shutdown(); }
-void EvidentEPIND::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentEPIND::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentEPIND::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentEPIND::Busy() { return false; }
-unsigned long EvidentEPIND::GetNumberOfPositions() const { return numPos_; }
-int EvidentEPIND::OnState(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentEPIND::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
+    // Create properties
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentLightPath::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
 
-EvidentCorrectionCollar::EvidentCorrectionCollar() : initialized_(false), name_(g_CorrectionCollarDeviceName) { CreateHubIDProperty(); }
-EvidentCorrectionCollar::~EvidentCorrectionCollar() { Shutdown(); }
-void EvidentCorrectionCollar::GetName(char* pszName) const { CDeviceUtils::CopyLimitedString(pszName, name_.c_str()); }
-int EvidentCorrectionCollar::Initialize() { initialized_ = true; return DEVICE_OK; }
-int EvidentCorrectionCollar::Shutdown() { initialized_ = false; return DEVICE_OK; }
-bool EvidentCorrectionCollar::Busy() { return false; }
-int EvidentCorrectionCollar::OnPosition(MM::PropertyBase*, MM::ActionType) { return DEVICE_OK; }
-EvidentHub* EvidentCorrectionCollar::GetHub() { return dynamic_cast<EvidentHub*>(GetParentHub()); }
+    SetPropertyLimits(MM::g_Keyword_State, 0, 3);
+
+    // Create label property
+    pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
+    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Define labels for light path positions
+    SetPositionLabel(0, "Left Port");       // LIGHT_PATH_LEFT_PORT = 1
+    SetPositionLabel(1, "Binocular 50/50"); // LIGHT_PATH_BI_50_50 = 2
+    SetPositionLabel(2, "Binocular 100%");  // LIGHT_PATH_BI_100 = 3
+    SetPositionLabel(3, "Right Port");      // LIGHT_PATH_RIGHT_PORT = 4
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentLightPath::Shutdown()
+{
+    if (initialized_)
+    {
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentLightPath::Busy()
+{
+    return false;  // Light path changes are instantaneous
+}
+
+unsigned long EvidentLightPath::GetNumberOfPositions() const
+{
+    return 4;
+}
+
+int EvidentLightPath::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Query current position
+        std::string cmd = BuildQuery(CMD_LIGHT_PATH);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int pos = ParseIntParameter(params[0]);
+            if (pos >= 1 && pos <= 4)
+            {
+                // Convert from 1-based to 0-based
+                pProp->Set(static_cast<long>(pos - 1));
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Convert from 0-based to 1-based for the microscope
+        std::string cmd = BuildCommand(CMD_LIGHT_PATH, static_cast<int>(pos + 1));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_LIGHT_PATH))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentLightPath::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentCondenserTurret - Condenser Turret Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentCondenserTurret::EvidentCondenserTurret() :
+    initialized_(false),
+    name_(g_CondenserTurretDeviceName),
+    numPos_(6)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Condenser turret not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentCondenserTurret::~EvidentCondenserTurret()
+{
+    Shutdown();
+}
+
+void EvidentCondenserTurret::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentCondenserTurret::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_CondenserTurret))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    numPos_ = hub->GetModel()->GetNumPositions(DeviceType_CondenserTurret);
+
+    // Create properties
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentCondenserTurret::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    SetPropertyLimits(MM::g_Keyword_State, 0, numPos_ - 1);
+
+    // Create label property
+    pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
+    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Define labels
+    for (unsigned int i = 0; i < numPos_; i++)
+    {
+        std::ostringstream label;
+        label << "Position-" << (i + 1);
+        SetPositionLabel(i, label.str().c_str());
+    }
+
+    // Enable notifications
+    ret = EnableNotifications(true);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentCondenserTurret::Shutdown()
+{
+    if (initialized_)
+    {
+        EnableNotifications(false);
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentCondenserTurret::Busy()
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return false;
+
+    return hub->GetModel()->IsBusy(DeviceType_CondenserTurret);
+}
+
+unsigned long EvidentCondenserTurret::GetNumberOfPositions() const
+{
+    return numPos_;
+}
+
+int EvidentCondenserTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        long pos = hub->GetModel()->GetPosition(DeviceType_CondenserTurret);
+        if (pos < 0)
+            return ERR_POSITION_UNKNOWN;
+
+        // Convert from 1-based to 0-based
+        pProp->Set(pos - 1);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Set target position BEFORE sending command so notifications can check against it
+        // Convert from 0-based to 1-based for the microscope
+        hub->GetModel()->SetTargetPosition(DeviceType_CondenserTurret, pos + 1);
+        hub->GetModel()->SetBusy(DeviceType_CondenserTurret, true);
+
+        std::string cmd = BuildCommand(CMD_CONDENSER_TURRET, static_cast<int>(pos + 1));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+            hub->GetModel()->SetBusy(DeviceType_CondenserTurret, false);
+            return ret;
+        }
+
+        if (!IsPositiveAck(response, CMD_CONDENSER_TURRET))
+        {
+            hub->GetModel()->SetBusy(DeviceType_CondenserTurret, false);
+            return ERR_NEGATIVE_ACK;
+        }
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentCondenserTurret::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+int EvidentCondenserTurret::EnableNotifications(bool enable)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    return hub->EnableNotification(CMD_CONDENSER_TURRET_NOTIFY, enable);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentDIAShutter - DIA (Transmitted Light) Shutter Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentDIAShutter::EvidentDIAShutter() :
+    initialized_(false),
+    name_(g_DIAShutterDeviceName)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "DIA shutter not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentDIAShutter::~EvidentDIAShutter()
+{
+    Shutdown();
+}
+
+void EvidentDIAShutter::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentDIAShutter::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_DIAShutter))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    // Create state property
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentDIAShutter::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    AddAllowedValue(MM::g_Keyword_State, "0");  // Closed
+    AddAllowedValue(MM::g_Keyword_State, "1");  // Open
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentDIAShutter::Shutdown()
+{
+    if (initialized_)
+    {
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentDIAShutter::Busy()
+{
+    return false;  // Shutter changes are instantaneous
+}
+
+int EvidentDIAShutter::SetOpen(bool open)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    std::string cmd = BuildCommand(CMD_DIA_SHUTTER, open ? 1 : 0);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_DIA_SHUTTER))
+        return ERR_NEGATIVE_ACK;
+
+    return DEVICE_OK;
+}
+
+int EvidentDIAShutter::GetOpen(bool& open)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    std::string cmd = BuildQuery(CMD_DIA_SHUTTER);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() > 0)
+    {
+        int state = ParseIntParameter(params[0]);
+        open = (state == 1);
+    }
+
+    return DEVICE_OK;
+}
+
+int EvidentDIAShutter::Fire(double /*deltaT*/)
+{
+    // Not implemented for this shutter
+    return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+int EvidentDIAShutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        bool open;
+        int ret = GetOpen(open);
+        if (ret != DEVICE_OK)
+            return ret;
+        pProp->Set(open ? 1L : 0L);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long state;
+        pProp->Get(state);
+        return SetOpen(state != 0);
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentDIAShutter::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentEPIShutter1 - EPI (Reflected Light) Shutter 1 Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentEPIShutter1::EvidentEPIShutter1() :
+    initialized_(false),
+    name_(g_EPIShutter1DeviceName)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "EPI shutter 1 not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentEPIShutter1::~EvidentEPIShutter1()
+{
+    Shutdown();
+}
+
+void EvidentEPIShutter1::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentEPIShutter1::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_EPIShutter1))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    // Create state property
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentEPIShutter1::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    AddAllowedValue(MM::g_Keyword_State, "0");  // Closed
+    AddAllowedValue(MM::g_Keyword_State, "1");  // Open
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentEPIShutter1::Shutdown()
+{
+    if (initialized_)
+    {
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentEPIShutter1::Busy()
+{
+    return false;  // Shutter changes are instantaneous
+}
+
+int EvidentEPIShutter1::SetOpen(bool open)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    std::string cmd = BuildCommand(CMD_EPI_SHUTTER1, open ? 1 : 0);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_EPI_SHUTTER1))
+        return ERR_NEGATIVE_ACK;
+
+    return DEVICE_OK;
+}
+
+int EvidentEPIShutter1::GetOpen(bool& open)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    std::string cmd = BuildQuery(CMD_EPI_SHUTTER1);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() > 0)
+    {
+        int state = ParseIntParameter(params[0]);
+        open = (state == 1);
+    }
+
+    return DEVICE_OK;
+}
+
+int EvidentEPIShutter1::Fire(double /*deltaT*/)
+{
+    // Not implemented for this shutter
+    return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+int EvidentEPIShutter1::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        bool open;
+        int ret = GetOpen(open);
+        if (ret != DEVICE_OK)
+            return ret;
+        pProp->Set(open ? 1L : 0L);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long state;
+        pProp->Get(state);
+        return SetOpen(state != 0);
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentEPIShutter1::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentMirrorUnit1 - Mirror Unit 1 (Filter Cube Turret) Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentMirrorUnit1::EvidentMirrorUnit1() :
+    initialized_(false),
+    name_(g_MirrorUnit1DeviceName),
+    numPos_(6)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Mirror unit 1 not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentMirrorUnit1::~EvidentMirrorUnit1()
+{
+    Shutdown();
+}
+
+void EvidentMirrorUnit1::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentMirrorUnit1::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_MirrorUnit1))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    numPos_ = hub->GetModel()->GetNumPositions(DeviceType_MirrorUnit1);
+
+    // Create properties
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentMirrorUnit1::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    SetPropertyLimits(MM::g_Keyword_State, 0, numPos_ - 1);
+
+    // Create label property
+    pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
+    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Define labels
+    for (unsigned int i = 0; i < numPos_; i++)
+    {
+        std::ostringstream label;
+        label << "Position-" << (i + 1);
+        SetPositionLabel(i, label.str().c_str());
+    }
+
+    // Enable notifications
+    ret = EnableNotifications(true);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentMirrorUnit1::Shutdown()
+{
+    if (initialized_)
+    {
+        EnableNotifications(false);
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentMirrorUnit1::Busy()
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return false;
+
+    return hub->GetModel()->IsBusy(DeviceType_MirrorUnit1);
+}
+
+unsigned long EvidentMirrorUnit1::GetNumberOfPositions() const
+{
+    return numPos_;
+}
+
+int EvidentMirrorUnit1::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        long pos = hub->GetModel()->GetPosition(DeviceType_MirrorUnit1);
+        if (pos < 0)
+            return ERR_POSITION_UNKNOWN;
+
+        // Convert from 1-based to 0-based
+        pProp->Set(pos - 1);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Set target position BEFORE sending command
+        hub->GetModel()->SetTargetPosition(DeviceType_MirrorUnit1, pos + 1);
+        hub->GetModel()->SetBusy(DeviceType_MirrorUnit1, true);
+
+        std::string cmd = BuildCommand(CMD_MIRROR_UNIT1, static_cast<int>(pos + 1));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+            hub->GetModel()->SetBusy(DeviceType_MirrorUnit1, false);
+            return ret;
+        }
+
+        if (!IsPositiveAck(response, CMD_MIRROR_UNIT1))
+        {
+            hub->GetModel()->SetBusy(DeviceType_MirrorUnit1, false);
+            return ERR_NEGATIVE_ACK;
+        }
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentMirrorUnit1::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+int EvidentMirrorUnit1::EnableNotifications(bool enable)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    return hub->EnableNotification(CMD_MIRROR_UNIT_NOTIFY1, enable);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentPolarizer - Polarizer Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentPolarizer::EvidentPolarizer() :
+    initialized_(false),
+    name_(g_PolarizerDeviceName),
+    numPos_(6)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Polarizer not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentPolarizer::~EvidentPolarizer()
+{
+    Shutdown();
+}
+
+void EvidentPolarizer::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentPolarizer::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_Polarizer))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    numPos_ = hub->GetModel()->GetNumPositions(DeviceType_Polarizer);
+
+    // Create properties
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentPolarizer::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    SetPropertyLimits(MM::g_Keyword_State, 0, numPos_ - 1);
+
+    // Create label property
+    pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
+    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Define labels
+    for (unsigned int i = 0; i < numPos_; i++)
+    {
+        std::ostringstream label;
+        label << "Position-" << (i + 1);
+        SetPositionLabel(i, label.str().c_str());
+    }
+
+    // Enable notifications
+    ret = EnableNotifications(true);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentPolarizer::Shutdown()
+{
+    if (initialized_)
+    {
+        EnableNotifications(false);
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentPolarizer::Busy()
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return false;
+
+    return hub->GetModel()->IsBusy(DeviceType_Polarizer);
+}
+
+unsigned long EvidentPolarizer::GetNumberOfPositions() const
+{
+    return numPos_;
+}
+
+int EvidentPolarizer::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        long pos = hub->GetModel()->GetPosition(DeviceType_Polarizer);
+        if (pos < 0)
+            return ERR_POSITION_UNKNOWN;
+
+        // Convert from 1-based to 0-based
+        pProp->Set(pos - 1);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Set target position BEFORE sending command
+        hub->GetModel()->SetTargetPosition(DeviceType_Polarizer, pos + 1);
+        hub->GetModel()->SetBusy(DeviceType_Polarizer, true);
+
+        std::string cmd = BuildCommand(CMD_POLARIZER, static_cast<int>(pos + 1));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+            hub->GetModel()->SetBusy(DeviceType_Polarizer, false);
+            return ret;
+        }
+
+        if (!IsPositiveAck(response, CMD_POLARIZER))
+        {
+            hub->GetModel()->SetBusy(DeviceType_Polarizer, false);
+            return ERR_NEGATIVE_ACK;
+        }
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentPolarizer::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+int EvidentPolarizer::EnableNotifications(bool enable)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    return hub->EnableNotification(CMD_POLARIZER_NOTIFY, enable);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentDICPrism - DIC Prism Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentDICPrism::EvidentDICPrism() :
+    initialized_(false),
+    name_(g_DICPrismDeviceName),
+    numPos_(6)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "DIC prism not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentDICPrism::~EvidentDICPrism()
+{
+    Shutdown();
+}
+
+void EvidentDICPrism::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentDICPrism::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_DICPrism))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    numPos_ = hub->GetModel()->GetNumPositions(DeviceType_DICPrism);
+
+    // Create properties
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentDICPrism::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    SetPropertyLimits(MM::g_Keyword_State, 0, numPos_ - 1);
+
+    // Create label property
+    pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
+    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Define labels
+    for (unsigned int i = 0; i < numPos_; i++)
+    {
+        std::ostringstream label;
+        label << "Position-" << (i + 1);
+        SetPositionLabel(i, label.str().c_str());
+    }
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentDICPrism::Shutdown()
+{
+    if (initialized_)
+    {
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentDICPrism::Busy()
+{
+    return false;  // DIC prism changes are instantaneous
+}
+
+unsigned long EvidentDICPrism::GetNumberOfPositions() const
+{
+    return numPos_;
+}
+
+int EvidentDICPrism::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Query current position
+        std::string cmd = BuildQuery(CMD_DIC_PRISM);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int pos = ParseIntParameter(params[0]);
+            if (pos >= 1 && pos <= static_cast<int>(numPos_))
+            {
+                // Convert from 1-based to 0-based
+                pProp->Set(static_cast<long>(pos - 1));
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Convert from 0-based to 1-based for the microscope
+        std::string cmd = BuildCommand(CMD_DIC_PRISM, static_cast<int>(pos + 1));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_DIC_PRISM))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentDICPrism::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentEPIND - EPI ND Filter Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentEPIND::EvidentEPIND() :
+    initialized_(false),
+    name_(g_EPINDDeviceName),
+    numPos_(6)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "EPI ND filter not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentEPIND::~EvidentEPIND()
+{
+    Shutdown();
+}
+
+void EvidentEPIND::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentEPIND::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_EPIND))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    numPos_ = hub->GetModel()->GetNumPositions(DeviceType_EPIND);
+
+    // Create properties
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentEPIND::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    SetPropertyLimits(MM::g_Keyword_State, 0, numPos_ - 1);
+
+    // Create label property
+    pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
+    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Define labels
+    for (unsigned int i = 0; i < numPos_; i++)
+    {
+        std::ostringstream label;
+        label << "Position-" << (i + 1);
+        SetPositionLabel(i, label.str().c_str());
+    }
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentEPIND::Shutdown()
+{
+    if (initialized_)
+    {
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentEPIND::Busy()
+{
+    return false;  // ND filter changes are instantaneous
+}
+
+unsigned long EvidentEPIND::GetNumberOfPositions() const
+{
+    return numPos_;
+}
+
+int EvidentEPIND::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Query current position
+        std::string cmd = BuildQuery(CMD_EPI_ND);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int pos = ParseIntParameter(params[0]);
+            if (pos >= 1 && pos <= static_cast<int>(numPos_))
+            {
+                // Convert from 1-based to 0-based
+                pProp->Set(static_cast<long>(pos - 1));
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Convert from 0-based to 1-based for the microscope
+        std::string cmd = BuildCommand(CMD_EPI_ND, static_cast<int>(pos + 1));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_EPI_ND))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentEPIND::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentCorrectionCollar - Correction Collar Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentCorrectionCollar::EvidentCorrectionCollar() :
+    initialized_(false),
+    name_(g_CorrectionCollarDeviceName)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Correction collar not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentCorrectionCollar::~EvidentCorrectionCollar()
+{
+    Shutdown();
+}
+
+void EvidentCorrectionCollar::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentCorrectionCollar::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_CorrectionCollar))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    // Create position property (0-100 range typically)
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentCorrectionCollar::OnPosition);
+    int ret = CreateProperty("Position", "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    SetPropertyLimits("Position", 0, 100);
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentCorrectionCollar::Shutdown()
+{
+    if (initialized_)
+    {
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentCorrectionCollar::Busy()
+{
+    return false;  // Correction collar changes are instantaneous
+}
+
+int EvidentCorrectionCollar::OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Query current position
+        std::string cmd = BuildQuery(CMD_CORRECTION_COLLAR);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int pos = ParseIntParameter(params[0]);
+            if (pos >= 0)
+                pProp->Set(static_cast<long>(pos));
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        std::string cmd = BuildCommand(CMD_CORRECTION_COLLAR, static_cast<int>(pos));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_CORRECTION_COLLAR))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentCorrectionCollar::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
