@@ -962,11 +962,12 @@ void EvidentHub::ProcessNotification(const std::string& message)
         if (pos >= 0)
         {
             model_.SetPosition(DeviceType_Focus, pos);
-            // Check if we've reached the target position
+            // Check if we've reached the target position (with tolerance for mechanical settling)
             long targetPos = model_.GetTargetPosition(DeviceType_Focus);
-            if (targetPos >= 0 && pos == targetPos)
+            if (IsAtTargetPosition(pos, targetPos, FOCUS_POSITION_TOLERANCE))
             {
                 model_.SetBusy(DeviceType_Focus, false);
+                LogMessage("Focus reached target position", true);
             }
         }
     }

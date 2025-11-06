@@ -171,6 +171,7 @@ const char* const CMD_MCZ_SWITCH = "S2";
 const long FOCUS_MIN_POS = 0;
 const long FOCUS_MAX_POS = 1050000;  // 10.5mm in 10nm units
 const double FOCUS_STEP_SIZE_UM = 0.01;  // 10nm = 0.01um
+const long FOCUS_POSITION_TOLERANCE = 10;  // 10 steps = 100nm tolerance for "at position" detection
 
 const int NOSEPIECE_MIN_POS = 1;
 const int NOSEPIECE_MAX_POS = 6;
@@ -360,6 +361,19 @@ inline long ParseLongParameter(const std::string& param)
         // Number too large for long
         return -1;
     }
+}
+
+// Helper function to check if position is within tolerance of target
+inline bool IsAtTargetPosition(long currentPos, long targetPos, long tolerance)
+{
+    if (targetPos < 0)
+        return false;  // No target set
+
+    long diff = currentPos - targetPos;
+    if (diff < 0)
+        diff = -diff;  // Absolute value
+
+    return diff <= tolerance;
 }
 
 } // namespace EvidentIX85
