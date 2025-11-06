@@ -1452,10 +1452,8 @@ int EvidentMirrorUnit1::Initialize()
         SetPositionLabel(i, label.str().c_str());
     }
 
-    // Enable notifications
-    ret = EnableNotifications(true);
-    if (ret != DEVICE_OK)
-        return ret;
+    // Note: MirrorUnit uses NMUINIT1 which is an initialization notification,
+    // not a position change notification, so we use query-based position tracking
 
     initialized_ = true;
     return DEVICE_OK;
@@ -1465,7 +1463,6 @@ int EvidentMirrorUnit1::Shutdown()
 {
     if (initialized_)
     {
-        EnableNotifications(false);
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -1473,11 +1470,7 @@ int EvidentMirrorUnit1::Shutdown()
 
 bool EvidentMirrorUnit1::Busy()
 {
-    EvidentHub* hub = GetHub();
-    if (!hub)
-        return false;
-
-    return hub->GetModel()->IsBusy(DeviceType_MirrorUnit1);
+    return false;  // Mirror unit changes are instantaneous
 }
 
 unsigned long EvidentMirrorUnit1::GetNumberOfPositions() const
@@ -1493,12 +1486,23 @@ int EvidentMirrorUnit1::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!hub)
             return DEVICE_ERR;
 
-        long pos = hub->GetModel()->GetPosition(DeviceType_MirrorUnit1);
-        if (pos < 0)
-            return ERR_POSITION_UNKNOWN;
+        // Query current position from hardware
+        std::string cmd = BuildQuery(CMD_MIRROR_UNIT1);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
 
-        // Convert from 1-based to 0-based
-        pProp->Set(pos - 1);
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int pos = ParseIntParameter(params[0]);
+            if (pos >= 1 && pos <= static_cast<int>(numPos_))
+            {
+                // Convert from 1-based to 0-based
+                pProp->Set(static_cast<long>(pos - 1));
+            }
+        }
     }
     else if (eAct == MM::AfterSet)
     {
@@ -1509,24 +1513,15 @@ int EvidentMirrorUnit1::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!hub)
             return DEVICE_ERR;
 
-        // Set target position BEFORE sending command
-        hub->GetModel()->SetTargetPosition(DeviceType_MirrorUnit1, pos + 1);
-        hub->GetModel()->SetBusy(DeviceType_MirrorUnit1, true);
-
+        // Convert from 0-based to 1-based for the microscope
         std::string cmd = BuildCommand(CMD_MIRROR_UNIT1, static_cast<int>(pos + 1));
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
-        {
-            hub->GetModel()->SetBusy(DeviceType_MirrorUnit1, false);
             return ret;
-        }
 
         if (!IsPositiveAck(response, CMD_MIRROR_UNIT1))
-        {
-            hub->GetModel()->SetBusy(DeviceType_MirrorUnit1, false);
             return ERR_NEGATIVE_ACK;
-        }
     }
     return DEVICE_OK;
 }
@@ -1539,13 +1534,11 @@ EvidentHub* EvidentMirrorUnit1::GetHub()
     return dynamic_cast<EvidentHub*>(hub);
 }
 
-int EvidentMirrorUnit1::EnableNotifications(bool enable)
+int EvidentMirrorUnit1::EnableNotifications(bool /*enable*/)
 {
-    EvidentHub* hub = GetHub();
-    if (!hub)
-        return DEVICE_ERR;
-
-    return hub->EnableNotification(CMD_MIRROR_UNIT_NOTIFY1, enable);
+    // NMUINIT1 is an initialization notification, not a position change notification
+    // MirrorUnit1 uses query-based position tracking instead
+    return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
