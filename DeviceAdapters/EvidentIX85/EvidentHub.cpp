@@ -917,13 +917,29 @@ void EvidentHub::MonitorThreadFunc()
                 {
                     long pos = ParseLongParameter(params[0]);
                     if (pos >= 0)
+                    {
                         model_.SetPosition(DeviceType_Focus, pos);
+                        // Check if we've reached the target position
+                        long targetPos = model_.GetTargetPosition(DeviceType_Focus);
+                        if (targetPos >= 0 && pos == targetPos)
+                        {
+                            model_.SetBusy(DeviceType_Focus, false);
+                        }
+                    }
                 }
                 else if (tag == CMD_NOSEPIECE_NOTIFY && params.size() > 0)
                 {
                     int pos = ParseIntParameter(params[0]);
                     if (pos >= 0)
+                    {
                         model_.SetPosition(DeviceType_Nosepiece, pos);
+                        // Check if we've reached the target position
+                        long targetPos = model_.GetTargetPosition(DeviceType_Nosepiece);
+                        if (targetPos >= 0 && pos == targetPos)
+                        {
+                            model_.SetBusy(DeviceType_Nosepiece, false);
+                        }
+                    }
                 }
                 else if (tag == CMD_MAGNIFICATION_NOTIFY && params.size() > 0)
                 {
