@@ -47,6 +47,7 @@ extern const char* g_CorrectionCollarDeviceName;
 // Property names
 const char* g_PropPort = "Port";
 const char* g_PropAnswerTimeout = "AnswerTimeout";
+extern const char* g_Keyword_Magnification;
 
 EvidentHub::EvidentHub() :
     initialized_(false),
@@ -998,7 +999,7 @@ void EvidentHub::ProcessNotification(const std::string& message)
                 const double magnifications[3] = {1.0, 1.6, 2.0};
                 if (pos >= 1 && pos <= 3)
                 {
-                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Magnification,
+                    GetCoreCallback()->OnPropertyChanged(it->second, g_Keyword_Magnification,
                         CDeviceUtils::ConvertToString(magnifications[pos - 1]));
                 }
             }

@@ -43,6 +43,9 @@ const char* g_DICPrismDeviceName = "IX85-DICPrism";
 const char* g_EPINDDeviceName = "IX85-EPIND";
 const char* g_CorrectionCollarDeviceName = "IX85-CorrectionCollar";
 
+// Property Names
+const char* g_Keyword_Magnification = "Magnification";
+
 ///////////////////////////////////////////////////////////////////////////////
 // MODULE_API - Exported MMDevice interface
 ///////////////////////////////////////////////////////////////////////////////
@@ -52,7 +55,7 @@ MODULE_API void InitializeModuleData()
     RegisterDevice(g_HubDeviceName, MM::HubDevice, "Evident IX85 Hub");
     RegisterDevice(g_FocusDeviceName, MM::StageDevice, "Evident IX85 Focus Drive");
     RegisterDevice(g_NosepieceDeviceName, MM::StateDevice, "Evident IX85 Nosepiece");
-    RegisterDevice(g_MagnificationDeviceName, MM::StateDevice, "Evident IX85 Magnification Changer");
+    RegisterDevice(g_MagnificationDeviceName, MM::MagnifierDevice, "Evident IX85 Magnification Changer");
     RegisterDevice(g_LightPathDeviceName, MM::StateDevice, "Evident IX85 Light Path");
     RegisterDevice(g_CondenserTurretDeviceName, MM::StateDevice, "Evident IX85 Condenser Turret");
     RegisterDevice(g_DIAShutterDeviceName, MM::ShutterDevice, "Evident IX85 DIA Shutter");
@@ -561,7 +564,7 @@ int EvidentMagnification::Initialize()
 
     // Create magnification property (read-only)
     CPropertyAction* pAct = new CPropertyAction(this, &EvidentMagnification::OnMagnification);
-    int ret = CreateProperty(MM::g_Keyword_Magnification, "1.0", MM::Float, true, pAct);
+    int ret = CreateProperty(g_Keyword_Magnification, "1.0", MM::Float, true, pAct);
     if (ret != DEVICE_OK)
         return ret;
 
@@ -570,7 +573,7 @@ int EvidentMagnification::Initialize()
     {
         std::ostringstream os;
         os << magnifications_[i];
-        AddAllowedValue(MM::g_Keyword_Magnification, os.str().c_str());
+        AddAllowedValue(g_Keyword_Magnification, os.str().c_str());
     }
 
     hub->RegisterDeviceAsUsed(DeviceType_Magnification, this);
@@ -604,7 +607,7 @@ bool EvidentMagnification::Busy()
     return hub->GetModel()->IsBusy(DeviceType_Magnification);
 }
 
-double EvidentMagnification::GetMagnification() const
+double EvidentMagnification::GetMagnification()
 {
     EvidentHub* hub = GetHub();
     if (!hub)

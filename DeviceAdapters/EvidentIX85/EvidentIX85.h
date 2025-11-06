@@ -116,7 +116,7 @@ public:
     bool Busy();
 
     // CMagnifierBase API
-    double GetMagnification() const;
+    double GetMagnification();
 
     // Action interface
     int OnMagnification(MM::PropertyBase* pProp, MM::ActionType eAct);
