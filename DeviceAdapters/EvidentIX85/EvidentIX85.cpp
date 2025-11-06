@@ -194,18 +194,28 @@ int EvidentFocus::SetPositionUm(double pos)
     if (steps < FOCUS_MIN_POS) steps = FOCUS_MIN_POS;
     if (steps > FOCUS_MAX_POS) steps = FOCUS_MAX_POS;
 
+    // Set target position BEFORE sending command so notifications can check against it
+    hub->GetModel()->SetTargetPosition(DeviceType_Focus, steps);
+    hub->GetModel()->SetBusy(DeviceType_Focus, true);
+
     std::string cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(steps));
     std::string response;
     int ret = hub->ExecuteCommand(cmd, response);
     if (ret != DEVICE_OK)
+    {
+        // Command failed - clear busy state
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
         return ret;
+    }
 
     if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+    {
+        // Command rejected - clear busy state
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
         return ERR_NEGATIVE_ACK;
+    }
 
-    hub->GetModel()->SetTargetPosition(DeviceType_Focus, steps);
-    hub->GetModel()->SetBusy(DeviceType_Focus, true);
-
+    // Command accepted - busy state already set, will be cleared by notification when target reached
     return DEVICE_OK;
 }
 
@@ -463,18 +473,29 @@ int EvidentNosepiece::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!hub)
             return DEVICE_ERR;
 
-        // Convert from 0-based to 1-based
+        // Set target position BEFORE sending command so notifications can check against it
+        // Convert from 0-based to 1-based for the microscope
+        hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, pos + 1);
+        hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
+
         std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(pos + 1));
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
+        {
+            // Command failed - clear busy state
+            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
             return ret;
+        }
 
         if (!IsPositiveAck(response, CMD_NOSEPIECE))
+        {
+            // Command rejected - clear busy state
+            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
             return ERR_NEGATIVE_ACK;
+        }
 
-        hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, pos + 1);
-        hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
+        // Command accepted - busy state already set, will be cleared by notification when target reached
     }
     return DEVICE_OK;
 }
