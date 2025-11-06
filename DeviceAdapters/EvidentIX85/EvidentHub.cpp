@@ -1001,6 +1001,8 @@ void EvidentHub::ProcessNotification(const std::string& message)
                 {
                     GetCoreCallback()->OnPropertyChanged(it->second, g_Keyword_Magnification,
                         CDeviceUtils::ConvertToString(magnifications[pos - 1]));
+                    // Notify core that magnification has changed
+                    GetCoreCallback()->OnMagnifierChanged(it->second);
                 }
             }
         }
