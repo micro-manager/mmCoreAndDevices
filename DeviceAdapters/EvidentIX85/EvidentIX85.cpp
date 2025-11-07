@@ -197,6 +197,10 @@ int EvidentFocus::SetPositionUm(double pos)
     if (steps < FOCUS_MIN_POS) steps = FOCUS_MIN_POS;
     if (steps > FOCUS_MAX_POS) steps = FOCUS_MAX_POS;
 
+    // Check if we're already at the target position
+    long currentPos = hub->GetModel()->GetPosition(DeviceType_Focus);
+    bool alreadyAtTarget = IsAtTargetPosition(currentPos, steps, FOCUS_POSITION_TOLERANCE);
+
     // Set target position BEFORE sending command so notifications can check against it
     hub->GetModel()->SetTargetPosition(DeviceType_Focus, steps);
     hub->GetModel()->SetBusy(DeviceType_Focus, true);
@@ -218,7 +222,13 @@ int EvidentFocus::SetPositionUm(double pos)
         return ERR_NEGATIVE_ACK;
     }
 
-    // Command accepted - busy state already set, will be cleared by notification when target reached
+    // If we're already at the target, firmware won't send notifications, so clear busy immediately
+    if (alreadyAtTarget)
+    {
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
+    }
+
+    // Command accepted - if not already at target, busy will be cleared by notification when target reached
     return DEVICE_OK;
 }
 
@@ -591,6 +601,9 @@ int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
 
     LogMessage("Safe nosepiece change: Moving focus to zero");
 
+    // Check if focus is already at zero
+    bool alreadyAtZero = IsAtTargetPosition(originalFocusPos, 0, FOCUS_POSITION_TOLERANCE);
+
     // Move focus to zero
     hub->GetModel()->SetTargetPosition(DeviceType_Focus, 0);
     hub->GetModel()->SetBusy(DeviceType_Focus, true);
@@ -607,6 +620,12 @@ int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
     {
         hub->GetModel()->SetBusy(DeviceType_Focus, false);
         return ERR_NEGATIVE_ACK;
+    }
+
+    // If already at zero, firmware won't send notifications, so clear busy immediately
+    if (alreadyAtZero)
+    {
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
     }
 
     // Wait for focus to reach zero (with timeout)
@@ -672,6 +691,10 @@ int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
 
     LogMessage("Safe nosepiece change: Restoring focus position");
 
+    // Check if we're already at the target position (originalFocusPos)
+    long currentFocusPos = hub->GetModel()->GetPosition(DeviceType_Focus);
+    bool alreadyAtTarget = IsAtTargetPosition(currentFocusPos, originalFocusPos, FOCUS_POSITION_TOLERANCE);
+
     // Restore original focus position
     hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
     hub->GetModel()->SetBusy(DeviceType_Focus, true);
@@ -688,6 +711,12 @@ int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
     {
         hub->GetModel()->SetBusy(DeviceType_Focus, false);
         return ERR_NEGATIVE_ACK;
+    }
+
+    // If already at target, firmware won't send notifications, so clear busy immediately
+    if (alreadyAtTarget)
+    {
+        hub->GetModel()->SetBusy(DeviceType_Focus, false);
     }
 
     LogMessage("Safe nosepiece change completed successfully");
@@ -1601,13 +1630,9 @@ int EvidentPolarizer::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
-    // Define labels
-    for (unsigned int i = 0; i < numPos_; i++)
-    {
-        std::ostringstream label;
-        label << "Position-" << (i + 1);
-        SetPositionLabel(i, label.str().c_str());
-    }
+    // Define labels - Polarizer has Out (0) and In (1)
+    SetPositionLabel(0, "Out");
+    SetPositionLabel(1, "In");
 
     // Enable notifications
     ret = EnableNotifications(true);
@@ -1654,8 +1679,8 @@ int EvidentPolarizer::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (pos < 0)
             return ERR_POSITION_UNKNOWN;
 
-        // Convert from 1-based to 0-based
-        pProp->Set(pos - 1);
+        // Polarizer uses 0-based indexing (PO 0 = Out, PO 1 = In), no conversion needed
+        pProp->Set(pos);
     }
     else if (eAct == MM::AfterSet)
     {
@@ -1667,10 +1692,11 @@ int EvidentPolarizer::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             return DEVICE_ERR;
 
         // Set target position BEFORE sending command
-        hub->GetModel()->SetTargetPosition(DeviceType_Polarizer, pos + 1);
+        // Polarizer uses 0-based indexing (PO 0 = Out, PO 1 = In)
+        hub->GetModel()->SetTargetPosition(DeviceType_Polarizer, pos);
         hub->GetModel()->SetBusy(DeviceType_Polarizer, true);
 
-        std::string cmd = BuildCommand(CMD_POLARIZER, static_cast<int>(pos + 1));
+        std::string cmd = BuildCommand(CMD_POLARIZER, static_cast<int>(pos));
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
@@ -1684,6 +1710,12 @@ int EvidentPolarizer::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             hub->GetModel()->SetBusy(DeviceType_Polarizer, false);
             return ERR_NEGATIVE_ACK;
         }
+
+        // Polarizer does not send notifications (NPO) when movement completes.
+        // The positive ack ("PO +") is only returned after movement completes,
+        // so we can clear busy immediately and update position.
+        hub->GetModel()->SetPosition(DeviceType_Polarizer, pos);
+        hub->GetModel()->SetBusy(DeviceType_Polarizer, false);
     }
     return DEVICE_OK;
 }
@@ -1702,7 +1734,8 @@ int EvidentPolarizer::EnableNotifications(bool enable)
     if (!hub)
         return DEVICE_ERR;
 
-    return hub->EnableNotification(CMD_POLARIZER_NOTIFY, enable);
+    // Use PO (command tag) not NPO (notification tag) to enable notifications
+    return hub->EnableNotification(CMD_POLARIZER, enable);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

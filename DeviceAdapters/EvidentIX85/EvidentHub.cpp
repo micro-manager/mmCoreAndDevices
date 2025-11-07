@@ -617,10 +617,29 @@ int EvidentHub::QueryPolarizer()
     if (ret != DEVICE_OK)
         return ret;
 
-    if (IsUnknown(response))
-        return ERR_DEVICE_NOT_AVAILABLE;
-
     std::vector<std::string> params = ParseParameters(response);
+
+    // Workaround for IX85 firmware bug: first query returns "X" even if device is present
+    if (IsUnknown(response) || (params.size() > 0 && params[0] == "X"))
+    {
+        // Try sending a command to verify device presence
+        // If device is not present, we get error response "PO !.E003F0130"
+        // If device is present, we get positive ack "PO +"
+        std::string testCmd = BuildCommand(CMD_POLARIZER, 0);  // PO 0
+        std::string testResponse;
+        ret = ExecuteCommand(testCmd, testResponse);
+        if (ret != DEVICE_OK)
+            return ERR_DEVICE_NOT_AVAILABLE;
+
+        if (!IsPositiveAck(testResponse, CMD_POLARIZER))
+            return ERR_DEVICE_NOT_AVAILABLE;
+
+        // Device is present, set default position (0 = Out)
+        model_.SetPosition(DeviceType_Polarizer, 0);
+        model_.SetNumPositions(DeviceType_Polarizer, POLARIZER_MAX_POS);
+        return DEVICE_OK;
+    }
+
     if (params.size() > 0 && params[0] != "X")
     {
         int pos = ParseIntParameter(params[0]);
@@ -640,10 +659,29 @@ int EvidentHub::QueryDICPrism()
     if (ret != DEVICE_OK)
         return ret;
 
-    if (IsUnknown(response))
-        return ERR_DEVICE_NOT_AVAILABLE;
-
     std::vector<std::string> params = ParseParameters(response);
+
+    // Workaround for IX85 firmware bug: first query returns "X" even if device is present
+    if (IsUnknown(response) || (params.size() > 0 && params[0] == "X"))
+    {
+        // Try sending a command to verify device presence
+        // If device is not present, we get error response "DIC !.E003F0130"
+        // If device is present, we get positive ack "DIC +"
+        std::string testCmd = BuildCommand(CMD_DIC_PRISM, 0);  // DIC 0
+        std::string testResponse;
+        ret = ExecuteCommand(testCmd, testResponse);
+        if (ret != DEVICE_OK)
+            return ERR_DEVICE_NOT_AVAILABLE;
+
+        if (!IsPositiveAck(testResponse, CMD_DIC_PRISM))
+            return ERR_DEVICE_NOT_AVAILABLE;
+
+        // Device is present, set default position (0)
+        model_.SetPosition(DeviceType_DICPrism, 0);
+        model_.SetNumPositions(DeviceType_DICPrism, DIC_PRISM_MAX_POS);
+        return DEVICE_OK;
+    }
+
     if (params.size() > 0 && params[0] != "X")
     {
         int pos = ParseIntParameter(params[0]);
