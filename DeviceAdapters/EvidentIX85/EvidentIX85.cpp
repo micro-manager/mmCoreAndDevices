@@ -1079,11 +1079,10 @@ int EvidentCondenserTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct
         if (!hub)
             return DEVICE_ERR;
 
-        // Set target position BEFORE sending command so notifications can check against it
-        // Convert from 0-based to 1-based for the microscope
-        hub->GetModel()->SetTargetPosition(DeviceType_CondenserTurret, pos + 1);
+        // Set busy before sending command
         hub->GetModel()->SetBusy(DeviceType_CondenserTurret, true);
 
+        // Convert from 0-based to 1-based for the microscope
         std::string cmd = BuildCommand(CMD_CONDENSER_TURRET, static_cast<int>(pos + 1));
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
@@ -1098,6 +1097,12 @@ int EvidentCondenserTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct
             hub->GetModel()->SetBusy(DeviceType_CondenserTurret, false);
             return ERR_NEGATIVE_ACK;
         }
+
+        // CondenserTurret does not send notifications (NTR) when movement completes.
+        // The positive ack ("TR +") is only returned after movement completes,
+        // so we can clear busy immediately and update position.
+        hub->GetModel()->SetPosition(DeviceType_CondenserTurret, pos + 1);
+        hub->GetModel()->SetBusy(DeviceType_CondenserTurret, false);
     }
     return DEVICE_OK;
 }
