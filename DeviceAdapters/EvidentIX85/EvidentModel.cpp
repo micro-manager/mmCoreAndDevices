@@ -163,6 +163,18 @@ void MicroscopeModel::SetDeviceState(DeviceType type, const DeviceState& state)
     devices_[type] = state;
 }
 
+void MicroscopeModel::SetDeviceVersion(DeviceType type, const std::string& version)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    GetOrCreateState(type).version = version;
+}
+
+std::string MicroscopeModel::GetDeviceVersion(DeviceType type) const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return GetStateConst(type).version;
+}
+
 void MicroscopeModel::Clear()
 {
     std::lock_guard<std::mutex> lock(mutex_);

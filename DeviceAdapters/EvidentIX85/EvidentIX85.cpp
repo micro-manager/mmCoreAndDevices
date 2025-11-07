@@ -156,6 +156,15 @@ int EvidentFocus::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_Focus);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+
     // Enable active notifications
     ret = EnableNotifications(true);
     if (ret != DEVICE_OK)
@@ -437,6 +446,15 @@ int EvidentNosepiece::Initialize()
         return ret;
     AddAllowedValue("SafeNosepieceChange", "Disabled");
     AddAllowedValue("SafeNosepieceChange", "Enabled");
+
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_Nosepiece);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
 
     // Enable notifications
     ret = EnableNotifications(true);
@@ -911,6 +929,15 @@ int EvidentLightPath::Initialize()
     SetPositionLabel(2, "Binocular 100%");  // LIGHT_PATH_BI_100 = 3
     SetPositionLabel(3, "Right Port");      // LIGHT_PATH_RIGHT_PORT = 4
 
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_LightPath);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -1049,6 +1076,15 @@ int EvidentCondenserTurret::Initialize()
         std::ostringstream label;
         label << "Position-" << (i + 1);
         SetPositionLabel(i, label.str().c_str());
+    }
+
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_CondenserTurret);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
     }
 
     // Enable notifications
@@ -1199,6 +1235,15 @@ int EvidentDIAShutter::Initialize()
     AddAllowedValue(MM::g_Keyword_State, "0");  // Closed
     AddAllowedValue(MM::g_Keyword_State, "1");  // Open
 
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_DIAShutter);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -1334,6 +1379,15 @@ int EvidentEPIShutter1::Initialize()
 
     AddAllowedValue(MM::g_Keyword_State, "0");  // Closed
     AddAllowedValue(MM::g_Keyword_State, "1");  // Open
+
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_EPIShutter1);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
 
     initialized_ = true;
     return DEVICE_OK;
@@ -1490,6 +1544,15 @@ int EvidentMirrorUnit1::Initialize()
     // Note: MirrorUnit uses NMUINIT1 which is an initialization notification,
     // not a position change notification, so we use query-based position tracking
 
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_MirrorUnit1);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -1633,6 +1696,15 @@ int EvidentPolarizer::Initialize()
     // Define labels - Polarizer has Out (0) and In (1)
     SetPositionLabel(0, "Out");
     SetPositionLabel(1, "In");
+
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_Polarizer);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
 
     // Enable notifications
     ret = EnableNotifications(true);
@@ -1799,6 +1871,15 @@ int EvidentDICPrism::Initialize()
         SetPositionLabel(i, label.str().c_str());
     }
 
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_DICPrism);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -1937,6 +2018,15 @@ int EvidentEPIND::Initialize()
         std::ostringstream label;
         label << "Position-" << (i + 1);
         SetPositionLabel(i, label.str().c_str());
+    }
+
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_EPIND);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
     }
 
     initialized_ = true;

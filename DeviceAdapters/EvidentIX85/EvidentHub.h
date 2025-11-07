@@ -62,6 +62,7 @@ public:
 
     // Device discovery
     bool IsDevicePresent(EvidentIX85::DeviceType type) const;
+    std::string GetDeviceVersion(EvidentIX85::DeviceType type) const;
 
     // Notification control
     int EnableNotification(const char* cmd, bool enable);
@@ -76,6 +77,7 @@ private:
     int GetUnit(std::string& unit);
     int ClearPort();
     int DoDeviceDetection();
+    int QueryDevicePresenceByVersion(int unitNumber, std::string& version);
 
     // Device query helpers
     int QueryFocus();

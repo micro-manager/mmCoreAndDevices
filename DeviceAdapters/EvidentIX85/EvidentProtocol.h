@@ -52,6 +52,26 @@ const char* const CMD_UNIT = "U";
 const char* const CMD_VERSION = "V";
 const char* const CMD_ERROR = "ER";
 
+// V command unit numbers for device detection
+const int V_CONTROLLER = 1;
+const int V_NOSEPIECE = 2;
+const int V_CORRECTION_COLLAR_LINK = 3;
+const int V_CORRECTION_COLLAR_ROULETTE = 4;
+const int V_FOCUS = 5;
+const int V_LIGHTPATH = 6;
+const int V_CONDENSER_UNIT = 7;  // IX3-LWUCDA: Polarizer, CondenserTurret, DIAShutter, DIAAperture
+const int V_DIC_UNIT = 8;        // IX5-DICTA: DICPrism, DICRetardation
+const int V_MIRROR_UNIT1 = 9;
+const int V_EPI_SHUTTER1 = 10;
+const int V_MIRROR_UNIT2 = 11;
+const int V_EPI_SHUTTER2 = 12;
+const int V_MANUAL_CONTROL = 13;
+const int V_EPIND = 14;
+const int V_SD_MAGNIFICATION = 15;  // SDCA magnification (SPIN/SR system)
+const int V_AUTOFOCUS = 16;
+const int V_OFFSET_LENS = 17;
+const int V_FV40_PSU = 18;
+
 // Command tags - Focus
 const char* const CMD_FOCUS_GOTO = "FG";
 const char* const CMD_FOCUS_MOVE = "FM";

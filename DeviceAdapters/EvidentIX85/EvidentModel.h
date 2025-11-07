@@ -66,6 +66,7 @@ struct DeviceState
     long minPos;
     long maxPos;
     int numPositions;  // For state devices
+    std::string version;  // Firmware version from V command
     MM::MMTime lastUpdateTime;
     MM::MMTime lastRequestTime;
 
@@ -78,6 +79,7 @@ struct DeviceState
         minPos(0),
         maxPos(0),
         numPositions(0),
+        version(""),
         lastUpdateTime(0.0),
         lastRequestTime(0.0)
     {}
@@ -117,6 +119,10 @@ public:
     // Number of positions (for state devices)
     void SetNumPositions(DeviceType type, int numPos);
     int GetNumPositions(DeviceType type) const;
+
+    // Firmware version
+    void SetDeviceVersion(DeviceType type, const std::string& version);
+    std::string GetDeviceVersion(DeviceType type) const;
 
     // Timestamps
     void SetLastUpdateTime(DeviceType type, MM::MMTime time);

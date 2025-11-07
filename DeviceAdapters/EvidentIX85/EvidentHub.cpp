@@ -321,88 +321,134 @@ int EvidentHub::DoDeviceDetection()
     availableDevices_.clear();
     detectedDevicesByName_.clear();
 
-    // Query each possible device to see if it's present
-    // Start with essential devices
+    // Use V command to detect device presence
+    // This avoids firmware bugs with individual device queries
+    std::string version;
 
-    if (QueryFocus() == DEVICE_OK)
+    // V2 - Nosepiece
+    if (QueryDevicePresenceByVersion(V_NOSEPIECE, version) == DEVICE_OK)
     {
-        availableDevices_.push_back(DeviceType_Focus);
-        detectedDevicesByName_.push_back(g_FocusDeviceName);
-        model_.SetDevicePresent(DeviceType_Focus, true);
-    }
-
-    if (QueryNosepiece() == DEVICE_OK)
-    {
+        LogMessage(("Detected Nosepiece (V2): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_Nosepiece, true);
+        model_.SetDeviceVersion(DeviceType_Nosepiece, version);
         availableDevices_.push_back(DeviceType_Nosepiece);
         detectedDevicesByName_.push_back(g_NosepieceDeviceName);
-        model_.SetDevicePresent(DeviceType_Nosepiece, true);
+        // Query actual position/numPositions
+        QueryNosepiece();
     }
 
+    // V5 - Focus
+    if (QueryDevicePresenceByVersion(V_FOCUS, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected Focus (V5): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_Focus, true);
+        model_.SetDeviceVersion(DeviceType_Focus, version);
+        availableDevices_.push_back(DeviceType_Focus);
+        detectedDevicesByName_.push_back(g_FocusDeviceName);
+        // Query actual position/limits
+        QueryFocus();
+    }
+
+    // V6 - Light Path
+    if (QueryDevicePresenceByVersion(V_LIGHTPATH, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected LightPath (V6): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_LightPath, true);
+        model_.SetDeviceVersion(DeviceType_LightPath, version);
+        availableDevices_.push_back(DeviceType_LightPath);
+        detectedDevicesByName_.push_back(g_LightPathDeviceName);
+        // Query actual position
+        QueryLightPath();
+    }
+
+    // V7 - Condenser Unit (IX3-LWUCDA): Contains Polarizer, CondenserTurret, DIAShutter, DIAAperture
+    if (QueryDevicePresenceByVersion(V_CONDENSER_UNIT, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected Condenser Unit (V7): " + version).c_str());
+
+        // Polarizer
+        model_.SetDevicePresent(DeviceType_Polarizer, true);
+        model_.SetDeviceVersion(DeviceType_Polarizer, version);
+        availableDevices_.push_back(DeviceType_Polarizer);
+        detectedDevicesByName_.push_back(g_PolarizerDeviceName);
+        QueryPolarizer();
+
+        // Condenser Turret
+        model_.SetDevicePresent(DeviceType_CondenserTurret, true);
+        model_.SetDeviceVersion(DeviceType_CondenserTurret, version);
+        availableDevices_.push_back(DeviceType_CondenserTurret);
+        detectedDevicesByName_.push_back(g_CondenserTurretDeviceName);
+        QueryCondenserTurret();
+
+        // DIA Shutter
+        model_.SetDevicePresent(DeviceType_DIAShutter, true);
+        model_.SetDeviceVersion(DeviceType_DIAShutter, version);
+        availableDevices_.push_back(DeviceType_DIAShutter);
+        detectedDevicesByName_.push_back(g_DIAShutterDeviceName);
+        QueryDIAShutter();
+    }
+
+    // V8 - DIC Unit (IX5-DICTA): Contains DICPrism, DICRetardation
+    if (QueryDevicePresenceByVersion(V_DIC_UNIT, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected DIC Unit (V8): " + version).c_str());
+
+        // DIC Prism
+        model_.SetDevicePresent(DeviceType_DICPrism, true);
+        model_.SetDeviceVersion(DeviceType_DICPrism, version);
+        availableDevices_.push_back(DeviceType_DICPrism);
+        detectedDevicesByName_.push_back(g_DICPrismDeviceName);
+        QueryDICPrism();
+    }
+
+    // V9 - Mirror Unit 1
+    if (QueryDevicePresenceByVersion(V_MIRROR_UNIT1, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected MirrorUnit1 (V9): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_MirrorUnit1, true);
+        model_.SetDeviceVersion(DeviceType_MirrorUnit1, version);
+        availableDevices_.push_back(DeviceType_MirrorUnit1);
+        detectedDevicesByName_.push_back(g_MirrorUnit1DeviceName);
+        QueryMirrorUnit1();
+    }
+
+    // V10 - EPI Shutter 1
+    if (QueryDevicePresenceByVersion(V_EPI_SHUTTER1, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected EPIShutter1 (V10): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_EPIShutter1, true);
+        model_.SetDeviceVersion(DeviceType_EPIShutter1, version);
+        availableDevices_.push_back(DeviceType_EPIShutter1);
+        detectedDevicesByName_.push_back(g_EPIShutter1DeviceName);
+        QueryEPIShutter1();
+    }
+
+    // V14 - EPI ND Filter
+    if (QueryDevicePresenceByVersion(V_EPIND, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected EPIND (V14): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_EPIND, true);
+        model_.SetDeviceVersion(DeviceType_EPIND, version);
+        availableDevices_.push_back(DeviceType_EPIND);
+        detectedDevicesByName_.push_back(g_EPINDDeviceName);
+        QueryEPIND();
+    }
+
+    // Keep legacy query methods for devices without clear V mapping
+
+    // Magnification (CA command) - V mapping unclear, keep existing query
     if (QueryMagnification() == DEVICE_OK)
     {
+        LogMessage("Detected Magnification (CA)");
         availableDevices_.push_back(DeviceType_Magnification);
         detectedDevicesByName_.push_back(g_MagnificationDeviceName);
         model_.SetDevicePresent(DeviceType_Magnification, true);
     }
 
-    if (QueryLightPath() == DEVICE_OK)
-    {
-        availableDevices_.push_back(DeviceType_LightPath);
-        detectedDevicesByName_.push_back(g_LightPathDeviceName);
-        model_.SetDevicePresent(DeviceType_LightPath, true);
-    }
-
-    if (QueryCondenserTurret() == DEVICE_OK)
-    {
-        availableDevices_.push_back(DeviceType_CondenserTurret);
-        detectedDevicesByName_.push_back(g_CondenserTurretDeviceName);
-        model_.SetDevicePresent(DeviceType_CondenserTurret, true);
-    }
-
-    if (QueryDIAShutter() == DEVICE_OK)
-    {
-        availableDevices_.push_back(DeviceType_DIAShutter);
-        detectedDevicesByName_.push_back(g_DIAShutterDeviceName);
-        model_.SetDevicePresent(DeviceType_DIAShutter, true);
-    }
-
-    if (QueryPolarizer() == DEVICE_OK)
-    {
-        availableDevices_.push_back(DeviceType_Polarizer);
-        detectedDevicesByName_.push_back(g_PolarizerDeviceName);
-        model_.SetDevicePresent(DeviceType_Polarizer, true);
-    }
-
-    if (QueryDICPrism() == DEVICE_OK)
-    {
-        availableDevices_.push_back(DeviceType_DICPrism);
-        detectedDevicesByName_.push_back(g_DICPrismDeviceName);
-        model_.SetDevicePresent(DeviceType_DICPrism, true);
-    }
-
-    if (QueryEPIShutter1() == DEVICE_OK)
-    {
-        availableDevices_.push_back(DeviceType_EPIShutter1);
-        detectedDevicesByName_.push_back(g_EPIShutter1DeviceName);
-        model_.SetDevicePresent(DeviceType_EPIShutter1, true);
-    }
-
-    if (QueryMirrorUnit1() == DEVICE_OK)
-    {
-        availableDevices_.push_back(DeviceType_MirrorUnit1);
-        detectedDevicesByName_.push_back(g_MirrorUnit1DeviceName);
-        model_.SetDevicePresent(DeviceType_MirrorUnit1, true);
-    }
-
-    if (QueryEPIND() == DEVICE_OK)
-    {
-        availableDevices_.push_back(DeviceType_EPIND);
-        detectedDevicesByName_.push_back(g_EPINDDeviceName);
-        model_.SetDevicePresent(DeviceType_EPIND, true);
-    }
-
+    // Correction Collar - V3 or V4, keep existing query
     if (QueryCorrectionCollar() == DEVICE_OK)
     {
+        LogMessage("Detected CorrectionCollar (CC)");
         availableDevices_.push_back(DeviceType_CorrectionCollar);
         detectedDevicesByName_.push_back(g_CorrectionCollarDeviceName);
         model_.SetDevicePresent(DeviceType_CorrectionCollar, true);
@@ -427,9 +473,37 @@ int EvidentHub::DetectInstalledDevices()
     return DEVICE_OK;
 }
 
+int EvidentHub::QueryDevicePresenceByVersion(int unitNumber, std::string& version)
+{
+    std::string cmd = BuildCommand(CMD_VERSION, unitNumber);
+    std::string response;
+    int ret = ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Check for error response indicating device not present
+    if (IsNegativeAck(response, CMD_VERSION))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    // Parse version string from response
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() > 0 && params[0] != "X")
+    {
+        version = params[0];
+        return DEVICE_OK;
+    }
+
+    return ERR_DEVICE_NOT_AVAILABLE;
+}
+
 bool EvidentHub::IsDevicePresent(EvidentIX85::DeviceType type) const
 {
     return model_.IsDevicePresent(type);
+}
+
+std::string EvidentHub::GetDeviceVersion(EvidentIX85::DeviceType type) const
+{
+    return model_.GetDeviceVersion(type);
 }
 
 int EvidentHub::EnableNotification(const char* cmd, bool enable)
@@ -617,38 +691,27 @@ int EvidentHub::QueryPolarizer()
     if (ret != DEVICE_OK)
         return ret;
 
+    // Note: This function is now only called after V7 confirms condenser unit is present
+    // May still return "X" on first query due to firmware bug, but that's okay -
+    // we'll just set position to 0 (Out) and device will work correctly
     std::vector<std::string> params = ParseParameters(response);
-
-    // Workaround for IX85 firmware bug: first query returns "X" even if device is present
-    if (IsUnknown(response) || (params.size() > 0 && params[0] == "X"))
-    {
-        // Try sending a command to verify device presence
-        // If device is not present, we get error response "PO !.E003F0130"
-        // If device is present, we get positive ack "PO +"
-        std::string testCmd = BuildCommand(CMD_POLARIZER, 0);  // PO 0
-        std::string testResponse;
-        ret = ExecuteCommand(testCmd, testResponse);
-        if (ret != DEVICE_OK)
-            return ERR_DEVICE_NOT_AVAILABLE;
-
-        if (!IsPositiveAck(testResponse, CMD_POLARIZER))
-            return ERR_DEVICE_NOT_AVAILABLE;
-
-        // Device is present, set default position (0 = Out)
-        model_.SetPosition(DeviceType_Polarizer, 0);
-        model_.SetNumPositions(DeviceType_Polarizer, POLARIZER_MAX_POS);
-        return DEVICE_OK;
-    }
-
-    if (params.size() > 0 && params[0] != "X")
+    if (params.size() > 0)
     {
         int pos = ParseIntParameter(params[0]);
-        model_.SetPosition(DeviceType_Polarizer, pos);
+        if (pos >= 0)
+        {
+            model_.SetPosition(DeviceType_Polarizer, pos);
+        }
+        else
+        {
+            // Firmware returned "X", set default position (0 = Out)
+            model_.SetPosition(DeviceType_Polarizer, 0);
+        }
         model_.SetNumPositions(DeviceType_Polarizer, POLARIZER_MAX_POS);
         return DEVICE_OK;
     }
 
-    return ERR_DEVICE_NOT_AVAILABLE;
+    return DEVICE_OK;  // Device present (confirmed by V7), just couldn't get position
 }
 
 int EvidentHub::QueryDICPrism()
@@ -659,38 +722,27 @@ int EvidentHub::QueryDICPrism()
     if (ret != DEVICE_OK)
         return ret;
 
+    // Note: This function is now only called after V8 confirms DIC unit is present
+    // May still return "X" on first query due to firmware bug, but that's okay -
+    // we'll just set position to 0 and device will work correctly
     std::vector<std::string> params = ParseParameters(response);
-
-    // Workaround for IX85 firmware bug: first query returns "X" even if device is present
-    if (IsUnknown(response) || (params.size() > 0 && params[0] == "X"))
-    {
-        // Try sending a command to verify device presence
-        // If device is not present, we get error response "DIC !.E003F0130"
-        // If device is present, we get positive ack "DIC +"
-        std::string testCmd = BuildCommand(CMD_DIC_PRISM, 0);  // DIC 0
-        std::string testResponse;
-        ret = ExecuteCommand(testCmd, testResponse);
-        if (ret != DEVICE_OK)
-            return ERR_DEVICE_NOT_AVAILABLE;
-
-        if (!IsPositiveAck(testResponse, CMD_DIC_PRISM))
-            return ERR_DEVICE_NOT_AVAILABLE;
-
-        // Device is present, set default position (0)
-        model_.SetPosition(DeviceType_DICPrism, 0);
-        model_.SetNumPositions(DeviceType_DICPrism, DIC_PRISM_MAX_POS);
-        return DEVICE_OK;
-    }
-
-    if (params.size() > 0 && params[0] != "X")
+    if (params.size() > 0)
     {
         int pos = ParseIntParameter(params[0]);
-        model_.SetPosition(DeviceType_DICPrism, pos);
+        if (pos >= 0)
+        {
+            model_.SetPosition(DeviceType_DICPrism, pos);
+        }
+        else
+        {
+            // Firmware returned "X", set default position (0)
+            model_.SetPosition(DeviceType_DICPrism, 0);
+        }
         model_.SetNumPositions(DeviceType_DICPrism, DIC_PRISM_MAX_POS);
         return DEVICE_OK;
     }
 
-    return ERR_DEVICE_NOT_AVAILABLE;
+    return DEVICE_OK;  // Device present (confirmed by V8), just couldn't get position
 }
 
 int EvidentHub::QueryDICRetardation()
