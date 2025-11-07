@@ -359,11 +359,11 @@ int EvidentHub::DoDeviceDetection()
         model_.SetDevicePresent(DeviceType_CondenserTurret, true);
     }
 
-    if (QueryDIAAperture() == DEVICE_OK)
+    if (QueryDIAShutter() == DEVICE_OK)
     {
-        availableDevices_.push_back(DeviceType_DIAAperture);
+        availableDevices_.push_back(DeviceType_DIAShutter);
         detectedDevicesByName_.push_back(g_DIAShutterDeviceName);
-        model_.SetDevicePresent(DeviceType_DIAAperture, true);
+        model_.SetDevicePresent(DeviceType_DIAShutter, true);
     }
 
     if (QueryPolarizer() == DEVICE_OK)
