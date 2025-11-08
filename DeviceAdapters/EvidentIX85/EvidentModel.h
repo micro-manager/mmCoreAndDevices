@@ -52,7 +52,8 @@ enum DeviceType
     DeviceType_RightPort,
     DeviceType_CorrectionCollar,
     DeviceType_Autofocus,
-    DeviceType_OffsetLens
+    DeviceType_OffsetLens,
+    DeviceType_ManualControl
 };
 
 // Device state structure

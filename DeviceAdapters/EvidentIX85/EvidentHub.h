@@ -70,6 +70,8 @@ public:
     void RegisterDeviceAsUsed(EvidentIX85::DeviceType type, MM::Device* device) { usedDevices_[type] = device;};
     void UnRegisterDeviceAsUsed(EvidentIX85::DeviceType type) { usedDevices_.erase(type); };
 
+    int UpdateMirrorUnitIndicator(int position);
+
 private:
     // Initialization helpers
     int SetRemoteMode();
@@ -97,6 +99,10 @@ private:
     int QueryEPIND();
     int QueryRightPort();
     int QueryCorrectionCollar();
+    int QueryManualControl();
+
+    // Manual Control Unit (MCU) helpers
+    int UpdateNosepieceIndicator(int position);
 
     // Monitoring thread
     void StartMonitoring();

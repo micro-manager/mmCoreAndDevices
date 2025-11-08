@@ -211,6 +211,39 @@ const int LIGHT_PATH_BI_50_50 = 2;
 const int LIGHT_PATH_BI_100 = 3;
 const int LIGHT_PATH_RIGHT_PORT = 4;
 
+// Manual Control Unit (MCU) 7-segment display codes
+// These hex codes drive the 7-segment displays on the MCU indicators
+const int SEG7_0 = 0xEE;
+const int SEG7_1 = 0x28;
+const int SEG7_2 = 0xCD;
+const int SEG7_3 = 0x6D;
+const int SEG7_4 = 0x2B;
+const int SEG7_5 = 0x67;
+const int SEG7_6 = 0xE7;
+const int SEG7_7 = 0x2E;
+const int SEG7_8 = 0xEF;
+const int SEG7_9 = 0x6F;
+const int SEG7_DASH = 0x01;
+
+// Helper function to get 7-segment code for a digit
+inline int Get7SegmentCode(int digit)
+{
+    switch (digit)
+    {
+        case 0: return SEG7_0;
+        case 1: return SEG7_1;
+        case 2: return SEG7_2;
+        case 3: return SEG7_3;
+        case 4: return SEG7_4;
+        case 5: return SEG7_5;
+        case 6: return SEG7_6;
+        case 7: return SEG7_7;
+        case 8: return SEG7_8;
+        case 9: return SEG7_9;
+        default: return SEG7_DASH;  // Return dash for invalid digits
+    }
+}
+
 // Error codes (Evident specific, starting at 10100)
 const int ERR_EVIDENT_OFFSET = 10100;
 const int ERR_COMMAND_TIMEOUT = ERR_EVIDENT_OFFSET + 1;

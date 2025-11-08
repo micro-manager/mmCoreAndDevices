@@ -23,6 +23,7 @@
 #include "EvidentHub.h"
 #include "ModuleInterface.h"
 #include <sstream>
+#include <iomanip>
 #include <algorithm>
 #include <chrono>
 
@@ -38,7 +39,9 @@ extern const char* g_LightPathDeviceName;
 extern const char* g_CondenserTurretDeviceName;
 extern const char* g_DIAShutterDeviceName;
 extern const char* g_EPIShutter1DeviceName;
+extern const char* g_EPIShutter2DeviceName;
 extern const char* g_MirrorUnit1DeviceName;
+extern const char* g_MirrorUnit2DeviceName;
 extern const char* g_PolarizerDeviceName;
 extern const char* g_DICPrismDeviceName;
 extern const char* g_EPINDDeviceName;
@@ -132,6 +135,36 @@ int EvidentHub::Initialize()
     ret = DoDeviceDetection();
     if (ret != DEVICE_OK)
        return ret;
+
+    // Initialize MCU indicators if MCU is present
+    if (model_.IsDevicePresent(DeviceType_ManualControl))
+    {
+        // Initialize nosepiece indicator (I1)
+        if (model_.IsDevicePresent(DeviceType_Nosepiece))
+        {
+            long pos = model_.GetPosition(DeviceType_Nosepiece);
+            // Position will be 0 if unknown (not yet queried), display as unknown
+            UpdateNosepieceIndicator(pos == 0 ? -1 : static_cast<int>(pos));
+        }
+        else
+        {
+            // No nosepiece, display "---"
+            UpdateNosepieceIndicator(-1);
+        }
+
+        // Initialize mirror unit indicator (I2)
+        if (model_.IsDevicePresent(DeviceType_MirrorUnit1))
+        {
+            long pos = model_.GetPosition(DeviceType_MirrorUnit1);
+            // Position will be 0 if unknown (not yet queried), display as unknown
+            UpdateMirrorUnitIndicator(pos == 0 ? -1 : static_cast<int>(pos));
+        }
+        else
+        {
+            // No mirror unit, display "---"
+            UpdateMirrorUnitIndicator(-1);
+        }
+    }
 
     initialized_ = true;
     return DEVICE_OK;
@@ -423,6 +456,28 @@ int EvidentHub::DoDeviceDetection()
         QueryEPIShutter1();
     }
 
+    // V11 - Mirror Unit 2
+    if (QueryDevicePresenceByVersion(V_MIRROR_UNIT2, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected MirrorUnit2 (V11): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_MirrorUnit2, true);
+        model_.SetDeviceVersion(DeviceType_MirrorUnit2, version);
+        availableDevices_.push_back(DeviceType_MirrorUnit2);
+        detectedDevicesByName_.push_back(g_MirrorUnit2DeviceName);
+        QueryMirrorUnit2();
+    }
+
+    // V12 - EPI Shutter 2
+    if (QueryDevicePresenceByVersion(V_EPI_SHUTTER2, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected EPIShutter2 (V12): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_EPIShutter2, true);
+        model_.SetDeviceVersion(DeviceType_EPIShutter2, version);
+        availableDevices_.push_back(DeviceType_EPIShutter2);
+        detectedDevicesByName_.push_back(g_EPIShutter2DeviceName);
+        QueryEPIShutter2();
+    }
+
     // V14 - EPI ND Filter
     if (QueryDevicePresenceByVersion(V_EPIND, version) == DEVICE_OK)
     {
@@ -432,6 +487,16 @@ int EvidentHub::DoDeviceDetection()
         availableDevices_.push_back(DeviceType_EPIND);
         detectedDevicesByName_.push_back(g_EPINDDeviceName);
         QueryEPIND();
+    }
+
+    // V13 - Manual Control Unit (MCU)
+    if (QueryDevicePresenceByVersion(V_MANUAL_CONTROL, version) == DEVICE_OK)
+    {
+        LogMessage(("Detected Manual Control Unit (V13): " + version).c_str());
+        model_.SetDevicePresent(DeviceType_ManualControl, true);
+        model_.SetDeviceVersion(DeviceType_ManualControl, version);
+        // Note: MCU is not added to availableDevices/detectedDevicesByName
+        // as it's not a standalone MM device but provides indicator feedback
     }
 
     // Keep legacy query methods for devices without clear V mapping
@@ -924,6 +989,82 @@ int EvidentHub::QueryCorrectionCollar()
     return ERR_DEVICE_NOT_AVAILABLE;
 }
 
+int EvidentHub::UpdateNosepieceIndicator(int position)
+{
+    // Check if MCU is present
+    if (!model_.IsDevicePresent(DeviceType_ManualControl))
+        return DEVICE_OK;  // Not an error, MCU just not present
+
+    std::string cmd;
+
+    // Position -1 means unknown, display "---" (three dashes)
+    if (position == -1 || position < 1 || position > 9)
+    {
+        // Three dashes: 0x01,0x01,0x01
+        cmd = "I1 010101";
+    }
+    else
+    {
+        // Single digit display - get 7-segment code
+        int code = Get7SegmentCode(position);
+
+        // Format as hex string (2 digits)
+        std::ostringstream oss;
+        oss << "I1 " << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << code;
+        cmd = oss.str();
+    }
+
+    // Send command without waiting for response (to avoid deadlock when called from monitoring thread)
+    // The "I1 +" response will be consumed by the monitoring thread as a pseudo-notification
+    int ret = SendCommand(cmd);
+    if (ret != DEVICE_OK)
+    {
+        LogMessage(("Failed to send nosepiece indicator command: " + cmd).c_str());
+        return ret;
+    }
+
+    LogMessage(("Sent nosepiece indicator command: " + cmd).c_str(), true);
+    return DEVICE_OK;
+}
+
+int EvidentHub::UpdateMirrorUnitIndicator(int position)
+{
+    // Check if MCU is present
+    if (!model_.IsDevicePresent(DeviceType_ManualControl))
+        return DEVICE_OK;  // Not an error, MCU just not present
+
+    std::string cmd;
+
+    // Position -1 means unknown, display "---" (three dashes)
+    if (position == -1 || position < 1 || position > 9)
+    {
+        // Three dashes: 0x01,0x01,0x01
+        cmd = "I2 010101";
+    }
+    else
+    {
+        // Single digit display - get 7-segment code
+        int code = Get7SegmentCode(position);
+
+        // Format as hex string (2 digits)
+        std::ostringstream oss;
+        oss << "I2 " << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << code;
+        cmd = oss.str();
+    }
+
+    // Send command without waiting for response (to avoid deadlock when called from monitoring thread)
+    // The "I2 +" response will be consumed by the monitoring thread as a pseudo-notification
+    int ret = SendCommand(cmd);
+    if (ret != DEVICE_OK)
+    {
+        LogMessage(("Failed to send mirror unit indicator command: " + cmd).c_str());
+        return ret;
+    }
+
+    LogMessage(("Sent mirror unit indicator command: " + cmd).c_str(), true);
+    return DEVICE_OK;
+}
+
 // Monitoring thread
 void EvidentHub::StartMonitoring()
 {
@@ -1024,6 +1165,11 @@ bool EvidentHub::IsNotificationTag(const std::string& message) const
     // Extract tag from the message
     std::string tag = ExtractTag(message);
 
+    // Special case: I1 and I2 (indicator) responses must always be consumed by monitoring thread
+    // This prevents them from being sent to command threads and causing sync issues
+    if (tag == CMD_INDICATOR1 || tag == CMD_INDICATOR2)
+        return true;
+
     // Check if it's a known notification tag
     bool isNotifyTag = (tag == CMD_FOCUS_NOTIFY ||
                         tag == CMD_NOSEPIECE_NOTIFY ||
@@ -1076,6 +1222,10 @@ void EvidentHub::ProcessNotification(const std::string& message)
         if (pos >= 0)
         {
             model_.SetPosition(DeviceType_Nosepiece, pos);
+
+            // Update MCU indicator I1 with new nosepiece position
+            UpdateNosepieceIndicator(pos);
+
             // Check if we've reached the target position
             long targetPos = model_.GetTargetPosition(DeviceType_Nosepiece);
             if (targetPos >= 0 && pos == targetPos)

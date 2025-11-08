@@ -282,6 +282,66 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////////
+// EPI Shutter 2
+//////////////////////////////////////////////////////////////////////////////
+
+class EvidentEPIShutter2 : public CShutterBase<EvidentEPIShutter2>
+{
+public:
+    EvidentEPIShutter2();
+    ~EvidentEPIShutter2();
+
+    // MMDevice API
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+
+    // Shutter API
+    int SetOpen(bool open = true);
+    int GetOpen(bool& open);
+    int Fire(double deltaT);
+
+    // Action interface
+    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+    EvidentHub* GetHub();
+
+    bool initialized_;
+    std::string name_;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// Mirror Unit 2 (Filter Cube Turret)
+//////////////////////////////////////////////////////////////////////////////
+
+class EvidentMirrorUnit2 : public CStateDeviceBase<EvidentMirrorUnit2>
+{
+public:
+    EvidentMirrorUnit2();
+    ~EvidentMirrorUnit2();
+
+    // MMDevice API
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+    unsigned long GetNumberOfPositions() const;
+
+    // Action interface
+    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+    EvidentHub* GetHub();
+    int EnableNotifications(bool enable);
+
+    bool initialized_;
+    std::string name_;
+    unsigned int numPos_;
+};
+
+//////////////////////////////////////////////////////////////////////////////
 // Polarizer
 //////////////////////////////////////////////////////////////////////////////
 

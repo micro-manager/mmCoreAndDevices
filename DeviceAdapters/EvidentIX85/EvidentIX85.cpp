@@ -37,7 +37,9 @@ const char* g_LightPathDeviceName = "IX85-LightPath";
 const char* g_CondenserTurretDeviceName = "IX85-CondenserTurret";
 const char* g_DIAShutterDeviceName = "IX85-DIAShutter";
 const char* g_EPIShutter1DeviceName = "IX85-EPIShutter1";
+const char* g_EPIShutter2DeviceName = "IX85-EPIShutter2";
 const char* g_MirrorUnit1DeviceName = "IX85-MirrorUnit1";
+const char* g_MirrorUnit2DeviceName = "IX85-MirrorUnit2";
 const char* g_PolarizerDeviceName = "IX85-Polarizer";
 const char* g_DICPrismDeviceName = "IX85-DICPrism";
 const char* g_EPINDDeviceName = "IX85-EPIND";
@@ -60,7 +62,9 @@ MODULE_API void InitializeModuleData()
     RegisterDevice(g_CondenserTurretDeviceName, MM::StateDevice, "Evident IX85 Condenser Turret");
     RegisterDevice(g_DIAShutterDeviceName, MM::ShutterDevice, "Evident IX85 DIA Shutter");
     RegisterDevice(g_EPIShutter1DeviceName, MM::ShutterDevice, "Evident IX85 EPI Shutter 1");
+    RegisterDevice(g_EPIShutter2DeviceName, MM::ShutterDevice, "Evident IX85 EPI Shutter 2");
     RegisterDevice(g_MirrorUnit1DeviceName, MM::StateDevice, "Evident IX85 Mirror Unit 1");
+    RegisterDevice(g_MirrorUnit2DeviceName, MM::StateDevice, "Evident IX85 Mirror Unit 2");
     RegisterDevice(g_PolarizerDeviceName, MM::StateDevice, "Evident IX85 Polarizer");
     RegisterDevice(g_DICPrismDeviceName, MM::StateDevice, "Evident IX85 DIC Prism");
     RegisterDevice(g_EPINDDeviceName, MM::StateDevice, "Evident IX85 EPI ND Filter");
@@ -88,8 +92,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
         return new EvidentDIAShutter();
     else if (strcmp(deviceName, g_EPIShutter1DeviceName) == 0)
         return new EvidentEPIShutter1();
+    else if (strcmp(deviceName, g_EPIShutter2DeviceName) == 0)
+        return new EvidentEPIShutter2();
     else if (strcmp(deviceName, g_MirrorUnit1DeviceName) == 0)
         return new EvidentMirrorUnit1();
+    else if (strcmp(deviceName, g_MirrorUnit2DeviceName) == 0)
+        return new EvidentMirrorUnit2();
     else if (strcmp(deviceName, g_PolarizerDeviceName) == 0)
         return new EvidentPolarizer();
     else if (strcmp(deviceName, g_DICPrismDeviceName) == 0)
@@ -1620,6 +1628,9 @@ int EvidentMirrorUnit1::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (!IsPositiveAck(response, CMD_MIRROR_UNIT1))
             return ERR_NEGATIVE_ACK;
+
+        // Update MCU indicator I2 with new mirror position (1-based)
+        hub->UpdateMirrorUnitIndicator(static_cast<int>(pos + 1));
     }
     return DEVICE_OK;
 }
@@ -2220,4 +2231,308 @@ EvidentHub* EvidentCorrectionCollar::GetHub()
     if (!hub)
         return nullptr;
     return dynamic_cast<EvidentHub*>(hub);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentEPIShutter2 - EPI (Reflected Light) Shutter 2 Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentEPIShutter2::EvidentEPIShutter2() :
+    initialized_(false),
+    name_(g_EPIShutter2DeviceName)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "EPI shutter 2 not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentEPIShutter2::~EvidentEPIShutter2()
+{
+    Shutdown();
+}
+
+void EvidentEPIShutter2::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentEPIShutter2::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_EPIShutter2))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    // Create state property
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentEPIShutter2::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    AddAllowedValue(MM::g_Keyword_State, "0");  // Closed
+    AddAllowedValue(MM::g_Keyword_State, "1");  // Open
+
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_EPIShutter2);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentEPIShutter2::Shutdown()
+{
+    if (initialized_)
+    {
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentEPIShutter2::Busy()
+{
+    return false;  // Shutter changes are instantaneous
+}
+
+int EvidentEPIShutter2::SetOpen(bool open)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    std::string cmd = BuildCommand(CMD_EPI_SHUTTER2, open ? 1 : 0);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_EPI_SHUTTER2))
+        return ERR_NEGATIVE_ACK;
+
+    return DEVICE_OK;
+}
+
+int EvidentEPIShutter2::GetOpen(bool& open)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    std::string cmd = BuildQuery(CMD_EPI_SHUTTER2);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() > 0)
+    {
+        int state = ParseIntParameter(params[0]);
+        open = (state == 1);
+    }
+
+    return DEVICE_OK;
+}
+
+int EvidentEPIShutter2::Fire(double /*deltaT*/)
+{
+    // Not implemented for this shutter
+    return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+int EvidentEPIShutter2::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        bool open;
+        int ret = GetOpen(open);
+        if (ret != DEVICE_OK)
+            return ret;
+        pProp->Set(open ? 1L : 0L);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long state;
+        pProp->Get(state);
+        return SetOpen(state != 0);
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentEPIShutter2::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentMirrorUnit2 - Mirror Unit 2 (Filter Cube Turret) Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentMirrorUnit2::EvidentMirrorUnit2() :
+    initialized_(false),
+    name_(g_MirrorUnit2DeviceName),
+    numPos_(6)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Mirror unit 2 not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentMirrorUnit2::~EvidentMirrorUnit2()
+{
+    Shutdown();
+}
+
+void EvidentMirrorUnit2::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentMirrorUnit2::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(DeviceType_MirrorUnit2))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    numPos_ = hub->GetModel()->GetNumPositions(DeviceType_MirrorUnit2);
+
+    // Create properties
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentMirrorUnit2::OnState);
+    int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    SetPropertyLimits(MM::g_Keyword_State, 0, numPos_ - 1);
+
+    // Create label property
+    pAct = new CPropertyAction(this, &CStateDeviceBase::OnLabel);
+    ret = CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Define labels
+    for (unsigned int i = 0; i < numPos_; i++)
+    {
+        std::ostringstream label;
+        label << "Position-" << (i + 1);
+        SetPositionLabel(i, label.str().c_str());
+    }
+
+    // Note: MirrorUnit uses NMUINIT2 which is an initialization notification,
+    // not a position change notification, so we use query-based position tracking
+
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_MirrorUnit2);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentMirrorUnit2::Shutdown()
+{
+    if (initialized_)
+    {
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentMirrorUnit2::Busy()
+{
+    return false;  // Mirror unit changes are instantaneous
+}
+
+unsigned long EvidentMirrorUnit2::GetNumberOfPositions() const
+{
+    return numPos_;
+}
+
+int EvidentMirrorUnit2::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Query current position from hardware
+        std::string cmd = BuildQuery(CMD_MIRROR_UNIT2);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int pos = ParseIntParameter(params[0]);
+            if (pos >= 1 && pos <= static_cast<int>(numPos_))
+            {
+                // Convert from 1-based to 0-based
+                pProp->Set(static_cast<long>(pos - 1));
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long pos;
+        pProp->Get(pos);
+
+        EvidentHub* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        // Convert from 0-based to 1-based for the microscope
+        std::string cmd = BuildCommand(CMD_MIRROR_UNIT2, static_cast<int>(pos + 1));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_MIRROR_UNIT2))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+EvidentHub* EvidentMirrorUnit2::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHub*>(hub);
+}
+
+int EvidentMirrorUnit2::EnableNotifications(bool /*enable*/)
+{
+    // NMUINIT2 is an initialization notification, not a position change notification
+    // MirrorUnit2 uses query-based position tracking instead
+    return DEVICE_OK;
 }
