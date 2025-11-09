@@ -71,6 +71,8 @@ public:
     void UnRegisterDeviceAsUsed(EvidentIX85::DeviceType type) { usedDevices_.erase(type); };
 
     int UpdateMirrorUnitIndicator(int position);
+    int UpdateLightPathIndicator(int position);
+    int UpdateEPIShutter1Indicator(int state);
 
 private:
     // Initialization helpers

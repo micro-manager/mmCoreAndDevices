@@ -164,6 +164,98 @@ int EvidentHub::Initialize()
             // No mirror unit, display "---"
             UpdateMirrorUnitIndicator(-1);
         }
+
+        // Enable encoder E1 for nosepiece control if nosepiece is present
+        if (model_.IsDevicePresent(DeviceType_Nosepiece))
+        {
+            std::string cmd = BuildCommand(CMD_ENCODER1, 1);  // Enable encoder
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                // Verify response is "E1 0"
+                std::vector<std::string> params = ParseParameters(response);
+                if (params.size() > 0 && params[0] == "0")
+                {
+                    LogMessage("Encoder E1 enabled for nosepiece control", false);
+                }
+                else
+                {
+                    LogMessage(("Unexpected response to E1 enable: " + response).c_str(), false);
+                }
+            }
+            else
+            {
+                LogMessage("Failed to enable encoder E1", false);
+            }
+        }
+
+        // Enable encoder E2 for mirror unit control if mirror unit is present
+        if (model_.IsDevicePresent(DeviceType_MirrorUnit1))
+        {
+            std::string cmd = BuildCommand(CMD_ENCODER2, 1);  // Enable encoder
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                // Verify response is "E2 0"
+                std::vector<std::string> params = ParseParameters(response);
+                if (params.size() > 0 && params[0] == "0")
+                {
+                    LogMessage("Encoder E2 enabled for mirror unit control", false);
+                }
+                else
+                {
+                    LogMessage(("Unexpected response to E2 enable: " + response).c_str(), false);
+                }
+            }
+            else
+            {
+                LogMessage("Failed to enable encoder E2", false);
+            }
+        }
+
+        // Enable jog (focus) control if MCU is present
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_JOG, 1);  // Enable jog control
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Jog (focus) control enabled on MCU", false);
+            }
+            else
+            {
+                LogMessage("Failed to enable jog control", false);
+            }
+        }
+
+        // Initialize light path indicator (I4)
+        if (model_.IsDevicePresent(DeviceType_LightPath))
+        {
+            long pos = model_.GetPosition(DeviceType_LightPath);
+            // Position will be 0 if unknown (not yet queried), display as unknown (all off)
+            UpdateLightPathIndicator(pos == 0 ? -1 : static_cast<int>(pos));
+        }
+        else
+        {
+            // No light path, display all off
+            UpdateLightPathIndicator(-1);
+        }
+
+        // Initialize EPI shutter 1 indicator (I5)
+        if (model_.IsDevicePresent(DeviceType_EPIShutter1))
+        {
+            long state = model_.GetPosition(DeviceType_EPIShutter1);
+            // Position will be 0 if unknown (not yet queried), display as closed (I5 1)
+            UpdateEPIShutter1Indicator(state == 0 ? 0 : static_cast<int>(state));
+        }
+        else
+        {
+            // No EPI shutter 1, display as closed
+            UpdateEPIShutter1Indicator(0);
+        }
     }
 
     initialized_ = true;
@@ -192,6 +284,54 @@ int EvidentHub::Shutdown()
                 // Add more as needed
                 default:
                     break;
+            }
+        }
+
+        // Disable encoder E1 if MCU is present
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_ENCODER1, 0);  // Disable encoder
+            std::string response;
+            int ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Encoder E1 disabled", true);
+            }
+            else
+            {
+                LogMessage("Failed to disable encoder E1", true);
+            }
+        }
+
+        // Disable encoder E2 if MCU is present
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_ENCODER2, 0);  // Disable encoder
+            std::string response;
+            int ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Encoder E2 disabled", true);
+            }
+            else
+            {
+                LogMessage("Failed to disable encoder E2", true);
+            }
+        }
+
+        // Disable jog control if MCU is present
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_JOG, 0);  // Disable jog control
+            std::string response;
+            int ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Jog (focus) control disabled", true);
+            }
+            else
+            {
+                LogMessage("Failed to disable jog control", true);
             }
         }
 
@@ -1065,6 +1205,84 @@ int EvidentHub::UpdateMirrorUnitIndicator(int position)
     return DEVICE_OK;
 }
 
+int EvidentHub::UpdateLightPathIndicator(int position)
+{
+    // Check if MCU is present
+    if (!model_.IsDevicePresent(DeviceType_ManualControl))
+        return DEVICE_OK;  // Not an error, MCU just not present
+
+    std::string cmd;
+
+    // Map LightPath position (1-4) to I4 indicator value
+    // Position 1 (Left Port) -> I4 1 (camera)
+    // Position 2 (Binocular 50/50) -> I4 2 (50:50)
+    // Position 3 (Binocular 100%) -> I4 4 (eyepiece)
+    // Position 4 (Right Port) -> I4 0 (all off)
+    // Unknown -> I4 0 (all off)
+
+    int i4Value;
+    if (position == 1)
+        i4Value = 1;  // Left Port -> camera
+    else if (position == 2)
+        i4Value = 2;  // 50:50
+    else if (position == 3)
+        i4Value = 4;  // Binocular 100% -> eyepiece
+    else
+        i4Value = 0;  // Right Port or unknown -> all off
+
+    std::ostringstream oss;
+    oss << "I4 " << i4Value;
+    cmd = oss.str();
+
+    // Send command without waiting for response (to avoid deadlock when called from monitoring thread)
+    // The "I4 +" response will be consumed by the monitoring thread as a pseudo-notification
+    int ret = SendCommand(cmd);
+    if (ret != DEVICE_OK)
+    {
+        LogMessage(("Failed to send light path indicator command: " + cmd).c_str());
+        return ret;
+    }
+
+    LogMessage(("Sent light path indicator command: " + cmd).c_str(), true);
+    return DEVICE_OK;
+}
+
+int EvidentHub::UpdateEPIShutter1Indicator(int state)
+{
+    // Check if MCU is present
+    if (!model_.IsDevicePresent(DeviceType_ManualControl))
+        return DEVICE_OK;  // Not an error, MCU just not present
+
+    std::string cmd;
+
+    // Map EPI Shutter state to I5 indicator value
+    // State 0 (Closed) -> I5 1
+    // State 1 (Open) -> I5 2
+    // Unknown or other -> I5 1 (default to closed)
+
+    int i5Value;
+    if (state == 1)
+        i5Value = 2;  // Open -> 2
+    else
+        i5Value = 1;  // Closed or unknown -> 1
+
+    std::ostringstream oss;
+    oss << "I5 " << i5Value;
+    cmd = oss.str();
+
+    // Send command without waiting for response (to avoid deadlock when called from monitoring thread)
+    // The "I5 +" response will be consumed by the monitoring thread as a pseudo-notification
+    int ret = SendCommand(cmd);
+    if (ret != DEVICE_OK)
+    {
+        LogMessage(("Failed to send EPI shutter indicator command: " + cmd).c_str());
+        return ret;
+    }
+
+    LogMessage(("Sent EPI shutter indicator command: " + cmd).c_str(), true);
+    return DEVICE_OK;
+}
+
 // Monitoring thread
 void EvidentHub::StartMonitoring()
 {
@@ -1165,10 +1383,50 @@ bool EvidentHub::IsNotificationTag(const std::string& message) const
     // Extract tag from the message
     std::string tag = ExtractTag(message);
 
-    // Special case: I1 and I2 (indicator) responses must always be consumed by monitoring thread
+    // Special case: I1, I2, I4, and I5 (indicator) responses must always be consumed by monitoring thread
     // This prevents them from being sent to command threads and causing sync issues
-    if (tag == CMD_INDICATOR1 || tag == CMD_INDICATOR2)
+    if (tag == CMD_INDICATOR1 || tag == CMD_INDICATOR2 || tag == CMD_INDICATOR4 || tag == CMD_INDICATOR5)
         return true;
+
+    // Special case: E1 (encoder) messages with delta values (-1, 1) are notifications
+    // but "E1 0" and acknowledgments "E1 +" are command responses
+    if (tag == CMD_ENCODER1)
+    {
+        std::vector<std::string> params = ParseParameters(message);
+        if (params.size() > 0)
+        {
+            // Reject acknowledgments first (before ParseIntParameter which returns -1 for "+")
+            if (params[0] == "+" || params[0] == "!")
+                return false;
+
+            int value = ParseIntParameter(params[0]);
+            // -1 and 1 are encoder turn notifications
+            if (value == -1 || value == 1)
+                return true;
+        }
+        // "E1 0" or other values are command responses
+        return false;
+    }
+
+    // Special case: E2 (encoder) messages with delta values (-1, 1) are notifications
+    // but "E2 0" and acknowledgments "E2 +" are command responses
+    if (tag == CMD_ENCODER2)
+    {
+        std::vector<std::string> params = ParseParameters(message);
+        if (params.size() > 0)
+        {
+            // Reject acknowledgments first (before ParseIntParameter which returns -1 for "+")
+            if (params[0] == "+" || params[0] == "!")
+                return false;
+
+            int value = ParseIntParameter(params[0]);
+            // -1 and 1 are encoder turn notifications
+            if (value == -1 || value == 1)
+                return true;
+        }
+        // "E2 0" or other values are command responses
+        return false;
+    }
 
     // Check if it's a known notification tag
     bool isNotifyTag = (tag == CMD_FOCUS_NOTIFY ||
@@ -1207,6 +1465,16 @@ void EvidentHub::ProcessNotification(const std::string& message)
         if (pos >= 0)
         {
             model_.SetPosition(DeviceType_Focus, pos);
+
+            // Notify core callback of stage position change
+            auto it = usedDevices_.find(DeviceType_Focus);
+            if (it != usedDevices_.end() && it->second != nullptr)
+            {
+                // Convert from 10nm units to micrometers
+                double positionUm = pos * FOCUS_STEP_SIZE_UM;
+                GetCoreCallback()->OnStagePositionChanged(it->second, positionUm);
+            }
+
             // Check if we've reached the target position (with tolerance for mechanical settling)
             long targetPos = model_.GetTargetPosition(DeviceType_Focus);
             if (IsAtTargetPosition(pos, targetPos, FOCUS_POSITION_TOLERANCE))
@@ -1225,6 +1493,16 @@ void EvidentHub::ProcessNotification(const std::string& message)
 
             // Update MCU indicator I1 with new nosepiece position
             UpdateNosepieceIndicator(pos);
+
+            // Notify core callback of State property change
+            auto it = usedDevices_.find(DeviceType_Nosepiece);
+            if (it != usedDevices_.end() && it->second != nullptr)
+            {
+                // Convert from 1-based position to 0-based state value
+                int stateValue = pos - 1;
+                GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                    CDeviceUtils::ConvertToString(stateValue));
+            }
 
             // Check if we've reached the target position
             long targetPos = model_.GetTargetPosition(DeviceType_Nosepiece);
@@ -1252,6 +1530,101 @@ void EvidentHub::ProcessNotification(const std::string& message)
                     // Notify core that magnification has changed
                     GetCoreCallback()->OnMagnifierChanged(it->second);
                 }
+            }
+        }
+    }
+    else if (tag == CMD_ENCODER1 && params.size() > 0)
+    {
+        // Encoder 1 controls nosepiece position
+        int delta = ParseIntParameter(params[0]);
+        if (delta == -1 || delta == 1)
+        {
+            // Get current nosepiece position
+            long currentPos = model_.GetPosition(DeviceType_Nosepiece);
+
+            // If position is unknown (0), we can't handle encoder input
+            if (currentPos == 0)
+            {
+                LogMessage("E1 encoder input ignored - nosepiece position unknown", true);
+                return;
+            }
+
+            // Calculate new position with wrapping
+            int newPos = static_cast<int>(currentPos) + delta;
+            int maxPos = NOSEPIECE_MAX_POS;  // 6
+
+            if (newPos < 1)
+                newPos = maxPos;  // Wrap from 1 to max
+            else if (newPos > maxPos)
+                newPos = 1;  // Wrap from max to 1
+
+            // Send OB command to change nosepiece position
+            std::string cmd = BuildCommand(CMD_NOSEPIECE, newPos);
+            std::ostringstream msg;
+            msg << "E1 encoder: moving nosepiece from " << currentPos << " to " << newPos;
+            LogMessage(msg.str().c_str(), true);
+
+            // Send the command (fire-and-forget, the NOB notification will update the model)
+            int ret = SendCommand(cmd);
+            if (ret != DEVICE_OK)
+            {
+                LogMessage("Failed to send nosepiece command from encoder", false);
+            }
+        }
+    }
+    else if (tag == CMD_ENCODER2 && params.size() > 0)
+    {
+        // Encoder 2 controls MirrorUnit1 position
+        int delta = ParseIntParameter(params[0]);
+        if (delta == -1 || delta == 1)
+        {
+            // Get current mirror unit position
+            long currentPos = model_.GetPosition(DeviceType_MirrorUnit1);
+
+            // If position is unknown (0), we can't handle encoder input
+            if (currentPos == 0)
+            {
+                LogMessage("E2 encoder input ignored - mirror unit position unknown", true);
+                return;
+            }
+
+            // Calculate new position with wrapping
+            int newPos = static_cast<int>(currentPos) + delta;
+            int maxPos = MIRROR_UNIT_MAX_POS;  // 6
+
+            if (newPos < 1)
+                newPos = maxPos;  // Wrap from 1 to max
+            else if (newPos > maxPos)
+                newPos = 1;  // Wrap from max to 1
+
+            // Send MU1 command to change mirror unit position
+            std::string cmd = BuildCommand(CMD_MIRROR_UNIT1, newPos);
+            std::ostringstream msg;
+            msg << "E2 encoder: moving mirror unit from " << currentPos << " to " << newPos;
+            LogMessage(msg.str().c_str(), true);
+
+            // Use SendCommand (not ExecuteCommand) to avoid deadlock when called from monitoring thread
+            // The "MU1 +" response will be consumed by monitoring thread as a command response
+            int ret = SendCommand(cmd);
+            if (ret == DEVICE_OK)
+            {
+                // Optimistically update model and indicator (mirror unit has no position change notifications)
+                model_.SetPosition(DeviceType_MirrorUnit1, newPos);
+                UpdateMirrorUnitIndicator(newPos);
+
+                // Notify core callback of State property change
+                auto it = usedDevices_.find(DeviceType_MirrorUnit1);
+                if (it != usedDevices_.end() && it->second != nullptr)
+                {
+                    // Convert from 1-based position to 0-based state value
+                    int stateValue = newPos - 1;
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                        CDeviceUtils::ConvertToString(stateValue));
+                }
+            }
+            else
+            {
+                LogMessage("Failed to send mirror unit command from encoder", false);
             }
         }
     }

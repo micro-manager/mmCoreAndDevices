@@ -178,6 +178,9 @@ int EvidentFocus::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
+    // Register with hub so notification handler can call OnStagePositionChanged
+    hub->RegisterDeviceAsUsed(DeviceType_Focus, this);
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -187,6 +190,12 @@ int EvidentFocus::Shutdown()
     if (initialized_)
     {
         EnableNotifications(false);
+
+        // Unregister from hub
+        EvidentHub* hub = GetHub();
+        if (hub)
+            hub->UnRegisterDeviceAsUsed(DeviceType_Focus);
+
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -469,6 +478,9 @@ int EvidentNosepiece::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
+    // Register with hub so notification handler can notify property changes
+    hub->RegisterDeviceAsUsed(DeviceType_Nosepiece, this);
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -478,6 +490,12 @@ int EvidentNosepiece::Shutdown()
     if (initialized_)
     {
         EnableNotifications(false);
+
+        // Unregister from hub
+        EvidentHub* hub = GetHub();
+        if (hub)
+            hub->UnRegisterDeviceAsUsed(DeviceType_Nosepiece);
+
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -946,6 +964,9 @@ int EvidentLightPath::Initialize()
             return ret;
     }
 
+    // Register with hub so OnState can notify indicator changes
+    hub->RegisterDeviceAsUsed(DeviceType_LightPath, this);
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -954,6 +975,11 @@ int EvidentLightPath::Shutdown()
 {
     if (initialized_)
     {
+        // Unregister from hub
+        EvidentHub* hub = GetHub();
+        if (hub)
+            hub->UnRegisterDeviceAsUsed(DeviceType_LightPath);
+
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -1013,6 +1039,9 @@ int EvidentLightPath::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (!IsPositiveAck(response, CMD_LIGHT_PATH))
             return ERR_NEGATIVE_ACK;
+
+        // Update MCU indicator I4 with new light path position (1-based)
+        hub->UpdateLightPathIndicator(static_cast<int>(pos + 1));
     }
     return DEVICE_OK;
 }
@@ -1397,6 +1426,9 @@ int EvidentEPIShutter1::Initialize()
             return ret;
     }
 
+    // Register with hub so SetOpen can notify indicator changes
+    hub->RegisterDeviceAsUsed(DeviceType_EPIShutter1, this);
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -1405,6 +1437,11 @@ int EvidentEPIShutter1::Shutdown()
 {
     if (initialized_)
     {
+        // Unregister from hub
+        EvidentHub* hub = GetHub();
+        if (hub)
+            hub->UnRegisterDeviceAsUsed(DeviceType_EPIShutter1);
+
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -1429,6 +1466,9 @@ int EvidentEPIShutter1::SetOpen(bool open)
 
     if (!IsPositiveAck(response, CMD_EPI_SHUTTER1))
         return ERR_NEGATIVE_ACK;
+
+    // Update MCU indicator I5 with new shutter state (0=closed, 1=open)
+    hub->UpdateEPIShutter1Indicator(open ? 1 : 0);
 
     return DEVICE_OK;
 }
@@ -1561,6 +1601,9 @@ int EvidentMirrorUnit1::Initialize()
             return ret;
     }
 
+    // Register with hub so encoder can notify property changes
+    hub->RegisterDeviceAsUsed(DeviceType_MirrorUnit1, this);
+
     initialized_ = true;
     return DEVICE_OK;
 }
@@ -1569,6 +1612,11 @@ int EvidentMirrorUnit1::Shutdown()
 {
     if (initialized_)
     {
+        // Unregister from hub
+        EvidentHub* hub = GetHub();
+        if (hub)
+            hub->UnRegisterDeviceAsUsed(DeviceType_MirrorUnit1);
+
         initialized_ = false;
     }
     return DEVICE_OK;
