@@ -724,13 +724,16 @@ int EvidentHub::DoDeviceDetection()
         model_.SetDevicePresent(DeviceType_Magnification, true);
     }
 
-    // Correction Collar - V3 or V4, keep existing query
-    if (QueryCorrectionCollar() == DEVICE_OK)
+    // Correction Collar - Present whenever Focus drive is present
+    // Note: "CC?" returns "X" when not linked, so we can't use QueryCorrectionCollar()
+    if (model_.IsDevicePresent(DeviceType_Focus))
     {
-        LogMessage("Detected CorrectionCollar (CC)");
+        LogMessage("Detected CorrectionCollar (present with Focus drive)");
         availableDevices_.push_back(DeviceType_CorrectionCollar);
         detectedDevicesByName_.push_back(g_CorrectionCollarDeviceName);
         model_.SetDevicePresent(DeviceType_CorrectionCollar, true);
+        // Position will be 0 until device is linked
+        model_.SetPosition(DeviceType_CorrectionCollar, 0);
     }
 
     std::ostringstream msg;

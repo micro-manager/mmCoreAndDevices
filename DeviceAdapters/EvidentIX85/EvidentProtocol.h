@@ -211,6 +211,11 @@ const int LIGHT_PATH_BI_50_50 = 2;
 const int LIGHT_PATH_BI_100 = 3;
 const int LIGHT_PATH_RIGHT_PORT = 4;
 
+// Correction Collar
+const long CORRECTION_COLLAR_MIN_POS = -3200;
+const long CORRECTION_COLLAR_MAX_POS = 3200;
+const double CORRECTION_COLLAR_STEP_SIZE_UM = 1.0;  // 1 step = 1 µm
+
 // Manual Control Unit (MCU) 7-segment display codes
 // These hex codes drive the 7-segment displays on the MCU indicators
 const int SEG7_0 = 0xEE;
@@ -255,6 +260,8 @@ const int ERR_POSITION_UNKNOWN = ERR_EVIDENT_OFFSET + 6;
 const int ERR_MONITOR_THREAD_FAILED = ERR_EVIDENT_OFFSET + 7;
 const int ERR_PORT_NOT_SET = ERR_EVIDENT_OFFSET + 8;
 const int ERR_PORT_CHANGE_FORBIDDEN = ERR_EVIDENT_OFFSET + 9;
+const int ERR_CORRECTION_COLLAR_NOT_LINKED = ERR_EVIDENT_OFFSET + 10;
+const int ERR_CORRECTION_COLLAR_LINK_FAILED = ERR_EVIDENT_OFFSET + 11;
 
 // Helper functions
 inline std::string BuildCommand(const char* tag)

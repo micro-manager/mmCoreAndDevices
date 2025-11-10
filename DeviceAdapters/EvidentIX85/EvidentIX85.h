@@ -440,7 +440,7 @@ private:
 // Correction Collar
 //////////////////////////////////////////////////////////////////////////////
 
-class EvidentCorrectionCollar : public CGenericBase<EvidentCorrectionCollar>
+class EvidentCorrectionCollar : public CStageBase<EvidentCorrectionCollar>
 {
 public:
     EvidentCorrectionCollar();
@@ -452,12 +452,24 @@ public:
     void GetName(char* pszName) const;
     bool Busy();
 
+    // Stage API
+    int SetPositionUm(double pos);
+    int GetPositionUm(double& pos);
+    int SetPositionSteps(long steps);
+    int GetPositionSteps(long& steps);
+    int SetOrigin();
+    int GetLimits(double& lower, double& upper);
+    int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; };
+    bool IsContinuousFocusDrive() const { return false; };
+
     // Action interface
-    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnActivate(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     EvidentHub* GetHub();
 
     bool initialized_;
+    bool linked_;
     std::string name_;
+    double stepSizeUm_;
 };

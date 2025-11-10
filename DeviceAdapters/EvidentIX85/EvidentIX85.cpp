@@ -68,7 +68,7 @@ MODULE_API void InitializeModuleData()
     RegisterDevice(g_PolarizerDeviceName, MM::StateDevice, "Evident IX85 Polarizer");
     RegisterDevice(g_DICPrismDeviceName, MM::StateDevice, "Evident IX85 DIC Prism");
     RegisterDevice(g_EPINDDeviceName, MM::StateDevice, "Evident IX85 EPI ND Filter");
-    RegisterDevice(g_CorrectionCollarDeviceName, MM::GenericDevice, "Evident IX85 Correction Collar");
+    RegisterDevice(g_CorrectionCollarDeviceName, MM::StageDevice, "Evident IX85 Correction Collar");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -2559,10 +2559,14 @@ EvidentHub* EvidentEPIND::GetHub()
 
 EvidentCorrectionCollar::EvidentCorrectionCollar() :
     initialized_(false),
-    name_(g_CorrectionCollarDeviceName)
+    linked_(false),
+    name_(g_CorrectionCollarDeviceName),
+    stepSizeUm_(CORRECTION_COLLAR_STEP_SIZE_UM)
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Correction collar not available on this microscope");
+    SetErrorText(ERR_CORRECTION_COLLAR_NOT_LINKED, "Correction Collar must be linked before setting position. Set Activate property to 'Linked'.");
+    SetErrorText(ERR_CORRECTION_COLLAR_LINK_FAILED, "Correction Collar linking failed. Ensure correct objective is installed (typically objective 6).");
 
     CreateHubIDProperty();
 }
@@ -2589,13 +2593,23 @@ int EvidentCorrectionCollar::Initialize()
     if (!hub->IsDevicePresent(DeviceType_CorrectionCollar))
         return ERR_DEVICE_NOT_AVAILABLE;
 
-    // Create position property (0-100 range typically)
-    CPropertyAction* pAct = new CPropertyAction(this, &EvidentCorrectionCollar::OnPosition);
-    int ret = CreateProperty("Position", "0", MM::Integer, false, pAct);
+    // Create Activate property for linking/unlinking
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentCorrectionCollar::OnActivate);
+    int ret = CreateProperty("Activate", "Unlinked", MM::String, false, pAct);
     if (ret != DEVICE_OK)
         return ret;
 
-    SetPropertyLimits("Position", 0, 100);
+    AddAllowedValue("Activate", "Linked");
+    AddAllowedValue("Activate", "Unlinked");
+
+    // Add firmware version as read-only property
+    std::string version = hub->GetDeviceVersion(DeviceType_CorrectionCollar);
+    if (!version.empty())
+    {
+        ret = CreateProperty("Firmware Version", version.c_str(), MM::String, true);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
 
     initialized_ = true;
     return DEVICE_OK;
@@ -2605,6 +2619,22 @@ int EvidentCorrectionCollar::Shutdown()
 {
     if (initialized_)
     {
+        // Auto-unlink on shutdown if linked
+        if (linked_)
+        {
+            EvidentHub* hub = GetHub();
+            if (hub)
+            {
+                std::string cmd = BuildCommand(CMD_CORRECTION_COLLAR_LINK, 0);  // 0 = Unlink
+                std::string response;
+                hub->ExecuteCommand(cmd, response);
+                // Don't check response - best effort unlink
+            }
+            linked_ = false;
+
+            // Notify core that position changed to 0
+            GetCoreCallback()->OnStagePositionChanged(this, 0.0);
+        }
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -2615,46 +2645,74 @@ bool EvidentCorrectionCollar::Busy()
     return false;  // Correction collar changes are instantaneous
 }
 
-int EvidentCorrectionCollar::OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentCorrectionCollar::OnActivate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
     if (eAct == MM::BeforeGet)
     {
-        EvidentHub* hub = GetHub();
-        if (!hub)
-            return DEVICE_ERR;
-
-        // Query current position
-        std::string cmd = BuildQuery(CMD_CORRECTION_COLLAR);
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-            return ret;
-
-        std::vector<std::string> params = ParseParameters(response);
-        if (params.size() > 0)
-        {
-            int pos = ParseIntParameter(params[0]);
-            if (pos >= 0)
-                pProp->Set(static_cast<long>(pos));
-        }
+        // Return current linked state
+        pProp->Set(linked_ ? "Linked" : "Unlinked");
     }
     else if (eAct == MM::AfterSet)
     {
-        long pos;
-        pProp->Get(pos);
+        std::string state;
+        pProp->Get(state);
 
-        EvidentHub* hub = GetHub();
-        if (!hub)
-            return DEVICE_ERR;
+        if (state == "Linked" && !linked_)
+        {
+            // Link the correction collar
+            std::string cmd = BuildCommand(CMD_CORRECTION_COLLAR_LINK, 1);  // 1 = Link
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+                return ret;
 
-        std::string cmd = BuildCommand(CMD_CORRECTION_COLLAR, static_cast<int>(pos));
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-            return ret;
+            if (!IsPositiveAck(response, CMD_CORRECTION_COLLAR_LINK))
+                return ERR_CORRECTION_COLLAR_LINK_FAILED;
 
-        if (!IsPositiveAck(response, CMD_CORRECTION_COLLAR))
-            return ERR_NEGATIVE_ACK;
+            // Initialize the correction collar
+            cmd = BuildCommand(CMD_CORRECTION_COLLAR_INIT);
+            ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+            {
+                // Link succeeded but init failed - try to unlink
+                cmd = BuildCommand(CMD_CORRECTION_COLLAR_LINK, 0);
+                hub->ExecuteCommand(cmd, response);
+                return ERR_CORRECTION_COLLAR_LINK_FAILED;
+            }
+
+            if (!IsPositiveAck(response, CMD_CORRECTION_COLLAR_INIT))
+            {
+                // Link succeeded but init failed - try to unlink
+                cmd = BuildCommand(CMD_CORRECTION_COLLAR_LINK, 0);
+                hub->ExecuteCommand(cmd, response);
+                return ERR_CORRECTION_COLLAR_LINK_FAILED;
+            }
+
+            // Successfully linked and initialized
+            linked_ = true;
+        }
+        else if (state == "Unlinked" && linked_)
+        {
+            // Unlink the correction collar
+            std::string cmd = BuildCommand(CMD_CORRECTION_COLLAR_LINK, 0);  // 0 = Unlink
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+                return ret;
+
+            if (!IsPositiveAck(response, CMD_CORRECTION_COLLAR_LINK))
+                return ERR_NEGATIVE_ACK;
+
+            // Successfully unlinked
+            linked_ = false;
+
+            // Notify core that position changed to 0
+            GetCoreCallback()->OnStagePositionChanged(this, 0.0);
+        }
     }
     return DEVICE_OK;
 }
@@ -2665,6 +2723,98 @@ EvidentHub* EvidentCorrectionCollar::GetHub()
     if (!hub)
         return nullptr;
     return dynamic_cast<EvidentHub*>(hub);
+}
+
+int EvidentCorrectionCollar::SetPositionUm(double pos)
+{
+    // Convert μm to steps (1:1 ratio)
+    long steps = static_cast<long>(pos / stepSizeUm_);
+    return SetPositionSteps(steps);
+}
+
+int EvidentCorrectionCollar::GetPositionUm(double& pos)
+{
+    long steps;
+    int ret = GetPositionSteps(steps);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    pos = steps * stepSizeUm_;
+    return DEVICE_OK;
+}
+
+int EvidentCorrectionCollar::SetPositionSteps(long steps)
+{
+    // Check if linked
+    if (!linked_)
+        return ERR_CORRECTION_COLLAR_NOT_LINKED;
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Clamp to limits
+    if (steps < CORRECTION_COLLAR_MIN_POS) steps = CORRECTION_COLLAR_MIN_POS;
+    if (steps > CORRECTION_COLLAR_MAX_POS) steps = CORRECTION_COLLAR_MAX_POS;
+
+    // Send CC command with position
+    std::string cmd = BuildCommand(CMD_CORRECTION_COLLAR, static_cast<int>(steps));
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_CORRECTION_COLLAR))
+        return ERR_NEGATIVE_ACK;
+
+    return DEVICE_OK;
+}
+
+int EvidentCorrectionCollar::GetPositionSteps(long& steps)
+{
+    // If not linked, return 0 (no error)
+    if (!linked_)
+    {
+        steps = 0;
+        return DEVICE_OK;
+    }
+
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Query current position
+    std::string cmd = BuildQuery(CMD_CORRECTION_COLLAR);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() > 0)
+    {
+        int pos = ParseIntParameter(params[0]);
+        if (pos >= CORRECTION_COLLAR_MIN_POS && pos <= CORRECTION_COLLAR_MAX_POS)
+        {
+            steps = pos;
+            return DEVICE_OK;
+        }
+    }
+
+    return ERR_INVALID_RESPONSE;
+}
+
+int EvidentCorrectionCollar::SetOrigin()
+{
+    // Not supported by IX85 correction collar
+    return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+int EvidentCorrectionCollar::GetLimits(double& lower, double& upper)
+{
+    lower = CORRECTION_COLLAR_MIN_POS * stepSizeUm_;
+    upper = CORRECTION_COLLAR_MAX_POS * stepSizeUm_;
+    return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
