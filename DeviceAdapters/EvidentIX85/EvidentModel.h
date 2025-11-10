@@ -41,6 +41,7 @@ enum DeviceType
     DeviceType_Condenser,
     DeviceType_DIAAperture,
     DeviceType_DIAShutter,
+    DeviceType_DIABrightness,
     DeviceType_Polarizer,
     DeviceType_DICPrism,
     DeviceType_DICRetardation,
