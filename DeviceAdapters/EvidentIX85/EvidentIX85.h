@@ -60,6 +60,9 @@ public:
     // Action interface
     int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnJogDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnJogFineSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnJogCoarseSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     EvidentHub* GetHub();
@@ -213,6 +216,11 @@ public:
 
     // Action interface
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBrightness(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnMechanicalShutter(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+    // Notification control
+    int EnableNotifications(bool enable);
 
 private:
     EvidentHub* GetHub();

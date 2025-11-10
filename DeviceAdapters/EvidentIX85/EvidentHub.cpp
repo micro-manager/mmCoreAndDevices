@@ -57,7 +57,8 @@ EvidentHub::EvidentHub() :
     port_(""),
     answerTimeoutMs_(ANSWER_TIMEOUT_MS),
     stopMonitoring_(false),
-    responseReady_(false)
+    responseReady_(false),
+    rememberedDIABrightness_(255)
 {
     InitializeDefaultErrorMessages();
 
@@ -215,6 +216,31 @@ int EvidentHub::Initialize()
             }
         }
 
+        // Enable encoder E3 for DIA brightness control if DIA shutter is present
+        if (model_.IsDevicePresent(DeviceType_DIAShutter))
+        {
+            std::string cmd = BuildCommand(CMD_ENCODER3, 1);  // Enable encoder
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                // Verify response is "E3 0"
+                std::vector<std::string> params = ParseParameters(response);
+                if (params.size() > 0 && params[0] == "0")
+                {
+                    LogMessage("Encoder E3 enabled for DIA brightness control", false);
+                }
+                else
+                {
+                    LogMessage(("Unexpected response to E3 enable: " + response).c_str(), false);
+                }
+            }
+            else
+            {
+                LogMessage("Failed to enable encoder E3", false);
+            }
+        }
+
         // Enable jog (focus) control if MCU is present
         if (model_.IsDevicePresent(DeviceType_ManualControl))
         {
@@ -228,6 +254,22 @@ int EvidentHub::Initialize()
             else
             {
                 LogMessage("Failed to enable jog control", false);
+            }
+        }
+
+        // Enable MCU switches (S2) if MCU is present
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_MCZ_SWITCH, 1);  // Enable switches
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("MCU switches (S2) enabled", false);
+            }
+            else
+            {
+                LogMessage("Failed to enable MCU switches", false);
             }
         }
 
@@ -319,6 +361,22 @@ int EvidentHub::Shutdown()
             }
         }
 
+        // Disable encoder E3 if MCU is present
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_ENCODER3, 0);  // Disable encoder
+            std::string response;
+            int ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Encoder E3 disabled", true);
+            }
+            else
+            {
+                LogMessage("Failed to disable encoder E3", true);
+            }
+        }
+
         // Disable jog control if MCU is present
         if (model_.IsDevicePresent(DeviceType_ManualControl))
         {
@@ -332,6 +390,22 @@ int EvidentHub::Shutdown()
             else
             {
                 LogMessage("Failed to disable jog control", true);
+            }
+        }
+
+        // Disable MCU switches (S2) if MCU is present
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_MCZ_SWITCH, 0);  // Disable switches
+            std::string response;
+            int ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("MCU switches (S2) disabled", true);
+            }
+            else
+            {
+                LogMessage("Failed to disable MCU switches", true);
             }
         }
 
@@ -1283,6 +1357,49 @@ int EvidentHub::UpdateEPIShutter1Indicator(int state)
     return DEVICE_OK;
 }
 
+int EvidentHub::UpdateDIABrightnessIndicator(int brightness)
+{
+    // Check if MCU is present
+    if (!model_.IsDevicePresent(DeviceType_ManualControl))
+        return DEVICE_OK;  // Not an error, MCU just not present
+
+    // Map brightness (0-255) to I3 indicator LED pattern (hex values)
+    // I3 accepts hex bitmask values: 1, 3, 7, F, 1F
+    // 0 brightness -> no LEDs (I3 0)
+    // 1-51 -> 1 LED (I3 1)
+    // 52-102 -> 2 LEDs (I3 3)
+    // 103-153 -> 3 LEDs (I3 7)
+    // 154-204 -> 4 LEDs (I3 F)
+    // 205-255 -> 5 LEDs (I3 1F)
+
+    std::string i3Value;
+    if (brightness == 0)
+        i3Value = "0";
+    else if (brightness <= 51)
+        i3Value = "1";
+    else if (brightness <= 102)
+        i3Value = "3";
+    else if (brightness <= 153)
+        i3Value = "7";
+    else if (brightness <= 204)
+        i3Value = "F";
+    else
+        i3Value = "1F";
+
+    std::string cmd = "I3 " + i3Value;
+
+    // Send command without waiting for response
+    int ret = SendCommand(cmd);
+    if (ret != DEVICE_OK)
+    {
+        LogMessage(("Failed to send DIA brightness indicator command: " + cmd).c_str());
+        return ret;
+    }
+
+    LogMessage(("Sent DIA brightness indicator command: " + cmd).c_str(), true);
+    return DEVICE_OK;
+}
+
 // Monitoring thread
 void EvidentHub::StartMonitoring()
 {
@@ -1383,9 +1500,10 @@ bool EvidentHub::IsNotificationTag(const std::string& message) const
     // Extract tag from the message
     std::string tag = ExtractTag(message);
 
-    // Special case: I1, I2, I4, and I5 (indicator) responses must always be consumed by monitoring thread
+    // Special case: I1, I2, I3, I4, and I5 (indicator) responses must always be consumed by monitoring thread
     // This prevents them from being sent to command threads and causing sync issues
-    if (tag == CMD_INDICATOR1 || tag == CMD_INDICATOR2 || tag == CMD_INDICATOR4 || tag == CMD_INDICATOR5)
+    if (tag == CMD_INDICATOR1 || tag == CMD_INDICATOR2 || tag == CMD_INDICATOR3 ||
+        tag == CMD_INDICATOR4 || tag == CMD_INDICATOR5)
         return true;
 
     // Special case: E1 (encoder) messages with delta values (-1, 1) are notifications
@@ -1425,6 +1543,43 @@ bool EvidentHub::IsNotificationTag(const std::string& message) const
                 return true;
         }
         // "E2 0" or other values are command responses
+        return false;
+    }
+
+    // Special case: E3 (encoder) messages with delta values (-9 to 9) are notifications
+    // but "E3 0" and acknowledgments "E3 +" are command responses
+    if (tag == CMD_ENCODER3)
+    {
+        std::vector<std::string> params = ParseParameters(message);
+        if (params.size() > 0)
+        {
+            // Reject acknowledgments first (before ParseIntParameter which returns -1 for "+")
+            if (params[0] == "+" || params[0] == "!")
+                return false;
+
+            int value = ParseIntParameter(params[0]);
+            // Fast turning can produce delta values from -9 to 9 (excluding 0)
+            if (value >= -9 && value <= 9 && value != 0)
+                return true;
+        }
+        // "E3 0" or other values are command responses
+        return false;
+    }
+
+    // Special case: S2 (MCU switches) messages with hex bitmask are notifications
+    // but acknowledgments "S2 +" are command responses
+    if (tag == CMD_MCZ_SWITCH)
+    {
+        std::vector<std::string> params = ParseParameters(message);
+        if (params.size() > 0)
+        {
+            // Only reject acknowledgments
+            if (params[0] == "+" || params[0] == "!")
+                return false;
+
+            // All hex bitmask values (0-7F) are notifications
+            return true;
+        }
         return false;
     }
 
@@ -1502,6 +1657,13 @@ void EvidentHub::ProcessNotification(const std::string& message)
                 int stateValue = pos - 1;
                 GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
                     CDeviceUtils::ConvertToString(stateValue));
+
+                // This should works since the nosepiece is a state device
+                // it would be safer to test the type first
+                char label[MM::MaxStrLength];
+                int ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+                if (ret == DEVICE_OK)
+                   GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
             }
 
             // Check if we've reached the target position
@@ -1620,11 +1782,253 @@ void EvidentHub::ProcessNotification(const std::string& message)
                     int stateValue = newPos - 1;
                     GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
                         CDeviceUtils::ConvertToString(stateValue));
+
+                    // This should works since the MirrorUnit is a state device
+                    // it would be safer to test the type first
+                    char label[MM::MaxStrLength];
+                    ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+                    if (ret == DEVICE_OK)
+                       GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
                 }
             }
             else
             {
                 LogMessage("Failed to send mirror unit command from encoder", false);
+            }
+        }
+    }
+    else if (tag == CMD_ENCODER3 && params.size() > 0)
+    {
+        // Encoder 3 controls DIA brightness
+        int delta = ParseIntParameter(params[0]);
+        // Fast turning can produce delta values from -9 to 9 (excluding 0)
+        if (delta >= -9 && delta <= 9 && delta != 0)
+        {
+            // Get current remembered brightness (not actual brightness)
+            int currentRemembered = rememberedDIABrightness_;
+
+            // Calculate new remembered brightness (each encoder step changes brightness by 3)
+            int newRemembered = currentRemembered + (delta * 3);
+
+            // Clamp to valid range 0-255
+            if (newRemembered < 0)
+                newRemembered = 0;
+            else if (newRemembered > 255)
+                newRemembered = 255;
+
+            // Always update remembered brightness
+            rememberedDIABrightness_ = newRemembered;
+
+            std::ostringstream msg;
+            msg << "E3 encoder: changing DIA remembered brightness from " << currentRemembered << " to " << newRemembered;
+            LogMessage(msg.str().c_str(), true);
+
+            // Always update I3 indicator to match remembered brightness
+            UpdateDIABrightnessIndicator(newRemembered);
+
+            // Only send DIL command if logical shutter is open (actual brightness > 0)
+            long currentActual = model_.GetPosition(DeviceType_DIABrightness);
+            if (currentActual > 0)
+            {
+                // Shutter is open: update actual lamp brightness
+                std::string cmd = BuildCommand(CMD_DIA_ILLUMINATION, newRemembered);
+                int ret = SendCommand(cmd);
+                if (ret == DEVICE_OK)
+                {
+                    // Update model with new brightness
+                    model_.SetPosition(DeviceType_DIABrightness, newRemembered);
+                }
+                else
+                {
+                    LogMessage("Failed to send DIA brightness command from encoder", false);
+                }
+            }
+            // If shutter is closed, don't send DIL, don't update model
+
+            // Always update Brightness property callback with remembered value
+            auto it = usedDevices_.find(DeviceType_DIAShutter);
+            if (it != usedDevices_.end() && it->second != nullptr)
+            {
+                GetCoreCallback()->OnPropertyChanged(it->second, "Brightness",
+                    CDeviceUtils::ConvertToString(newRemembered));
+            }
+        }
+    }
+    else if (tag == CMD_DIA_ILLUMINATION_NOTIFY && params.size() > 0)
+    {
+        // Handle DIA illumination (brightness) change notification
+        int brightness = ParseIntParameter(params[0]);
+        if (brightness >= 0 && brightness <= 255)
+        {
+            model_.SetPosition(DeviceType_DIABrightness, brightness);
+
+            // Only update I3 indicator and Brightness property if shutter is open (brightness > 0)
+            // When closed (brightness = 0), user wants to continue seeing remembered brightness
+            if (brightness > 0)
+            {
+                // Shutter is open: update remembered brightness, I3 indicator, and property
+                rememberedDIABrightness_ = brightness;
+                UpdateDIABrightnessIndicator(brightness);
+
+                // Notify core callback of Brightness property change
+                auto it = usedDevices_.find(DeviceType_DIAShutter);
+                if (it != usedDevices_.end() && it->second != nullptr)
+                {
+                    GetCoreCallback()->OnPropertyChanged(it->second, "Brightness",
+                        CDeviceUtils::ConvertToString(brightness));
+                }
+            }
+            // If brightness = 0 (closed), don't update I3 or Brightness property
+            // They should continue showing the remembered brightness value
+        }
+    }
+    else if (tag == CMD_MCZ_SWITCH && params.size() > 0)
+    {
+        // Handle MCU switch press notifications
+        // Parameter is a hex bitmask (0-7F) indicating which switch(es) were pressed
+        // Bit 0 (0x01): Switch 1 - Light Path cycle
+        // Bit 1 (0x02): Switch 2 - EPI Shutter toggle
+        // Bit 2 (0x04): Switch 3 - DIA on/off toggle
+        // Bits 3-6: Reserved for future use
+
+        // Parse hex parameter
+        int switchMask = 0;
+        std::istringstream iss(params[0]);
+        iss >> std::hex >> switchMask;
+
+        if (switchMask < 0 || switchMask > 0x7F)
+        {
+            LogMessage(("Invalid S2 switch mask: " + params[0]).c_str(), false);
+            return;
+        }
+
+        std::ostringstream msg;
+        msg << "MCU switch pressed: 0x" << std::hex << std::uppercase << switchMask;
+        LogMessage(msg.str().c_str(), true);
+
+        // Switch 1 (Bit 0): Light Path cycling
+        if (switchMask & 0x01)
+        {
+            if (model_.IsDevicePresent(DeviceType_LightPath))
+            {
+                long currentPos = model_.GetPosition(DeviceType_LightPath);
+                // Cycle: 3 (Eyepiece) → 2 (50/50) → 1 (Left Port) → 4 (Right Port) → 3 (Eyepiece)
+                int newPos;
+                if (currentPos == 3)      // Eyepiece → 50/50
+                    newPos = 2;
+                else if (currentPos == 2) // 50/50 → Left Port
+                    newPos = 1;
+                else if (currentPos == 1) // Left Port → Right Port
+                    newPos = 4;
+                else                      // Right Port or unknown → Eyepiece
+                    newPos = 3;
+
+                std::string cmd = BuildCommand(CMD_LIGHT_PATH, newPos);
+                int ret = SendCommand(cmd);
+                if (ret == DEVICE_OK)
+                {
+                    model_.SetPosition(DeviceType_LightPath, newPos);
+                    UpdateLightPathIndicator(newPos);
+
+                    auto it = usedDevices_.find(DeviceType_LightPath);
+                    if (it != usedDevices_.end() && it->second != nullptr)
+                    {
+                        int stateValue = newPos - 1;
+                        GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                            CDeviceUtils::ConvertToString(stateValue));
+
+                        // This should works since the LightPath is a state device
+                        // it would be safer to test the type first
+                        char label[MM::MaxStrLength];
+                        ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+                        if (ret == DEVICE_OK)
+                           GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
+                    }
+                    LogMessage(("Switch 1: Light path changed to position " + std::to_string(newPos)).c_str(), true);
+                }
+                else
+                {
+                    LogMessage("Failed to change light path from switch", false);
+                }
+            }
+        }
+
+        // Switch 2 (Bit 1): EPI Shutter toggle
+        if (switchMask & 0x02)
+        {
+            auto it = usedDevices_.find(DeviceType_EPIShutter1);
+            if (it != usedDevices_.end() && it->second != nullptr)
+            {
+                // Get current state from model
+                long currentState = model_.GetPosition(DeviceType_EPIShutter1);
+                int newState = (currentState == 0) ? 1 : 0;
+
+                // Send toggle command using SendCommand (not ExecuteCommand) to avoid deadlock
+                std::string cmd = BuildCommand(CMD_EPI_SHUTTER1, newState);
+                int ret = SendCommand(cmd);
+                if (ret == DEVICE_OK)
+                {
+                    model_.SetPosition(DeviceType_EPIShutter1, newState);
+                    UpdateEPIShutter1Indicator(newState);
+
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                        CDeviceUtils::ConvertToString(static_cast<long>(newState)));
+                    GetCoreCallback()->OnShutterOpenChanged(it->second, newState == 1);
+
+                    LogMessage(("Switch 2: EPI shutter toggled to " + std::string(newState ? "open" : "closed")).c_str(), true);
+                }
+                else
+                {
+                    LogMessage("Failed to toggle EPI shutter from switch", false);
+                }
+            }
+        }
+
+        // Switch 3 (Bit 2): DIA on/off toggle (with brightness memory)
+        if (switchMask & 0x04)
+        {
+            auto it = usedDevices_.find(DeviceType_DIAShutter);
+            if (it != usedDevices_.end() && it->second != nullptr)
+            {
+                // Get current brightness from model to determine if logical shutter is open
+                long currentBrightness = model_.GetPosition(DeviceType_DIABrightness);
+                int newBrightness;
+
+                if (currentBrightness > 0)
+                {
+                    // Currently on: remember brightness and turn off
+                    rememberedDIABrightness_ = static_cast<int>(currentBrightness);
+                    newBrightness = 0;
+                }
+                else
+                {
+                    // Currently off: restore remembered brightness
+                    newBrightness = rememberedDIABrightness_;
+                }
+
+                // Send command using SendCommand (not ExecuteCommand) to avoid deadlock
+                std::string cmd = BuildCommand(CMD_DIA_ILLUMINATION, newBrightness);
+                int ret = SendCommand(cmd);
+                if (ret == DEVICE_OK)
+                {
+                    model_.SetPosition(DeviceType_DIABrightness, newBrightness);
+
+                    // Always update I3 indicator with remembered brightness (not 0 when closing)
+                    // User wants to see the remembered brightness value, not that lamp is off
+                    UpdateDIABrightnessIndicator(rememberedDIABrightness_);
+
+                    // Only update State property (logical shutter), NOT Brightness property
+                    // This keeps the Brightness property at its remembered value
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                        CDeviceUtils::ConvertToString(newBrightness > 0 ? 1L : 0L));
+                    GetCoreCallback()->OnShutterOpenChanged(it->second, newBrightness > 0);
+
+                    LogMessage(("Switch 3: DIA toggled to " + std::string(newBrightness > 0 ? "on" : "off")).c_str(), true);
+                }
+                else
+                {
+                    LogMessage("Failed to toggle DIA from switch", false);
+                }
             }
         }
     }

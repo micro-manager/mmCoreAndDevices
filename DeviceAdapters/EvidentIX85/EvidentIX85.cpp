@@ -164,6 +164,36 @@ int EvidentFocus::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
+    // Jog Direction property
+    pAct = new CPropertyAction(this, &EvidentFocus::OnJogDirection);
+    ret = CreateProperty("Jog Direction", "Default", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    std::vector<std::string> directionValues;
+    directionValues.push_back("Default");
+    directionValues.push_back("Reverse");
+    ret = SetAllowedValues("Jog Direction", directionValues);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Jog Fine Sensitivity property
+    pAct = new CPropertyAction(this, &EvidentFocus::OnJogFineSensitivity);
+    ret = CreateProperty("Jog Fine Sensitivity", "10", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    ret = SetPropertyLimits("Jog Fine Sensitivity", 1, 100);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Jog Coarse Sensitivity property
+    pAct = new CPropertyAction(this, &EvidentFocus::OnJogCoarseSensitivity);
+    ret = CreateProperty("Jog Coarse Sensitivity", "10", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    ret = SetPropertyLimits("Jog Coarse Sensitivity", 1, 100);
+    if (ret != DEVICE_OK)
+        return ret;
+
     // Add firmware version as read-only property
     std::string version = hub->GetDeviceVersion(DeviceType_Focus);
     if (!version.empty())
@@ -372,6 +402,138 @@ int EvidentFocus::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ret;
 
         if (!IsPositiveAck(response, CMD_FOCUS_SPEED))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentFocus::OnJogDirection(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        // Query current direction
+        std::string cmd = BuildQuery(CMD_JOG_DIRECTION);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() >= 1)
+        {
+            int direction = ParseIntParameter(params[0]);
+            if (direction == 0)
+                pProp->Set("Reverse");
+            else if (direction == 1)
+                pProp->Set("Default");
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string directionStr;
+        pProp->Get(directionStr);
+
+        int direction = (directionStr == "Reverse") ? 0 : 1;
+
+        std::string cmd = BuildCommand(CMD_JOG_DIRECTION, direction);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_JOG_DIRECTION))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentFocus::OnJogFineSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        // Query current fine sensitivity
+        std::string cmd = BuildQuery(CMD_JOG_SENSITIVITY_FINE);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() >= 1)
+        {
+            long sensitivity = ParseLongParameter(params[0]);
+            if (sensitivity >= 1 && sensitivity <= 100)
+                pProp->Set(sensitivity);
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long sensitivity;
+        pProp->Get(sensitivity);
+
+        // Clamp to valid range
+        if (sensitivity < 1) sensitivity = 1;
+        if (sensitivity > 100) sensitivity = 100;
+
+        std::string cmd = BuildCommand(CMD_JOG_SENSITIVITY_FINE, static_cast<int>(sensitivity));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_JOG_SENSITIVITY_FINE))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentFocus::OnJogCoarseSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        // Query current coarse sensitivity
+        std::string cmd = BuildQuery(CMD_JOG_SENSITIVITY_COARSE);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() >= 1)
+        {
+            long sensitivity = ParseLongParameter(params[0]);
+            if (sensitivity >= 1 && sensitivity <= 100)
+                pProp->Set(sensitivity);
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long sensitivity;
+        pProp->Get(sensitivity);
+
+        // Clamp to valid range
+        if (sensitivity < 1) sensitivity = 1;
+        if (sensitivity > 100) sensitivity = 100;
+
+        std::string cmd = BuildCommand(CMD_JOG_SENSITIVITY_COARSE, static_cast<int>(sensitivity));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_JOG_SENSITIVITY_COARSE))
             return ERR_NEGATIVE_ACK;
     }
     return DEVICE_OK;
@@ -1281,7 +1443,71 @@ int EvidentDIAShutter::Initialize()
             return ret;
     }
 
+    // Create Brightness property (DIA illumination intensity)
+    pAct = new CPropertyAction(this, &EvidentDIAShutter::OnBrightness);
+    ret = CreateProperty("Brightness", "0", MM::Integer, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    SetPropertyLimits("Brightness", 0, 255);
+
+    // Query current brightness value
+    std::string cmd = BuildQuery(CMD_DIA_ILLUMINATION);
+    std::string response;
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret == DEVICE_OK)
+    {
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int brightness = ParseIntParameter(params[0]);
+            if (brightness >= 0 && brightness <= 255)
+            {
+                hub->GetModel()->SetPosition(DeviceType_DIABrightness, brightness);
+                SetProperty("Brightness", CDeviceUtils::ConvertToString(brightness));
+
+                // Update I3 indicator on MCU
+                hub->UpdateDIABrightnessIndicator(brightness);
+            }
+        }
+    }
+
+    // Create Mechanical Shutter property (controls physical shutter, independent of logical shutter)
+    pAct = new CPropertyAction(this, &EvidentDIAShutter::OnMechanicalShutter);
+    ret = CreateProperty("Mechanical Shutter", "Closed", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    AddAllowedValue("Mechanical Shutter", "Closed");
+    AddAllowedValue("Mechanical Shutter", "Open");
+
+    // Query current mechanical shutter state
+    cmd = BuildQuery(CMD_DIA_SHUTTER);
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret == DEVICE_OK)
+    {
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int state = ParseIntParameter(params[0]);
+            // Note: DSH 0 = Open, DSH 1 = Closed (reversed)
+            SetProperty("Mechanical Shutter", (state == 0) ? "Open" : "Closed");
+        }
+    }
+
+    // Enable brightness change notifications
+    ret = EnableNotifications(true);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Register with hub so notification handler can call OnPropertyChanged
+    hub->RegisterDeviceAsUsed(DeviceType_DIAShutter, this);
+
     initialized_ = true;
+
+    // Close logical shutter on startup (set brightness to 0)
+    SetOpen(false);
+
     return DEVICE_OK;
 }
 
@@ -1289,6 +1515,14 @@ int EvidentDIAShutter::Shutdown()
 {
     if (initialized_)
     {
+        // Disable brightness change notifications
+        EnableNotifications(false);
+
+        // Unregister from hub
+        EvidentHub* hub = GetHub();
+        if (hub)
+            hub->UnRegisterDeviceAsUsed(DeviceType_DIAShutter);
+
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -1305,14 +1539,58 @@ int EvidentDIAShutter::SetOpen(bool open)
     if (!hub)
         return DEVICE_ERR;
 
-    std::string cmd = BuildCommand(CMD_DIA_SHUTTER, open ? 1 : 0);
-    std::string response;
-    int ret = hub->ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
-        return ret;
+    if (open)
+    {
+        // Logical open: Set brightness to remembered value
+        int rememberedBrightness = hub->GetRememberedDIABrightness();
+        std::string cmd = BuildCommand(CMD_DIA_ILLUMINATION, rememberedBrightness);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
 
-    if (!IsPositiveAck(response, CMD_DIA_SHUTTER))
-        return ERR_NEGATIVE_ACK;
+        if (!IsPositiveAck(response, CMD_DIA_ILLUMINATION))
+            return ERR_NEGATIVE_ACK;
+
+        // Update model
+        hub->GetModel()->SetPosition(DeviceType_DIABrightness, rememberedBrightness);
+
+        // Update I3 indicator on MCU
+        hub->UpdateDIABrightnessIndicator(rememberedBrightness);
+    }
+    else
+    {
+        // Logical close: Remember current brightness, then set to 0
+        std::string cmd = BuildQuery(CMD_DIA_ILLUMINATION);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int brightness = ParseIntParameter(params[0]);
+            if (brightness > 0)
+                hub->SetRememberedDIABrightness(brightness);
+        }
+
+        // Set brightness to 0
+        cmd = BuildCommand(CMD_DIA_ILLUMINATION, 0);
+        ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_DIA_ILLUMINATION))
+            return ERR_NEGATIVE_ACK;
+
+        // Update model
+        hub->GetModel()->SetPosition(DeviceType_DIABrightness, 0);
+
+        // Update I3 indicator on MCU with remembered brightness (not 0)
+        // User wants to see the remembered brightness value, not that lamp is off
+        hub->UpdateDIABrightnessIndicator(hub->GetRememberedDIABrightness());
+    }
 
     return DEVICE_OK;
 }
@@ -1323,7 +1601,8 @@ int EvidentDIAShutter::GetOpen(bool& open)
     if (!hub)
         return DEVICE_ERR;
 
-    std::string cmd = BuildQuery(CMD_DIA_SHUTTER);
+    // Logical shutter state is based on brightness: open if brightness > 0
+    std::string cmd = BuildQuery(CMD_DIA_ILLUMINATION);
     std::string response;
     int ret = hub->ExecuteCommand(cmd, response);
     if (ret != DEVICE_OK)
@@ -1332,8 +1611,11 @@ int EvidentDIAShutter::GetOpen(bool& open)
     std::vector<std::string> params = ParseParameters(response);
     if (params.size() > 0)
     {
-        int state = ParseIntParameter(params[0]);
-        open = (state == 1);
+        int brightness = ParseIntParameter(params[0]);
+        open = (brightness > 0);
+
+        // Update model
+        hub->GetModel()->SetPosition(DeviceType_DIABrightness, brightness);
     }
 
     return DEVICE_OK;
@@ -1362,6 +1644,106 @@ int EvidentDIAShutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         return SetOpen(state != 0);
     }
     return DEVICE_OK;
+}
+
+int EvidentDIAShutter::OnBrightness(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        // Return remembered brightness (what brightness will be when shutter opens)
+        int rememberedBrightness = hub->GetRememberedDIABrightness();
+        pProp->Set(static_cast<long>(rememberedBrightness));
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        long brightness;
+        pProp->Get(brightness);
+
+        // Always update remembered brightness
+        hub->SetRememberedDIABrightness(static_cast<int>(brightness));
+
+        // Always update I3 indicator to match Brightness property
+        hub->UpdateDIABrightnessIndicator(static_cast<int>(brightness));
+
+        // Only send DIL command if logical shutter is open (actual brightness > 0)
+        long currentBrightness = hub->GetModel()->GetPosition(DeviceType_DIABrightness);
+        if (currentBrightness > 0)
+        {
+            // Shutter is open: update actual lamp brightness
+            std::string cmd = BuildCommand(CMD_DIA_ILLUMINATION, static_cast<int>(brightness));
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+                return ret;
+
+            if (!IsPositiveAck(response, CMD_DIA_ILLUMINATION))
+                return ERR_NEGATIVE_ACK;
+
+            // Update model
+            hub->GetModel()->SetPosition(DeviceType_DIABrightness, brightness);
+        }
+        // If shutter is closed, don't send DIL command, don't update model
+    }
+
+    return DEVICE_OK;
+}
+
+int EvidentDIAShutter::OnMechanicalShutter(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        // Query physical shutter state
+        std::string cmd = BuildQuery(CMD_DIA_SHUTTER);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            int state = ParseIntParameter(params[0]);
+            // Note: DSH 0 = Open, DSH 1 = Closed (reversed)
+            pProp->Set((state == 0) ? "Open" : "Closed");
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+
+        // Convert "Open"/"Closed" to 0/1 (reversed: Open=0, Closed=1)
+        int state = (value == "Open") ? 0 : 1;
+
+        // Send DSH command to control physical shutter
+        std::string cmd = BuildCommand(CMD_DIA_SHUTTER, state);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_DIA_SHUTTER))
+            return ERR_NEGATIVE_ACK;
+    }
+
+    return DEVICE_OK;
+}
+
+int EvidentDIAShutter::EnableNotifications(bool enable)
+{
+    EvidentHub* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    return hub->EnableNotification(CMD_DIA_ILLUMINATION_NOTIFY, enable);
 }
 
 EvidentHub* EvidentDIAShutter::GetHub()
@@ -1430,6 +1812,10 @@ int EvidentEPIShutter1::Initialize()
     hub->RegisterDeviceAsUsed(DeviceType_EPIShutter1, this);
 
     initialized_ = true;
+
+    // Close shutter on startup
+    SetOpen(false);
+
     return DEVICE_OK;
 }
 
@@ -2336,6 +2722,10 @@ int EvidentEPIShutter2::Initialize()
     }
 
     initialized_ = true;
+
+    // Close shutter on startup
+    SetOpen(false);
+
     return DEVICE_OK;
 }
 

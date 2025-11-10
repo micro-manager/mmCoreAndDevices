@@ -166,7 +166,7 @@ const char* const CMD_OFFSET_LENS_LOST_MOTION = "ABLM";
 const char* const CMD_JOG = "JG";
 const char* const CMD_JOG_SENSITIVITY_FINE = "JGSF";
 const char* const CMD_JOG_SENSITIVITY_COARSE = "JGSC";
-const char* const CMD_JOG_DIRECTION = "JGDR";
+const char* const CMD_JOG_DIRECTION = "JGDR";  // Jog direction (0=Reverse, 1=Default)
 const char* const CMD_JOG_LIMIT = "JGL";
 const char* const CMD_OFFSET_LENS_SENSITIVITY_FINE = "ABJGSF";
 const char* const CMD_OFFSET_LENS_SENSITIVITY_COARSE = "ABJGSC";

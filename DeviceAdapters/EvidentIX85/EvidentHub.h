@@ -73,6 +73,11 @@ public:
     int UpdateMirrorUnitIndicator(int position);
     int UpdateLightPathIndicator(int position);
     int UpdateEPIShutter1Indicator(int state);
+    int UpdateDIABrightnessIndicator(int brightness);
+
+    // DIA brightness memory for logical shutter
+    int GetRememberedDIABrightness() const { return rememberedDIABrightness_; }
+    void SetRememberedDIABrightness(int brightness) { rememberedDIABrightness_ = brightness; }
 
 private:
     // Initialization helpers
@@ -135,6 +140,9 @@ private:
     std::string unit_;
     std::vector<EvidentIX85::DeviceType> availableDevices_;
     std::vector<std::string> detectedDevicesByName_;
+
+    // MCU switch state
+    int rememberedDIABrightness_;  // Remembered brightness for DIA switch toggle
 
     // Child devices
     std::map<EvidentIX85::DeviceType, MM::Device*> usedDevices_;
