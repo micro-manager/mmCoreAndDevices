@@ -877,6 +877,9 @@ void CMMCore::unloadAllDevices() MMCORE_LEGACY_THROW(CMMError)
 
       throw;
    }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreInitialize, "0");
+   }
 }
 
 /**
@@ -961,6 +964,9 @@ void CMMCore::initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError)
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
 
    updateCoreProperties();
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreInitialize, "1");
+   }
 }
 
 
@@ -2623,6 +2629,9 @@ void CMMCore::setAutoShutter(bool state)
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoShutter, state ? "1" : "0"));
    }
    LOG_DEBUG(coreLogger_) << "Autoshutter turned " << (state ? "on" : "off");
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoShutter, state ? "1" : "0");
+   }
 }
 
 /**
@@ -3428,6 +3437,9 @@ void CMMCore::setAutoFocusDevice(const char* autofocusLabel) MMCORE_LEGACY_THROW
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str()));
    }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str());
+   }
 }
 
 /**
@@ -3495,6 +3507,9 @@ void CMMCore::setImageProcessorDevice(const char* procLabel) MMCORE_LEGACY_THROW
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str()));
    }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str());
+   }
 }
 
 /**
@@ -3518,6 +3533,9 @@ void CMMCore::setSLMDevice(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreSLM, newSLMLabel.c_str()));
+   }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreSLM, newSLMLabel.c_str());
    }
 }
 
@@ -3543,6 +3561,9 @@ void CMMCore::setGalvoDevice(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMErro
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str()));
+   }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str());
    }
 }
 
@@ -3574,6 +3595,7 @@ void CMMCore::setChannelGroup(const char* chGroup) MMCORE_LEGACY_THROW(CMMError)
    if (externalCallback_ != 0) 
    {
       externalCallback_->onChannelGroupChanged(channelGroup_.c_str());
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreChannelGroup, channelGroup_.c_str());
    }
 }
 
@@ -3633,6 +3655,9 @@ void CMMCore::setShutterDevice(const char* shutterLabel) MMCORE_LEGACY_THROW(CMM
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreShutter, newShutterLabel.c_str()));
    }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreShutter, newShutterLabel.c_str());
+   }
 }
 
 /**
@@ -3658,6 +3683,9 @@ void CMMCore::setFocusDevice(const char* focusLabel) MMCORE_LEGACY_THROW(CMMErro
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreFocus, newFocusLabel.c_str()));
    }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreFocus, newFocusLabel.c_str());
+   }
 }
 
 /**
@@ -3681,6 +3709,9 @@ void CMMCore::setXYStageDevice(const char* xyDeviceLabel) MMCORE_LEGACY_THROW(CM
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str()));
+   }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str());
    }
 }
 
@@ -3720,6 +3751,9 @@ void CMMCore::setCameraDevice(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMEr
    {
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, newCameraLabel.c_str()));
+   }
+   if (externalCallback_) {
+      externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, newCameraLabel.c_str());
    }
 }
 
@@ -4403,6 +4437,17 @@ double CMMCore::getExposure(const char* label) MMCORE_LEGACY_THROW(CMMError)
   }
   else
      return 0.0;
+}
+
+
+void CMMCore::setTimeoutMs(long timeoutMs)
+{
+   if (timeoutMs > 0) {
+      timeoutMs_ = timeoutMs;
+      if (externalCallback_) {
+         externalCallback_->onPropertyChanged(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreTimeoutMs, std::to_string(timeoutMs).c_str());
+      }
+   }
 }
 
 /**
