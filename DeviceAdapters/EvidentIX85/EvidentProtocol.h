@@ -267,7 +267,7 @@ const int ERR_CORRECTION_COLLAR_LINK_FAILED = ERR_EVIDENT_OFFSET + 11;
 inline std::string BuildCommand(const char* tag)
 {
     std::ostringstream cmd;
-    cmd << tag << TERMINATOR;
+    cmd << tag;  // Don't add TERMINATOR - SendSerialCommand adds it
     return cmd.str();
 }
 

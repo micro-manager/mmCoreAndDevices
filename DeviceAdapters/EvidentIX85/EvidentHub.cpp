@@ -554,7 +554,12 @@ int EvidentHub::ExecuteCommand(const std::string& command, std::string& response
         return ret;
 
     // Extract expected response tag from command
-    std::string expectedTag = ExtractTag(command);
+    // First strip any trailing whitespace/terminators from the command
+    std::string cleanCommand = command;
+    size_t end = cleanCommand.find_last_not_of(" \t\r\n");
+    if (end != std::string::npos)
+        cleanCommand = cleanCommand.substr(0, end + 1);
+    std::string expectedTag = ExtractTag(cleanCommand);
 
     ret = GetResponse(response, answerTimeoutMs_);
     if (ret != DEVICE_OK)
