@@ -339,6 +339,7 @@ int EvidentHub::Shutdown()
             {
                 LogMessage("Encoder E1 disabled", true);
             }
+
             else
             {
                 LogMessage("Failed to disable encoder E1", true);
@@ -469,6 +470,7 @@ int EvidentHub::ClearPort()
     return DEVICE_OK;
 }
 
+
 int EvidentHub::SetRemoteMode()
 {
     std::string cmd = BuildCommand(CMD_LOGIN, 1);  // 1 = Remote mode
@@ -521,6 +523,28 @@ int EvidentHub::GetUnit(std::string& unit)
     return ERR_INVALID_RESPONSE;
 }
 
+int EvidentHub::GetUnitDirect(std::string& unit)
+{
+    std::string cmd = BuildQuery(CMD_UNIT);
+    std::string response;
+    int ret = SendCommand(cmd);
+    if (ret != DEVICE_OK)
+        return ret;
+    ret = GetSerialAnswer(port_.c_str(), TERMINATOR, response);
+    if (ret != DEVICE_OK)
+       return ret;
+
+    // Parse response: "U IX5,..."
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() > 0)
+    {
+        unit = params[0];
+        return DEVICE_OK;
+    }
+
+    return ERR_INVALID_RESPONSE;
+}
+
 int EvidentHub::ExecuteCommand(const std::string& command, std::string& response)
 {
     std::lock_guard<std::mutex> lock(commandMutex_);
@@ -529,8 +553,38 @@ int EvidentHub::ExecuteCommand(const std::string& command, std::string& response
     if (ret != DEVICE_OK)
         return ret;
 
+    // Extract expected response tag from command
+    std::string expectedTag = ExtractTag(command);
+
     ret = GetResponse(response, answerTimeoutMs_);
-    return ret;
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Verify response tag matches command tag
+    std::string responseTag = ExtractTag(response);
+    if (responseTag != expectedTag)
+    {
+        // Received wrong response - this can happen if responses arrive out of order
+        LogMessage(("Warning: Expected response for '" + expectedTag +
+                    "' but received '" + responseTag + "' (" + response +
+                    "). Discarding and waiting for correct response.").c_str(), false);
+
+        // Wait for the correct response (with remaining timeout)
+        ret = GetResponse(response, answerTimeoutMs_);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        // Check again
+        responseTag = ExtractTag(response);
+        if (responseTag != expectedTag)
+        {
+            LogMessage(("Error: Still did not receive expected response for '" +
+                        expectedTag + "', got '" + responseTag + "' instead.").c_str(), false);
+            return ERR_INVALID_RESPONSE;
+        }
+    }
+
+    return DEVICE_OK;
 }
 
 int EvidentHub::SendCommand(const std::string& command)
@@ -741,6 +795,65 @@ int EvidentHub::DoDeviceDetection()
     LogMessage(msg.str().c_str(), false);
 
     return DEVICE_OK;
+}
+
+MM::DeviceDetectionStatus EvidentHub::DetectDevice(void)
+{
+   
+   if (initialized_)
+      return MM::CanCommunicate;
+
+   // our property port_ should have been set to one of the valid ports
+
+
+   // all conditions must be satisfied...
+   MM::DeviceDetectionStatus result = MM::Misconfigured;
+   char answerTO[MM::MaxStrLength];
+   
+   try
+   {
+      std::string portLowerCase = port_;
+      for( std::string::iterator its = portLowerCase.begin(); its != portLowerCase.end(); ++its)
+      {
+         *its = (char)tolower(*its);
+      }
+      if( 0< portLowerCase.length() &&  0 != portLowerCase.compare("undefined")  && 0 != portLowerCase.compare("unknown") )
+      {
+         result = MM::CanNotCommunicate;
+         // record current port settings
+         GetCoreCallback()->GetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
+
+         // device specific default communication parameters
+         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_BaudRate, "115200" );
+         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_StopBits, "1");
+         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_Parity, "Even");
+         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "Verbose", "0");
+         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", "5000.0");
+         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "DelayBetweenCharsMs", "0");
+         MM::Device* pS = GetCoreCallback()->GetDevice(this, port_.c_str());
+         pS->Initialize();
+         std::string unit;
+         int ret = GetUnitDirect(unit);
+         if (ret != DEVICE_OK || unit != "IX5")
+         {
+            pS->Shutdown();
+            // always restore the AnswerTimeout to the default
+            GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
+            return result;
+         }
+         result = MM::CanCommunicate;
+         pS->Shutdown();
+         // always restore the AnswerTimeout to the default
+         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
+
+      }
+   }
+   catch(...)
+   {
+      LogMessage("Exception in DetectDevice!",false);
+   }
+   return result;
+
 }
 
 int EvidentHub::DetectInstalledDevices()

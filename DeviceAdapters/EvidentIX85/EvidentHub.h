@@ -45,6 +45,8 @@ public:
     void GetName(char* pszName) const;
     bool Busy();
 
+    bool SupportsDeviceDetection(void) { return true; }
+    MM::DeviceDetectionStatus DetectDevice(void);
     // Hub API
     int DetectInstalledDevices();
 
@@ -84,6 +86,7 @@ private:
     int SetRemoteMode();
     int GetVersion(std::string& version);
     int GetUnit(std::string& unit);
+    int GetUnitDirect(std::string& unit);
     int ClearPort();
     int DoDeviceDetection();
     int QueryDevicePresenceByVersion(int unitNumber, std::string& version);
