@@ -497,6 +497,10 @@ int CIDSPeakCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySiz
         return DEVICE_CAN_NOT_SET_PROPERTY;
     }
 
+    // Update framerate limits
+    int ret = GetBoundaries(nodeMapRemoteDevice->FindNode<FloatNode>("AcquisitionFrameRate"), frameRateMin_, frameRateMax_, frameRateInc_);
+    SetPropertyLimits("MDA framerate", frameRateMin_, frameRateMax_);
+
     img_.Resize(xSize, ySize);
     roiX_ = x;
     roiY_ = y;
@@ -1010,6 +1014,10 @@ int CIDSPeakCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
             LogMessage("IDS exception: Could not determine ROI parameters.");
             LogMessage(e.what());
         }
+
+
+        ret = GetBoundaries(nodeMapRemoteDevice->FindNode<FloatNode>("AcquisitionFrameRate"), frameRateMin_, frameRateMax_, frameRateInc_);
+        SetPropertyLimits("MDA framerate", frameRateMin_, frameRateMax_);
 
         OnPropertyChanged("Binning", std::to_string(binSize_).c_str());
         ret = DEVICE_OK;
@@ -1839,13 +1847,7 @@ int CIDSPeakCamera::InitializeBinning()
     std::vector<std::string> binningValues;
     try 
     {
-        binningSelector_ = "Sensor";
-        if (!nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->HasEntry(binningSelector_)) 
-        {
-            binningSelector_ = "Region0";
-        }
-        nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")
-            ->SetCurrentEntry(binningSelector_);
+        binningSelector_ = nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->CurrentEntry()->SymbolicValue();
         
         int64_t maxVal = nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->Maximum();
         int64_t i = 1;
@@ -2646,7 +2648,7 @@ int CIDSPeakCamera::GetBoundaries(std::shared_ptr<FloatNode> node, double& minVa
     {
         minVal = node->Minimum();
         maxVal = node->Maximum();
-        increment = node->Increment();
+        increment = (node->HasConstantIncrement()) ? node->Increment() : 0.001;
     }
     catch (std::exception& e)
     {
