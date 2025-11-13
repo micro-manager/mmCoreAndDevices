@@ -3,17 +3,16 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Driver for IDS peak series of USB cameras
+// DESCRIPTION:   Driver for IDS peak series cameras
 //
 //                Based on IDS peak SDK and Micro-manager DemoCamera example
 //                tested with SDK version 2.5
-//                Requires Micro-manager Device API 71 or higher!
-//                
+//
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 //
-// YEAR:          2023
+// YEAR:          2025
 //                
-// VERSION:       1.1.1
+// VERSION:       2.0.1
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -26,7 +25,7 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// LAST UPDATE:   03.12.2024 LK
+// LAST UPDATE:   13.11.2025 LK
 ////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
