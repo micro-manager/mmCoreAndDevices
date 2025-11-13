@@ -15,17 +15,29 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="IDSPeak.h">
+    <ClInclude Include="IDSPeakCamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IDSPeakHub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="IDSPeak.cpp">
+    <ClCompile Include="IDSPeakCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="IDSPeakHub.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="ids_peak_comfort_c.lib">
+    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\api\lib\x86_64\ids_peak.lib">
+      <Filter>Resource Files</Filter>
+    </Library>
+    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\ipl\lib\x86_64\ids_peak_ipl.lib">
+      <Filter>Resource Files</Filter>
+    </Library>
+    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\afl\lib\x86_64\ids_peak_afl.lib">
       <Filter>Resource Files</Filter>
     </Library>
   </ItemGroup>
