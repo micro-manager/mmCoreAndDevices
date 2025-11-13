@@ -19,6 +19,7 @@ on:
 
 jobs:
   dispatch:
+    if: github.repository == 'micro-manager/mmCoreAndDevices'
     runs-on: ubuntu-latest
     permissions:
       contents: read
