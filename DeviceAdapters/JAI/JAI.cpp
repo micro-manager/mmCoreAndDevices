@@ -814,16 +814,6 @@ int JAICamera::ResizeImageBuffer()
 	return DEVICE_OK;
 }
 
-int JAICamera::PushImage(unsigned char* imgBuf)
-{
-	int retCode = GetCoreCallback()->InsertImage(this,
-		imgBuf,
-		img.Width(),
-		img.Height(),
-		img.Depth());
-	return DEVICE_OK;
-}
-
 int JAICamera::processPvError(const PvResult& pvr)
 {
 	ClearPvBuffers();
@@ -1154,11 +1144,6 @@ int AcqSequenceThread::svc (void)
 	}
 
 	pvr = moduleInstance->camera->StreamDisable();
-	if (pvr.IsFailure())
-	{
-		return processPvError(pvr, camStream);
-	}
-
 	if (pvr.IsFailure())
 	{
 		return processPvError(pvr, camStream);

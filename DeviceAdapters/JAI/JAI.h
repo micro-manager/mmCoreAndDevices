@@ -183,15 +183,11 @@ public:
    int OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnTemperatureSetPoint(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnTriggerPolarity(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    int ResizeImageBuffer();
-   int PushImage(unsigned char* imgBuf);
 	int processPvError(const PvResult& pvr);
 	static void convert_BGR8_RGBA32(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
 	static void convert_BGR12P_RGBA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);

@@ -55,28 +55,6 @@ int JAICamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int JAICamera::OnTriggerMode(MM::PropertyBase* /*pProp*/, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-	}
-	else if (eAct == MM::BeforeGet)
-	{
-	}
-	return DEVICE_OK;
-}
-
-int JAICamera::OnTriggerPolarity(MM::PropertyBase* /*pProp*/, MM::ActionType eAct)
-{
-	if (eAct == MM::AfterSet)
-	{
-	}
-	else if (eAct == MM::BeforeGet)
-	{
-	}
-	return DEVICE_OK;
-}
-
 int JAICamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::AfterSet)
@@ -296,13 +274,3 @@ int JAICamera::OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int JAICamera::OnTemperatureSetPoint(MM::PropertyBase* /*pProp*/, MM::ActionType eAct)
-{
-   if (eAct == MM::AfterSet)
-   {
-   }
-   else if (eAct == MM::BeforeGet)
-   {
-   }
-   return DEVICE_OK;
-}
