@@ -20,3 +20,10 @@ Changelog IDSPeak:
   those features.
 - Included Analog Gain
 - Fixes small memory leak during conversion from IDS PixelType to MM pixeltypes
+
+2025.11.13
+- Switched from IDS Comfort API to IDS Generic API
+- Automatically detect if optional feature is supported by the camera.
+    When the user enables an optional feature that is not supported, it should
+    log a warning, and skip that feature.
+- Added Trigger functionality, both Software and Hardware triggers.
