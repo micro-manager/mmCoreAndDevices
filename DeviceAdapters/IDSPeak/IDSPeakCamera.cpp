@@ -54,7 +54,7 @@ using IntNode = peak::core::nodes::IntegerNode;
 const char* g_PixelType = "PixelType";
 const char* g_PixelType_8bit = "8bit";
 const char* g_PixelType_16bit = "16bit";
-const char* g_PixelType_32bitRGBA = "32bit RGBA";
+const char* g_PixelType_32bitBGRA = "32bit BGRA";
 
 const char* g_keyword_Peak_PixelFormat = "IDS Pixel Format";
 
@@ -330,7 +330,8 @@ int CIDSPeakCamera::SnapImage()
     }
 
     // Acquire and transfer the image to MM
-    ret = AcquireAndTransferImage((uint64_t) exposureCur_, true);
+    uint64_t timeout_ms = exposureCur_ * 3;
+    ret = AcquireAndTransferImage(timeout_ms, true);
     // Unblock the camera
     StopAcquisition();
     if (DEVICE_OK != ret)
@@ -393,6 +394,15 @@ unsigned CIDSPeakCamera::GetImageBytesPerPixel() const
 unsigned CIDSPeakCamera::GetBitDepth() const
 {
     return 8 * img_.Depth();
+}
+
+/**
+* Get the number of components (1 for Mono, 4 for BGRA)
+* @ returns unsigned int - Number of components
+*/
+unsigned CIDSPeakCamera::GetNumberOfComponents() const
+{
+    return nComponents_;
 }
 
 /**
@@ -1166,7 +1176,7 @@ int CIDSPeakCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
         }
         else if (nComponents_ == 4 && bitDepth_ == 8) 
         {
-            pProp->Set(g_PixelType_32bitRGBA);
+            pProp->Set(g_PixelType_32bitBGRA);
         }
         else 
         {
@@ -1620,14 +1630,10 @@ int CIDSPeakCamera::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType 
             LogMessage("IDS error: Could not activate trigger, due to lack of READWRITE access.");
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
-        LogMessage("Has write access");
         try 
         {
-            LogMessage("Before execute");
             node->Execute();
-            LogMessage("Trigger execute");
             node->WaitUntilDone();
-            LogMessage("Trigger finished");
         }
         catch (std::exception& e) 
         {
@@ -2588,7 +2594,7 @@ int CIDSPeakCamera::SetPixelType(const std::string& pixelType)
         bitDepth_ = 16;
         destinationFormat_ = peak::ipl::PixelFormatName::Mono16;
     }
-    else if (pixelType == g_PixelType_32bitRGBA) 
+    else if (pixelType == g_PixelType_32bitBGRA) 
     {
         nComponents_ = 4;
         bitDepth_ = 8;
@@ -2700,7 +2706,7 @@ std::vector<std::string> CIDSPeakCamera::GetAvailableEntries(const std::string& 
          }
          else if (peak::ipl::PixelFormatName::BGRa8 == outputFormat) 
          {
-             output.push_back(g_PixelType_32bitRGBA);
+             output.push_back(g_PixelType_32bitBGRA);
          }
      }
      return output;

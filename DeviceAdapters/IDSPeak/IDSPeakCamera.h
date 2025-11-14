@@ -75,6 +75,7 @@ public:
     unsigned GetImageHeight() const;
     unsigned GetImageBytesPerPixel() const;
     unsigned GetBitDepth() const;
+    unsigned GetNumberOfComponents() const;
     long GetImageBufferSize() const;
     int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
     int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
