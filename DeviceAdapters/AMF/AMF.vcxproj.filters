@@ -24,6 +24,9 @@
     <ClInclude Include="AMF_LSP_Hub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClCompile Include="AMF_LSP_Pump.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AMF_RVM.cpp">
@@ -34,9 +37,6 @@
     </ClCompile>
     <ClCompile Include="AMF_LSP_Pump.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AMF_LSP_Pump.h">
-      <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

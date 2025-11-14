@@ -14,11 +14,11 @@
     <ClInclude Include="AMF_Commands.h" />
     <ClInclude Include="AMF_LSP_Hub.h" />
     <ClInclude Include="AMF_RVM.h" />
+    <ClInclude Include="AMF_LSP_Pump.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AMF_LSP_Hub.cpp" />
     <ClCompile Include="AMF_LSP_Pump.cpp" />
-    <ClCompile Include="AMF_LSP_Pump.h" />
     <ClCompile Include="AMF_RVM.cpp" />
   </ItemGroup>
   <ItemGroup>
