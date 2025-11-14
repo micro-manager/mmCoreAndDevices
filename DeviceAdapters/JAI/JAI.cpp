@@ -756,6 +756,12 @@ int JAICamera::StartSequenceAcquisition(long numImages, double /*interval_ms*/, 
       return DEVICE_CAMERA_BUSY_ACQUIRING;
    }
 
+	int ret = GetCoreCallback()->PrepareForAcq(this);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+
    // the camera ignores interval, running at the rate dictated by the exposure
    stopOnOverflow = stopOnOvl;
    liveAcqThd_->SetNumFrames(numImages); // continuous
@@ -768,6 +774,12 @@ int JAICamera::StartSequenceAcquisition(double /*interval_ms*/)
 {
    if (IsCapturing())
       return DEVICE_CAMERA_BUSY_ACQUIRING;
+
+	int ret = GetCoreCallback()->PrepareForAcq(this);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 
    // the camera ignores interval, running at the rate dictated by the exposure
    stopOnOverflow = false;
@@ -1157,8 +1169,9 @@ int AcqSequenceThread::svc (void)
 
 	camStream->Close();
 	moduleInstance->ClearPvBuffers();
+	int ret = moduleInstance->GetCoreCallback()->AcqFinished(moduleInstance, DEVICE_OK);
 	InterlockedExchange(&moduleInstance->acquiring, 0);
-   return 0;
+   return ret;
 }
 
 void AcqSequenceThread::Stop()
