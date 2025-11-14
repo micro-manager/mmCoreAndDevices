@@ -1,11 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          TSICam.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Thorlabs Scientific Imaging compatible camera adapter
-//                Handlers for get/set property events
-//                
 // AUTHOR:        Nenad Amodaj, 2018
 // COPYRIGHT:     JAI
 //

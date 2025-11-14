@@ -1,10 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          SpinnakerSDK.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Adapter for cameras compatible with Spinnaker SDK
-//                
 // AUTHOR:        Nenad Amodaj, 2018
 // COPYRIGHT:     Luminous Point LLC
 //

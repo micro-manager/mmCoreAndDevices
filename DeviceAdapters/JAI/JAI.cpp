@@ -1,10 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          JAI.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Adapter for JAI eBus compatible cameras
-//                
 // AUTHOR:        Nenad Amodaj, 2018
 // COPYRIGHT:     JAI
 //
