@@ -749,20 +749,6 @@ int JAICamera::ClearROI()
 	return ResizeImageBuffer();
 }
 
-int JAICamera::PrepareSequenceAcqusition()
-{
-   if (IsCapturing())
-   {
-      return DEVICE_CAMERA_BUSY_ACQUIRING;
-   }
-
-   int ret = GetCoreCallback()->PrepareForAcq(this);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   return DEVICE_OK;
-}
-
 int JAICamera::StartSequenceAcquisition(long numImages, double /*interval_ms*/, bool stopOnOvl)
 {
    if (IsCapturing())
