@@ -23,11 +23,6 @@
     <ClCompile Include="IDSPeakCamera.cpp" />
     <ClCompile Include="IDSPeakHub.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\afl\lib\x86_64\ids_peak_afl.lib" />
-    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\api\lib\x86_64\ids_peak.lib" />
-    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\ipl\lib\x86_64\ids_peak_ipl.lib" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -67,11 +62,9 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\..\stage\Release\x64\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\..\stage\Release\x64\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -79,13 +72,14 @@
       <PreprocessorDefinitions>_DEBUG;IDSPEAK_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Program Files\IDS\ids_peak\generic_sdk\afl\include;C:\Program Files\IDS\ids_peak\generic_sdk\ipl\include;C:\Program Files\IDS\ids_peak\generic_sdk\api\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\common\include;$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\generic_sdk\api\include;$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\generic_sdk\ipl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>C:\Program Files\IDS\ids_peak\generic_sdk\api\lib\x86_64;C:\Program Files\IDS\ids_peak\generic_sdk\ipl\lib\x86_64;C:\Program Files\IDS\ids_peak\generic_sdk\afl\lib\x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\generic_sdk\api\lib\x86_64;$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\generic_sdk\ipl\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ids_peak.lib;ids_peak_ipl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -96,7 +90,7 @@
       <PreprocessorDefinitions>NDEBUG;IDSPEAK_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Program Files\IDS\ids_peak\generic_sdk\icv\include;C:\Program Files\IDS\ids_peak\generic_sdk\afl\include;C:\Program Files\IDS\ids_peak\generic_sdk\ipl\include;C:\Program Files\IDS\ids_peak\generic_sdk\api\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\common\include;$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\generic_sdk\api\include;$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\generic_sdk\ipl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -104,7 +98,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>C:\Program Files\IDS\ids_peak\generic_sdk\icv\lib\x86_64;C:\Program Files\IDS\ids_peak\generic_sdk\api\lib\x86_64;C:\Program Files\IDS\ids_peak\generic_sdk\ipl\lib\x86_64;C:\Program Files\IDS\ids_peak\generic_sdk\afl\lib\x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\generic_sdk\api\lib\x86_64;$(MM_3RDPARTYPRIVATE)\IDS\ids_peak-2.18.1.0\generic_sdk\ipl\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ids_peak.lib;ids_peak_ipl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -30,15 +30,4 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
-  <ItemGroup>
-    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\api\lib\x86_64\ids_peak.lib">
-      <Filter>Resource Files</Filter>
-    </Library>
-    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\ipl\lib\x86_64\ids_peak_ipl.lib">
-      <Filter>Resource Files</Filter>
-    </Library>
-    <Library Include="..\..\..\..\..\..\..\..\..\Program Files\IDS\ids_peak\generic_sdk\afl\lib\x86_64\ids_peak_afl.lib">
-      <Filter>Resource Files</Filter>
-    </Library>
-  </ItemGroup>
 </Project>
