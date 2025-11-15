@@ -1095,6 +1095,7 @@ int AcqSequenceThread::svc (void)
 			}
 
 			// transfer pv image to camera buffer
+			// TODO Handle RGBA64 case correctly
 			uint8_t* pSrcImg = pvImg->GetDataPointer();
 			moduleInstance->img.Resize(width, height, 4); // RGBA format
 			uint8_t* pDestImg = moduleInstance->img.GetPixelsRW();
