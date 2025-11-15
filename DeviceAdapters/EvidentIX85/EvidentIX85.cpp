@@ -710,10 +710,21 @@ int EvidentNosepiece::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         // Direct nosepiece change (original behavior)
         // Set target position BEFORE sending command so notifications can check against it
         // Convert from 0-based to 1-based for the microscope
-        hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, pos + 1);
+        long targetPos = pos + 1;
+        hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, targetPos);
+
+        // Check if already at target position
+        long currentPos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+        if (currentPos == targetPos)
+        {
+            // Already at target, no need to move
+            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+            return DEVICE_OK;
+        }
+
         hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
 
-        std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(pos + 1));
+        std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPos));
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
@@ -779,6 +790,16 @@ int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
         // No focus device - just do a regular nosepiece change
         LogMessage("Focus device not available, skipping safe nosepiece change");
         hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, targetPosition);
+
+        // Check if already at target position
+        long currentPos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+        if (currentPos == targetPosition)
+        {
+            // Already at target, no need to move
+            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+            return DEVICE_OK;
+        }
+
         hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
 
         std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPosition));
@@ -805,80 +826,106 @@ int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
         return ERR_POSITION_UNKNOWN;
     }
 
+    // Timeout settings for wait loops
+    const int maxWaitIterations = 100;  // 10 seconds max
+
     LogMessage("Safe nosepiece change: Moving focus to zero");
 
     // Check if focus is already at zero
     bool alreadyAtZero = IsAtTargetPosition(originalFocusPos, 0, FOCUS_POSITION_TOLERANCE);
 
-    // Move focus to zero
-    hub->GetModel()->SetTargetPosition(DeviceType_Focus, 0);
-    hub->GetModel()->SetBusy(DeviceType_Focus, true);
-
-    std::string cmd = BuildCommand(CMD_FOCUS_GOTO, 0);
-    std::string response;
-    int ret = hub->ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
+    if (!alreadyAtZero)
     {
+        // Move focus to zero
+        hub->GetModel()->SetTargetPosition(DeviceType_Focus, 0);
+        hub->GetModel()->SetBusy(DeviceType_Focus, true);
+
+        std::string cmd = BuildCommand(CMD_FOCUS_GOTO, 0);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+            hub->GetModel()->SetBusy(DeviceType_Focus, false);
+            return ret;
+        }
+        if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+        {
+            hub->GetModel()->SetBusy(DeviceType_Focus, false);
+            return ERR_NEGATIVE_ACK;
+        }
+
+        // Wait for focus to reach zero (with timeout)
+        int focusWaitCount = 0;
+        while (hub->GetModel()->IsBusy(DeviceType_Focus) && focusWaitCount < maxWaitIterations)
+        {
+            CDeviceUtils::SleepMs(100);
+            focusWaitCount++;
+        }
+
+        if (focusWaitCount >= maxWaitIterations)
+        {
+            LogMessage("Timeout waiting for focus to reach zero");
+            return ERR_COMMAND_TIMEOUT;
+        }
+    }
+    else
+    {
+        LogMessage("Focus already at zero, skipping focus move");
         hub->GetModel()->SetBusy(DeviceType_Focus, false);
-        return ret;
-    }
-    if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
-    {
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-        return ERR_NEGATIVE_ACK;
-    }
-
-    // If already at zero, firmware won't send notifications, so clear busy immediately
-    if (alreadyAtZero)
-    {
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-    }
-
-    // Wait for focus to reach zero (with timeout)
-    int focusWaitCount = 0;
-    const int maxWaitIterations = 100;  // 10 seconds max
-    while (hub->GetModel()->IsBusy(DeviceType_Focus) && focusWaitCount < maxWaitIterations)
-    {
-        CDeviceUtils::SleepMs(100);
-        focusWaitCount++;
-    }
-
-    if (focusWaitCount >= maxWaitIterations)
-    {
-        LogMessage("Timeout waiting for focus to reach zero");
-        return ERR_COMMAND_TIMEOUT;
     }
 
     LogMessage("Safe nosepiece change: Changing nosepiece position");
 
     // Change nosepiece position
     hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, targetPosition);
-    hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
 
-    cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPosition));
-    ret = hub->ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
+    std::ostringstream msg;
+    msg << "Set nosepiece target position to: " << targetPosition;
+    LogMessage(msg.str().c_str());
+
+    // Check if already at target position
+    long currentNosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+    bool alreadyAtTargetNosepiece = (currentNosepiecePos == targetPosition);
+
+    std::ostringstream msg2;
+    msg2 << "Current nosepiece position: " << currentNosepiecePos << ", target: " << targetPosition << ", alreadyAtTarget: " << alreadyAtTargetNosepiece;
+    LogMessage(msg2.str().c_str());
+
+    if (!alreadyAtTargetNosepiece)
     {
-        hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
-        // Try to restore focus position even if nosepiece change failed
-        hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
-        hub->GetModel()->SetBusy(DeviceType_Focus, true);
-        std::string focusCmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
-        std::string focusResponse;
-        hub->ExecuteCommand(focusCmd, focusResponse);
-        return ret;
+        hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
+
+        std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPosition));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+            // Try to restore focus position even if nosepiece change failed
+            hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
+            hub->GetModel()->SetBusy(DeviceType_Focus, true);
+            std::string focusCmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
+            std::string focusResponse;
+            hub->ExecuteCommand(focusCmd, focusResponse);
+            return ret;
+        }
+
+        if (!IsPositiveAck(response, CMD_NOSEPIECE))
+        {
+            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+            // Try to restore focus position even if nosepiece change failed
+            hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
+            hub->GetModel()->SetBusy(DeviceType_Focus, true);
+            std::string focusCmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
+            std::string focusResponse;
+            hub->ExecuteCommand(focusCmd, focusResponse);
+            return ERR_NEGATIVE_ACK;
+        }
     }
-
-    if (!IsPositiveAck(response, CMD_NOSEPIECE))
+    else
     {
+        // Already at target, no need to move
         hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
-        // Try to restore focus position even if nosepiece change failed
-        hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
-        hub->GetModel()->SetBusy(DeviceType_Focus, true);
-        std::string focusCmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
-        std::string focusResponse;
-        hub->ExecuteCommand(focusCmd, focusResponse);
-        return ERR_NEGATIVE_ACK;
     }
 
     // Wait for nosepiece to complete (with timeout)
@@ -901,27 +948,32 @@ int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
     long currentFocusPos = hub->GetModel()->GetPosition(DeviceType_Focus);
     bool alreadyAtTarget = IsAtTargetPosition(currentFocusPos, originalFocusPos, FOCUS_POSITION_TOLERANCE);
 
-    // Restore original focus position
-    hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
-    hub->GetModel()->SetBusy(DeviceType_Focus, true);
-
-    cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
-    ret = hub->ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
+    if (!alreadyAtTarget)
     {
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-        return ret;
+        // Restore original focus position
+        hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
+        hub->GetModel()->SetBusy(DeviceType_Focus, true);
+
+        std::string cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+            hub->GetModel()->SetBusy(DeviceType_Focus, false);
+            return ret;
+        }
+
+        if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+        {
+            hub->GetModel()->SetBusy(DeviceType_Focus, false);
+            return ERR_NEGATIVE_ACK;
+        }
+
+        // Busy will be cleared by notification when target reached
     }
-
-    if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+    else
     {
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-        return ERR_NEGATIVE_ACK;
-    }
-
-    // If already at target, firmware won't send notifications, so clear busy immediately
-    if (alreadyAtTarget)
-    {
+        LogMessage("Focus already at target position, skipping focus restore");
         hub->GetModel()->SetBusy(DeviceType_Focus, false);
     }
 
@@ -1343,11 +1395,22 @@ int EvidentCondenserTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct
         if (!hub)
             return DEVICE_ERR;
 
+        // Convert from 0-based to 1-based for the microscope
+        long targetPos = pos + 1;
+
+        // Check if already at target position
+        long currentPos = hub->GetModel()->GetPosition(DeviceType_CondenserTurret);
+        if (currentPos == targetPos)
+        {
+            // Already at target, no need to move
+            hub->GetModel()->SetBusy(DeviceType_CondenserTurret, false);
+            return DEVICE_OK;
+        }
+
         // Set busy before sending command
         hub->GetModel()->SetBusy(DeviceType_CondenserTurret, true);
 
-        // Convert from 0-based to 1-based for the microscope
-        std::string cmd = BuildCommand(CMD_CONDENSER_TURRET, static_cast<int>(pos + 1));
+        std::string cmd = BuildCommand(CMD_CONDENSER_TURRET, static_cast<int>(targetPos));
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
@@ -1365,7 +1428,7 @@ int EvidentCondenserTurret::OnState(MM::PropertyBase* pProp, MM::ActionType eAct
         // CondenserTurret does not send notifications (NTR) when movement completes.
         // The positive ack ("TR +") is only returned after movement completes,
         // so we can clear busy immediately and update position.
-        hub->GetModel()->SetPosition(DeviceType_CondenserTurret, pos + 1);
+        hub->GetModel()->SetPosition(DeviceType_CondenserTurret, targetPos);
         hub->GetModel()->SetBusy(DeviceType_CondenserTurret, false);
     }
     return DEVICE_OK;
@@ -2211,6 +2274,16 @@ int EvidentPolarizer::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         // Set target position BEFORE sending command
         // Polarizer uses 0-based indexing (PO 0 = Out, PO 1 = In)
         hub->GetModel()->SetTargetPosition(DeviceType_Polarizer, pos);
+
+        // Check if already at target position
+        long currentPos = hub->GetModel()->GetPosition(DeviceType_Polarizer);
+        if (currentPos == pos)
+        {
+            // Already at target, no need to move
+            hub->GetModel()->SetBusy(DeviceType_Polarizer, false);
+            return DEVICE_OK;
+        }
+
         hub->GetModel()->SetBusy(DeviceType_Polarizer, true);
 
         std::string cmd = BuildCommand(CMD_POLARIZER, static_cast<int>(pos));

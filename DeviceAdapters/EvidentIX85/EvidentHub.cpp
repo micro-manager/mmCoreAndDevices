@@ -1770,29 +1770,42 @@ void EvidentHub::ProcessNotification(const std::string& message)
             // Update MCU indicator I1 with new nosepiece position
             UpdateNosepieceIndicator(pos);
 
-            // Notify core callback of State property change
-            auto it = usedDevices_.find(DeviceType_Nosepiece);
-            if (it != usedDevices_.end() && it->second != nullptr)
-            {
-                // Convert from 1-based position to 0-based state value
-                int stateValue = pos - 1;
-                GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
-                    CDeviceUtils::ConvertToString(stateValue));
-
-                // This should works since the nosepiece is a state device
-                // it would be safer to test the type first
-                char label[MM::MaxStrLength];
-                int ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
-                if (ret == DEVICE_OK)
-                   GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
-            }
-
             // Check if we've reached the target position
             long targetPos = model_.GetTargetPosition(DeviceType_Nosepiece);
-            if (targetPos >= 0 && pos == targetPos)
+            bool isExpectedChange = (targetPos >= 0 && pos == targetPos);
+
+            std::ostringstream msg;
+            msg << "Nosepiece notification: pos=" << pos << ", targetPos=" << targetPos << ", isExpectedChange=" << isExpectedChange;
+            LogMessage(msg.str().c_str(), true);
+
+            if (isExpectedChange)
             {
+                LogMessage("Nosepiece reached target position, clearing busy flag", true);
                 model_.SetBusy(DeviceType_Nosepiece, false);
             }
+
+            // Only notify core of property changes for UNSOLICITED changes (manual controls)
+            // For commanded changes, the core already knows about the change
+            if (!isExpectedChange)
+            {
+                LogMessage("Unsolicited nosepiece change detected, notifying core", true);
+                auto it = usedDevices_.find(DeviceType_Nosepiece);
+                if (it != usedDevices_.end() && it->second != nullptr)
+                {
+                    // Convert from 1-based position to 0-based state value
+                    int stateValue = pos - 1;
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                        CDeviceUtils::ConvertToString(stateValue));
+
+                    // This should works since the nosepiece is a state device
+                    // it would be safer to test the type first
+                    char label[MM::MaxStrLength];
+                    int ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+                    if (ret == DEVICE_OK)
+                       GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
+                }
+            }
+
         }
     }
     else if (tag == CMD_MAGNIFICATION_NOTIFY && params.size() > 0)
