@@ -30,7 +30,7 @@
 
 using namespace IX5SSA;
 
-const char* g_DeviceName = "EvidentIX5SSA";
+const char* g_DeviceName = "IX85_XYStage";
 
 // Property names
 const char* g_PropertyPort = "Port";
@@ -51,7 +51,7 @@ const char* g_Reverse = "Reverse";
 
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_DeviceName, MM::XYStageDevice, "Evident IX5-SSA XY Stage");
+   RegisterDevice(g_DeviceName, MM::XYStageDevice, "Evident IX85 XY Stage");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -429,10 +429,12 @@ int EvidentIX5SSA::SetOrigin()
 
 int EvidentIX5SSA::GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
 {
-   xMin = XY_STAGE_MIN_POS_X * stepSizeXUm_;
-   xMax = XY_STAGE_MAX_POS_X * stepSizeXUm_;
-   yMin = XY_STAGE_MIN_POS_Y * stepSizeYUm_;
-   yMax = XY_STAGE_MAX_POS_Y * stepSizeYUm_;
+   std::pair<double, double> xy = ConvertPositionStepsToUm(XY_STAGE_MIN_POS_X, XY_STAGE_MIN_POS_Y);
+   xMin = xy.first;
+   yMin = xy.second;
+   xy = ConvertPositionStepsToUm(XY_STAGE_MAX_POS_X, XY_STAGE_MAX_POS_Y);
+   xMax = xy.first;
+   yMax = xy.second;
    return DEVICE_OK;
 }
 
