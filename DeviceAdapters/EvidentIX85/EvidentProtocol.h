@@ -201,7 +201,7 @@ const int MAGNIFICATION_MAX_POS = 3;
 
 // Most turrets and state devices have up to 6 positions
 const int CONDENSER_TURRET_MAX_POS = 6;
-const int MIRROR_UNIT_MAX_POS = 6;
+const int MIRROR_UNIT_MAX_POS = 8;
 const int POLARIZER_MAX_POS = 2;  // Out (0) and In (1)
 const int DIC_PRISM_MAX_POS = 6;
 const int EPIND_MAX_POS = 6;
