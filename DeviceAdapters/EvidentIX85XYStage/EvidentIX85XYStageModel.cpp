@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          EvidentIX5SSAModel.cpp
+// FILE:          EvidentIX85XYStageModel.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   State model implementation for Evident IX5-SSA XY Stage
+// DESCRIPTION:   State model implementation for Evident IX85 XY Stage
 //
 // COPYRIGHT:     University of California, San Francisco, 2025
 //
@@ -20,11 +20,11 @@
 //
 // AUTHOR:        Nico Stuurman, 2025
 
-#include "EvidentIX5SSAModel.h"
-#include "EvidentIX5SSAProtocol.h"
+#include "EvidentIX85XYStageModel.h"
+#include "EvidentIX85XYStageProtocol.h"
 #include <cmath>
 
-using namespace IX5SSA;
+using namespace IX85XYStage;
 
 StageModel::StageModel() :
    posX_(0),

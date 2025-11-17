@@ -12,7 +12,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A7F8E9C3-5D4B-4E2F-9A1C-3B7D8E6F4A2C}</ProjectGuid>
-    <RootNamespace>EvidentIX5SSA</RootNamespace>
+    <RootNamespace>EvidentIX85XYStage</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -84,13 +84,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="EvidentIX5SSA.cpp" />
-    <ClCompile Include="EvidentIX5SSAModel.cpp" />
+    <ClCompile Include="EvidentIX85XYStage.cpp" />
+    <ClCompile Include="EvidentIX85XYStageModel.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EvidentIX5SSA.h" />
-    <ClInclude Include="EvidentIX5SSAModel.h" />
-    <ClInclude Include="EvidentIX5SSAProtocol.h" />
+    <ClInclude Include="EvidentIX85XYStage.h" />
+    <ClInclude Include="EvidentIX85XYStageModel.h" />
+    <ClInclude Include="EvidentIX85XYStageProtocol.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">

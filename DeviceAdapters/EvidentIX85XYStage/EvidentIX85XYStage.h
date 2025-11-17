@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          EvidentIX5SSA.h
+// FILE:          EvidentIX85XYStage.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Evident IX5-SSA XY Stage device adapter
+// DESCRIPTION:   Evident IX85 XY Stage device adapter (IX5-SSA hardware)
 //
 // COPYRIGHT:     University of California, San Francisco, 2025
 //
@@ -23,8 +23,8 @@
 #pragma once
 
 #include "DeviceBase.h"
-#include "EvidentIX5SSAProtocol.h"
-#include "EvidentIX5SSAModel.h"
+#include "EvidentIX85XYStageProtocol.h"
+#include "EvidentIX85XYStageModel.h"
 #include <string>
 #include <thread>
 #include <atomic>
@@ -34,14 +34,14 @@
 // Use protocol and model from separate files
 
 //////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA - IX5-SSA XY Stage Controller
+// EvidentIX85XYStage - IX85 XY Stage Controller (IX5-SSA hardware)
 //////////////////////////////////////////////////////////////////////////////
 
-class EvidentIX5SSA : public CXYStageBase<EvidentIX5SSA>
+class EvidentIX85XYStage : public CXYStageBase<EvidentIX85XYStage>
 {
 public:
-   EvidentIX5SSA();
-   ~EvidentIX5SSA();
+   EvidentIX85XYStage();
+   ~EvidentIX85XYStage();
 
    // MMDevice API
    int Initialize();
@@ -103,7 +103,7 @@ private:
    double stepSizeYUm_;
 
    // Model - thread-safe state storage
-   IX5SSA::StageModel model_;
+   IX85XYStage::StageModel model_;
 
    // Threading
    std::thread monitorThread_;

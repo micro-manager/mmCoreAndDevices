@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          EvidentIX5SSA.cpp
+// FILE:          EvidentIX85XYStage.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Evident IX5-SSA XY Stage device implementation
+// DESCRIPTION:   Evident IX85 XY Stage device implementation (IX5-SSA hardware)
 //
 // COPYRIGHT:     University of California, San Francisco, 2025
 //
@@ -20,15 +20,15 @@
 //
 // AUTHOR:        Nico Stuurman, 2025
 
-#include "EvidentIX5SSA.h"
-#include "EvidentIX5SSAProtocol.h"
-#include "EvidentIX5SSAModel.h"
+#include "EvidentIX85XYStage.h"
+#include "EvidentIX85XYStageProtocol.h"
+#include "EvidentIX85XYStageModel.h"
 #include "ModuleInterface.h"
 #include <sstream>
 #include <cmath>
 #include <chrono>
 
-using namespace IX5SSA;
+using namespace IX85XYStage;
 
 const char* g_DeviceName = "IX85_XYStage";
 
@@ -60,7 +60,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       return nullptr;
 
    if (strcmp(deviceName, g_DeviceName) == 0)
-      return new EvidentIX5SSA();
+      return new EvidentIX85XYStage();
 
    return nullptr;
 }
@@ -71,10 +71,10 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA Constructor
+// EvidentIX85XYStage Constructor
 ///////////////////////////////////////////////////////////////////////////////
 
-EvidentIX5SSA::EvidentIX5SSA() :
+EvidentIX85XYStage::EvidentIX85XYStage() :
    initialized_(false),
    port_("Undefined"),
    name_(g_DeviceName),
@@ -92,33 +92,33 @@ EvidentIX5SSA::EvidentIX5SSA() :
    SetErrorText(ERR_INVALID_RESPONSE, "Invalid response from device");
 
    // Pre-initialization property: Port
-   CPropertyAction* pAct = new CPropertyAction(this, &EvidentIX5SSA::OnPort);
+   CPropertyAction* pAct = new CPropertyAction(this, &EvidentIX85XYStage::OnPort);
    CreateProperty(g_PropertyPort, "Undefined", MM::String, false, pAct, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA Destructor
+// EvidentIX85XYStage Destructor
 ///////////////////////////////////////////////////////////////////////////////
 
-EvidentIX5SSA::~EvidentIX5SSA()
+EvidentIX85XYStage::~EvidentIX85XYStage()
 {
    Shutdown();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::GetName
+// EvidentIX85XYStage::GetName
 ///////////////////////////////////////////////////////////////////////////////
 
-void EvidentIX5SSA::GetName(char* pszName) const
+void EvidentIX85XYStage::GetName(char* pszName) const
 {
    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::Initialize
+// EvidentIX85XYStage::Initialize
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::Initialize()
+int EvidentIX85XYStage::Initialize()
 {
    if (initialized_)
       return DEVICE_OK;
@@ -194,33 +194,33 @@ int EvidentIX5SSA::Initialize()
    }
 
    // Create post-initialization properties
-   CPropertyAction* pAct = new CPropertyAction(this, &EvidentIX5SSA::OnSpeed);
+   CPropertyAction* pAct = new CPropertyAction(this, &EvidentIX85XYStage::OnSpeed);
    ret = CreateProperty(g_PropertySpeed, "256000", MM::Integer, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
    SetPropertyLimits(g_PropertySpeed, 0, 512000);
 
-   pAct = new CPropertyAction(this, &EvidentIX5SSA::OnJogEnable);
+   pAct = new CPropertyAction(this, &EvidentIX85XYStage::OnJogEnable);
    ret = CreateProperty(g_PropertyJogEnable, g_No, MM::String, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
    AddAllowedValue(g_PropertyJogEnable, g_Yes);
    AddAllowedValue(g_PropertyJogEnable, g_No);
 
-   pAct = new CPropertyAction(this, &EvidentIX5SSA::OnJogSensitivity);
+   pAct = new CPropertyAction(this, &EvidentIX85XYStage::OnJogSensitivity);
    ret = CreateProperty(g_PropertyJogSensitivity, "8", MM::Integer, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
    SetPropertyLimits(g_PropertyJogSensitivity, 1, 16);
 
-   pAct = new CPropertyAction(this, &EvidentIX5SSA::OnJogDirectionX);
+   pAct = new CPropertyAction(this, &EvidentIX85XYStage::OnJogDirectionX);
    ret = CreateProperty(g_PropertyJogDirectionX, g_Normal, MM::String, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
    AddAllowedValue(g_PropertyJogDirectionX, g_Normal);
    AddAllowedValue(g_PropertyJogDirectionX, g_Reverse);
 
-   pAct = new CPropertyAction(this, &EvidentIX5SSA::OnJogDirectionY);
+   pAct = new CPropertyAction(this, &EvidentIX85XYStage::OnJogDirectionY);
    ret = CreateProperty(g_PropertyJogDirectionY, g_Normal, MM::String, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
@@ -232,10 +232,10 @@ int EvidentIX5SSA::Initialize()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::Shutdown
+// EvidentIX85XYStage::Shutdown
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::Shutdown()
+int EvidentIX85XYStage::Shutdown()
 {
    if (!initialized_)
       return DEVICE_OK;
@@ -262,20 +262,20 @@ int EvidentIX5SSA::Shutdown()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::Busy
+// EvidentIX85XYStage::Busy
 ///////////////////////////////////////////////////////////////////////////////
 
-bool EvidentIX5SSA::Busy()
+bool EvidentIX85XYStage::Busy()
 {
    // Check model state (updated by position notifications)
    return model_.IsBusy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::SetPositionSteps
+// EvidentIX85XYStage::SetPositionSteps
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::SetPositionSteps(long x, long y)
+int EvidentIX85XYStage::SetPositionSteps(long x, long y)
 {
    // Set target in model first
    model_.SetTarget(x, y);
@@ -320,10 +320,10 @@ int EvidentIX5SSA::SetPositionSteps(long x, long y)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::GetPositionSteps
+// EvidentIX85XYStage::GetPositionSteps
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::GetPositionSteps(long& x, long& y)
+int EvidentIX85XYStage::GetPositionSteps(long& x, long& y)
 {
    // Get position from model (updated by position notifications)
    model_.GetPosition(x, y);
@@ -331,10 +331,10 @@ int EvidentIX5SSA::GetPositionSteps(long& x, long& y)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::SetRelativePositionSteps
+// EvidentIX85XYStage::SetRelativePositionSteps
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::SetRelativePositionSteps(long x, long y)
+int EvidentIX85XYStage::SetRelativePositionSteps(long x, long y)
 {
    // Get current position from model
    long currentX, currentY;
@@ -388,19 +388,19 @@ int EvidentIX5SSA::SetRelativePositionSteps(long x, long y)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::Home
+// EvidentIX85XYStage::Home
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::Home()
+int EvidentIX85XYStage::Home()
 {
    return InitializeStage();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::Stop
+// EvidentIX85XYStage::Stop
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::Stop()
+int EvidentIX85XYStage::Stop()
 {
    std::string response;
    int ret = ExecuteCommand(CMD_XY_STOP, response);
@@ -412,10 +412,10 @@ int EvidentIX5SSA::Stop()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::SetOrigin
+// EvidentIX85XYStage::SetOrigin
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::SetOrigin()
+int EvidentIX85XYStage::SetOrigin()
 {
    // The SSA doesn't have a "set origin" command, so we just note the current
    // position as 0,0 in software. This would require tracking an offset.
@@ -424,10 +424,10 @@ int EvidentIX5SSA::SetOrigin()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::GetLimitsUm
+// EvidentIX85XYStage::GetLimitsUm
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
+int EvidentIX85XYStage::GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax)
 {
    std::pair<double, double> xy = ConvertPositionStepsToUm(XY_STAGE_MIN_POS_X, XY_STAGE_MIN_POS_Y);
    xMin = xy.first;
@@ -439,10 +439,10 @@ int EvidentIX5SSA::GetLimitsUm(double& xMin, double& xMax, double& yMin, double&
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// EvidentIX5SSA::GetStepLimits
+// EvidentIX85XYStage::GetStepLimits
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax)
+int EvidentIX85XYStage::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax)
 {
    xMin = XY_STAGE_MIN_POS_X;
    xMax = XY_STAGE_MAX_POS_X;
@@ -455,7 +455,7 @@ int EvidentIX5SSA::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax)
 // Property Handlers
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentIX85XYStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -473,7 +473,7 @@ int EvidentIX5SSA::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentIX85XYStage::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -508,7 +508,7 @@ int EvidentIX5SSA::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::OnJogEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentIX85XYStage::OnJogEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -556,7 +556,7 @@ int EvidentIX5SSA::OnJogEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::OnJogSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentIX85XYStage::OnJogSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -585,7 +585,7 @@ int EvidentIX5SSA::OnJogSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::OnJogDirectionX(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentIX85XYStage::OnJogDirectionX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -616,7 +616,7 @@ int EvidentIX5SSA::OnJogDirectionX(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::OnJogDirectionY(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentIX85XYStage::OnJogDirectionY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -651,20 +651,20 @@ int EvidentIX5SSA::OnJogDirectionY(MM::PropertyBase* pProp, MM::ActionType eAct)
 // Threading Methods
 ///////////////////////////////////////////////////////////////////////////////
 
-void EvidentIX5SSA::StartMonitoring()
+void EvidentIX85XYStage::StartMonitoring()
 {
    stopMonitoring_ = false;
-   monitorThread_ = std::thread(&EvidentIX5SSA::MonitorThreadFunc, this);
+   monitorThread_ = std::thread(&EvidentIX85XYStage::MonitorThreadFunc, this);
 }
 
-void EvidentIX5SSA::StopMonitoring()
+void EvidentIX85XYStage::StopMonitoring()
 {
    stopMonitoring_ = true;
    if (monitorThread_.joinable())
       monitorThread_.join();
 }
 
-void EvidentIX5SSA::MonitorThreadFunc()
+void EvidentIX85XYStage::MonitorThreadFunc()
 {
    std::string message;
 
@@ -718,7 +718,7 @@ void EvidentIX5SSA::MonitorThreadFunc()
    }
 }
 
-void EvidentIX5SSA::ProcessNotification(const std::string& notification)
+void EvidentIX85XYStage::ProcessNotification(const std::string& notification)
 {
    std::vector<std::string> params = ParseParameters(notification);
 
@@ -860,7 +860,7 @@ void EvidentIX5SSA::ProcessNotification(const std::string& notification)
 // Command/Response Pattern
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::ExecuteCommand(const std::string& cmd, std::string& response, long timeoutMs)
+int EvidentIX85XYStage::ExecuteCommand(const std::string& cmd, std::string& response, long timeoutMs)
 {
    // Lock to ensure only one command at a time
    std::lock_guard<std::mutex> cmdLock(commandMutex_);
@@ -886,7 +886,7 @@ int EvidentIX5SSA::ExecuteCommand(const std::string& cmd, std::string& response,
 // Private Helper Methods
 ///////////////////////////////////////////////////////////////////////////////
 
-int EvidentIX5SSA::SendCommand(const std::string& cmd)
+int EvidentIX85XYStage::SendCommand(const std::string& cmd)
 {
    int ret = SendSerialCommand(port_.c_str(), cmd.c_str(), TERMINATOR);
    if (ret != DEVICE_OK)
@@ -895,7 +895,7 @@ int EvidentIX5SSA::SendCommand(const std::string& cmd)
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::GetResponse(std::string& response, long timeoutMs)
+int EvidentIX85XYStage::GetResponse(std::string& response, long timeoutMs)
 {
    std::unique_lock<std::mutex> lock(responseMutex_);
 
@@ -913,7 +913,7 @@ int EvidentIX5SSA::GetResponse(std::string& response, long timeoutMs)
    return DEVICE_OK;
 }
 
-MM::DeviceDetectionStatus EvidentIX5SSA::DetectDevice(void)
+MM::DeviceDetectionStatus EvidentIX85XYStage::DetectDevice(void)
 {
    if (initialized_)
       return MM::CanCommunicate;
@@ -972,7 +972,7 @@ MM::DeviceDetectionStatus EvidentIX5SSA::DetectDevice(void)
    return result;
 }
 
-int EvidentIX5SSA::LoginToRemoteMode()
+int EvidentIX85XYStage::LoginToRemoteMode()
 {
    std::string cmd = BuildCommand(CMD_LOGIN, 1);
    std::string response;
@@ -990,7 +990,7 @@ int EvidentIX5SSA::LoginToRemoteMode()
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::QueryVersion()
+int EvidentIX85XYStage::QueryVersion()
 {
    std::string cmd = BuildCommand(CMD_VERSION, 1);
    std::string response;
@@ -1008,7 +1008,7 @@ int EvidentIX5SSA::QueryVersion()
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::VerifyDevice()
+int EvidentIX85XYStage::VerifyDevice()
 {
    std::string cmd = BuildCommand(CMD_UNIT);
    cmd += "?";
@@ -1024,7 +1024,7 @@ int EvidentIX5SSA::VerifyDevice()
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::InitializeStage()
+int EvidentIX85XYStage::InitializeStage()
 {
    // Use XYINIT to initialize the stage
    // This can take a long time (several seconds), so use longer timeout
@@ -1044,7 +1044,7 @@ int EvidentIX5SSA::InitializeStage()
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::EnableJog(bool enable)
+int EvidentIX85XYStage::EnableJog(bool enable)
 {
    std::string cmd = BuildCommand(CMD_XY_JOG, enable ? 1 : 0);
    std::string response;
@@ -1063,7 +1063,7 @@ int EvidentIX5SSA::EnableJog(bool enable)
    return DEVICE_OK;
 }
 
-int EvidentIX5SSA::EnableNotifications(bool enable)
+int EvidentIX85XYStage::EnableNotifications(bool enable)
 {
    std::string cmd = BuildCommand(CMD_XY_POSITION_NOTIFY, enable ? 1 : 0);
    std::string response;

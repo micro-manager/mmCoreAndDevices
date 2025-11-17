@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          EvidentIX5SSAModel.h
+// FILE:          EvidentIX85XYStageModel.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   State model for Evident IX5-SSA XY Stage
+// DESCRIPTION:   State model for Evident IX85 XY Stage
 //
 // COPYRIGHT:     University of California, San Francisco, 2025
 //
@@ -25,10 +25,10 @@
 #include <string>
 #include <mutex>
 
-namespace IX5SSA {
+namespace IX85XYStage {
 
 ///////////////////////////////////////////////////////////////////////////////
-// StageModel - Thread-safe state management for IX5-SSA XY Stage
+// StageModel - Thread-safe state management for IX85 XY Stage
 ///////////////////////////////////////////////////////////////////////////////
 
 class StageModel
@@ -121,4 +121,4 @@ private:
    long encoderPos2_;
 };
 
-} // namespace IX5SSA
+} // namespace IX85XYStage

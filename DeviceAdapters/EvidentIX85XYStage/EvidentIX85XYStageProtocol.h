@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          EvidentIX5SSAProtocol.h
+// FILE:          EvidentIX85XYStageProtocol.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Protocol constants and helpers for Evident IX5-SSA XY Stage
+// DESCRIPTION:   Protocol constants and helpers for Evident IX85 XY Stage
 //
 // COPYRIGHT:     University of California, San Francisco, 2025
 //
@@ -27,7 +27,7 @@
 #include <vector>
 
 // Protocol constants
-namespace IX5SSA {
+namespace IX85XYStage {
 
 const char* const TERMINATOR = "\r\n";
 const char TAG_DELIMITER = ' ';
@@ -231,4 +231,4 @@ inline std::string ExtractTag(const std::string& response)
    return response.substr(0, delimPos);
 }
 
-} // namespace IX5SSA
+} // namespace IX85XYStage
