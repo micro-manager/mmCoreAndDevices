@@ -54,6 +54,10 @@ public:
     int OnSerialPort(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnDLLPath(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnAnswerTimeout(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnHandSwitchJog(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnHandSwitchSwitches(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnHandSwitchCondenser(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnHandSwitchIndicators(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     // Hub interface for devices to access state
     EvidentIX85Win::MicroscopeModel* GetModel() { return &model_; }
@@ -85,12 +89,13 @@ public:
 private:
     // Initialization helpers
     int SetRemoteMode();
-    int GetVersion(std::string& version);
+    int SetSettingMode(bool enable);
+    int EnterSettingMode();
+    int ExitSettingMode();
     int GetUnit(std::string& unit);
     int GetUnitDirect(std::string& unit);
     int ClearPort();
     int DoDeviceDetection();
-    int QueryDevicePresenceByVersion(int unitNumber, std::string& version);
 
     // Device query helpers
     int QueryFocus();
@@ -134,7 +139,7 @@ private:
 
     // Instance callback handlers
     int OnCommandComplete(EvidentSDK::MDK_MSL_CMD* pCmd);
-    int OnNotification(EvidentSDK::MDK_MSL_CMD* pCmd);
+    int OnNotification(const char* notificationStr);
     int OnError(EvidentSDK::MDK_MSL_CMD* pCmd);
 
     // Member variables

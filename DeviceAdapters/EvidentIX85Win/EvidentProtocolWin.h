@@ -49,28 +49,8 @@ const int STOP_BITS = 2;
 // Command tags - System commands
 const char* const CMD_LOGIN = "L";
 const char* const CMD_UNIT = "U";
-const char* const CMD_VERSION = "V";
 const char* const CMD_ERROR = "ER";
-
-// V command unit numbers for device detection
-const int V_CONTROLLER = 1;
-const int V_NOSEPIECE = 2;
-const int V_CORRECTION_COLLAR_LINK = 3;
-const int V_CORRECTION_COLLAR_ROULETTE = 4;
-const int V_FOCUS = 5;
-const int V_LIGHTPATH = 6;
-const int V_CONDENSER_UNIT = 7;  // IX3-LWUCDA: Polarizer, CondenserTurret, DIAShutter, DIAAperture
-const int V_DIC_UNIT = 8;        // IX5-DICTA: DICPrism, DICRetardation
-const int V_MIRROR_UNIT1 = 9;
-const int V_EPI_SHUTTER1 = 10;
-const int V_MIRROR_UNIT2 = 11;
-const int V_EPI_SHUTTER2 = 12;
-const int V_MANUAL_CONTROL = 13;
-const int V_EPIND = 14;
-const int V_SD_MAGNIFICATION = 15;  // SDCA magnification (SPIN/SR system)
-const int V_AUTOFOCUS = 16;
-const int V_OFFSET_LENS = 17;
-const int V_FV40_PSU = 18;
+const char* const CMD_OPERATION_MODE = "OPE";  // Setting mode control (0=normal, 1=setting)
 
 // Command tags - Focus
 const char* const CMD_FOCUS_GOTO = "FG";
@@ -85,6 +65,8 @@ const char* const CMD_FOCUS_FAR_LIMIT = "FL";
 // Command tags - Nosepiece (Objective Turret)
 const char* const CMD_NOSEPIECE = "OB";
 const char* const CMD_NOSEPIECE_NOTIFY = "NOB";
+const char* const CMD_NOSEPIECE_SEQ = "OBSEQ";  // Safe/sequential objective switch
+const char* const CMD_NOSEPIECE_REQUEST_NOTIFY = "NROB";  // MCZ dial request notification
 
 // Command tags - Magnification Changer
 const char* const CMD_MAGNIFICATION = "CA";
@@ -126,6 +108,7 @@ const char* const CMD_MIRROR_UNIT1 = "MU1";
 const char* const CMD_MIRROR_UNIT2 = "MU2";
 const char* const CMD_MIRROR_UNIT_NOTIFY1 = "NMUINIT1";
 const char* const CMD_MIRROR_UNIT_NOTIFY2 = "NMUINIT2";
+const char* const CMD_MIRROR_REQUEST_NOTIFY = "NRMU";  // MCZ dial request notification
 const char* const CMD_COVER_SWITCH1 = "C1";
 const char* const CMD_COVER_SWITCH2 = "C2";
 const char* const CMD_EPI_ND = "END";
@@ -181,6 +164,7 @@ const char* const CMD_INDICATOR2 = "I2";
 const char* const CMD_INDICATOR3 = "I3";
 const char* const CMD_INDICATOR4 = "I4";
 const char* const CMD_INDICATOR5 = "I5";
+const char* const CMD_INDICATOR_SYNC = "ISYNC";  // Synchronize indicators with actual positions
 const char* const CMD_ENCODER1 = "E1";
 const char* const CMD_ENCODER2 = "E2";
 const char* const CMD_ENCODER3 = "E3";

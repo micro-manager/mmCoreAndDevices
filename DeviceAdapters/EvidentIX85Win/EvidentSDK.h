@@ -107,8 +107,20 @@ inline void SetCommandString(MDK_MSL_CMD& cmd, const std::string& command)
 
 inline std::string GetResponseString(const MDK_MSL_CMD& cmd)
 {
-    if (cmd.m_RspSize > 0 && cmd.m_RspSize < MAX_RESPONSE_SIZE)
+    if (cmd.m_RspSize > 0 && cmd.m_RspSize <= MAX_RESPONSE_SIZE)
         return std::string((const char*)cmd.m_Rsp, cmd.m_RspSize);
+    return "";
+}
+
+// For notifications, the SDK may use m_Cmd instead of m_Rsp
+inline std::string GetNotificationString(const MDK_MSL_CMD& cmd)
+{
+    // Try response field first
+    if (cmd.m_RspSize > 0 && cmd.m_RspSize <= MAX_RESPONSE_SIZE)
+        return std::string((const char*)cmd.m_Rsp, cmd.m_RspSize);
+    // Fall back to command field for notifications
+    if (cmd.m_CmdSize > 0 && cmd.m_CmdSize <= MAX_COMMAND_SIZE)
+        return std::string((const char*)cmd.m_Cmd, cmd.m_CmdSize);
     return "";
 }
 

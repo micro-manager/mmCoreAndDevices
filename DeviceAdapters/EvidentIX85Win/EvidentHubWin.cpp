@@ -53,6 +53,18 @@ const char* g_PropAnswerTimeout = "AnswerTimeout";
 const char* g_PropDLLPath = "SDK_DLL_Path";
 extern const char* g_Keyword_Magnification;
 
+// Hand Switch (MCZ) property names
+const char* g_PropHandSwitchJog = "HandSwitch-FocusJog";
+const char* g_PropHandSwitchSwitches = "HandSwitch-Switches";
+const char* g_PropHandSwitchCondenser = "HandSwitch-CondenserSwitch";
+const char* g_PropHandSwitchIndicators = "HandSwitch-Indicators";
+
+// Hand Switch property values
+const char* g_Disabled = "Disabled";
+const char* g_Enabled = "Enabled";
+const char* g_IndicatorNormal = "Normal";
+const char* g_IndicatorDark = "Dark";
+
 EvidentHubWin::EvidentHubWin() :
     initialized_(false),
     port_(""),
@@ -143,8 +155,8 @@ int EvidentHubWin::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
-    // Get version and unit info
-    ret = GetVersion(version_);
+    // Exit Setting mode (SDK enters it automatically after login)
+    ret = ExitSettingMode();
     if (ret != DEVICE_OK)
         return ret;
 
@@ -296,6 +308,70 @@ int EvidentHubWin::Initialize()
             }
         }
 
+        // Enable condenser switch (S1) if condenser is present
+        if (model_.IsDevicePresent(DeviceType_CondenserTurret))
+        {
+            std::string cmd = BuildCommand(CMD_CONDENSER_SWITCH, 1);  // Enable switches
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Condenser switches (S1) enabled", false);
+            }
+            else
+            {
+                LogMessage("Failed to enable condenser switches", false);
+            }
+        }
+
+        // Enable indicators (I) with normal intensity
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_INDICATOR_CONTROL, 1);  // 1 = Normal intensity
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("MCU indicators enabled (Normal)", false);
+            }
+            else
+            {
+                LogMessage("Failed to enable MCU indicators", false);
+            }
+        }
+
+        // Enable objective dial request notification (NROB) if nosepiece is present
+        if (model_.IsDevicePresent(DeviceType_Nosepiece))
+        {
+            std::string cmd = BuildCommand(CMD_NOSEPIECE_REQUEST_NOTIFY, 1);
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Objective dial notification (NROB) enabled", false);
+            }
+            else
+            {
+                LogMessage("Failed to enable objective dial notification", false);
+            }
+        }
+
+        // Enable mirror dial request notification (NRMU) if mirror unit is present
+        if (model_.IsDevicePresent(DeviceType_MirrorUnit1))
+        {
+            std::string cmd = BuildCommand(CMD_MIRROR_REQUEST_NOTIFY, 1);
+            std::string response;
+            ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Mirror dial notification (NRMU) enabled", false);
+            }
+            else
+            {
+                LogMessage("Failed to enable mirror dial notification", false);
+            }
+        }
+
         // Initialize light path indicator (I4)
         if (model_.IsDevicePresent(DeviceType_LightPath))
         {
@@ -321,6 +397,31 @@ int EvidentHubWin::Initialize()
             // No EPI shutter 1, display as closed
             UpdateEPIShutter1Indicator(0);
         }
+
+        // Create Hand Switch control properties
+        CPropertyAction* pAct = new CPropertyAction(this, &EvidentHubWin::OnHandSwitchJog);
+        CreateProperty(g_PropHandSwitchJog, g_Enabled, MM::String, false, pAct);
+        AddAllowedValue(g_PropHandSwitchJog, g_Disabled);
+        AddAllowedValue(g_PropHandSwitchJog, g_Enabled);
+
+        pAct = new CPropertyAction(this, &EvidentHubWin::OnHandSwitchSwitches);
+        CreateProperty(g_PropHandSwitchSwitches, g_Enabled, MM::String, false, pAct);
+        AddAllowedValue(g_PropHandSwitchSwitches, g_Disabled);
+        AddAllowedValue(g_PropHandSwitchSwitches, g_Enabled);
+
+        if (model_.IsDevicePresent(DeviceType_CondenserTurret))
+        {
+            pAct = new CPropertyAction(this, &EvidentHubWin::OnHandSwitchCondenser);
+            CreateProperty(g_PropHandSwitchCondenser, g_Enabled, MM::String, false, pAct);
+            AddAllowedValue(g_PropHandSwitchCondenser, g_Disabled);
+            AddAllowedValue(g_PropHandSwitchCondenser, g_Enabled);
+        }
+
+        pAct = new CPropertyAction(this, &EvidentHubWin::OnHandSwitchIndicators);
+        CreateProperty(g_PropHandSwitchIndicators, g_IndicatorNormal, MM::String, false, pAct);
+        AddAllowedValue(g_PropHandSwitchIndicators, g_Disabled);
+        AddAllowedValue(g_PropHandSwitchIndicators, g_IndicatorNormal);
+        AddAllowedValue(g_PropHandSwitchIndicators, g_IndicatorDark);
     }
 
     initialized_ = true;
@@ -433,6 +534,38 @@ int EvidentHubWin::Shutdown()
             }
         }
 
+        // Disable condenser switches (S1) if condenser is present
+        if (model_.IsDevicePresent(DeviceType_CondenserTurret))
+        {
+            std::string cmd = BuildCommand(CMD_CONDENSER_SWITCH, 0);  // Disable switches
+            std::string response;
+            int ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("Condenser switches (S1) disabled", true);
+            }
+            else
+            {
+                LogMessage("Failed to disable condenser switches", true);
+            }
+        }
+
+        // Disable indicators (I)
+        if (model_.IsDevicePresent(DeviceType_ManualControl))
+        {
+            std::string cmd = BuildCommand(CMD_INDICATOR_CONTROL, 0);  // 0 = Disable
+            std::string response;
+            int ret = ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                LogMessage("MCU indicators disabled", true);
+            }
+            else
+            {
+                LogMessage("Failed to disable MCU indicators", true);
+            }
+        }
+
         // Switch back to local mode
         std::string cmd = BuildCommand(CMD_LOGIN, 0);  // 0 = Local mode
         std::string response;
@@ -503,6 +636,82 @@ int EvidentHubWin::OnAnswerTimeout(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
+int EvidentHubWin::OnHandSwitchJog(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+        int enable = (value == g_Enabled) ? 1 : 0;
+        std::string cmd = BuildCommand(CMD_JOG, enable);
+        std::string response;
+        int ret = ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+        if (!IsPositiveAck(response, CMD_JOG))
+            return ERR_INVALID_RESPONSE;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentHubWin::OnHandSwitchSwitches(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+        int enable = (value == g_Enabled) ? 1 : 0;
+        std::string cmd = BuildCommand(CMD_MCZ_SWITCH, enable);
+        std::string response;
+        int ret = ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+        if (!IsPositiveAck(response, CMD_MCZ_SWITCH))
+            return ERR_INVALID_RESPONSE;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentHubWin::OnHandSwitchCondenser(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+        int enable = (value == g_Enabled) ? 1 : 0;
+        std::string cmd = BuildCommand(CMD_CONDENSER_SWITCH, enable);
+        std::string response;
+        int ret = ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+        if (!IsPositiveAck(response, CMD_CONDENSER_SWITCH))
+            return ERR_INVALID_RESPONSE;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentHubWin::OnHandSwitchIndicators(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+        int mode = 0;  // Disabled
+        if (value == g_IndicatorNormal)
+            mode = 1;
+        else if (value == g_IndicatorDark)
+            mode = 2;
+        std::string cmd = BuildCommand(CMD_INDICATOR_CONTROL, mode);
+        std::string response;
+        int ret = ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+        if (!IsPositiveAck(response, CMD_INDICATOR_CONTROL))
+            return ERR_INVALID_RESPONSE;
+    }
+    return DEVICE_OK;
+}
+
 int EvidentHubWin::SetRemoteMode()
 {
     std::string cmd = BuildCommand(CMD_LOGIN, 1);  // 1 = Remote mode
@@ -517,23 +726,32 @@ int EvidentHubWin::SetRemoteMode()
     return DEVICE_OK;
 }
 
-int EvidentHubWin::GetVersion(std::string& version)
+int EvidentHubWin::SetSettingMode(bool enable)
 {
-    std::string cmd = BuildCommand(CMD_VERSION, 1); // 1 = Firmware version
+    std::string cmd = BuildCommand(CMD_OPERATION_MODE, enable ? 1 : 0);
     std::string response;
     int ret = ExecuteCommand(cmd, response);
     if (ret != DEVICE_OK)
         return ret;
 
-    if (IsValidAnswer(response, CMD_VERSION))
+    if (!IsPositiveAck(response, CMD_OPERATION_MODE))
     {
-        // Response format: "V +" - version command doesn't return version number
-        // Version is embedded in the response or needs separate query
-        version = response.substr(2);
-        return DEVICE_OK;
+        LogMessage(("SetSettingMode failed, response: " + response).c_str(), false);
+        return ERR_INVALID_RESPONSE;
     }
 
-    return ERR_INVALID_RESPONSE;
+    LogMessage(enable ? "Entered Setting mode" : "Exited Setting mode", false);
+    return DEVICE_OK;
+}
+
+int EvidentHubWin::EnterSettingMode()
+{
+    return SetSettingMode(true);
+}
+
+int EvidentHubWin::ExitSettingMode()
+{
+    return SetSettingMode(false);
 }
 
 int EvidentHubWin::GetUnit(std::string& unit)
@@ -683,173 +901,160 @@ int EvidentHubWin::DoDeviceDetection()
     availableDevices_.clear();
     detectedDevicesByName_.clear();
 
-    // Use V command to detect device presence
-    // This avoids firmware bugs with individual device queries
-    std::string version;
-
-    // V2 - Nosepiece
-    if (QueryDevicePresenceByVersion(V_NOSEPIECE, version) == DEVICE_OK)
+    // Use U command to detect device presence
+    // The U command returns a comma-separated list of unit codes
+    std::string cmd = BuildQuery(CMD_UNIT);
+    std::string response;
+    int ret = ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
     {
-        LogMessage(("Detected Nosepiece (V2): " + version).c_str());
+        LogMessage("Failed to query unit codes", false);
+        return ret;
+    }
+
+    // Parse response: "U IX5,FRM,REA,LWUCDA,..."
+    std::vector<std::string> unitCodes = ParseParameters(response);
+
+    // Log all detected unit codes
+    std::ostringstream unitLog;
+    unitLog << "Unit codes detected: ";
+    for (size_t i = 0; i < unitCodes.size(); i++)
+    {
+        if (i > 0) unitLog << ", ";
+        unitLog << unitCodes[i];
+    }
+    LogMessage(unitLog.str().c_str(), false);
+
+    // Helper lambda to check if a unit code is present
+    auto hasUnit = [&unitCodes](const std::string& code) -> bool {
+        for (const auto& unit : unitCodes)
+        {
+            if (unit == code) return true;
+        }
+        return false;
+    };
+
+    // IX5 - Focus, Light Path, Correction Collar, Magnification
+    if (hasUnit("IX5"))
+    {
+        LogMessage("Detected IX5 unit (Focus, LightPath, CorrectionCollar, Magnification)");
+
+        // Focus
+        model_.SetDevicePresent(DeviceType_Focus, true);
+        availableDevices_.push_back(DeviceType_Focus);
+        detectedDevicesByName_.push_back(g_FocusDeviceName);
+        QueryFocus();
+
+        // Light Path
+        model_.SetDevicePresent(DeviceType_LightPath, true);
+        availableDevices_.push_back(DeviceType_LightPath);
+        detectedDevicesByName_.push_back(g_LightPathDeviceName);
+        QueryLightPath();
+
+        // Correction Collar
+        model_.SetDevicePresent(DeviceType_CorrectionCollar, true);
+        availableDevices_.push_back(DeviceType_CorrectionCollar);
+        detectedDevicesByName_.push_back(g_CorrectionCollarDeviceName);
+        model_.SetPosition(DeviceType_CorrectionCollar, 0);
+
+        // Magnification
+        model_.SetDevicePresent(DeviceType_Magnification, true);
+        availableDevices_.push_back(DeviceType_Magnification);
+        detectedDevicesByName_.push_back(g_MagnificationDeviceName);
+        QueryMagnification();
+    }
+
+    // REA - Nosepiece
+    if (hasUnit("REA"))
+    {
+        LogMessage("Detected REA unit (Nosepiece)");
         model_.SetDevicePresent(DeviceType_Nosepiece, true);
-        model_.SetDeviceVersion(DeviceType_Nosepiece, version);
         availableDevices_.push_back(DeviceType_Nosepiece);
         detectedDevicesByName_.push_back(g_NosepieceDeviceName);
-        // Query actual position/numPositions
         QueryNosepiece();
     }
 
-    // V5 - Focus
-    if (QueryDevicePresenceByVersion(V_FOCUS, version) == DEVICE_OK)
+    // LWUCDA - Condenser Turret, DIA Aperture, Polarizer, DIA Shutter
+    if (hasUnit("LWUCDA"))
     {
-        LogMessage(("Detected Focus (V5): " + version).c_str());
-        model_.SetDevicePresent(DeviceType_Focus, true);
-        model_.SetDeviceVersion(DeviceType_Focus, version);
-        availableDevices_.push_back(DeviceType_Focus);
-        detectedDevicesByName_.push_back(g_FocusDeviceName);
-        // Query actual position/limits
-        QueryFocus();
-    }
-
-    // V6 - Light Path
-    if (QueryDevicePresenceByVersion(V_LIGHTPATH, version) == DEVICE_OK)
-    {
-        LogMessage(("Detected LightPath (V6): " + version).c_str());
-        model_.SetDevicePresent(DeviceType_LightPath, true);
-        model_.SetDeviceVersion(DeviceType_LightPath, version);
-        availableDevices_.push_back(DeviceType_LightPath);
-        detectedDevicesByName_.push_back(g_LightPathDeviceName);
-        // Query actual position
-        QueryLightPath();
-    }
-
-    // V7 - Condenser Unit (IX3-LWUCDA): Contains Polarizer, CondenserTurret, DIAShutter, DIAAperture
-    if (QueryDevicePresenceByVersion(V_CONDENSER_UNIT, version) == DEVICE_OK)
-    {
-        LogMessage(("Detected Condenser Unit (V7): " + version).c_str());
+        LogMessage("Detected LWUCDA unit (CondenserTurret, Polarizer, DIAShutter)");
 
         // Polarizer
         model_.SetDevicePresent(DeviceType_Polarizer, true);
-        model_.SetDeviceVersion(DeviceType_Polarizer, version);
         availableDevices_.push_back(DeviceType_Polarizer);
         detectedDevicesByName_.push_back(g_PolarizerDeviceName);
         QueryPolarizer();
 
         // Condenser Turret
         model_.SetDevicePresent(DeviceType_CondenserTurret, true);
-        model_.SetDeviceVersion(DeviceType_CondenserTurret, version);
         availableDevices_.push_back(DeviceType_CondenserTurret);
         detectedDevicesByName_.push_back(g_CondenserTurretDeviceName);
         QueryCondenserTurret();
 
         // DIA Shutter
         model_.SetDevicePresent(DeviceType_DIAShutter, true);
-        model_.SetDeviceVersion(DeviceType_DIAShutter, version);
         availableDevices_.push_back(DeviceType_DIAShutter);
         detectedDevicesByName_.push_back(g_DIAShutterDeviceName);
         QueryDIAShutter();
     }
 
-    // V8 - DIC Unit (IX5-DICTA): Contains DICPrism, DICRetardation
-    if (QueryDevicePresenceByVersion(V_DIC_UNIT, version) == DEVICE_OK)
+    // DICTA - DIC Prism and Retardation
+    if (hasUnit("DICTA"))
     {
-        LogMessage(("Detected DIC Unit (V8): " + version).c_str());
-
-        // DIC Prism
+        LogMessage("Detected DICTA unit (DICPrism)");
         model_.SetDevicePresent(DeviceType_DICPrism, true);
-        model_.SetDeviceVersion(DeviceType_DICPrism, version);
         availableDevices_.push_back(DeviceType_DICPrism);
         detectedDevicesByName_.push_back(g_DICPrismDeviceName);
         QueryDICPrism();
     }
 
-    // V9 - Mirror Unit 1
-    if (QueryDevicePresenceByVersion(V_MIRROR_UNIT1, version) == DEVICE_OK)
+    // RFACA.1 - Mirror Unit 1 and EPI Shutter 1
+    if (hasUnit("RFACA.1"))
     {
-        LogMessage(("Detected MirrorUnit1 (V9): " + version).c_str());
+        LogMessage("Detected RFACA.1 unit (MirrorUnit1, EPIShutter1)");
+
+        // Mirror Unit 1
         model_.SetDevicePresent(DeviceType_MirrorUnit1, true);
-        model_.SetDeviceVersion(DeviceType_MirrorUnit1, version);
         availableDevices_.push_back(DeviceType_MirrorUnit1);
         detectedDevicesByName_.push_back(g_MirrorUnit1DeviceName);
         QueryMirrorUnit1();
-    }
 
-    // V10 - EPI Shutter 1
-    if (QueryDevicePresenceByVersion(V_EPI_SHUTTER1, version) == DEVICE_OK)
-    {
-        LogMessage(("Detected EPIShutter1 (V10): " + version).c_str());
+        // EPI Shutter 1
         model_.SetDevicePresent(DeviceType_EPIShutter1, true);
-        model_.SetDeviceVersion(DeviceType_EPIShutter1, version);
         availableDevices_.push_back(DeviceType_EPIShutter1);
         detectedDevicesByName_.push_back(g_EPIShutter1DeviceName);
         QueryEPIShutter1();
     }
 
-    // V11 - Mirror Unit 2
-    if (QueryDevicePresenceByVersion(V_MIRROR_UNIT2, version) == DEVICE_OK)
+    // RFACA.2 - Mirror Unit 2 and EPI Shutter 2
+    if (hasUnit("RFACA.2"))
     {
-        LogMessage(("Detected MirrorUnit2 (V11): " + version).c_str());
+        LogMessage("Detected RFACA.2 unit (MirrorUnit2, EPIShutter2)");
+
+        // Mirror Unit 2
         model_.SetDevicePresent(DeviceType_MirrorUnit2, true);
-        model_.SetDeviceVersion(DeviceType_MirrorUnit2, version);
         availableDevices_.push_back(DeviceType_MirrorUnit2);
         detectedDevicesByName_.push_back(g_MirrorUnit2DeviceName);
         QueryMirrorUnit2();
-    }
 
-    // V12 - EPI Shutter 2
-    if (QueryDevicePresenceByVersion(V_EPI_SHUTTER2, version) == DEVICE_OK)
-    {
-        LogMessage(("Detected EPIShutter2 (V12): " + version).c_str());
+        // EPI Shutter 2
         model_.SetDevicePresent(DeviceType_EPIShutter2, true);
-        model_.SetDeviceVersion(DeviceType_EPIShutter2, version);
         availableDevices_.push_back(DeviceType_EPIShutter2);
         detectedDevicesByName_.push_back(g_EPIShutter2DeviceName);
         QueryEPIShutter2();
     }
 
-    // V14 - EPI ND Filter
-    if (QueryDevicePresenceByVersion(V_EPIND, version) == DEVICE_OK)
+    // MCZ - Manual Control Unit (Hand Switch)
+    // Note: Not added to availableDevices_ - properties are added to Hub device instead
+    if (hasUnit("MCZ"))
     {
-        LogMessage(("Detected EPIND (V14): " + version).c_str());
-        model_.SetDevicePresent(DeviceType_EPIND, true);
-        model_.SetDeviceVersion(DeviceType_EPIND, version);
-        availableDevices_.push_back(DeviceType_EPIND);
-        detectedDevicesByName_.push_back(g_EPINDDeviceName);
-        QueryEPIND();
-    }
-
-    // V13 - Manual Control Unit (MCU)
-    if (QueryDevicePresenceByVersion(V_MANUAL_CONTROL, version) == DEVICE_OK)
-    {
-        LogMessage(("Detected Manual Control Unit (V13): " + version).c_str());
+        LogMessage("Detected MCZ unit (ManualControl/HandSwitch)");
         model_.SetDevicePresent(DeviceType_ManualControl, true);
-        model_.SetDeviceVersion(DeviceType_ManualControl, version);
-        // Note: MCU is not added to availableDevices/detectedDevicesByName
-        // as it's not a standalone MM device but provides indicator feedback
     }
 
-    // Keep legacy query methods for devices without clear V mapping
-
-    // Magnification (CA command) - V mapping unclear, keep existing query
-    if (QueryMagnification() == DEVICE_OK)
-    {
-        LogMessage("Detected Magnification (CA)");
-        availableDevices_.push_back(DeviceType_Magnification);
-        detectedDevicesByName_.push_back(g_MagnificationDeviceName);
-        model_.SetDevicePresent(DeviceType_Magnification, true);
-    }
-
-    // Correction Collar - Present whenever Focus drive is present
-    // Note: "CC?" returns "X" when not linked, so we can't use QueryCorrectionCollar()
-    if (model_.IsDevicePresent(DeviceType_Focus))
-    {
-        LogMessage("Detected CorrectionCollar (present with Focus drive)");
-        availableDevices_.push_back(DeviceType_CorrectionCollar);
-        detectedDevicesByName_.push_back(g_CorrectionCollarDeviceName);
-        model_.SetDevicePresent(DeviceType_CorrectionCollar, true);
-        // Position will be 0 until device is linked
-        model_.SetPosition(DeviceType_CorrectionCollar, 0);
-    }
+    // TODO: ZDC - Autofocus unit (implement later)
+    // TODO: U-AW - EPI? (needs clarification)
+    // TODO: FRM - unknown devices
 
     std::ostringstream msg;
     msg << "Discovered " << availableDevices_.size() << " devices";
@@ -927,29 +1132,6 @@ int EvidentHubWin::DetectInstalledDevices()
     }
 
     return DEVICE_OK;
-}
-
-int EvidentHubWin::QueryDevicePresenceByVersion(int unitNumber, std::string& version)
-{
-    std::string cmd = BuildCommand(CMD_VERSION, unitNumber);
-    std::string response;
-    int ret = ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
-        return ret;
-
-    // Check for error response indicating device not present
-    if (IsNegativeAck(response, CMD_VERSION))
-        return ERR_DEVICE_NOT_AVAILABLE;
-
-    // Parse version string from response
-    std::vector<std::string> params = ParseParameters(response);
-    if (params.size() > 0 && params[0] != "X")
-    {
-        version = params[0];
-        return DEVICE_OK;
-    }
-
-    return ERR_DEVICE_NOT_AVAILABLE;
 }
 
 bool EvidentHubWin::IsDevicePresent(EvidentIX85Win::DeviceType type) const
@@ -1666,6 +1848,11 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
         if (pos >= 0)
         {
             model_.SetPosition(DeviceType_Magnification, pos);
+
+            std::ostringstream msg;
+            msg << "Magnification notification: pos=" << pos;
+            LogMessage(msg.str().c_str(), true);
+
             auto it = usedDevices_.find(DeviceType_Magnification);
             if (it != usedDevices_.end() && it->second != nullptr)
             {
@@ -1673,11 +1860,25 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
                 const double magnifications[3] = {1.0, 1.6, 2.0};
                 if (pos >= 1 && pos <= 3)
                 {
+                    double magValue = magnifications[pos - 1];
+                    std::string logMsg = std::string("Magnification changed to ") + CDeviceUtils::ConvertToString(magValue);
+                    LogMessage(logMsg.c_str(), true);
+
                     GetCoreCallback()->OnPropertyChanged(it->second, g_Keyword_Magnification,
-                        CDeviceUtils::ConvertToString(magnifications[pos - 1]));
+                        CDeviceUtils::ConvertToString(magValue));
                     // Notify core that magnification has changed
                     GetCoreCallback()->OnMagnifierChanged(it->second);
                 }
+                else
+                {
+                    std::ostringstream errMsg;
+                    errMsg << "Magnification position " << pos << " out of range (expected 1-3)";
+                    LogMessage(errMsg.str().c_str(), false);
+                }
+            }
+            else
+            {
+                LogMessage("Magnification device not registered, cannot notify core", true);
             }
         }
     }
@@ -2018,6 +2219,124 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
             }
         }
     }
+    else if (tag == CMD_NOSEPIECE_REQUEST_NOTIFY && params.size() > 0)
+    {
+        // Handle objective dial request from MCZ
+        // When user turns the objective dial, we need to:
+        // 1. Disable S2 and JG
+        // 2. Execute the objective switch
+        // 3. Re-enable S2 and JG
+        int requestedPos = ParseIntParameter(params[0]);
+        if (requestedPos >= 1 && requestedPos <= NOSEPIECE_MAX_POS)
+        {
+            std::ostringstream msg;
+            msg << "Objective dial request: position " << requestedPos;
+            LogMessage(msg.str().c_str(), true);
+
+            std::string response;
+
+            // Disable MCZ control
+            std::string cmd = BuildCommand(CMD_MCZ_SWITCH, 0);
+            SendCommand(cmd);
+
+            // Disable jog control
+            cmd = BuildCommand(CMD_JOG, 0);
+            SendCommand(cmd);
+
+            // Execute objective switch using OBSEQ (sequential/safe switch)
+            cmd = BuildCommand(CMD_NOSEPIECE, requestedPos);
+            int ret = SendCommand(cmd);
+            if (ret == DEVICE_OK)
+            {
+                // Update model and indicator
+                model_.SetPosition(DeviceType_Nosepiece, requestedPos);
+                UpdateNosepieceIndicator(requestedPos);
+
+                // Notify core callback
+                auto it = usedDevices_.find(DeviceType_Nosepiece);
+                if (it != usedDevices_.end() && it->second != nullptr)
+                {
+                    int stateValue = requestedPos - 1;
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                        CDeviceUtils::ConvertToString(stateValue));
+
+                    char label[MM::MaxStrLength];
+                    ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+                    if (ret == DEVICE_OK)
+                        GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
+                }
+
+                LogMessage(("Objective dial: switched to position " + std::to_string(requestedPos)).c_str(), true);
+            }
+            else
+            {
+                LogMessage("Failed to execute objective switch from dial", false);
+            }
+
+            // Re-enable MCZ control
+            cmd = BuildCommand(CMD_MCZ_SWITCH, 1);
+            SendCommand(cmd);
+
+            // Re-enable jog control
+            cmd = BuildCommand(CMD_JOG, 1);
+            SendCommand(cmd);
+        }
+    }
+    else if (tag == CMD_MIRROR_REQUEST_NOTIFY && params.size() > 0)
+    {
+        // Handle mirror dial request from MCZ
+        // When user turns the mirror dial, we need to:
+        // 1. Disable S2
+        // 2. Execute the mirror switch
+        // 3. Re-enable S2
+        int requestedPos = ParseIntParameter(params[0]);
+        if (requestedPos >= 1 && requestedPos <= MIRROR_UNIT_MAX_POS)
+        {
+            std::ostringstream msg;
+            msg << "Mirror dial request: position " << requestedPos;
+            LogMessage(msg.str().c_str(), true);
+
+            std::string response;
+
+            // Disable MCZ control
+            std::string cmd = BuildCommand(CMD_MCZ_SWITCH, 0);
+            SendCommand(cmd);
+
+            // Execute mirror switch
+            cmd = BuildCommand(CMD_MIRROR_UNIT1, requestedPos);
+            int ret = SendCommand(cmd);
+            if (ret == DEVICE_OK)
+            {
+                // Update model and indicator
+                model_.SetPosition(DeviceType_MirrorUnit1, requestedPos);
+                UpdateMirrorUnitIndicator(requestedPos);
+
+                // Notify core callback
+                auto it = usedDevices_.find(DeviceType_MirrorUnit1);
+                if (it != usedDevices_.end() && it->second != nullptr)
+                {
+                    int stateValue = requestedPos - 1;
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                        CDeviceUtils::ConvertToString(stateValue));
+
+                    char label[MM::MaxStrLength];
+                    ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+                    if (ret == DEVICE_OK)
+                        GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
+                }
+
+                LogMessage(("Mirror dial: switched to position " + std::to_string(requestedPos)).c_str(), true);
+            }
+            else
+            {
+                LogMessage("Failed to execute mirror switch from dial", false);
+            }
+
+            // Re-enable MCZ control
+            cmd = BuildCommand(CMD_MCZ_SWITCH, 1);
+            SendCommand(cmd);
+        }
+    }
     // Add more notification handlers as needed
 }
 
@@ -2231,10 +2550,11 @@ int CALLBACK EvidentHubWin::NotifyCallbackStatic(ULONG MsgId, ULONG wParam, ULON
                                                    PVOID pv, PVOID pContext, PVOID pCaller)
 {
     EvidentHubWin* pHub = static_cast<EvidentHubWin*>(pContext);
-    if (pHub != nullptr)
+    if (pHub != nullptr && pv != nullptr)
     {
-        EvidentSDK::MDK_MSL_CMD* pCmd = static_cast<EvidentSDK::MDK_MSL_CMD*>(pv);
-        return pHub->OnNotification(pCmd);
+        // For notifications, pv is a null-terminated string, not MDK_MSL_CMD*
+        const char* notificationStr = static_cast<const char*>(pv);
+        return pHub->OnNotification(notificationStr);
     }
     return 0;
 }
@@ -2270,16 +2590,15 @@ int EvidentHubWin::OnCommandComplete(EvidentSDK::MDK_MSL_CMD* pCmd)
     return 0;
 }
 
-int EvidentHubWin::OnNotification(EvidentSDK::MDK_MSL_CMD* pCmd)
+int EvidentHubWin::OnNotification(const char* notificationStr)
 {
-    if (pCmd == nullptr)
+    if (notificationStr == nullptr || notificationStr[0] == '\0')
         return 0;
 
-    // Extract notification message
-    std::string notification = EvidentSDK::GetResponseString(*pCmd);
+    std::string notification(notificationStr);
+    LogMessage(("Notification received: " + notification).c_str(), true);
 
-    // Process notification on a separate thread to avoid blocking SDK
-    // For now, process synchronously (can be optimized later)
+    // Process notification
     ProcessNotification(notification);
 
     return 0;

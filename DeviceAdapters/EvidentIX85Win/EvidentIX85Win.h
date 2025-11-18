@@ -60,9 +60,6 @@ public:
     // Action interface
     int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnJogDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnJogFineSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnJogCoarseSensitivity(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     EvidentHubWin* GetHub();
