@@ -1801,8 +1801,7 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
         {
             model_.SetPosition(DeviceType_Nosepiece, pos);
 
-            // Update MCU indicator I1 with new nosepiece position
-            UpdateNosepieceIndicator(pos);
+            // Note: MCU indicator I1 is updated automatically by SDK when using OBSEQ
 
             // Check if we've reached the target position
             long targetPos = model_.GetTargetPosition(DeviceType_Nosepiece);
@@ -2233,49 +2232,30 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
             msg << "Objective dial request: position " << requestedPos;
             LogMessage(msg.str().c_str(), true);
 
-            std::string response;
+            // Note: Responses come through notification callback when called from here,
+            // so we use SendCommand with small delays instead of ExecuteCommand
 
             // Disable MCZ control
             std::string cmd = BuildCommand(CMD_MCZ_SWITCH, 0);
             SendCommand(cmd);
+            Sleep(30);
 
             // Disable jog control
             cmd = BuildCommand(CMD_JOG, 0);
             SendCommand(cmd);
+            Sleep(30);
 
-            // Execute objective switch using OBSEQ (sequential/safe switch)
-            cmd = BuildCommand(CMD_NOSEPIECE, requestedPos);
-            int ret = SendCommand(cmd);
-            if (ret == DEVICE_OK)
-            {
-                // Update model and indicator
-                model_.SetPosition(DeviceType_Nosepiece, requestedPos);
-                UpdateNosepieceIndicator(requestedPos);
-
-                // Notify core callback
-                auto it = usedDevices_.find(DeviceType_Nosepiece);
-                if (it != usedDevices_.end() && it->second != nullptr)
-                {
-                    int stateValue = requestedPos - 1;
-                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
-                        CDeviceUtils::ConvertToString(stateValue));
-
-                    char label[MM::MaxStrLength];
-                    ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
-                    if (ret == DEVICE_OK)
-                        GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
-                }
-
-                LogMessage(("Objective dial: switched to position " + std::to_string(requestedPos)).c_str(), true);
-            }
-            else
-            {
-                LogMessage("Failed to execute objective switch from dial", false);
-            }
+            // Execute objective switch using OBSEQ command (required when responding to NROB)
+            // Note: Don't update model/indicator here - let NOB notification handle that
+            cmd = BuildCommand(CMD_NOSEPIECE_SEQ, requestedPos);
+            SendCommand(cmd);
+            LogMessage(("Objective dial: sent OBSEQ " + std::to_string(requestedPos)).c_str(), true);
+            Sleep(30);
 
             // Re-enable MCZ control
             cmd = BuildCommand(CMD_MCZ_SWITCH, 1);
             SendCommand(cmd);
+            Sleep(30);
 
             // Re-enable jog control
             cmd = BuildCommand(CMD_JOG, 1);

@@ -67,6 +67,7 @@ const char* const CMD_NOSEPIECE = "OB";
 const char* const CMD_NOSEPIECE_NOTIFY = "NOB";
 const char* const CMD_NOSEPIECE_SEQ = "OBSEQ";  // Safe/sequential objective switch
 const char* const CMD_NOSEPIECE_REQUEST_NOTIFY = "NROB";  // MCZ dial request notification
+const char* const CMD_GET_OBJECTIVE = "GOB";  // Get objective lens information
 
 // Command tags - Magnification Changer
 const char* const CMD_MAGNIFICATION = "CA";

@@ -71,6 +71,9 @@ public:
     bool IsDevicePresent(EvidentIX85Win::DeviceType type) const;
     std::string GetDeviceVersion(EvidentIX85Win::DeviceType type) const;
 
+    // Objective lens information
+    const std::vector<EvidentIX85Win::ObjectiveInfo>& GetObjectiveInfo() const { return objectiveInfo_; }
+
     // Notification control
     int EnableNotification(const char* cmd, bool enable);
 
@@ -96,6 +99,7 @@ private:
     int GetUnitDirect(std::string& unit);
     int ClearPort();
     int DoDeviceDetection();
+    int QueryObjectiveInfo();
 
     // Device query helpers
     int QueryFocus();
@@ -176,6 +180,7 @@ private:
     std::string unit_;
     std::vector<EvidentIX85Win::DeviceType> availableDevices_;
     std::vector<std::string> detectedDevicesByName_;
+    std::vector<EvidentIX85Win::ObjectiveInfo> objectiveInfo_;  // Objective lens info for positions 1-6
 
     // MCU switch state
     int rememberedDIABrightness_;  // Remembered brightness for DIA switch toggle
