@@ -27,36 +27,6 @@
 #include "EvidentModelWin.h"
 #include "EvidentProtocolWin.h"
 
-namespace EvidentIX85Win {
-
-// Objective lens information structure
-struct ObjectiveInfo
-{
-    std::string name;           // p2: Name of objective lens
-    double na;                  // p3: Numerical aperture (0.00-2.00, -1 = indefinite)
-    int magnification;          // p4: Magnification (0-200, -1 = indefinite)
-    int medium;                 // p5: 1=dry, 2=water, 3=oil, 4=silicone oil, 5=silicone gel, -1=indefinite
-    int asMin;                  // p7: AS minimum value % (0-120, -1 = indefinite/unknown)
-    int asMax;                  // p8: AS maximum value % (0-120, -1 = indefinite/unknown)
-    double wd;                  // p9: Working distance (0.01-25.00, -1 = indefinite)
-    int zdcOneShotCompat;       // p10: ZDC OneShot AF compatibility (0-3)
-    int zdcContinuousCompat;    // p11: ZDC Continuous AF compatibility (0-3)
-
-    ObjectiveInfo() :
-        name(""),
-        na(-1.0),
-        magnification(-1),
-        medium(-1),
-        asMin(-1),
-        asMax(-1),
-        wd(-1.0),
-        zdcOneShotCompat(0),
-        zdcContinuousCompat(0)
-    {}
-};
-
-} // namespace EvidentIX85Win
-
 //////////////////////////////////////////////////////////////////////////////
 // Focus Drive (Z-Stage)
 //////////////////////////////////////////////////////////////////////////////
@@ -119,6 +89,10 @@ public:
     // Action interface
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSafeChange(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnObjectiveNA(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnObjectiveMagnification(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnObjectiveMedium(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnObjectiveWD(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     EvidentHubWin* GetHub();
@@ -496,6 +470,101 @@ private:
 
     bool initialized_;
     bool linked_;
+    std::string name_;
+    double stepSizeUm_;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// ZDC Autofocus
+//////////////////////////////////////////////////////////////////////////////
+
+class EvidentAutofocus : public CAutoFocusBase<EvidentAutofocus>
+{
+public:
+    EvidentAutofocus();
+    ~EvidentAutofocus();
+
+    // MMDevice API
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+
+    // AutoFocus API
+    int SetContinuousFocusing(bool state);
+    int GetContinuousFocusing(bool& state);
+    bool IsContinuousFocusLocked();
+    int FullFocus();
+    int IncrementalFocus();
+    int GetLastFocusScore(double& score);
+    int GetCurrentFocusScore(double& score);
+    int GetOffset(double& offset);
+    int SetOffset(double offset);
+
+    // Action interface
+    int OnAFMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnAFStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnFarLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnCoverSlipType(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnCoverSlipThicknessGlass(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnCoverSlipThicknessPlastic(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnDICMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBuzzerSuccess(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBuzzerFailure(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+    EvidentHubWin* GetHub();
+    int EnableNotifications(bool enable);
+    int StopAF();
+    int InitializeZDC();  // Run full ZDC initialization sequence
+    std::string GetAFStatusString(int status);
+
+    bool initialized_;
+    std::string name_;
+    bool continuousFocusing_;
+    int afStatus_;  // 0=Stop, 1=Focus, 2=Track, 3=Wait, 4=Search
+    long nearLimit_;
+    long farLimit_;
+    long lastNosepiecePos_;  // Track objective changes
+    int lastCoverslipType_;   // Track coverslip type changes
+    bool zdcInitNeeded_;      // Flag to defer ZDC initialization
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// Offset Lens (ZDC)
+//////////////////////////////////////////////////////////////////////////////
+
+class EvidentOffsetLens : public CStageBase<EvidentOffsetLens>
+{
+public:
+    EvidentOffsetLens();
+    ~EvidentOffsetLens();
+
+    // MMDevice API
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+
+    // Stage API
+    int SetPositionUm(double pos);
+    int GetPositionUm(double& pos);
+    int SetPositionSteps(long steps);
+    int GetPositionSteps(long& steps);
+    int SetOrigin();
+    int GetLimits(double& lower, double& upper);
+    int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; };
+    bool IsContinuousFocusDrive() const { return false; };
+
+    // Action interface
+    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+    EvidentHubWin* GetHub();
+    int EnableNotifications(bool enable);
+
+    bool initialized_;
     std::string name_;
     double stepSizeUm_;
 };

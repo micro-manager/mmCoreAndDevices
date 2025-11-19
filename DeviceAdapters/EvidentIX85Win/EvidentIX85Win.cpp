@@ -23,6 +23,7 @@
 #include "EvidentIX85Win.h"
 #include "ModuleInterface.h"
 #include <sstream>
+#include <iomanip>
 
 using namespace EvidentIX85Win;
 
@@ -44,6 +45,8 @@ const char* g_PolarizerDeviceName = "IX85-Polarizer";
 const char* g_DICPrismDeviceName = "IX85-DICPrism";
 const char* g_EPINDDeviceName = "IX85-EPIND";
 const char* g_CorrectionCollarDeviceName = "IX85-CorrectionCollar";
+const char* g_AutofocusDeviceName = "IX85-Autofocus";
+const char* g_OffsetLensDeviceName = "IX85-OffsetLens";
 
 // Property Names
 const char* g_Keyword_Magnification = "Magnification";
@@ -69,6 +72,8 @@ MODULE_API void InitializeModuleData()
     RegisterDevice(g_DICPrismDeviceName, MM::StateDevice, "Evident IX85 DIC Prism");
     RegisterDevice(g_EPINDDeviceName, MM::StateDevice, "Evident IX85 EPI ND Filter");
     RegisterDevice(g_CorrectionCollarDeviceName, MM::StageDevice, "Evident IX85 Correction Collar");
+    RegisterDevice(g_AutofocusDeviceName, MM::AutoFocusDevice, "Evident IX85 ZDC Autofocus");
+    RegisterDevice(g_OffsetLensDeviceName, MM::StageDevice, "Evident IX85 Offset Lens");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -106,6 +111,10 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
         return new EvidentEPIND();
     else if (strcmp(deviceName, g_CorrectionCollarDeviceName) == 0)
         return new EvidentCorrectionCollar();
+    else if (strcmp(deviceName, g_AutofocusDeviceName) == 0)
+        return new EvidentAutofocus();
+    else if (strcmp(deviceName, g_OffsetLensDeviceName) == 0)
+        return new EvidentOffsetLens();
 
     return nullptr;
 }
@@ -126,6 +135,7 @@ EvidentFocus::EvidentFocus() :
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Focus drive not available on this microscope");
+    SetErrorText(ERR_POSITION_OUT_OF_RANGE, "Requested focus position is out of range");
 
     // Parent ID for hub
     CreateHubIDProperty();
@@ -236,6 +246,12 @@ int EvidentFocus::SetPositionUm(double pos)
     {
         // Command rejected - clear busy state
         hub->GetModel()->SetBusy(DeviceType_Focus, false);
+
+        // Check for specific error: position out of range
+        if (IsPositionOutOfRangeError(response))
+        {
+            return ERR_POSITION_OUT_OF_RANGE;
+        }
         return ERR_NEGATIVE_ACK;
     }
 
@@ -439,13 +455,42 @@ int EvidentNosepiece::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
-    // Define labels
+    // Define labels using objective names from hub
+    const std::vector<EvidentIX85Win::ObjectiveInfo>& objectives = hub->GetObjectiveInfo();
     for (unsigned int i = 0; i < numPos_; i++)
     {
-        std::ostringstream label;
-        label << "Position-" << (i + 1);
-        SetPositionLabel(i, label.str().c_str());
+        if (i < objectives.size() && !objectives[i].name.empty())
+        {
+            SetPositionLabel(i, objectives[i].name.c_str());
+        }
+        else
+        {
+            std::ostringstream label;
+            label << "Position-" << (i + 1);
+            SetPositionLabel(i, label.str().c_str());
+        }
     }
+
+    // Create read-only properties for current objective info
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnObjectiveNA);
+    ret = CreateProperty("Objective-NA", "", MM::String, true, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnObjectiveMagnification);
+    ret = CreateProperty("Objective-Magnification", "", MM::String, true, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnObjectiveMedium);
+    ret = CreateProperty("Objective-Medium", "", MM::String, true, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnObjectiveWD);
+    ret = CreateProperty("Objective-WD", "", MM::String, true, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
 
     // Create SafeNosepieceChange property
     pAct = new CPropertyAction(this, &EvidentNosepiece::OnSafeChange);
@@ -603,6 +648,116 @@ int EvidentNosepiece::OnSafeChange(MM::PropertyBase* pProp, MM::ActionType eAct)
         std::string value;
         pProp->Get(value);
         safeNosepieceChange_ = (value == "Enabled");
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnObjectiveNA(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            long pos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            const std::vector<EvidentIX85Win::ObjectiveInfo>& objectives = hub->GetObjectiveInfo();
+            if (pos >= 1 && pos <= (long)objectives.size())
+            {
+                double na = objectives[pos - 1].na;
+                if (na >= 0)
+                {
+                    std::ostringstream ss;
+                    ss << std::fixed << std::setprecision(2) << na;
+                    pProp->Set(ss.str().c_str());
+                }
+                else
+                {
+                    pProp->Set("N/A");
+                }
+            }
+        }
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnObjectiveMagnification(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            long pos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            const std::vector<EvidentIX85Win::ObjectiveInfo>& objectives = hub->GetObjectiveInfo();
+            if (pos >= 1 && pos <= (long)objectives.size())
+            {
+                int mag = objectives[pos - 1].magnification;
+                if (mag >= 0)
+                {
+                    pProp->Set((long)mag);
+                }
+                else
+                {
+                    pProp->Set("N/A");
+                }
+            }
+        }
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnObjectiveMedium(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            long pos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            const std::vector<EvidentIX85Win::ObjectiveInfo>& objectives = hub->GetObjectiveInfo();
+            if (pos >= 1 && pos <= (long)objectives.size())
+            {
+                int medium = objectives[pos - 1].medium;
+                const char* mediumStr = "N/A";
+                switch (medium)
+                {
+                    case 1: mediumStr = "Dry"; break;
+                    case 2: mediumStr = "Water"; break;
+                    case 3: mediumStr = "Oil"; break;
+                    case 4: mediumStr = "Silicone Oil"; break;
+                    case 5: mediumStr = "Silicone Gel"; break;
+                }
+                pProp->Set(mediumStr);
+            }
+        }
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnObjectiveWD(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            long pos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            const std::vector<EvidentIX85Win::ObjectiveInfo>& objectives = hub->GetObjectiveInfo();
+            if (pos >= 1 && pos <= (long)objectives.size())
+            {
+                double wd = objectives[pos - 1].wd;
+                if (wd >= 0)
+                {
+                    std::ostringstream ss;
+                    ss << std::fixed << std::setprecision(2) << wd << " mm";
+                    pProp->Set(ss.str().c_str());
+                }
+                else
+                {
+                    pProp->Set("N/A");
+                }
+            }
+        }
     }
     return DEVICE_OK;
 }
@@ -1357,9 +1512,6 @@ int EvidentDIAShutter::Initialize()
             {
                 hub->GetModel()->SetPosition(DeviceType_DIABrightness, brightness);
                 SetProperty("Brightness", CDeviceUtils::ConvertToString(brightness));
-
-                // Update I3 indicator on MCU
-                hub->UpdateDIABrightnessIndicator(brightness);
             }
         }
     }
@@ -1446,9 +1598,6 @@ int EvidentDIAShutter::SetOpen(bool open)
 
         // Update model
         hub->GetModel()->SetPosition(DeviceType_DIABrightness, rememberedBrightness);
-
-        // Update I3 indicator on MCU
-        hub->UpdateDIABrightnessIndicator(rememberedBrightness);
     }
     else
     {
@@ -1478,10 +1627,6 @@ int EvidentDIAShutter::SetOpen(bool open)
 
         // Update model
         hub->GetModel()->SetPosition(DeviceType_DIABrightness, 0);
-
-        // Update I3 indicator on MCU with remembered brightness (not 0)
-        // User wants to see the remembered brightness value, not that lamp is off
-        hub->UpdateDIABrightnessIndicator(hub->GetRememberedDIABrightness());
     }
 
     return DEVICE_OK;
@@ -1557,9 +1702,6 @@ int EvidentDIAShutter::OnBrightness(MM::PropertyBase* pProp, MM::ActionType eAct
 
         // Always update remembered brightness
         hub->SetRememberedDIABrightness(static_cast<int>(brightness));
-
-        // Always update I3 indicator to match Brightness property
-        hub->UpdateDIABrightnessIndicator(static_cast<int>(brightness));
 
         // Only send DIL command if logical shutter is open (actual brightness > 0)
         long currentBrightness = hub->GetModel()->GetPosition(DeviceType_DIABrightness);
@@ -2575,6 +2717,10 @@ int EvidentCorrectionCollar::OnActivate(MM::PropertyBase* pProp, MM::ActionType 
             if (!IsPositiveAck(response, CMD_CORRECTION_COLLAR_LINK))
                 return ERR_CORRECTION_COLLAR_LINK_FAILED;
 
+            // Wait for link to complete before initializing
+            // The hardware needs time after linking before accepting init command
+            CDeviceUtils::SleepMs(500);
+
             // Initialize the correction collar
             cmd = BuildCommand(CMD_CORRECTION_COLLAR_INIT);
             ret = hub->ExecuteCommand(cmd, response);
@@ -2593,6 +2739,10 @@ int EvidentCorrectionCollar::OnActivate(MM::PropertyBase* pProp, MM::ActionType 
                 hub->ExecuteCommand(cmd, response);
                 return ERR_CORRECTION_COLLAR_LINK_FAILED;
             }
+
+            // Wait for correction collar initialization to complete
+            // The hardware needs time to initialize before accepting position commands
+            CDeviceUtils::SleepMs(500);
 
             // Successfully linked and initialized
             linked_ = true;
@@ -3025,4 +3175,1099 @@ int EvidentMirrorUnit2::EnableNotifications(bool /*enable*/)
     // NMUINIT2 is an initialization notification, not a position change notification
     // MirrorUnit2 uses query-based position tracking instead
     return DEVICE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentAutofocus - ZDC Autofocus Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentAutofocus::EvidentAutofocus() :
+    initialized_(false),
+    name_(g_AutofocusDeviceName),
+    continuousFocusing_(false),
+    afStatus_(0),
+    nearLimit_(1050000),  // Near = upper limit (closer to sample)
+    farLimit_(0),         // Far = lower limit (farther from sample)
+    lastNosepiecePos_(-1),
+    lastCoverslipType_(-1),
+    zdcInitNeeded_(false)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "ZDC Autofocus not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentAutofocus::~EvidentAutofocus()
+{
+    Shutdown();
+}
+
+void EvidentAutofocus::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentAutofocus::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(EvidentIX85Win::DeviceType_Autofocus))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    // Query initial AF status
+    std::string cmd = BuildQuery(CMD_AF_STATUS);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret == DEVICE_OK)
+    {
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0 && params[0] != "X")
+        {
+            afStatus_ = ParseIntParameter(params[0]);
+        }
+    }
+
+    // Query initial AF limits
+    cmd = BuildQuery(CMD_AF_LIMIT);
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret == DEVICE_OK)
+    {
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() >= 2 && params[0] != "X" && params[1] != "X")
+        {
+            nearLimit_ = ParseIntParameter(params[0]);
+            farLimit_ = ParseIntParameter(params[1]);
+        }
+    }
+
+    // Create AF Status property (read-only)
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentAutofocus::OnAFStatus);
+    ret = CreateProperty("AF Status", GetAFStatusString(afStatus_).c_str(), MM::String, true, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Create Near Limit property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnNearLimit);
+    ret = CreateProperty("Near Limit (um)", CDeviceUtils::ConvertToString(nearLimit_ * 0.01), MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Create Far Limit property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnFarLimit);
+    ret = CreateProperty("Far Limit (um)", CDeviceUtils::ConvertToString(farLimit_ * 0.01), MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Create Cover Slip Type property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnCoverSlipType);
+    ret = CreateProperty("Cover Slip Type", "Glass", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("Cover Slip Type", "Glass");
+    AddAllowedValue("Cover Slip Type", "Plastic");
+
+    // Create Cover Slip Thickness Glass property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnCoverSlipThicknessGlass);
+    ret = CreateProperty("Cover Slip Thickness Glass (um)", "170", MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    SetPropertyLimits("Cover Slip Thickness Glass (um)", 150, 500);
+
+    // Create Cover Slip Thickness Plastic property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnCoverSlipThicknessPlastic);
+    ret = CreateProperty("Cover Slip Thickness Plastic (um)", "1000", MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    SetPropertyLimits("Cover Slip Thickness Plastic (um)", 700, 1500);
+
+    // Create DIC Mode property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnDICMode);
+    ret = CreateProperty("DIC Mode", "Off", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("DIC Mode", "Off");
+    AddAllowedValue("DIC Mode", "On");
+
+    // Create Buzzer Success property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnBuzzerSuccess);
+    ret = CreateProperty("Buzzer Success", "On", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("Buzzer Success", "Off");
+    AddAllowedValue("Buzzer Success", "On");
+
+    // Create Buzzer Failure property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnBuzzerFailure);
+    ret = CreateProperty("Buzzer Failure", "On", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("Buzzer Failure", "Off");
+    AddAllowedValue("Buzzer Failure", "On");
+
+    // Enable AF status notifications
+    EnableNotifications(true);
+
+    // Mark that ZDC needs initialization (deferred to first FullFocus() call)
+    zdcInitNeeded_ = true;
+
+    hub->RegisterDeviceAsUsed(EvidentIX85Win::DeviceType_Autofocus, this);
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::Shutdown()
+{
+    if (initialized_)
+    {
+        // Stop AF if running
+        if (continuousFocusing_)
+        {
+            StopAF();
+        }
+
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            EnableNotifications(false);
+            hub->UnRegisterDeviceAsUsed(EvidentIX85Win::DeviceType_Autofocus);
+        }
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentAutofocus::Busy()
+{
+    // AF is busy during One-Shot or Focus Search operations
+    return (afStatus_ == 4);  // 4 = Search
+}
+
+int EvidentAutofocus::SetContinuousFocusing(bool state)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (state)
+    {
+        // Start continuous AF
+        std::string cmd = BuildCommand(CMD_AF_START_STOP, 2);  // 2 = Continuous AF
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_AF_START_STOP))
+            return ERR_NEGATIVE_ACK;
+
+        continuousFocusing_ = true;
+    }
+    else
+    {
+        // Stop AF
+        int ret = StopAF();
+        if (ret != DEVICE_OK)
+            return ret;
+
+        continuousFocusing_ = false;
+    }
+
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::GetContinuousFocusing(bool& state)
+{
+    state = continuousFocusing_;
+    return DEVICE_OK;
+}
+
+bool EvidentAutofocus::IsContinuousFocusLocked()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return false;
+
+    // Query current AF status
+    std::string cmd = BuildQuery(CMD_AF_STATUS);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return false;
+
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() > 0 && params[0] != "X")
+    {
+        afStatus_ = ParseIntParameter(params[0]);
+    }
+
+    // Locked when in Focus (1) or Track (2) state
+    return (afStatus_ == 1 || afStatus_ == 2);
+}
+
+int EvidentAutofocus::FullFocus()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Check if ZDC needs re-initialization (objective changed, or settings changed)
+    long nosepiecePos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Nosepiece);
+    if (nosepiecePos != lastNosepiecePos_ || zdcInitNeeded_)
+    {
+        int ret = InitializeZDC();
+        if (ret != DEVICE_OK)
+            return ret;
+
+        // Clear the flag after successful initialization
+        zdcInitNeeded_ = false;
+    }
+
+    // Execute One-Shot AF (AF 1)
+    std::string cmd = BuildCommand(CMD_AF_START_STOP, 1);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_AF_START_STOP))
+        return ERR_NEGATIVE_ACK;
+
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::IncrementalFocus()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Execute Focus Search
+    std::string cmd = BuildCommand(CMD_AF_START_STOP, 3);  // 3 = Focus Search
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_AF_START_STOP))
+        return ERR_NEGATIVE_ACK;
+
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::GetLastFocusScore(double& score)
+{
+    score = 0.0;
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::GetCurrentFocusScore(double& score)
+{
+    score = 0.0;
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::GetOffset(double& offset)
+{
+    // Get offset lens position
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    long pos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_OffsetLens);
+    offset = pos * OFFSET_LENS_STEP_SIZE_UM;
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::SetOffset(double offset)
+{
+    // Set offset lens position
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    long steps = static_cast<long>(offset / OFFSET_LENS_STEP_SIZE_UM);
+
+    std::string cmd = BuildCommand(CMD_OFFSET_LENS_GOTO, static_cast<int>(steps));
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_OFFSET_LENS_GOTO))
+        return ERR_NEGATIVE_ACK;
+
+    hub->GetModel()->SetPosition(EvidentIX85Win::DeviceType_OffsetLens, steps);
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::StopAF()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    std::string cmd = BuildCommand(CMD_AF_STOP);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // AFSTP returns + when stopped successfully
+    if (!IsPositiveAck(response, CMD_AF_STOP))
+        return ERR_NEGATIVE_ACK;
+
+    afStatus_ = 0;
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::InitializeZDC()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    std::string cmd;
+    std::string response;
+    int ret;
+
+    // Get current nosepiece position
+    long nosepiecePos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Nosepiece);
+    if (nosepiecePos < 1 || nosepiecePos > 6)
+        nosepiecePos = 1;  // Default to position 1
+
+    // Get objective name for current nosepiece position
+    const std::vector<EvidentIX85Win::ObjectiveInfo>& objectives = hub->GetObjectiveInfo();
+    std::string objectiveName = "Unknown";
+    if (nosepiecePos >= 1 && nosepiecePos <= (long)objectives.size())
+    {
+        objectiveName = objectives[nosepiecePos - 1].name;
+    }
+
+    // Step 1: Enter Setting status (OPE 1)
+    cmd = BuildCommand(CMD_OPERATION_MODE, 1);
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+    if (!IsPositiveAck(response, CMD_OPERATION_MODE))
+        return ERR_NEGATIVE_ACK;
+
+    // Step 2: Set Coverslip type - query current setting first
+    cmd = BuildQuery(CMD_COVERSLIP_TYPE);
+    ret = hub->ExecuteCommand(cmd, response);
+    int coverslipType = 1;  // Default to Glass
+    if (ret == DEVICE_OK)
+    {
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0)
+        {
+            coverslipType = ParseIntParameter(params[0]);
+        }
+    }
+    cmd = BuildCommand(CMD_COVERSLIP_TYPE, coverslipType);
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+    {
+        // Exit setting mode before returning error
+        hub->ExecuteCommand(BuildCommand(CMD_OPERATION_MODE, 0), response);
+        return ret;
+    }
+    if (!IsPositiveAck(response, CMD_COVERSLIP_TYPE))
+    {
+        hub->ExecuteCommand(BuildCommand(CMD_OPERATION_MODE, 0), response);
+        return ERR_NEGATIVE_ACK;
+    }
+
+    // Step 3: Set objective lens for AF (S_OB position,name)
+    std::ostringstream sobCmd;
+    sobCmd << CMD_AF_SET_OBJECTIVE << " " << nosepiecePos << "," << objectiveName;
+    ret = hub->ExecuteCommand(sobCmd.str(), response);
+    if (ret != DEVICE_OK)
+    {
+        hub->ExecuteCommand(BuildCommand(CMD_OPERATION_MODE, 0), response);
+        return ret;
+    }
+    if (!IsPositiveAck(response, CMD_AF_SET_OBJECTIVE))
+    {
+        hub->ExecuteCommand(BuildCommand(CMD_OPERATION_MODE, 0), response);
+        return ERR_NEGATIVE_ACK;
+    }
+
+    // Step 4: Exit Setting status (OPE 0)
+    cmd = BuildCommand(CMD_OPERATION_MODE, 0);
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+    if (!IsPositiveAck(response, CMD_OPERATION_MODE))
+        return ERR_NEGATIVE_ACK;
+
+    // Step 5: Set ZDC DM In (AFDM 1)
+    cmd = BuildCommand(CMD_AF_DICHROIC, 1);
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+    if (!IsPositiveAck(response, CMD_AF_DICHROIC))
+        return ERR_NEGATIVE_ACK;
+
+    // Step 6: Move offset lens to base position for current objective (ABBP)
+    cmd = BuildCommand(CMD_OFFSET_LENS_BASE_POSITION, static_cast<int>(nosepiecePos));
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+    if (!IsPositiveAck(response, CMD_OFFSET_LENS_BASE_POSITION))
+        return ERR_NEGATIVE_ACK;
+
+    // Step 7: Enable Focus Jog (JG 1)
+    cmd = BuildCommand(CMD_JOG, 1);
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+    if (!IsPositiveAck(response, CMD_JOG))
+        return ERR_NEGATIVE_ACK;
+
+    // Step 8: Set AF search range (AFL nearLimit,farLimit)
+    cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(farLimit_));
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+    if (!IsPositiveAck(response, CMD_AF_LIMIT))
+        return ERR_NEGATIVE_ACK;
+
+    // Update tracking variables
+    lastNosepiecePos_ = nosepiecePos;
+    lastCoverslipType_ = coverslipType;
+
+    return DEVICE_OK;
+}
+
+std::string EvidentAutofocus::GetAFStatusString(int status)
+{
+    switch (status)
+    {
+        case 0: return "Stop";
+        case 1: return "Focus";
+        case 2: return "Track";
+        case 3: return "Wait";
+        case 4: return "Search";
+        default: return "Unknown";
+    }
+}
+
+EvidentHubWin* EvidentAutofocus::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHubWin*>(hub);
+}
+
+int EvidentAutofocus::EnableNotifications(bool enable)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    return hub->EnableNotification(CMD_AF_STATUS, enable);
+}
+
+int EvidentAutofocus::OnAFStatus(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        // Query current status
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            std::string cmd = BuildQuery(CMD_AF_STATUS);
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd, response);
+            if (ret == DEVICE_OK)
+            {
+                std::vector<std::string> params = ParseParameters(response);
+                if (params.size() > 0 && params[0] != "X")
+                {
+                    afStatus_ = ParseIntParameter(params[0]);
+                }
+            }
+        }
+        pProp->Set(GetAFStatusString(afStatus_).c_str());
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(nearLimit_ * 0.01);  // Convert 0.01um units to um
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double val;
+        pProp->Get(val);
+        long newNear = static_cast<long>(val * 100);  // Convert um to 0.01um units
+
+        // Validate: Near limit must be > Far limit
+        if (newNear <= farLimit_)
+        {
+            return ERR_INVALID_PARAMETER;
+        }
+
+        std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(newNear), static_cast<int>(farLimit_));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_AF_LIMIT))
+            return ERR_NEGATIVE_ACK;
+
+        nearLimit_ = newNear;
+
+        // Mark that ZDC needs re-initialization (deferred until next AF operation)
+        zdcInitNeeded_ = true;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnFarLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(farLimit_ * 0.01);  // Convert 0.01um units to um
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double val;
+        pProp->Get(val);
+        long newFar = static_cast<long>(val * 100);  // Convert um to 0.01um units
+
+        // Validate: Near limit must be > Far limit
+        if (nearLimit_ <= newFar)
+        {
+            return ERR_INVALID_PARAMETER;
+        }
+
+        std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(newFar));
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_AF_LIMIT))
+            return ERR_NEGATIVE_ACK;
+
+        farLimit_ = newFar;
+
+        // Mark that ZDC needs re-initialization (deferred until next AF operation)
+        zdcInitNeeded_ = true;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnCoverSlipType(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        std::string cmd = BuildQuery(CMD_COVERSLIP_TYPE);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() > 0)
+            {
+                int type = ParseIntParameter(params[0]);
+                pProp->Set(type == 1 ? "Glass" : "Plastic");
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        int type = (val == "Glass") ? 1 : 2;
+
+        std::string cmd = BuildCommand(CMD_COVERSLIP_TYPE, type);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_COVERSLIP_TYPE))
+            return ERR_NEGATIVE_ACK;
+
+        // Track coverslip type change
+        lastCoverslipType_ = type;
+
+        // Mark that ZDC needs re-initialization (deferred until next AF operation)
+        zdcInitNeeded_ = true;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnCoverSlipThicknessGlass(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        std::string cmd = BuildQuery(CMD_COVERSLIP_THICKNESS);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() >= 1 && params[0] != "X")
+            {
+                int thickness = ParseIntParameter(params[0]);
+                pProp->Set(thickness * 10.0);  // Convert 10um units to um
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double val;
+        pProp->Get(val);
+        int thickness = static_cast<int>(val / 10.0);  // Convert um to 10um units
+
+        // Query current plastic thickness to preserve it
+        std::string cmd = BuildQuery(CMD_COVERSLIP_THICKNESS);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        int plasticThickness = 100;  // Default
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() >= 2 && params[1] != "X")
+            {
+                plasticThickness = ParseIntParameter(params[1]);
+            }
+        }
+
+        cmd = BuildCommand(CMD_COVERSLIP_THICKNESS, thickness, plasticThickness);
+        ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_COVERSLIP_THICKNESS))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnCoverSlipThicknessPlastic(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        std::string cmd = BuildQuery(CMD_COVERSLIP_THICKNESS);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() >= 2 && params[1] != "X")
+            {
+                int thickness = ParseIntParameter(params[1]);
+                pProp->Set(thickness * 10.0);  // Convert 10um units to um
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double val;
+        pProp->Get(val);
+        int thickness = static_cast<int>(val / 10.0);  // Convert um to 10um units
+
+        // Query current glass thickness to preserve it
+        std::string cmd = BuildQuery(CMD_COVERSLIP_THICKNESS);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        int glassThickness = 17;  // Default
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() >= 1 && params[0] != "X")
+            {
+                glassThickness = ParseIntParameter(params[0]);
+            }
+        }
+
+        cmd = BuildCommand(CMD_COVERSLIP_THICKNESS, glassThickness, thickness);
+        ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_COVERSLIP_THICKNESS))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnDICMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        std::string cmd = BuildQuery(CMD_AF_DIC);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() > 0)
+            {
+                int mode = ParseIntParameter(params[0]);
+                pProp->Set(mode == 0 ? "Off" : "On");
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        int mode = (val == "Off") ? 0 : 1;
+
+        std::string cmd = BuildCommand(CMD_AF_DIC, mode);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_AF_DIC))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnBuzzerSuccess(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        std::string cmd = BuildQuery(CMD_AF_BUZZER);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() >= 1)
+            {
+                int success = ParseIntParameter(params[0]);
+                pProp->Set(success == 0 ? "Off" : "On");
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        int success = (val == "Off") ? 0 : 1;
+
+        // Query current failure setting to preserve it
+        std::string cmd = BuildQuery(CMD_AF_BUZZER);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        int failure = 1;  // Default
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() >= 2)
+            {
+                failure = ParseIntParameter(params[1]);
+            }
+        }
+
+        cmd = BuildCommand(CMD_AF_BUZZER, success, failure);
+        ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_AF_BUZZER))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnBuzzerFailure(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        std::string cmd = BuildQuery(CMD_AF_BUZZER);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() >= 2)
+            {
+                int failure = ParseIntParameter(params[1]);
+                pProp->Set(failure == 0 ? "Off" : "On");
+            }
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        int failure = (val == "Off") ? 0 : 1;
+
+        // Query current success setting to preserve it
+        std::string cmd = BuildQuery(CMD_AF_BUZZER);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        int success = 1;  // Default
+        if (ret == DEVICE_OK)
+        {
+            std::vector<std::string> params = ParseParameters(response);
+            if (params.size() >= 1)
+            {
+                success = ParseIntParameter(params[0]);
+            }
+        }
+
+        cmd = BuildCommand(CMD_AF_BUZZER, success, failure);
+        ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_AF_BUZZER))
+            return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentOffsetLens - Offset Lens Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+EvidentOffsetLens::EvidentOffsetLens() :
+    initialized_(false),
+    name_(g_OffsetLensDeviceName),
+    stepSizeUm_(OFFSET_LENS_STEP_SIZE_UM)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Offset lens not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentOffsetLens::~EvidentOffsetLens()
+{
+    Shutdown();
+}
+
+void EvidentOffsetLens::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentOffsetLens::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(EvidentIX85Win::DeviceType_OffsetLens))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    // Query initial position
+    std::string cmd = BuildQuery(CMD_OFFSET_LENS_POSITION);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret == DEVICE_OK)
+    {
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() > 0 && params[0] != "X")
+        {
+            long pos = ParseIntParameter(params[0]);
+            hub->GetModel()->SetPosition(EvidentIX85Win::DeviceType_OffsetLens, pos);
+        }
+    }
+
+    // Create Position property
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentOffsetLens::OnPosition);
+    ret = CreateProperty("Position (um)", "0", MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Enable notifications
+    EnableNotifications(true);
+
+    hub->RegisterDeviceAsUsed(EvidentIX85Win::DeviceType_OffsetLens, this);
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentOffsetLens::Shutdown()
+{
+    if (initialized_)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            EnableNotifications(false);
+            hub->UnRegisterDeviceAsUsed(EvidentIX85Win::DeviceType_OffsetLens);
+        }
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentOffsetLens::Busy()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return false;
+
+    return hub->GetModel()->IsBusy(EvidentIX85Win::DeviceType_OffsetLens);
+}
+
+int EvidentOffsetLens::SetPositionUm(double pos)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Convert μm to steps
+    long steps = static_cast<long>(pos / stepSizeUm_);
+
+    // Clamp to limits
+    if (steps < OFFSET_LENS_MIN_POS) steps = OFFSET_LENS_MIN_POS;
+    if (steps > OFFSET_LENS_MAX_POS) steps = OFFSET_LENS_MAX_POS;
+
+    hub->GetModel()->SetBusy(EvidentIX85Win::DeviceType_OffsetLens, true);
+
+    std::string cmd = BuildCommand(CMD_OFFSET_LENS_GOTO, static_cast<int>(steps));
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+    {
+        hub->GetModel()->SetBusy(EvidentIX85Win::DeviceType_OffsetLens, false);
+        return ret;
+    }
+
+    if (!IsPositiveAck(response, CMD_OFFSET_LENS_GOTO))
+    {
+        hub->GetModel()->SetBusy(EvidentIX85Win::DeviceType_OffsetLens, false);
+        return ERR_NEGATIVE_ACK;
+    }
+
+    hub->GetModel()->SetPosition(EvidentIX85Win::DeviceType_OffsetLens, steps);
+    hub->GetModel()->SetBusy(EvidentIX85Win::DeviceType_OffsetLens, false);
+
+    return DEVICE_OK;
+}
+
+int EvidentOffsetLens::GetPositionUm(double& pos)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    long steps = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_OffsetLens);
+    pos = steps * stepSizeUm_;
+    return DEVICE_OK;
+}
+
+int EvidentOffsetLens::SetPositionSteps(long steps)
+{
+    return SetPositionUm(steps * stepSizeUm_);
+}
+
+int EvidentOffsetLens::GetPositionSteps(long& steps)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    steps = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_OffsetLens);
+    return DEVICE_OK;
+}
+
+int EvidentOffsetLens::SetOrigin()
+{
+    // Not supported - origin is factory set
+    return DEVICE_UNSUPPORTED_COMMAND;
+}
+
+int EvidentOffsetLens::GetLimits(double& lower, double& upper)
+{
+    lower = OFFSET_LENS_MIN_POS * stepSizeUm_;
+    upper = OFFSET_LENS_MAX_POS * stepSizeUm_;
+    return DEVICE_OK;
+}
+
+int EvidentOffsetLens::OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        double pos;
+        int ret = GetPositionUm(pos);
+        if (ret != DEVICE_OK)
+            return ret;
+        pProp->Set(pos);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double pos;
+        pProp->Get(pos);
+        int ret = SetPositionUm(pos);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+    return DEVICE_OK;
+}
+
+EvidentHubWin* EvidentOffsetLens::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHubWin*>(hub);
+}
+
+int EvidentOffsetLens::EnableNotifications(bool enable)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    return hub->EnableNotification(CMD_OFFSET_LENS_NOTIFY, enable);
 }

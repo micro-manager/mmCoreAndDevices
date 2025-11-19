@@ -29,7 +29,7 @@
 
 using namespace EvidentIX85Win;
 
-const char* g_HubDeviceName = "EvidentIX85Win-Hub";
+const char* g_HubDeviceName = "IX85Win-Hub";
 
 // Device names
 extern const char* g_FocusDeviceName;
@@ -46,6 +46,8 @@ extern const char* g_PolarizerDeviceName;
 extern const char* g_DICPrismDeviceName;
 extern const char* g_EPINDDeviceName;
 extern const char* g_CorrectionCollarDeviceName;
+extern const char* g_AutofocusDeviceName;
+extern const char* g_OffsetLensDeviceName;
 
 // Property names
 const char* g_PropPort = "SerialPort";
@@ -972,6 +974,7 @@ int EvidentHubWin::DoDeviceDetection()
         availableDevices_.push_back(DeviceType_Nosepiece);
         detectedDevicesByName_.push_back(g_NosepieceDeviceName);
         QueryNosepiece();
+        QueryObjectiveInfo();
     }
 
     // LWUCDA - Condenser Turret, DIA Aperture, Polarizer, DIA Shutter
@@ -1052,7 +1055,25 @@ int EvidentHubWin::DoDeviceDetection()
         model_.SetDevicePresent(DeviceType_ManualControl, true);
     }
 
-    // TODO: ZDC - Autofocus unit (implement later)
+    // ZDC - Autofocus and Offset Lens
+    if (hasUnit("ZDC"))
+    {
+        LogMessage("Detected ZDC unit (Autofocus, OffsetLens)");
+
+        // Autofocus
+        model_.SetDevicePresent(DeviceType_Autofocus, true);
+        availableDevices_.push_back(DeviceType_Autofocus);
+        detectedDevicesByName_.push_back(g_AutofocusDeviceName);
+
+        // Offset Lens
+        model_.SetDevicePresent(DeviceType_OffsetLens, true);
+        availableDevices_.push_back(DeviceType_OffsetLens);
+        detectedDevicesByName_.push_back(g_OffsetLensDeviceName);
+
+        // Query initial offset lens position
+        QueryOffsetLens();
+    }
+
     // TODO: U-AW - EPI? (needs clarification)
     // TODO: FRM - unknown devices
 
@@ -1205,6 +1226,89 @@ int EvidentHubWin::QueryNosepiece()
     }
 
     return ERR_DEVICE_NOT_AVAILABLE;
+}
+
+int EvidentHubWin::QueryObjectiveInfo()
+{
+    objectiveInfo_.clear();
+    objectiveInfo_.resize(NOSEPIECE_MAX_POS);  // 6 positions
+
+    for (int pos = 1; pos <= NOSEPIECE_MAX_POS; pos++)
+    {
+        std::string cmd = BuildCommand(CMD_GET_OBJECTIVE, pos);
+        std::string response;
+        int ret = ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+            LogMessage(("Failed to query objective info for position " + std::to_string(pos)).c_str(), false);
+            continue;
+        }
+
+        std::vector<std::string> params = ParseParameters(response);
+        if (params.size() < 11)
+        {
+            LogMessage(("Incomplete GOB response for position " + std::to_string(pos)).c_str(), false);
+            continue;
+        }
+
+        EvidentIX85Win::ObjectiveInfo& info = objectiveInfo_[pos - 1];
+
+        // p1 is position (already known), p2 is name
+        info.name = params[1];
+
+        // p3: NA (0.00-2.00, N = indefinite)
+        if (params[2] != "N")
+            info.na = std::stod(params[2]);
+        else
+            info.na = -1.0;
+
+        // p4: Magnification (0-200, N = indefinite)
+        if (params[3] != "N")
+            info.magnification = std::stoi(params[3]);
+        else
+            info.magnification = -1;
+
+        // p5: Medium (1-5, N = indefinite)
+        if (params[4] != "N")
+            info.medium = std::stoi(params[4]);
+        else
+            info.medium = -1;
+
+        // p6 is always 0, skip
+
+        // p7: AS min (0-120, N/U = indefinite/unknown)
+        if (params[6] != "N" && params[6] != "U")
+            info.asMin = std::stoi(params[6]);
+        else
+            info.asMin = -1;
+
+        // p8: AS max (0-120, N/U = indefinite/unknown)
+        if (params[7] != "N" && params[7] != "U")
+            info.asMax = std::stoi(params[7]);
+        else
+            info.asMax = -1;
+
+        // p9: WD (0.01-25.00, N = indefinite)
+        if (params[8] != "N")
+            info.wd = std::stod(params[8]);
+        else
+            info.wd = -1.0;
+
+        // p10: ZDC OneShot compatibility (0-3)
+        info.zdcOneShotCompat = std::stoi(params[9]);
+
+        // p11: ZDC Continuous compatibility (0-3)
+        info.zdcContinuousCompat = std::stoi(params[10]);
+
+        std::ostringstream msg;
+        msg << "Objective " << pos << ": " << info.name
+            << ", NA=" << info.na
+            << ", Mag=" << info.magnification
+            << "x, WD=" << info.wd << "mm";
+        LogMessage(msg.str().c_str(), false);
+    }
+
+    return DEVICE_OK;
 }
 
 int EvidentHubWin::QueryMagnification()
@@ -1562,6 +1666,28 @@ int EvidentHubWin::QueryCorrectionCollar()
     return ERR_DEVICE_NOT_AVAILABLE;
 }
 
+int EvidentHubWin::QueryOffsetLens()
+{
+    std::string cmd = BuildQuery(CMD_OFFSET_LENS_POSITION);
+    std::string response;
+    int ret = ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (IsUnknown(response))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() > 0 && params[0] != "X")
+    {
+        int pos = ParseIntParameter(params[0]);
+        model_.SetPosition(DeviceType_OffsetLens, pos);
+        return DEVICE_OK;
+    }
+
+    return ERR_DEVICE_NOT_AVAILABLE;
+}
+
 int EvidentHubWin::UpdateNosepieceIndicator(int position)
 {
     // Check if MCU is present
@@ -1713,49 +1839,6 @@ int EvidentHubWin::UpdateEPIShutter1Indicator(int state)
     }
 
     LogMessage(("Sent EPI shutter indicator command: " + cmd).c_str(), true);
-    return DEVICE_OK;
-}
-
-int EvidentHubWin::UpdateDIABrightnessIndicator(int brightness)
-{
-    // Check if MCU is present
-    if (!model_.IsDevicePresent(DeviceType_ManualControl))
-        return DEVICE_OK;  // Not an error, MCU just not present
-
-    // Map brightness (0-255) to I3 indicator LED pattern (hex values)
-    // I3 accepts hex bitmask values: 1, 3, 7, F, 1F
-    // 0 brightness -> no LEDs (I3 0)
-    // 1-51 -> 1 LED (I3 1)
-    // 52-102 -> 2 LEDs (I3 3)
-    // 103-153 -> 3 LEDs (I3 7)
-    // 154-204 -> 4 LEDs (I3 F)
-    // 205-255 -> 5 LEDs (I3 1F)
-
-    std::string i3Value;
-    if (brightness == 0)
-        i3Value = "0";
-    else if (brightness <= 51)
-        i3Value = "1";
-    else if (brightness <= 102)
-        i3Value = "3";
-    else if (brightness <= 153)
-        i3Value = "7";
-    else if (brightness <= 204)
-        i3Value = "F";
-    else
-        i3Value = "1F";
-
-    std::string cmd = "I3 " + i3Value;
-
-    // Send command without waiting for response
-    int ret = SendCommand(cmd);
-    if (ret != DEVICE_OK)
-    {
-        LogMessage(("Failed to send DIA brightness indicator command: " + cmd).c_str());
-        return ret;
-    }
-
-    LogMessage(("Sent DIA brightness indicator command: " + cmd).c_str(), true);
     return DEVICE_OK;
 }
 
@@ -2009,9 +2092,6 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
             msg << "E3 encoder: changing DIA remembered brightness from " << currentRemembered << " to " << newRemembered;
             LogMessage(msg.str().c_str(), true);
 
-            // Always update I3 indicator to match remembered brightness
-            UpdateDIABrightnessIndicator(newRemembered);
-
             // Only send DIL command if logical shutter is open (actual brightness > 0)
             long currentActual = model_.GetPosition(DeviceType_DIABrightness);
             if (currentActual > 0)
@@ -2052,9 +2132,8 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
             // When closed (brightness = 0), user wants to continue seeing remembered brightness
             if (brightness > 0)
             {
-                // Shutter is open: update remembered brightness, I3 indicator, and property
+                // Shutter is open: update remembered brightness and property
                 rememberedDIABrightness_ = brightness;
-                UpdateDIABrightnessIndicator(brightness);
 
                 // Notify core callback of Brightness property change
                 auto it = usedDevices_.find(DeviceType_DIAShutter);
@@ -2198,10 +2277,6 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
                 if (ret == DEVICE_OK)
                 {
                     model_.SetPosition(DeviceType_DIABrightness, newBrightness);
-
-                    // Always update I3 indicator with remembered brightness (not 0 when closing)
-                    // User wants to see the remembered brightness value, not that lamp is off
-                    UpdateDIABrightnessIndicator(rememberedDIABrightness_);
 
                     // Only update State property (logical shutter), NOT Brightness property
                     // This keeps the Brightness property at its remembered value
@@ -2441,7 +2516,7 @@ int EvidentHubWin::EnumerateAndOpenInterface()
     for (int i = 0; i < numInterfaces; i++)
     {
         void* pTempInterface = nullptr;
-        int ret = pfnGetInterfaceInfo_(i, &pTempInterface);
+        pfnGetInterfaceInfo_(i, &pTempInterface);
         if (pTempInterface == nullptr)
         {
             continue;

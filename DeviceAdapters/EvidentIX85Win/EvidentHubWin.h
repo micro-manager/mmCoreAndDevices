@@ -83,7 +83,6 @@ public:
     int UpdateMirrorUnitIndicator(int position);
     int UpdateLightPathIndicator(int position);
     int UpdateEPIShutter1Indicator(int state);
-    int UpdateDIABrightnessIndicator(int brightness);
 
     // DIA brightness memory for logical shutter
     int GetRememberedDIABrightness() const { return rememberedDIABrightness_; }
@@ -120,6 +119,7 @@ private:
     int QueryRightPort();
     int QueryCorrectionCollar();
     int QueryManualControl();
+    int QueryOffsetLens();
 
     // Manual Control Unit (MCU) helpers
     int UpdateNosepieceIndicator(int position);

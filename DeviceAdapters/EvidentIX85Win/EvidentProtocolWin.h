@@ -125,7 +125,9 @@ const char* const CMD_CORRECTION_COLLAR_INIT = "CCINIT";
 
 // Command tags - Autofocus (ZDC)
 const char* const CMD_AF_START_STOP = "AF";
+const char* const CMD_AF_STOP = "AFSTP";
 const char* const CMD_AF_STATUS = "AFST";
+const char* const CMD_AF_LIMIT = "AFL";
 const char* const CMD_AF_TABLE = "AFTBL";
 const char* const CMD_AF_PARAMETER = "AFP";
 const char* const CMD_AF_GET_PARAMETER = "GAFP";
@@ -135,6 +137,10 @@ const char* const CMD_AF_BUZZER = "AFBZ";
 const char* const CMD_AF_APERTURE = "AFAS";
 const char* const CMD_AF_DICHROIC = "AFDM";
 const char* const CMD_AF_DICHROIC_MOVE = "AFDMG";
+const char* const CMD_AF_DIC = "AFDIC";
+const char* const CMD_COVERSLIP_TYPE = "CST";
+const char* const CMD_COVERSLIP_THICKNESS = "CS2";
+const char* const CMD_AF_SET_OBJECTIVE = "S_OB";
 
 // Command tags - Offset Lens (part of ZDC)
 const char* const CMD_OFFSET_LENS_GOTO = "ABG";
@@ -145,6 +151,7 @@ const char* const CMD_OFFSET_LENS_NOTIFY = "NABP";
 const char* const CMD_OFFSET_LENS_RANGE = "ABRANGE";
 const char* const CMD_OFFSET_LENS_LIMIT = "ABLMT";
 const char* const CMD_OFFSET_LENS_LOST_MOTION = "ABLM";
+const char* const CMD_OFFSET_LENS_BASE_POSITION = "ABBP";
 
 // Command tags - MCZ (Manual Control Unit)
 const char* const CMD_JOG = "JG";
@@ -201,6 +208,11 @@ const long CORRECTION_COLLAR_MIN_POS = -3200;
 const long CORRECTION_COLLAR_MAX_POS = 3200;
 const double CORRECTION_COLLAR_STEP_SIZE_UM = 1.0;  // 1 step = 1 µm
 
+// Offset Lens (ZDC)
+const long OFFSET_LENS_MIN_POS = -10000;
+const long OFFSET_LENS_MAX_POS = 50000;
+const double OFFSET_LENS_STEP_SIZE_UM = 0.5;  // 1 step = 0.5 µm
+
 // Manual Control Unit (MCU) 7-segment display codes
 // These hex codes drive the 7-segment displays on the MCU indicators
 const int SEG7_0 = 0xEE;
@@ -247,6 +259,8 @@ const int ERR_PORT_NOT_SET = ERR_EVIDENT_OFFSET + 8;
 const int ERR_PORT_CHANGE_FORBIDDEN = ERR_EVIDENT_OFFSET + 9;
 const int ERR_CORRECTION_COLLAR_NOT_LINKED = ERR_EVIDENT_OFFSET + 10;
 const int ERR_CORRECTION_COLLAR_LINK_FAILED = ERR_EVIDENT_OFFSET + 11;
+const int ERR_POSITION_OUT_OF_RANGE = ERR_EVIDENT_OFFSET + 12;
+const int ERR_INVALID_PARAMETER = ERR_EVIDENT_OFFSET + 13;
 
 // Helper functions
 inline std::string BuildCommand(const char* tag)
@@ -306,6 +320,12 @@ inline bool IsNegativeAck(const std::string& response, const char* tag)
 {
     std::string expected = std::string(tag) + " !";
     return response.find(expected) == 0;
+}
+
+// Check if response contains position out of range error (E0B500020)
+inline bool IsPositionOutOfRangeError(const std::string& response)
+{
+    return response.find("E0B500020") != std::string::npos;
 }
 
 inline bool IsUnknown(const std::string& response)

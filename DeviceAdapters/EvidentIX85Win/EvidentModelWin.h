@@ -57,6 +57,32 @@ enum DeviceType
     DeviceType_ManualControl
 };
 
+// Objective lens information structure
+struct ObjectiveInfo
+{
+    std::string name;           // p2: Name of objective lens
+    double na;                  // p3: Numerical aperture (0.00-2.00, -1 = indefinite)
+    int magnification;          // p4: Magnification (0-200, -1 = indefinite)
+    int medium;                 // p5: 1=dry, 2=water, 3=oil, 4=silicone oil, 5=silicone gel, -1=indefinite
+    int asMin;                  // p7: AS minimum value % (0-120, -1 = indefinite/unknown)
+    int asMax;                  // p8: AS maximum value % (0-120, -1 = indefinite/unknown)
+    double wd;                  // p9: Working distance (0.01-25.00, -1 = indefinite)
+    int zdcOneShotCompat;       // p10: ZDC OneShot AF compatibility (0-3)
+    int zdcContinuousCompat;    // p11: ZDC Continuous AF compatibility (0-3)
+
+    ObjectiveInfo() :
+        name(""),
+        na(-1.0),
+        magnification(-1),
+        medium(-1),
+        asMin(-1),
+        asMax(-1),
+        wd(-1.0),
+        zdcOneShotCompat(0),
+        zdcContinuousCompat(0)
+    {}
+};
+
 // Device state structure
 struct DeviceState
 {
