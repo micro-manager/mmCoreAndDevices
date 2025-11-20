@@ -409,8 +409,10 @@ EvidentNosepiece::EvidentNosepiece() :
     initialized_(false),
     name_(g_NosepieceDeviceName),
     numPos_(NOSEPIECE_MAX_POS),
-    safeNosepieceChange_(true),
-    nearLimits_(NOSEPIECE_MAX_POS, FOCUS_MAX_POS)  // Initialize with max values
+    nearLimits_(NOSEPIECE_MAX_POS, FOCUS_MAX_POS),  // Initialize with max values
+    parfocalPositions_(NOSEPIECE_MAX_POS, 0),  // Initialize with zeros
+    parfocalEnabled_(false),
+    escapeDistance_(3)  // Default to 3.0 mm 
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Nosepiece not available on this microscope");
@@ -493,14 +495,6 @@ int EvidentNosepiece::Initialize()
     if (ret != DEVICE_OK)
         return ret;
 
-    // Create SafeNosepieceChange property
-    pAct = new CPropertyAction(this, &EvidentNosepiece::OnSafeChange);
-    ret = CreateProperty("SafeNosepieceChange", "Enabled", MM::String, false, pAct);
-    if (ret != DEVICE_OK)
-        return ret;
-    AddAllowedValue("SafeNosepieceChange", "Disabled");
-    AddAllowedValue("SafeNosepieceChange", "Enabled");
-
     // Add firmware version as read-only property
     std::string version = hub->GetDeviceVersion(DeviceType_Nosepiece);
     if (!version.empty())
@@ -532,6 +526,66 @@ int EvidentNosepiece::Initialize()
     AddAllowedValue("Set-Focus-Near-Limit", "");
     AddAllowedValue("Set-Focus-Near-Limit", "Set");
     AddAllowedValue("Set-Focus-Near-Limit", "Clear");
+
+    // Query parfocal settings from microscope
+    ret = QueryParfocalSettings();
+    if (ret != DEVICE_OK)
+    {
+        LogMessage("Warning: Failed to query parfocal settings, using defaults");
+        // Don't fail initialization, just use default values
+    }
+
+    // Create Parfocal-Position-um read-only property
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnParfocalPosition);
+    ret = CreateProperty("Parfocal-Position-um", "0.0", MM::Float, true, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Create Set-Parfocal-Position action property
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnSetParfocalPosition);
+    ret = CreateProperty("Set-Parfocal-Position", "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("Set-Parfocal-Position", "");
+    AddAllowedValue("Set-Parfocal-Position", "Set");
+    AddAllowedValue("Set-Parfocal-Position", "Clear");
+
+    // Create Parfocal-Enabled property
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnParfocalEnabled);
+    ret = CreateProperty("Parfocal-Enabled", "Disabled", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("Parfocal-Enabled", "Disabled");
+    AddAllowedValue("Parfocal-Enabled", "Enabled");
+
+    // Query focus escape distance
+    std::string escCmd = BuildQuery(CMD_FOCUS_ESCAPE);
+    std::string escResponse;
+    ret = hub->ExecuteCommand(escCmd, escResponse);
+    if (ret == DEVICE_OK)
+    {
+        std::vector<std::string> escParams = ParseParameters(escResponse);
+        if (escParams.size() > 0)
+        {
+            escapeDistance_ = ParseIntParameter(escParams[0]);
+        }
+    }
+
+    // Create Focus-Escape-Distance property
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnEscapeDistance);
+    ret = CreateProperty("Focus-Escape-Distance", "3.0 mm", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("Focus-Escape-Distance", "0.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "1.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "2.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "3.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "4.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "5.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "6.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "7.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "8.0 mm");
+    AddAllowedValue("Focus-Escape-Distance", "9.0 mm");
 
     // Enable notifications
     ret = EnableNotifications(true);
@@ -599,16 +653,10 @@ int EvidentNosepiece::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!hub)
             return DEVICE_ERR;
 
-        // Use safe nosepiece change if enabled
-        if (safeNosepieceChange_)
-        {
-            return SafeNosepieceChange(pos + 1);  // Convert 0-based to 1-based
-        }
-
-        // Direct nosepiece change (original behavior)
-        // Set target position BEFORE sending command so notifications can check against it
         // Convert from 0-based to 1-based for the microscope
         long targetPos = pos + 1;
+
+        // Set target position BEFORE sending command so notifications can check against it
         hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, targetPos);
 
         // Check if already at target position
@@ -622,7 +670,8 @@ int EvidentNosepiece::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
 
-        std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPos));
+        // Use OBSEQ command - SDK handles focus escape and parfocality automatically
+        std::string cmd = BuildCommand(CMD_NOSEPIECE_SEQ, static_cast<int>(targetPos));
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
@@ -632,7 +681,7 @@ int EvidentNosepiece::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ret;
         }
 
-        if (!IsPositiveAck(response, CMD_NOSEPIECE))
+        if (!IsPositiveAck(response, CMD_NOSEPIECE_SEQ))
         {
             // Command rejected - clear busy state
             hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
@@ -659,21 +708,6 @@ int EvidentNosepiece::EnableNotifications(bool enable)
         return DEVICE_ERR;
 
     return hub->EnableNotification(CMD_NOSEPIECE_NOTIFY, enable);
-}
-
-int EvidentNosepiece::OnSafeChange(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        pProp->Set(safeNosepieceChange_ ? "Enabled" : "Disabled");
-    }
-    else if (eAct == MM::AfterSet)
-    {
-        std::string value;
-        pProp->Get(value);
-        safeNosepieceChange_ = (value == "Enabled");
-    }
-    return DEVICE_OK;
 }
 
 int EvidentNosepiece::OnObjectiveNA(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -935,206 +969,231 @@ int EvidentNosepiece::OnSetNearLimit(MM::PropertyBase* pProp, MM::ActionType eAc
     return DEVICE_OK;
 }
 
-int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
+int EvidentNosepiece::OnParfocalPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            long pos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            if (pos >= 1 && pos <= (long)parfocalPositions_.size())
+            {
+                // Get parfocal position for current objective (convert 1-based to 0-based)
+                long parfocalSteps = parfocalPositions_[pos - 1];
+                // Convert steps to micrometers
+                double parfocalUm = parfocalSteps * FOCUS_STEP_SIZE_UM;
+                pProp->Set(parfocalUm);
+            }
+            else
+            {
+                pProp->Set(0.0);
+            }
+        }
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnSetParfocalPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+
+        if (value == "Set")
+        {
+            EvidentHubWin* hub = GetHub();
+            if (!hub)
+                return DEVICE_ERR;
+
+            // Get current nosepiece position
+            long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            if (nosepiecePos < 1 || nosepiecePos > (long)parfocalPositions_.size())
+                return ERR_INVALID_PARAMETER;
+
+            // Check if focus device is available
+            if (!hub->IsDevicePresent(DeviceType_Focus))
+            {
+                LogMessage("Focus device not available, cannot set parfocal position");
+                pProp->Set("");  // Reset to empty
+                return ERR_DEVICE_NOT_AVAILABLE;
+            }
+
+            // Get current focus position
+            long focusPos = hub->GetModel()->GetPosition(DeviceType_Focus);
+            if (focusPos < 0)
+            {
+                LogMessage("Focus position unknown, cannot set parfocal position");
+                pProp->Set("");  // Reset to empty
+                return ERR_POSITION_UNKNOWN;
+            }
+
+            // Update parfocal position for current objective (convert 1-based to 0-based)
+            parfocalPositions_[nosepiecePos - 1] = focusPos;
+
+            // Build PF command with all 6 positions: "PF p1,p2,p3,p4,p5,p6"
+            std::ostringstream cmd;
+            cmd << CMD_PARFOCAL << TAG_DELIMITER;
+            for (size_t i = 0; i < parfocalPositions_.size(); i++)
+            {
+                if (i > 0)
+                    cmd << DATA_DELIMITER;
+                cmd << parfocalPositions_[i];
+            }
+
+            // Execute command
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd.str(), response);
+            if (ret != DEVICE_OK)
+            {
+                pProp->Set("");  // Reset to empty
+                return ret;
+            }
+
+            if (!IsPositiveAck(response, CMD_PARFOCAL))
+            {
+                pProp->Set("");  // Reset to empty
+                return ERR_NEGATIVE_ACK;
+            }
+
+            // Log success
+            std::ostringstream logMsg;
+            logMsg << "Set parfocal position for objective " << nosepiecePos
+                   << " to " << (focusPos * FOCUS_STEP_SIZE_UM) << " um";
+            LogMessage(logMsg.str().c_str());
+
+            // Reset property to empty
+            pProp->Set("");
+        }
+        else if (value == "Clear")
+        {
+            EvidentHubWin* hub = GetHub();
+            if (!hub)
+                return DEVICE_ERR;
+
+            // Get current nosepiece position
+            long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            if (nosepiecePos < 1 || nosepiecePos > (long)parfocalPositions_.size())
+                return ERR_INVALID_PARAMETER;
+
+            // Set parfocal position to zero (no offset)
+            parfocalPositions_[nosepiecePos - 1] = 0;
+
+            // Build PF command with all 6 positions: "PF p1,p2,p3,p4,p5,p6"
+            std::ostringstream cmd;
+            cmd << CMD_PARFOCAL << TAG_DELIMITER;
+            for (size_t i = 0; i < parfocalPositions_.size(); i++)
+            {
+                if (i > 0)
+                    cmd << DATA_DELIMITER;
+                cmd << parfocalPositions_[i];
+            }
+
+            // Execute command
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd.str(), response);
+            if (ret != DEVICE_OK)
+            {
+                pProp->Set("");  // Reset to empty
+                return ret;
+            }
+
+            if (!IsPositiveAck(response, CMD_PARFOCAL))
+            {
+                pProp->Set("");  // Reset to empty
+                return ERR_NEGATIVE_ACK;
+            }
+
+            // Log success
+            std::ostringstream logMsg;
+            logMsg << "Cleared parfocal position for objective " << nosepiecePos;
+            LogMessage(logMsg.str().c_str());
+
+            // Reset property to empty
+            pProp->Set("");
+        }
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnParfocalEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     EvidentHubWin* hub = GetHub();
     if (!hub)
         return DEVICE_ERR;
 
-    // Check if Focus device is available
-    if (!hub->IsDevicePresent(DeviceType_Focus))
+    if (eAct == MM::BeforeGet)
     {
-        // No focus device - just do a regular nosepiece change
-        LogMessage("Focus device not available, skipping safe nosepiece change");
-        hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, targetPosition);
+        pProp->Set(parfocalEnabled_ ? "Enabled" : "Disabled");
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+        int enabled = (value == "Enabled") ? 1 : 0;
 
-        // Check if already at target position
-        long currentPos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
-        if (currentPos == targetPosition)
-        {
-            // Already at target, no need to move
-            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
-            return DEVICE_OK;
-        }
-
-        hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
-
-        std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPosition));
+        std::string cmd = BuildCommand(CMD_ENABLE_PARFOCAL, enabled);
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
-        {
-            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
             return ret;
-        }
-        if (!IsPositiveAck(response, CMD_NOSEPIECE))
-        {
-            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
+
+        if (!IsPositiveAck(response, CMD_ENABLE_PARFOCAL))
             return ERR_NEGATIVE_ACK;
+
+        // Update internal state
+        parfocalEnabled_ = (enabled == 1);
+
+        // Log success
+        LogMessage(parfocalEnabled_ ? "Parfocal enabled" : "Parfocal disabled");
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnEscapeDistance(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (eAct == MM::BeforeGet)
+    {
+        // Convert escapeDistance_ (0-9) to display string "X.0 mm"
+        std::ostringstream ss;
+        ss << escapeDistance_ << ".0 mm";
+        pProp->Set(ss.str().c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+
+        // Parse "X.0 mm" to extract the integer (0-9)
+        int newDistance = 0;
+        if (value.length() >= 1 && value[0] >= '0' && value[0] <= '9')
+        {
+            newDistance = value[0] - '0';
         }
-        return DEVICE_OK;
-    }
 
-    // Get current focus position
-    long originalFocusPos = hub->GetModel()->GetPosition(DeviceType_Focus);
-    if (originalFocusPos < 0)
-    {
-        LogMessage("Focus position unknown, cannot perform safe nosepiece change");
-        return ERR_POSITION_UNKNOWN;
-    }
-
-    // Timeout settings for wait loops
-    const int maxWaitIterations = 100;  // 10 seconds max
-
-    LogMessage("Safe nosepiece change: Moving focus to zero");
-
-    // Check if focus is already at zero
-    bool alreadyAtZero = IsAtTargetPosition(originalFocusPos, 0, FOCUS_POSITION_TOLERANCE);
-
-    if (!alreadyAtZero)
-    {
-        // Move focus to zero
-        hub->GetModel()->SetTargetPosition(DeviceType_Focus, 0);
-        hub->GetModel()->SetBusy(DeviceType_Focus, true);
-
-        std::string cmd = BuildCommand(CMD_FOCUS_GOTO, 0);
+        // Send ESC2 command with new value
+        std::string cmd = BuildCommand(CMD_FOCUS_ESCAPE, newDistance);
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
-        {
-            hub->GetModel()->SetBusy(DeviceType_Focus, false);
             return ret;
-        }
-        if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
-        {
-            hub->GetModel()->SetBusy(DeviceType_Focus, false);
+
+        if (!IsPositiveAck(response, CMD_FOCUS_ESCAPE))
             return ERR_NEGATIVE_ACK;
-        }
 
-        // Wait for focus to reach zero (with timeout)
-        int focusWaitCount = 0;
-        while (hub->GetModel()->IsBusy(DeviceType_Focus) && focusWaitCount < maxWaitIterations)
-        {
-            CDeviceUtils::SleepMs(100);
-            focusWaitCount++;
-        }
+        // Update internal state
+        escapeDistance_ = newDistance;
 
-        if (focusWaitCount >= maxWaitIterations)
-        {
-            LogMessage("Timeout waiting for focus to reach zero");
-            return ERR_COMMAND_TIMEOUT;
-        }
+        // Log success
+        std::ostringstream logMsg;
+        logMsg << "Focus escape distance set to " << newDistance << ".0 mm";
+        LogMessage(logMsg.str().c_str());
     }
-    else
-    {
-        LogMessage("Focus already at zero, skipping focus move");
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-    }
-
-    LogMessage("Safe nosepiece change: Changing nosepiece position");
-
-    // Change nosepiece position
-    hub->GetModel()->SetTargetPosition(DeviceType_Nosepiece, targetPosition);
-
-    std::ostringstream msg;
-    msg << "Set nosepiece target position to: " << targetPosition;
-    LogMessage(msg.str().c_str());
-
-    // Check if already at target position
-    long currentNosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
-    bool alreadyAtTargetNosepiece = (currentNosepiecePos == targetPosition);
-
-    std::ostringstream msg2;
-    msg2 << "Current nosepiece position: " << currentNosepiecePos << ", target: " << targetPosition << ", alreadyAtTarget: " << alreadyAtTargetNosepiece;
-    LogMessage(msg2.str().c_str());
-
-    if (!alreadyAtTargetNosepiece)
-    {
-        hub->GetModel()->SetBusy(DeviceType_Nosepiece, true);
-
-        std::string cmd = BuildCommand(CMD_NOSEPIECE, static_cast<int>(targetPosition));
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-        {
-            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
-            // Try to restore focus position even if nosepiece change failed
-            hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
-            hub->GetModel()->SetBusy(DeviceType_Focus, true);
-            std::string focusCmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
-            std::string focusResponse;
-            hub->ExecuteCommand(focusCmd, focusResponse);
-            return ret;
-        }
-
-        if (!IsPositiveAck(response, CMD_NOSEPIECE))
-        {
-            hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
-            // Try to restore focus position even if nosepiece change failed
-            hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
-            hub->GetModel()->SetBusy(DeviceType_Focus, true);
-            std::string focusCmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
-            std::string focusResponse;
-            hub->ExecuteCommand(focusCmd, focusResponse);
-            return ERR_NEGATIVE_ACK;
-        }
-    }
-    else
-    {
-        // Already at target, no need to move
-        hub->GetModel()->SetBusy(DeviceType_Nosepiece, false);
-    }
-
-    // Wait for nosepiece to complete (with timeout)
-    int nosepieceWaitCount = 0;
-    while (hub->GetModel()->IsBusy(DeviceType_Nosepiece) && nosepieceWaitCount < maxWaitIterations)
-    {
-        CDeviceUtils::SleepMs(100);
-        nosepieceWaitCount++;
-    }
-
-    if (nosepieceWaitCount >= maxWaitIterations)
-    {
-        LogMessage("Timeout waiting for nosepiece to complete");
-        return ERR_COMMAND_TIMEOUT;
-    }
-
-    LogMessage("Safe nosepiece change: Restoring focus position");
-
-    // Check if we're already at the target position (originalFocusPos)
-    long currentFocusPos = hub->GetModel()->GetPosition(DeviceType_Focus);
-    bool alreadyAtTarget = IsAtTargetPosition(currentFocusPos, originalFocusPos, FOCUS_POSITION_TOLERANCE);
-
-    if (!alreadyAtTarget)
-    {
-        // Restore original focus position
-        hub->GetModel()->SetTargetPosition(DeviceType_Focus, originalFocusPos);
-        hub->GetModel()->SetBusy(DeviceType_Focus, true);
-
-        std::string cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalFocusPos));
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-        {
-            hub->GetModel()->SetBusy(DeviceType_Focus, false);
-            return ret;
-        }
-
-        if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
-        {
-            hub->GetModel()->SetBusy(DeviceType_Focus, false);
-            return ERR_NEGATIVE_ACK;
-        }
-
-        // Busy will be cleared by notification when target reached
-    }
-    else
-    {
-        LogMessage("Focus already at target position, skipping focus restore");
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-    }
-
-    LogMessage("Safe nosepiece change completed successfully");
     return DEVICE_OK;
 }
 
@@ -1163,6 +1222,56 @@ int EvidentNosepiece::QueryNearLimits()
     else
     {
         LogMessage("Warning: NL? response has fewer than expected parameters");
+        return ERR_INVALID_RESPONSE;
+    }
+
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::QueryParfocalSettings()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Query parfocal positions from microscope
+    std::string cmd = BuildQuery(CMD_PARFOCAL);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Parse response: "PF p1,p2,p3,p4,p5,p6"
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() >= NOSEPIECE_MAX_POS)
+    {
+        for (size_t i = 0; i < NOSEPIECE_MAX_POS; i++)
+        {
+            parfocalPositions_[i] = ParseLongParameter(params[i]);
+        }
+    }
+    else
+    {
+        LogMessage("Warning: PF? response has fewer than expected parameters");
+        return ERR_INVALID_RESPONSE;
+    }
+
+    // Query parfocal enabled state
+    cmd = BuildQuery(CMD_ENABLE_PARFOCAL);
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Parse response: "ENPF 0" or "ENPF 1"
+    params = ParseParameters(response);
+    if (params.size() > 0)
+    {
+        int enabled = ParseIntParameter(params[0]);
+        parfocalEnabled_ = (enabled == 1);
+    }
+    else
+    {
+        LogMessage("Warning: ENPF? response has no parameters");
         return ERR_INVALID_RESPONSE;
     }
 

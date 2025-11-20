@@ -61,6 +61,9 @@ const char* const CMD_FOCUS_NOTIFY = "NFP";
 const char* const CMD_FOCUS_SPEED = "FSPD";
 const char* const CMD_FOCUS_NEAR_LIMIT = "NL";
 const char* const CMD_FOCUS_FAR_LIMIT = "FL";
+const char* const CMD_PARFOCAL = "PF";
+const char* const CMD_ENABLE_PARFOCAL = "ENPF";
+const char* const CMD_FOCUS_ESCAPE = "ESC2";
 
 // Command tags - Nosepiece (Objective Turret)
 const char* const CMD_NOSEPIECE = "OB";

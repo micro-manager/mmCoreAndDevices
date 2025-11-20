@@ -88,25 +88,30 @@ public:
 
     // Action interface
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnSafeChange(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnObjectiveNA(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnObjectiveMagnification(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnObjectiveMedium(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnObjectiveWD(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSetNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnParfocalPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSetParfocalPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnParfocalEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnEscapeDistance(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     EvidentHubWin* GetHub();
     int EnableNotifications(bool enable);
-    int SafeNosepieceChange(long targetPosition);
     int QueryNearLimits();  // Query and store near limits from microscope
+    int QueryParfocalSettings();  // Query parfocal positions and enabled state
 
     bool initialized_;
     std::string name_;
     unsigned int numPos_;
-    bool safeNosepieceChange_;  // When true, lower focus before changing nosepiece
     std::vector<long> nearLimits_;  // Focus near limits for each objective (in steps)
+    std::vector<long> parfocalPositions_;  // Parfocal positions for each objective (in steps)
+    bool parfocalEnabled_;  // Whether parfocal is enabled
+    int escapeDistance_;  // Focus escape distance (0-9 mm)
 };
 
 //////////////////////////////////////////////////////////////////////////////

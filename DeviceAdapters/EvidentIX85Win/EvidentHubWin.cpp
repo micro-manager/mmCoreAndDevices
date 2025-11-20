@@ -1964,6 +1964,43 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
             }
         }
     }
+    else if (tag == CMD_OFFSET_LENS_NOTIFY && params.size() > 0)
+    {
+        // Handle offset lens position change notification
+        long pos = ParseLongParameter(params[0]);
+        if (pos >= OFFSET_LENS_MIN_POS && pos <= OFFSET_LENS_MAX_POS)
+        {
+            model_.SetPosition(DeviceType_OffsetLens, pos);
+
+            // Notify core callback of stage position change
+            auto it = usedDevices_.find(DeviceType_OffsetLens);
+            if (it != usedDevices_.end() && it->second != nullptr)
+            {
+                // Convert from steps to micrometers
+                double positionUm = pos * OFFSET_LENS_STEP_SIZE_UM;
+                GetCoreCallback()->OnStagePositionChanged(it->second, positionUm);
+            }
+        }
+    }
+    else if (tag == CMD_AF_STATUS && params.size() > 0)
+    {
+        // Handle AF status notification (NAFST)
+        if (params[0] != "X")
+        {
+            int status = ParseIntParameter(params[0]);
+
+            // Update AF status in the autofocus device
+            auto it = usedDevices_.find(DeviceType_Autofocus);
+            if (it != usedDevices_.end() && it->second != nullptr)
+            {
+                EvidentAutofocus* afDevice = dynamic_cast<EvidentAutofocus*>(it->second);
+                if (afDevice != nullptr)
+                {
+                    afDevice->UpdateAFStatus(status);
+                }
+            }
+        }
+    }
     else if (tag == CMD_ENCODER1 && params.size() > 0)
     {
         // Encoder 1 controls nosepiece position
