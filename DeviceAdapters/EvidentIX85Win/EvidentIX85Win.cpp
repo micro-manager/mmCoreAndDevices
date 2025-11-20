@@ -3190,7 +3190,8 @@ EvidentAutofocus::EvidentAutofocus() :
     farLimit_(0),         // Far = lower limit (farther from sample)
     lastNosepiecePos_(-1),
     lastCoverslipType_(-1),
-    zdcInitNeeded_(false)
+    zdcInitNeeded_(false),
+    trackingMode_(2)      // Default to Focus drive
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "ZDC Autofocus not available on this microscope");
@@ -3294,6 +3295,14 @@ int EvidentAutofocus::Initialize()
     AddAllowedValue("DIC Mode", "Off");
     AddAllowedValue("DIC Mode", "On");
 
+    // Create Tracking Mode property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnAFMode);
+    ret = CreateProperty("Tracking Mode", "Focus Drive", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("Tracking Mode", "Focus Drive");
+    AddAllowedValue("Tracking Mode", "Offset Lens");
+
     // Create Buzzer Success property
     pAct = new CPropertyAction(this, &EvidentAutofocus::OnBuzzerSuccess);
     ret = CreateProperty("Buzzer Success", "On", MM::String, false, pAct);
@@ -3356,8 +3365,20 @@ int EvidentAutofocus::SetContinuousFocusing(bool state)
 
     if (state)
     {
+        // Check if ZDC needs re-initialization (objective changed, or settings changed)
+        long nosepiecePos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Nosepiece);
+        if (nosepiecePos != lastNosepiecePos_ || zdcInitNeeded_)
+        {
+            int ret = InitializeZDC();
+            if (ret != DEVICE_OK)
+                return ret;
+
+            // Clear the flag after successful initialization
+            zdcInitNeeded_ = false;
+        }
+
         // Start continuous AF
-        std::string cmd = BuildCommand(CMD_AF_START_STOP, 2);  // 2 = Continuous AF
+        std::string cmd = BuildCommand(CMD_AF_START_STOP, trackingMode_);  // 2 = Focus drive, 3 = Offset lens
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
@@ -3428,8 +3449,9 @@ int EvidentAutofocus::FullFocus()
         zdcInitNeeded_ = false;
     }
 
-    // Execute One-Shot AF (AF 1)
-    std::string cmd = BuildCommand(CMD_AF_START_STOP, 1);
+    // Use continuous AF approach to avoid resetting offset lens position
+    // Start continuous AF (AF 2 or AF 3 depending on tracking mode)
+    std::string cmd = BuildCommand(CMD_AF_START_STOP, trackingMode_);
     std::string response;
     int ret = hub->ExecuteCommand(cmd, response);
     if (ret != DEVICE_OK)
@@ -3438,7 +3460,58 @@ int EvidentAutofocus::FullFocus()
     if (!IsPositiveAck(response, CMD_AF_START_STOP))
         return ERR_NEGATIVE_ACK;
 
-    return DEVICE_OK;
+    // For AF 3 mode (Offset Lens), autofocus completes quickly and auto-stops
+    // By the time we get "AF +" response, it may have already completed (AFST 1 -> AFST 0)
+    // This is success, not failure
+    if (trackingMode_ == 3 && afStatus_ == 0)
+    {
+        // AF 3 completed and auto-stopped - success
+        return DEVICE_OK;
+    }
+
+    // Wait for focus to be achieved (afStatus_ becomes 1=Focus)
+    // afStatus_ is updated by notifications (NAFST), no polling needed
+    // Timeout: max 30 seconds
+    const int maxWaitMs = 30000;
+    const int sleepIntervalMs = 100;
+    int elapsedMs = 0;
+
+    while (elapsedMs < maxWaitMs)
+    {
+        CDeviceUtils::SleepMs(sleepIntervalMs);
+        elapsedMs += sleepIntervalMs;
+
+        // Check afStatus_ which is updated by NAFST notifications
+        if (afStatus_ == 1)  // 1 = Focus achieved
+        {
+            if (trackingMode_ == 2)
+            {
+                // AF 2 (Focus drive): manually stop after achieving focus
+                ret = StopAF();
+                if (ret != DEVICE_OK)
+                    return ret;
+                return DEVICE_OK;
+            }
+            // AF 3 (Offset lens): wait for auto-stop (AFST 0)
+        }
+        else if (afStatus_ == 0)  // Stopped
+        {
+            if (trackingMode_ == 3)
+            {
+                // AF 3 auto-stopped after achieving focus - success
+                return DEVICE_OK;
+            }
+            else
+            {
+                // AF 2 stopped unexpectedly - failure
+                return ERR_NEGATIVE_ACK;
+            }
+        }
+    }
+
+    // Timeout - stop AF and return error
+    StopAF();
+    return ERR_COMMAND_TIMEOUT;
 }
 
 int EvidentAutofocus::IncrementalFocus()
@@ -3962,6 +4035,21 @@ int EvidentAutofocus::OnDICMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         if (!IsPositiveAck(response, CMD_AF_DIC))
             return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnAFMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        pProp->Set(trackingMode_ == 2 ? "Focus Drive" : "Offset Lens");
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        trackingMode_ = (val == "Focus Drive") ? 2 : 3;
     }
     return DEVICE_OK;
 }

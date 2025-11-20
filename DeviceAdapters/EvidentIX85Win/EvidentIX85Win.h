@@ -513,6 +513,9 @@ public:
     int OnBuzzerSuccess(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnBuzzerFailure(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+    // Public method for hub to update AF status from notifications
+    void UpdateAFStatus(int status) { afStatus_ = status; }
+
 private:
     EvidentHubWin* GetHub();
     int EnableNotifications(bool enable);
@@ -529,6 +532,7 @@ private:
     long lastNosepiecePos_;  // Track objective changes
     int lastCoverslipType_;   // Track coverslip type changes
     bool zdcInitNeeded_;      // Flag to defer ZDC initialization
+    int trackingMode_;        // 2=Focus drive, 3=Offset lens
 };
 
 //////////////////////////////////////////////////////////////////////////////
