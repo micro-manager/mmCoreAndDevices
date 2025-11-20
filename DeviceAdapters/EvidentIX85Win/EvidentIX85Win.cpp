@@ -409,7 +409,8 @@ EvidentNosepiece::EvidentNosepiece() :
     initialized_(false),
     name_(g_NosepieceDeviceName),
     numPos_(NOSEPIECE_MAX_POS),
-    safeNosepieceChange_(true)
+    safeNosepieceChange_(true),
+    nearLimits_(NOSEPIECE_MAX_POS, FOCUS_MAX_POS)  // Initialize with max values
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Nosepiece not available on this microscope");
@@ -508,6 +509,29 @@ int EvidentNosepiece::Initialize()
         if (ret != DEVICE_OK)
             return ret;
     }
+
+    // Query focus near limits from microscope
+    ret = QueryNearLimits();
+    if (ret != DEVICE_OK)
+    {
+        LogMessage("Warning: Failed to query near limits, using defaults");
+        // Don't fail initialization, just use default values
+    }
+
+    // Create Focus-Near-Limit-um read-only property
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnNearLimit);
+    ret = CreateProperty("Focus-Near-Limit-um", "0.0", MM::Float, true, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Create Set-Focus-Near-Limit action property
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnSetNearLimit);
+    ret = CreateProperty("Set-Focus-Near-Limit", "", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("Set-Focus-Near-Limit", "");
+    AddAllowedValue("Set-Focus-Near-Limit", "Set");
+    AddAllowedValue("Set-Focus-Near-Limit", "Clear");
 
     // Enable notifications
     ret = EnableNotifications(true);
@@ -762,6 +786,155 @@ int EvidentNosepiece::OnObjectiveWD(MM::PropertyBase* pProp, MM::ActionType eAct
     return DEVICE_OK;
 }
 
+int EvidentNosepiece::OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            long pos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            if (pos >= 1 && pos <= (long)nearLimits_.size())
+            {
+                // Get near limit for current objective position (convert 1-based to 0-based)
+                long nearLimitSteps = nearLimits_[pos - 1];
+                // Convert steps to micrometers
+                double nearLimitUm = nearLimitSteps * FOCUS_STEP_SIZE_UM;
+                pProp->Set(nearLimitUm);
+            }
+            else
+            {
+                pProp->Set(0.0);
+            }
+        }
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnSetNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::AfterSet)
+    {
+        std::string value;
+        pProp->Get(value);
+
+        if (value == "Set")
+        {
+            EvidentHubWin* hub = GetHub();
+            if (!hub)
+                return DEVICE_ERR;
+
+            // Get current nosepiece position
+            long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            if (nosepiecePos < 1 || nosepiecePos > (long)nearLimits_.size())
+                return ERR_INVALID_PARAMETER;
+
+            // Check if focus device is available
+            if (!hub->IsDevicePresent(DeviceType_Focus))
+            {
+                LogMessage("Focus device not available, cannot set near limit");
+                pProp->Set("");  // Reset to empty
+                return ERR_DEVICE_NOT_AVAILABLE;
+            }
+
+            // Get current focus position
+            long focusPos = hub->GetModel()->GetPosition(DeviceType_Focus);
+            if (focusPos < 0)
+            {
+                LogMessage("Focus position unknown, cannot set near limit");
+                pProp->Set("");  // Reset to empty
+                return ERR_POSITION_UNKNOWN;
+            }
+
+            // Update near limit for current objective (convert 1-based to 0-based)
+            nearLimits_[nosepiecePos - 1] = focusPos;
+
+            // Build NL command with all 6 positions: "NL p1,p2,p3,p4,p5,p6"
+            std::ostringstream cmd;
+            cmd << CMD_FOCUS_NEAR_LIMIT << TAG_DELIMITER;
+            for (size_t i = 0; i < nearLimits_.size(); i++)
+            {
+                if (i > 0)
+                    cmd << DATA_DELIMITER;
+                cmd << nearLimits_[i];
+            }
+
+            // Execute command
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd.str(), response);
+            if (ret != DEVICE_OK)
+            {
+                pProp->Set("");  // Reset to empty
+                return ret;
+            }
+
+            if (!IsPositiveAck(response, CMD_FOCUS_NEAR_LIMIT))
+            {
+                pProp->Set("");  // Reset to empty
+                return ERR_NEGATIVE_ACK;
+            }
+
+            // Log success
+            std::ostringstream logMsg;
+            logMsg << "Set near limit for objective " << nosepiecePos
+                   << " to " << (focusPos * FOCUS_STEP_SIZE_UM) << " um";
+            LogMessage(logMsg.str().c_str());
+
+            // Reset property to empty
+            pProp->Set("");
+        }
+        else if (value == "Clear")
+        {
+            EvidentHubWin* hub = GetHub();
+            if (!hub)
+                return DEVICE_ERR;
+
+            // Get current nosepiece position
+            long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+            if (nosepiecePos < 1 || nosepiecePos > (long)nearLimits_.size())
+                return ERR_INVALID_PARAMETER;
+
+            // Set near limit to maximum (effectively removing the limit)
+            nearLimits_[nosepiecePos - 1] = FOCUS_MAX_POS;
+
+            // Build NL command with all 6 positions: "NL p1,p2,p3,p4,p5,p6"
+            std::ostringstream cmd;
+            cmd << CMD_FOCUS_NEAR_LIMIT << TAG_DELIMITER;
+            for (size_t i = 0; i < nearLimits_.size(); i++)
+            {
+                if (i > 0)
+                    cmd << DATA_DELIMITER;
+                cmd << nearLimits_[i];
+            }
+
+            // Execute command
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd.str(), response);
+            if (ret != DEVICE_OK)
+            {
+                pProp->Set("");  // Reset to empty
+                return ret;
+            }
+
+            if (!IsPositiveAck(response, CMD_FOCUS_NEAR_LIMIT))
+            {
+                pProp->Set("");  // Reset to empty
+                return ERR_NEGATIVE_ACK;
+            }
+
+            // Log success
+            std::ostringstream logMsg;
+            logMsg << "Cleared near limit for objective " << nosepiecePos
+                   << " (set to maximum: " << (FOCUS_MAX_POS * FOCUS_STEP_SIZE_UM) << " um)";
+            LogMessage(logMsg.str().c_str());
+
+            // Reset property to empty
+            pProp->Set("");
+        }
+    }
+    return DEVICE_OK;
+}
+
 int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
 {
     EvidentHubWin* hub = GetHub();
@@ -962,6 +1135,37 @@ int EvidentNosepiece::SafeNosepieceChange(long targetPosition)
     }
 
     LogMessage("Safe nosepiece change completed successfully");
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::QueryNearLimits()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Query near limits from microscope
+    std::string cmd = BuildQuery(CMD_FOCUS_NEAR_LIMIT);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Parse response: "NL p1,p2,p3,p4,p5,p6"
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() >= NOSEPIECE_MAX_POS)
+    {
+        for (size_t i = 0; i < NOSEPIECE_MAX_POS; i++)
+        {
+            nearLimits_[i] = ParseLongParameter(params[i]);
+        }
+    }
+    else
+    {
+        LogMessage("Warning: NL? response has fewer than expected parameters");
+        return ERR_INVALID_RESPONSE;
+    }
+
     return DEVICE_OK;
 }
 

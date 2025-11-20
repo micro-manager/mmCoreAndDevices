@@ -93,16 +93,20 @@ public:
     int OnObjectiveMagnification(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnObjectiveMedium(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnObjectiveWD(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSetNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     EvidentHubWin* GetHub();
     int EnableNotifications(bool enable);
     int SafeNosepieceChange(long targetPosition);
+    int QueryNearLimits();  // Query and store near limits from microscope
 
     bool initialized_;
     std::string name_;
     unsigned int numPos_;
     bool safeNosepieceChange_;  // When true, lower focus before changing nosepiece
+    std::vector<long> nearLimits_;  // Focus near limits for each objective (in steps)
 };
 
 //////////////////////////////////////////////////////////////////////////////
