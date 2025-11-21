@@ -21,6 +21,7 @@
 // AUTHOR:        Nico Stuurman, 2025
 
 #include "EvidentIX85Win.h"
+#include "EvidentObjectiveSetup.h"
 #include "ModuleInterface.h"
 #include <sstream>
 #include <iomanip>
@@ -47,6 +48,7 @@ const char* g_EPINDDeviceName = "IX85-EPIND";
 const char* g_CorrectionCollarDeviceName = "IX85-CorrectionCollar";
 const char* g_AutofocusDeviceName = "IX85-Autofocus";
 const char* g_OffsetLensDeviceName = "IX85-OffsetLens";
+const char* g_ObjectiveSetupDeviceName = "IX85-ObjectiveSetup";
 
 // Property Names
 const char* g_Keyword_Magnification = "Magnification";
@@ -74,6 +76,7 @@ MODULE_API void InitializeModuleData()
     RegisterDevice(g_CorrectionCollarDeviceName, MM::StageDevice, "Evident IX85 Correction Collar");
     RegisterDevice(g_AutofocusDeviceName, MM::AutoFocusDevice, "Evident IX85 ZDC Autofocus");
     RegisterDevice(g_OffsetLensDeviceName, MM::StageDevice, "Evident IX85 Offset Lens");
+    RegisterDevice(g_ObjectiveSetupDeviceName, MM::GenericDevice, "Evident IX85 Objective Setup");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -115,6 +118,8 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
         return new EvidentAutofocus();
     else if (strcmp(deviceName, g_OffsetLensDeviceName) == 0)
         return new EvidentOffsetLens();
+    else if (strcmp(deviceName, g_ObjectiveSetupDeviceName) == 0)
+        return new EvidentObjectiveSetup();
 
     return nullptr;
 }

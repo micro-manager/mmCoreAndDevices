@@ -24,6 +24,9 @@
     <ClCompile Include="EvidentModelWin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="EvidentObjectiveSetup.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvidentHubWin.h">
@@ -39,6 +42,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EvidentSDK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="mdk_if.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EvidentLensDatabase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EvidentObjectiveSetup.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

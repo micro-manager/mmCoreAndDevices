@@ -48,6 +48,7 @@ extern const char* g_EPINDDeviceName;
 extern const char* g_CorrectionCollarDeviceName;
 extern const char* g_AutofocusDeviceName;
 extern const char* g_OffsetLensDeviceName;
+extern const char* g_ObjectiveSetupDeviceName;
 
 // Property names
 const char* g_PropPort = "SerialPort";
@@ -1076,6 +1077,10 @@ int EvidentHubWin::DoDeviceDetection()
 
     // TODO: U-AW - EPI? (needs clarification)
     // TODO: FRM - unknown devices
+
+    // Objective Setup - Always available (utility device for configuration)
+    LogMessage("Adding ObjectiveSetup utility device");
+    detectedDevicesByName_.push_back(g_ObjectiveSetupDeviceName);
 
     std::ostringstream msg;
     msg << "Discovered " << availableDevices_.size() << " devices";

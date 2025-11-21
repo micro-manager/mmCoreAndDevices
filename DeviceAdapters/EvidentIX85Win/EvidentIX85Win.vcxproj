@@ -103,11 +103,14 @@
     <ClCompile Include="EvidentHubWin.cpp" />
     <ClCompile Include="EvidentIX85Win.cpp" />
     <ClCompile Include="EvidentModelWin.cpp" />
+    <ClCompile Include="EvidentObjectiveSetup.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvidentHubWin.h" />
     <ClInclude Include="EvidentIX85Win.h" />
+    <ClInclude Include="EvidentLensDatabase.h" />
     <ClInclude Include="EvidentModelWin.h" />
+    <ClInclude Include="EvidentObjectiveSetup.h" />
     <ClInclude Include="EvidentProtocolWin.h" />
     <ClInclude Include="EvidentSDK.h" />
     <ClInclude Include="mdk_if.h" />

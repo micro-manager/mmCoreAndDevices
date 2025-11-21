@@ -144,6 +144,7 @@ const char* const CMD_AF_DIC = "AFDIC";
 const char* const CMD_COVERSLIP_TYPE = "CST";
 const char* const CMD_COVERSLIP_THICKNESS = "CS2";
 const char* const CMD_AF_SET_OBJECTIVE = "S_OB";
+const char* const CMD_AF_SET_OBJECTIVE_FULL = "S_SOB";  // Set objective with full specs (NA, mag, medium)
 
 // Command tags - Offset Lens (part of ZDC)
 const char* const CMD_OFFSET_LENS_GOTO = "ABG";
