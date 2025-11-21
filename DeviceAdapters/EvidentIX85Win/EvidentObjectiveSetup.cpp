@@ -157,7 +157,6 @@ int EvidentObjectiveSetup::Initialize()
       std::ostringstream propName;
       CPropertyAction* pActName = 0;
       CPropertyAction* pActSpecs = 0;
-      CPropertyAction* pActFinal = 0;
 
       // Detected name (read-only with action handler)
       propName.str("");
@@ -214,22 +213,6 @@ int EvidentObjectiveSetup::Initialize()
 
       // Populate database dropdown with all lenses
       ret = UpdateDatabaseDropdown(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-
-      // Final specs that will be sent (read-only with action handler)
-      propName.str("");
-      propName << "Position-" << pos << "-Final-Specs";
-      switch (pos)
-      {
-         case 1: pActFinal = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos1FinalSpecs); break;
-         case 2: pActFinal = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos2FinalSpecs); break;
-         case 3: pActFinal = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos3FinalSpecs); break;
-         case 4: pActFinal = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos4FinalSpecs); break;
-         case 5: pActFinal = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos5FinalSpecs); break;
-         case 6: pActFinal = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos6FinalSpecs); break;
-      }
-      ret = CreateProperty(propName.str().c_str(), detectedSpecs.c_str(), MM::String, true, pActFinal);
       if (ret != DEVICE_OK)
          return ret;
 
@@ -427,9 +410,6 @@ int EvidentObjectiveSetup::SendObjectiveToSDK(int position, double na, double ma
          detectedObjectives_[idx].magnification,
          detectedObjectives_[idx].medium);
       SetProperty(propName.str().c_str(), detectedSpecs.c_str());
-
-      // Update final specs display
-      UpdateFinalSpecsDisplay(position);
    }
    else
    {
@@ -483,17 +463,6 @@ void EvidentObjectiveSetup::GetEffectiveObjectiveSpecs(int position, double& na,
    na = detectedObjectives_[idx].na;
    mag = detectedObjectives_[idx].magnification;
    medium = detectedObjectives_[idx].medium;
-}
-
-int EvidentObjectiveSetup::UpdateFinalSpecsDisplay(int position)
-{
-   double na, mag;
-   int medium;
-   GetEffectiveObjectiveSpecs(position, na, mag, medium);
-
-   std::ostringstream propName;
-   propName << "Position-" << position << "-Final-Specs";
-   return SetProperty(propName.str().c_str(), FormatSpecsString(na, mag, medium).c_str());
 }
 
 int EvidentObjectiveSetup::UpdateDatabaseDropdown(int position)
@@ -644,19 +613,6 @@ int EvidentObjectiveSetup::OnPos1DetectedSpecs(MM::PropertyBase* pProp, MM::Acti
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos1FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(1, na, mag, medium);
-      std::string specs = FormatSpecsString(na, mag, medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
 int EvidentObjectiveSetup::OnPos1DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -668,7 +624,6 @@ int EvidentObjectiveSetup::OnPos1DatabaseSelection(MM::PropertyBase* pProp, MM::
       std::string value;
       pProp->Get(value);
       selectedLensModel_[0] = value;
-      UpdateFinalSpecsDisplay(1);
    }
    return DEVICE_OK;
 }
@@ -696,19 +651,6 @@ int EvidentObjectiveSetup::OnPos2DetectedSpecs(MM::PropertyBase* pProp, MM::Acti
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos2FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(2, na, mag, medium);
-      std::string specs = FormatSpecsString(na, mag, medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
 int EvidentObjectiveSetup::OnPos2DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -720,7 +662,6 @@ int EvidentObjectiveSetup::OnPos2DatabaseSelection(MM::PropertyBase* pProp, MM::
       std::string value;
       pProp->Get(value);
       selectedLensModel_[1] = value;
-      UpdateFinalSpecsDisplay(2);
    }
    return DEVICE_OK;
 }
@@ -748,19 +689,6 @@ int EvidentObjectiveSetup::OnPos3DetectedSpecs(MM::PropertyBase* pProp, MM::Acti
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos3FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(3, na, mag, medium);
-      std::string specs = FormatSpecsString(na, mag, medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
 int EvidentObjectiveSetup::OnPos3DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -772,7 +700,6 @@ int EvidentObjectiveSetup::OnPos3DatabaseSelection(MM::PropertyBase* pProp, MM::
       std::string value;
       pProp->Get(value);
       selectedLensModel_[2] = value;
-      UpdateFinalSpecsDisplay(3);
    }
    return DEVICE_OK;
 }
@@ -800,19 +727,6 @@ int EvidentObjectiveSetup::OnPos4DetectedSpecs(MM::PropertyBase* pProp, MM::Acti
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos4FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(4, na, mag, medium);
-      std::string specs = FormatSpecsString(na, mag, medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
 int EvidentObjectiveSetup::OnPos4DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -824,7 +738,6 @@ int EvidentObjectiveSetup::OnPos4DatabaseSelection(MM::PropertyBase* pProp, MM::
       std::string value;
       pProp->Get(value);
       selectedLensModel_[3] = value;
-      UpdateFinalSpecsDisplay(4);
    }
    return DEVICE_OK;
 }
@@ -852,19 +765,6 @@ int EvidentObjectiveSetup::OnPos5DetectedSpecs(MM::PropertyBase* pProp, MM::Acti
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos5FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(5, na, mag, medium);
-      std::string specs = FormatSpecsString(na, mag, medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
 int EvidentObjectiveSetup::OnPos5DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -876,7 +776,6 @@ int EvidentObjectiveSetup::OnPos5DatabaseSelection(MM::PropertyBase* pProp, MM::
       std::string value;
       pProp->Get(value);
       selectedLensModel_[4] = value;
-      UpdateFinalSpecsDisplay(5);
    }
    return DEVICE_OK;
 }
@@ -904,19 +803,6 @@ int EvidentObjectiveSetup::OnPos6DetectedSpecs(MM::PropertyBase* pProp, MM::Acti
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos6FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(6, na, mag, medium);
-      std::string specs = FormatSpecsString(na, mag, medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
 int EvidentObjectiveSetup::OnPos6DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -928,7 +814,6 @@ int EvidentObjectiveSetup::OnPos6DatabaseSelection(MM::PropertyBase* pProp, MM::
       std::string value;
       pProp->Get(value);
       selectedLensModel_[5] = value;
-      UpdateFinalSpecsDisplay(6);
    }
    return DEVICE_OK;
 }

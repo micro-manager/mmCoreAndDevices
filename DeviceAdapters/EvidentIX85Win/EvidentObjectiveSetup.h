@@ -48,42 +48,36 @@ public:
    // Action interface - Position 1
    int OnPos1DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos1DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos1FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos1DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos1SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Action interface - Position 2
    int OnPos2DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos2DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos2FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos2DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos2SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Action interface - Position 3
    int OnPos3DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos3DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos3FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos3DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos3SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Action interface - Position 4
    int OnPos4DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos4DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos4FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos4DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos4SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Action interface - Position 5
    int OnPos5DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos5DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos5FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos5DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos5SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Action interface - Position 6
    int OnPos6DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos6DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos6FinalSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos6DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPos6SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
 
@@ -100,7 +94,6 @@ private:
    int ConvertImmersionToMediumCode(EvidentLens::ImmersionType immersion);
    std::string FormatLensForDropdown(const EvidentLens::LensInfo* lens);
    void GetEffectiveObjectiveSpecs(int position, double& na, double& mag, int& medium);
-   int UpdateFinalSpecsDisplay(int position);
    int UpdateDatabaseDropdown(int position);
    std::string FormatSpecsString(double na, double mag, int medium);
 
