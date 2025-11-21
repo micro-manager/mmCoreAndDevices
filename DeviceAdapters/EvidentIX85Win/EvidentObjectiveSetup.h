@@ -45,41 +45,17 @@ public:
    void GetName(char* pszName) const;
    bool Busy();
 
-   // Action interface - Position 1
-   int OnPos1DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos1DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos1DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos1SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
+   // Action interface - Parameterized handlers
+   int OnPosDetectedName(MM::PropertyBase* pProp, MM::ActionType eAct, long position);
+   int OnPosDetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct, long position);
+   int OnPosDatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct, long position);
+   int OnPosSendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct, long position);
 
-   // Action interface - Position 2
-   int OnPos2DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos2DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos2DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos2SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-   // Action interface - Position 3
-   int OnPos3DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos3DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos3DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos3SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-   // Action interface - Position 4
-   int OnPos4DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos4DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos4DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos4SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-   // Action interface - Position 5
-   int OnPos5DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos5DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos5DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos5SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-   // Action interface - Position 6
-   int OnPos6DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos6DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos6DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnPos6SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct);
+   // Action interface - Special objective handlers (parameterized)
+   int OnPosSpecialNA(MM::PropertyBase* pProp, MM::ActionType eAct, long position);
+   int OnPosSpecialMagnification(MM::PropertyBase* pProp, MM::ActionType eAct, long position);
+   int OnPosSpecialImmersion(MM::PropertyBase* pProp, MM::ActionType eAct, long position);
+   int OnPosSpecialSendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct, long position);
 
    // Action interface - Global controls
    int OnFilterMagnification(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -90,8 +66,10 @@ private:
 
    // Helper functions
    int QueryObjectiveAtPosition(int position);
-   int SendObjectiveToSDK(int position, double na, double mag, int medium);
+   int SendObjectiveToSDK(int position);
+   int SendSpecialObjectiveToSDK(int position);
    int ConvertImmersionToMediumCode(EvidentLens::ImmersionType immersion);
+   int ConvertImmersionStringToMediumCode(const std::string& immersion);
    std::string FormatLensForDropdown(const EvidentLens::LensInfo* lens);
    void GetEffectiveObjectiveSpecs(int position, double& na, double& mag, int& medium);
    int UpdateDatabaseDropdown(int position);
@@ -114,6 +92,11 @@ private:
 
    // User override selections (6 positions)
    std::string selectedLensModel_[6];  // Model name from database, or "NONE" to clear position
+
+   // Special/custom objective specifications (6 positions)
+   double specialNA_[6];                // NA value (0.04-2.00)
+   double specialMagnification_[6];     // Magnification (0.01-150)
+   std::string specialImmersion_[6];    // Immersion type string
 
    // Filter settings for database dropdown
    std::string filterMagnification_;  // "All" or specific mag value

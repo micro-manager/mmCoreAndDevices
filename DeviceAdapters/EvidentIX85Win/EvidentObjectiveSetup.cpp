@@ -46,6 +46,11 @@ EvidentObjectiveSetup::EvidentObjectiveSetup() :
       detectedObjectives_[i].magnification = 0.0;
       detectedObjectives_[i].medium = 1;  // Default to Dry
       detectedObjectives_[i].detected = false;
+
+      // Initialize special objective specs
+      specialNA_[i] = 0.16;           // Default NA
+      specialMagnification_[i] = 10.0; // Default magnification
+      specialImmersion_[i] = "Dry";    // Default immersion
    }
 
    InitializeDefaultErrorMessages();
@@ -155,59 +160,32 @@ int EvidentObjectiveSetup::Initialize()
    for (int pos = 1; pos <= 6; pos++)
    {
       std::ostringstream propName;
-      CPropertyAction* pActName = 0;
-      CPropertyAction* pActSpecs = 0;
 
       // Detected name (read-only with action handler)
       propName.str("");
       propName << "Position-" << pos << "-Detected-Name";
-      switch (pos)
-      {
-         case 1: pActName = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos1DetectedName); break;
-         case 2: pActName = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos2DetectedName); break;
-         case 3: pActName = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos3DetectedName); break;
-         case 4: pActName = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos4DetectedName); break;
-         case 5: pActName = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos5DetectedName); break;
-         case 6: pActName = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos6DetectedName); break;
-      }
-      ret = CreateProperty(propName.str().c_str(), detectedObjectives_[pos-1].name.c_str(), MM::String, true, pActName);
+      CPropertyActionEx* pActNameEX = new CPropertyActionEx(this, &EvidentObjectiveSetup::OnPosDetectedName, pos);
+      ret = CreateProperty(propName.str().c_str(), detectedObjectives_[pos-1].name.c_str(), MM::String, true, pActNameEX);
       if (ret != DEVICE_OK)
          return ret;
 
       // Detected specs (read-only with action handler)
       propName.str("");
       propName << "Position-" << pos << "-Detected-Specs";
-      switch (pos)
-      {
-         case 1: pActSpecs = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos1DetectedSpecs); break;
-         case 2: pActSpecs = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos2DetectedSpecs); break;
-         case 3: pActSpecs = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos3DetectedSpecs); break;
-         case 4: pActSpecs = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos4DetectedSpecs); break;
-         case 5: pActSpecs = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos5DetectedSpecs); break;
-         case 6: pActSpecs = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos6DetectedSpecs); break;
-      }
+      CPropertyActionEx* pActSpecsEX = new CPropertyActionEx(this, &EvidentObjectiveSetup::OnPosDetectedSpecs, pos);
       std::string detectedSpecs = FormatSpecsString(
          detectedObjectives_[pos-1].na,
          detectedObjectives_[pos-1].magnification,
          detectedObjectives_[pos-1].medium);
-      ret = CreateProperty(propName.str().c_str(), detectedSpecs.c_str(), MM::String, true, pActSpecs);
+      ret = CreateProperty(propName.str().c_str(), detectedSpecs.c_str(), MM::String, true, pActSpecsEX);
       if (ret != DEVICE_OK)
          return ret;
 
       // Database selection dropdown
       propName.str("");
       propName << "Position-" << pos << "-Database-Selection";
-      CPropertyAction* pActSel = 0;
-      switch (pos)
-      {
-         case 1: pActSel = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos1DatabaseSelection); break;
-         case 2: pActSel = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos2DatabaseSelection); break;
-         case 3: pActSel = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos3DatabaseSelection); break;
-         case 4: pActSel = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos4DatabaseSelection); break;
-         case 5: pActSel = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos5DatabaseSelection); break;
-         case 6: pActSel = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos6DatabaseSelection); break;
-      }
-      ret = CreateProperty(propName.str().c_str(), "NONE", MM::String, false, pActSel);
+      CPropertyActionEx* pActSelEX = new CPropertyActionEx(this, &EvidentObjectiveSetup::OnPosDatabaseSelection, pos);
+      ret = CreateProperty(propName.str().c_str(), "NONE", MM::String, false, pActSelEX);
       if (ret != DEVICE_OK)
          return ret;
 
@@ -219,17 +197,50 @@ int EvidentObjectiveSetup::Initialize()
       // Send to SDK action button for this position
       propName.str("");
       propName << "Position-" << pos << "-Send-To-SDK";
-      CPropertyAction* pActSend = 0;
-      switch (pos)
-      {
-         case 1: pActSend = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos1SendToSDK); break;
-         case 2: pActSend = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos2SendToSDK); break;
-         case 3: pActSend = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos3SendToSDK); break;
-         case 4: pActSend = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos4SendToSDK); break;
-         case 5: pActSend = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos5SendToSDK); break;
-         case 6: pActSend = new CPropertyAction(this, &EvidentObjectiveSetup::OnPos6SendToSDK); break;
-      }
-      ret = CreateProperty(propName.str().c_str(), "Press to send", MM::String, false, pActSend);
+      CPropertyActionEx* pActSendEX = new CPropertyActionEx(this, &EvidentObjectiveSetup::OnPosSendToSDK, pos);
+      ret = CreateProperty(propName.str().c_str(), "Press to send", MM::String, false, pActSendEX);
+      if (ret != DEVICE_OK)
+         return ret;
+      AddAllowedValue(propName.str().c_str(), "Press to send");
+      AddAllowedValue(propName.str().c_str(), "Sending...");
+
+      // Special objective properties
+      // Special NA
+      propName.str("");
+      propName << "Position-" << pos << "-Special-NA";
+      CPropertyActionEx* pActNAEX = new CPropertyActionEx(this, &EvidentObjectiveSetup::OnPosSpecialNA, pos); 
+      ret = CreateProperty(propName.str().c_str(), "0.16", MM::Float, false, pActNAEX);
+      if (ret != DEVICE_OK)
+         return ret;
+      SetPropertyLimits(propName.str().c_str(), 0.04, 2.00);
+
+      // Special Magnification
+      propName.str("");
+      propName << "Position-" << pos << "-Special-Magnification";
+      CPropertyActionEx* pActMagEX = new CPropertyActionEx(this, &EvidentObjectiveSetup::OnPosSpecialMagnification, pos);
+      ret = CreateProperty(propName.str().c_str(), "10.0", MM::Float, false, pActMagEX);
+      if (ret != DEVICE_OK)
+         return ret;
+      SetPropertyLimits(propName.str().c_str(), 0.01, 150.0);
+
+      // Special Immersion
+      propName.str("");
+      propName << "Position-" << pos << "-Special-Immersion";
+      CPropertyActionEx* pActImmEX = new CPropertyActionEx(this, &EvidentObjectiveSetup::OnPosSpecialImmersion, pos);
+      ret = CreateProperty(propName.str().c_str(), "Dry", MM::String, false, pActImmEX);
+      if (ret != DEVICE_OK)
+         return ret;
+      AddAllowedValue(propName.str().c_str(), "Dry");
+      AddAllowedValue(propName.str().c_str(), "Water");
+      AddAllowedValue(propName.str().c_str(), "Oil");
+      AddAllowedValue(propName.str().c_str(), "Silicon oil");
+      AddAllowedValue(propName.str().c_str(), "Silicon gel");
+
+      // Special Send to SDK button
+      propName.str("");
+      propName << "Position-" << pos << "-Special-Send-To-SDK";
+      CPropertyActionEx* pActSpecialSendEX = new CPropertyActionEx(this, &EvidentObjectiveSetup::OnPosSpecialSendToSDK, pos);
+      ret = CreateProperty(propName.str().c_str(), "Press to send", MM::String, false, pActSpecialSendEX);
       if (ret != DEVICE_OK)
          return ret;
       AddAllowedValue(propName.str().c_str(), "Press to send");
@@ -337,7 +348,7 @@ int EvidentObjectiveSetup::QueryObjectiveAtPosition(int position)
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::SendObjectiveToSDK(int position, double na, double mag, int medium)
+int EvidentObjectiveSetup::SendObjectiveToSDK(int position)
 {
    EvidentHubWin* hub = GetHub();
    if (hub == 0)
@@ -419,6 +430,80 @@ int EvidentObjectiveSetup::SendObjectiveToSDK(int position, double na, double ma
    return DEVICE_OK;
 }
 
+int EvidentObjectiveSetup::SendSpecialObjectiveToSDK(int position)
+{
+   EvidentHubWin* hub = GetHub();
+   if (hub == 0)
+      return ERR_DEVICE_NOT_AVAILABLE;
+
+   int idx = position - 1;
+
+   // Get special objective specs for this position
+   double na = specialNA_[idx];
+   double magnification = specialMagnification_[idx];
+   int medium = ConvertImmersionStringToMediumCode(specialImmersion_[idx]);
+
+   std::ostringstream msg;
+   msg << "Sending special objective to SDK - Position " << position
+       << ": NA=" << na << ", Mag=" << magnification << ", Medium=" << medium;
+   LogMessage(msg.str().c_str());
+
+   // Enter Setting mode
+   std::string cmd = BuildCommand(CMD_OPERATION_MODE, 1);
+   std::string response;
+   int ret = hub->ExecuteCommand(cmd, response);
+   if (ret != DEVICE_OK)
+   {
+      LogMessage("Failed to enter Setting mode");
+      return ret;
+   }
+
+   // Send S_SOB command: S_SOB position,NA,magnification,medium
+   std::ostringstream sobCmd;
+   sobCmd << CMD_AF_SET_OBJECTIVE_FULL << " " << position << ","
+          << std::fixed << std::setprecision(2) << na << ","
+          << std::fixed << std::setprecision(2) << magnification << ","
+          << medium;
+
+   ret = hub->ExecuteCommand(sobCmd.str(), response);
+   if (ret != DEVICE_OK)
+   {
+      LogMessage("S_SOB command failed");
+      std::string exitCmd = BuildCommand(CMD_OPERATION_MODE, 0);
+      hub->ExecuteCommand(exitCmd, response);
+      return ret;
+   }
+
+   // Exit Setting mode
+   cmd = BuildCommand(CMD_OPERATION_MODE, 0);
+   std::string exitResponse;
+   hub->ExecuteCommand(cmd, exitResponse);
+
+   // Re-query the objective to update detected properties
+   ret = QueryObjectiveAtPosition(position);
+   if (ret == DEVICE_OK)
+   {
+      // Update detected properties
+      std::ostringstream propName;
+      propName << "Position-" << position << "-Detected-Name";
+      SetProperty(propName.str().c_str(), detectedObjectives_[idx].name.c_str());
+
+      propName.str("");
+      propName << "Position-" << position << "-Detected-Specs";
+      std::string detectedSpecs = FormatSpecsString(
+         detectedObjectives_[idx].na,
+         detectedObjectives_[idx].magnification,
+         detectedObjectives_[idx].medium);
+      SetProperty(propName.str().c_str(), detectedSpecs.c_str());
+   }
+   else
+   {
+      LogMessage("Warning: Failed to re-query objective after sending");
+   }
+
+   return DEVICE_OK;
+}
+
 int EvidentObjectiveSetup::ConvertImmersionToMediumCode(EvidentLens::ImmersionType immersion)
 {
    switch (immersion)
@@ -430,6 +515,22 @@ int EvidentObjectiveSetup::ConvertImmersionToMediumCode(EvidentLens::ImmersionTy
       case EvidentLens::Immersion_Gel:      return 5;
       default:                               return 1;  // Default to Dry
    }
+}
+
+int EvidentObjectiveSetup::ConvertImmersionStringToMediumCode(const std::string& immersion)
+{
+   if (immersion == "Dry")
+      return 1;
+   else if (immersion == "Water")
+      return 2;
+   else if (immersion == "Oil")
+      return 3;
+   else if (immersion == "Silicon oil")
+      return 4;
+   else if (immersion == "Silicon gel")
+      return 5;
+   else
+      return 1;  // Default to Dry
 }
 
 std::string EvidentObjectiveSetup::FormatLensForDropdown(const EvidentLens::LensInfo* lens)
@@ -590,236 +691,45 @@ int EvidentObjectiveSetup::OnFilterImmersion(MM::PropertyBase* pProp, MM::Action
    return DEVICE_OK;
 }
 
-// Position 1 - Detected properties
-int EvidentObjectiveSetup::OnPos1DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct)
+// Position handlers (parameterized)
+int EvidentObjectiveSetup::OnPosDetectedName(MM::PropertyBase* pProp, MM::ActionType eAct, long position)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(detectedObjectives_[0].name.c_str());
+      pProp->Set(detectedObjectives_[position - 1].name.c_str());
    }
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos1DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentObjectiveSetup::OnPosDetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct, long position)
 {
    if (eAct == MM::BeforeGet)
    {
       std::string specs = FormatSpecsString(
-         detectedObjectives_[0].na,
-         detectedObjectives_[0].magnification,
-         detectedObjectives_[0].medium);
+         detectedObjectives_[position - 1].na,
+         detectedObjectives_[position - 1].magnification,
+         detectedObjectives_[position - 1].medium);
       pProp->Set(specs.c_str());
    }
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos1DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentObjectiveSetup::OnPosDatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct, long position)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(selectedLensModel_[0].c_str());
+      pProp->Set(selectedLensModel_[position - 1].c_str());
    }
    else if (eAct == MM::AfterSet)
    {
       std::string value;
       pProp->Get(value);
-      selectedLensModel_[0] = value;
+      selectedLensModel_[position - 1] = value;
    }
    return DEVICE_OK;
 }
 
-// Position 2 - Detected properties
-int EvidentObjectiveSetup::OnPos2DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(detectedObjectives_[1].name.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos2DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      std::string specs = FormatSpecsString(
-         detectedObjectives_[1].na,
-         detectedObjectives_[1].magnification,
-         detectedObjectives_[1].medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos2DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(selectedLensModel_[1].c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string value;
-      pProp->Get(value);
-      selectedLensModel_[1] = value;
-   }
-   return DEVICE_OK;
-}
-
-// Position 3 - Detected properties
-int EvidentObjectiveSetup::OnPos3DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(detectedObjectives_[2].name.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos3DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      std::string specs = FormatSpecsString(
-         detectedObjectives_[2].na,
-         detectedObjectives_[2].magnification,
-         detectedObjectives_[2].medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos3DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(selectedLensModel_[2].c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string value;
-      pProp->Get(value);
-      selectedLensModel_[2] = value;
-   }
-   return DEVICE_OK;
-}
-
-// Position 4 - Detected properties
-int EvidentObjectiveSetup::OnPos4DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(detectedObjectives_[3].name.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos4DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      std::string specs = FormatSpecsString(
-         detectedObjectives_[3].na,
-         detectedObjectives_[3].magnification,
-         detectedObjectives_[3].medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos4DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(selectedLensModel_[3].c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string value;
-      pProp->Get(value);
-      selectedLensModel_[3] = value;
-   }
-   return DEVICE_OK;
-}
-
-// Position 5 - Detected properties
-int EvidentObjectiveSetup::OnPos5DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(detectedObjectives_[4].name.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos5DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      std::string specs = FormatSpecsString(
-         detectedObjectives_[4].na,
-         detectedObjectives_[4].magnification,
-         detectedObjectives_[4].medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos5DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(selectedLensModel_[4].c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string value;
-      pProp->Get(value);
-      selectedLensModel_[4] = value;
-   }
-   return DEVICE_OK;
-}
-
-// Position 6 - Detected properties
-int EvidentObjectiveSetup::OnPos6DetectedName(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(detectedObjectives_[5].name.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos6DetectedSpecs(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      std::string specs = FormatSpecsString(
-         detectedObjectives_[5].na,
-         detectedObjectives_[5].magnification,
-         detectedObjectives_[5].medium);
-      pProp->Set(specs.c_str());
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos6DatabaseSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(selectedLensModel_[5].c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string value;
-      pProp->Get(value);
-      selectedLensModel_[5] = value;
-   }
-   return DEVICE_OK;
-}
-
-// Send to SDK - Position 1
-int EvidentObjectiveSetup::OnPos1SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentObjectiveSetup::OnPosSendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct, long position)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -829,17 +739,13 @@ int EvidentObjectiveSetup::OnPos1SendToSDK(MM::PropertyBase* pProp, MM::ActionTy
    {
       pProp->Set("Sending...");
 
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(1, na, mag, medium);
-
-      int ret = SendObjectiveToSDK(1, na, mag, medium);
+      int ret = SendObjectiveToSDK(position);
 
       std::ostringstream statusMsg;
       if (ret == DEVICE_OK)
-         statusMsg << "Position 1: Sent successfully";
+         statusMsg << "Position " << position << ": Sent successfully";
       else
-         statusMsg << "Position 1: Failed to send";
+         statusMsg << "Position " << position << ": Failed to send";
 
       SetProperty("Last-Status", statusMsg.str().c_str());
       LogMessage(statusMsg.str().c_str());
@@ -849,97 +755,50 @@ int EvidentObjectiveSetup::OnPos1SendToSDK(MM::PropertyBase* pProp, MM::ActionTy
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos2SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct)
+
+// Special Objective handlers (parameterized)
+int EvidentObjectiveSetup::OnPosSpecialNA(MM::PropertyBase* pProp, MM::ActionType eAct, long position)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set("Press to send");
+      pProp->Set(specialNA_[position - 1]);
    }
    else if (eAct == MM::AfterSet)
    {
-      pProp->Set("Sending...");
-
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(2, na, mag, medium);
-
-      int ret = SendObjectiveToSDK(2, na, mag, medium);
-
-      std::ostringstream statusMsg;
-      if (ret == DEVICE_OK)
-         statusMsg << "Position 2: Sent successfully";
-      else
-         statusMsg << "Position 2: Failed to send";
-
-      SetProperty("Last-Status", statusMsg.str().c_str());
-      LogMessage(statusMsg.str().c_str());
-
-      pProp->Set("Press to send");
+      pProp->Get(specialNA_[position - 1]);
    }
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos3SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentObjectiveSetup::OnPosSpecialMagnification(MM::PropertyBase* pProp, MM::ActionType eAct, long position)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set("Press to send");
+      pProp->Set(specialMagnification_[position - 1]);
    }
    else if (eAct == MM::AfterSet)
    {
-      pProp->Set("Sending...");
-
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(3, na, mag, medium);
-
-      int ret = SendObjectiveToSDK(3, na, mag, medium);
-
-      std::ostringstream statusMsg;
-      if (ret == DEVICE_OK)
-         statusMsg << "Position 3: Sent successfully";
-      else
-         statusMsg << "Position 3: Failed to send";
-
-      SetProperty("Last-Status", statusMsg.str().c_str());
-      LogMessage(statusMsg.str().c_str());
-
-      pProp->Set("Press to send");
+      pProp->Get(specialMagnification_[position - 1]);
    }
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos4SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentObjectiveSetup::OnPosSpecialImmersion(MM::PropertyBase* pProp, MM::ActionType eAct, long position)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set("Press to send");
+      pProp->Set(specialImmersion_[position - 1].c_str());
    }
    else if (eAct == MM::AfterSet)
    {
-      pProp->Set("Sending...");
-
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(4, na, mag, medium);
-
-      int ret = SendObjectiveToSDK(4, na, mag, medium);
-
-      std::ostringstream statusMsg;
-      if (ret == DEVICE_OK)
-         statusMsg << "Position 4: Sent successfully";
-      else
-         statusMsg << "Position 4: Failed to send";
-
-      SetProperty("Last-Status", statusMsg.str().c_str());
-      LogMessage(statusMsg.str().c_str());
-
-      pProp->Set("Press to send");
+      std::string value;
+      pProp->Get(value);
+      specialImmersion_[position - 1] = value;
    }
    return DEVICE_OK;
 }
 
-int EvidentObjectiveSetup::OnPos5SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct)
+int EvidentObjectiveSetup::OnPosSpecialSendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct, long position)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -949,47 +808,13 @@ int EvidentObjectiveSetup::OnPos5SendToSDK(MM::PropertyBase* pProp, MM::ActionTy
    {
       pProp->Set("Sending...");
 
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(5, na, mag, medium);
-
-      int ret = SendObjectiveToSDK(5, na, mag, medium);
+      int ret = SendSpecialObjectiveToSDK(position);
 
       std::ostringstream statusMsg;
       if (ret == DEVICE_OK)
-         statusMsg << "Position 5: Sent successfully";
+         statusMsg << "Position " << position << ": Special objective sent successfully";
       else
-         statusMsg << "Position 5: Failed to send";
-
-      SetProperty("Last-Status", statusMsg.str().c_str());
-      LogMessage(statusMsg.str().c_str());
-
-      pProp->Set("Press to send");
-   }
-   return DEVICE_OK;
-}
-
-int EvidentObjectiveSetup::OnPos6SendToSDK(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set("Press to send");
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      pProp->Set("Sending...");
-
-      double na, mag;
-      int medium;
-      GetEffectiveObjectiveSpecs(6, na, mag, medium);
-
-      int ret = SendObjectiveToSDK(6, na, mag, medium);
-
-      std::ostringstream statusMsg;
-      if (ret == DEVICE_OK)
-         statusMsg << "Position 6: Sent successfully";
-      else
-         statusMsg << "Position 6: Failed to send";
+         statusMsg << "Position " << position << ": Failed to send special objective";
 
       SetProperty("Last-Status", statusMsg.str().c_str());
       LogMessage(statusMsg.str().c_str());
