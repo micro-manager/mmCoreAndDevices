@@ -509,9 +509,10 @@ public:
     int GetCurrentFocusScore(double& score);
     int GetOffset(double& offset);
     int SetOffset(double offset);
+    int GetMeasuredZOffset(double& offset);
+    int SetMeasuredZOffset(double offset);
 
     // Action interface
-    int OnAFMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnAFStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnFarLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -521,6 +522,8 @@ public:
     int OnDICMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnBuzzerSuccess(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnBuzzerFailure(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnWorkflowMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnMeasuredFocusOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     // Public method for hub to update AF status from notifications
     void UpdateAFStatus(int status) { afStatus_ = status; }
@@ -531,6 +534,8 @@ private:
     int StopAF();
     int InitializeZDC();  // Run full ZDC initialization sequence
     std::string GetAFStatusString(int status);
+    int MeasureZOffset();         // Mode 1: Measure Z-offset
+    int FindFocusWithOffset();    // Mode 2: Find focus and apply offset
 
     bool initialized_;
     std::string name_;
@@ -541,7 +546,9 @@ private:
     long lastNosepiecePos_;  // Track objective changes
     int lastCoverslipType_;   // Track coverslip type changes
     bool zdcInitNeeded_;      // Flag to defer ZDC initialization
-    int trackingMode_;        // 2=Focus drive, 3=Offset lens
+    long measuredZOffset_;    // Stored Z-offset in steps (difference before/after AF)
+    bool offsetMeasured_;     // Flag indicating if offset has been measured
+    int workflowMode_;        // 1=Measure Offset, 2=Find Focus with Offset, 3=Continuous Focus
 };
 
 //////////////////////////////////////////////////////////////////////////////

@@ -3504,7 +3504,9 @@ EvidentAutofocus::EvidentAutofocus() :
     lastNosepiecePos_(-1),
     lastCoverslipType_(-1),
     zdcInitNeeded_(false),
-    trackingMode_(2)      // Default to Focus drive
+    measuredZOffset_(0),
+    offsetMeasured_(false),
+    workflowMode_(3)      // Default to Continuous Focus mode
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "ZDC Autofocus not available on this microscope");
@@ -3608,14 +3610,6 @@ int EvidentAutofocus::Initialize()
     AddAllowedValue("DIC Mode", "Off");
     AddAllowedValue("DIC Mode", "On");
 
-    // Create Tracking Mode property
-    pAct = new CPropertyAction(this, &EvidentAutofocus::OnAFMode);
-    ret = CreateProperty("Tracking Mode", "Focus Drive", MM::String, false, pAct);
-    if (ret != DEVICE_OK)
-        return ret;
-    AddAllowedValue("Tracking Mode", "Focus Drive");
-    AddAllowedValue("Tracking Mode", "Offset Lens");
-
     // Create Buzzer Success property
     pAct = new CPropertyAction(this, &EvidentAutofocus::OnBuzzerSuccess);
     ret = CreateProperty("Buzzer Success", "On", MM::String, false, pAct);
@@ -3631,6 +3625,22 @@ int EvidentAutofocus::Initialize()
         return ret;
     AddAllowedValue("Buzzer Failure", "Off");
     AddAllowedValue("Buzzer Failure", "On");
+
+    // Create AF Workflow Mode property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnWorkflowMode);
+    ret = CreateProperty("AF-Workflow-Mode", "Continuous-Focus", MM::String, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    AddAllowedValue("AF-Workflow-Mode", "Measure-Offset");
+    AddAllowedValue("AF-Workflow-Mode", "Find-Focus-With-Offset");
+    AddAllowedValue("AF-Workflow-Mode", "Continuous-Focus");
+
+    // Create Measured Focus Offset property
+    pAct = new CPropertyAction(this, &EvidentAutofocus::OnMeasuredFocusOffset);
+    ret = CreateProperty("Measured-Focus-Offset-um", "0.0", MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    SetPropertyLimits("Measured-Focus-Offset-um", -10000.0, 10000.0);  // ±10mm range
 
     // Enable AF status notifications
     EnableNotifications(true);
@@ -3690,8 +3700,22 @@ int EvidentAutofocus::SetContinuousFocusing(bool state)
             zdcInitNeeded_ = false;
         }
 
+        // Determine AF mode to use
+        int afMode;
+        if (workflowMode_ == 3)  // Continuous Focus workflow
+        {
+            // Use AF mode 2 (Continuous Focus Drive)
+            afMode = 2;
+            LogMessage("Continuous Focus mode: Using AF 2 (Focus Drive tracking)");
+        }
+        else
+        {
+            // Use AF mode 2 (Focus Drive) as default
+            afMode = 2;
+        }
+
         // Start continuous AF
-        std::string cmd = BuildCommand(CMD_AF_START_STOP, trackingMode_);  // 2 = Focus drive, 3 = Offset lens
+        std::string cmd = BuildCommand(CMD_AF_START_STOP, afMode);
         std::string response;
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
@@ -3750,6 +3774,16 @@ int EvidentAutofocus::FullFocus()
     if (!hub)
         return DEVICE_ERR;
 
+    // Handle workflow-specific modes
+    if (workflowMode_ == 1)  // Measure Offset mode
+    {
+        return MeasureZOffset();
+    }
+    else if (workflowMode_ == 2)  // Find Focus with Offset mode
+    {
+        return FindFocusWithOffset();
+    }
+
     // Check if ZDC needs re-initialization (objective changed, or settings changed)
     long nosepiecePos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Nosepiece);
     if (nosepiecePos != lastNosepiecePos_ || zdcInitNeeded_)
@@ -3763,8 +3797,8 @@ int EvidentAutofocus::FullFocus()
     }
 
     // Use continuous AF approach to avoid resetting offset lens position
-    // Start continuous AF (AF 2 or AF 3 depending on tracking mode)
-    std::string cmd = BuildCommand(CMD_AF_START_STOP, trackingMode_);
+    // Start continuous AF with AF mode 2 (Focus Drive)
+    std::string cmd = BuildCommand(CMD_AF_START_STOP, 2);
     std::string response;
     int ret = hub->ExecuteCommand(cmd, response);
     if (ret != DEVICE_OK)
@@ -3772,15 +3806,6 @@ int EvidentAutofocus::FullFocus()
 
     if (!IsPositiveAck(response, CMD_AF_START_STOP))
         return ERR_NEGATIVE_ACK;
-
-    // For AF 3 mode (Offset Lens), autofocus completes quickly and auto-stops
-    // By the time we get "AF +" response, it may have already completed (AFST 1 -> AFST 0)
-    // This is success, not failure
-    if (trackingMode_ == 3 && afStatus_ == 0)
-    {
-        // AF 3 completed and auto-stopped - success
-        return DEVICE_OK;
-    }
 
     // Wait for focus to be achieved (afStatus_ becomes 1=Focus)
     // afStatus_ is updated by notifications (NAFST), no polling needed
@@ -3797,28 +3822,16 @@ int EvidentAutofocus::FullFocus()
         // Check afStatus_ which is updated by NAFST notifications
         if (afStatus_ == 1)  // 1 = Focus achieved
         {
-            if (trackingMode_ == 2)
-            {
-                // AF 2 (Focus drive): manually stop after achieving focus
-                ret = StopAF();
-                if (ret != DEVICE_OK)
-                    return ret;
-                return DEVICE_OK;
-            }
-            // AF 3 (Offset lens): wait for auto-stop (AFST 0)
+            // AF 2 (Focus drive): manually stop after achieving focus
+            ret = StopAF();
+            if (ret != DEVICE_OK)
+                return ret;
+            return DEVICE_OK;
         }
         else if (afStatus_ == 0)  // Stopped
         {
-            if (trackingMode_ == 3)
-            {
-                // AF 3 auto-stopped after achieving focus - success
-                return DEVICE_OK;
-            }
-            else
-            {
-                // AF 2 stopped unexpectedly - failure
-                return ERR_NEGATIVE_ACK;
-            }
+            // AF 2 stopped unexpectedly - failure
+            return ERR_NEGATIVE_ACK;
         }
     }
 
@@ -3889,6 +3902,21 @@ int EvidentAutofocus::SetOffset(double offset)
         return ERR_NEGATIVE_ACK;
 
     hub->GetModel()->SetPosition(EvidentIX85Win::DeviceType_OffsetLens, steps);
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::GetMeasuredZOffset(double& offset)
+{
+    // Get stored Z-offset in micrometers
+    offset = measuredZOffset_ * FOCUS_STEP_SIZE_UM;
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::SetMeasuredZOffset(double offset)
+{
+    // Set stored Z-offset (for manual override)
+    measuredZOffset_ = static_cast<long>(offset / FOCUS_STEP_SIZE_UM);
+    offsetMeasured_ = (measuredZOffset_ != 0);
     return DEVICE_OK;
 }
 
@@ -4028,6 +4056,266 @@ int EvidentAutofocus::InitializeZDC()
     lastNosepiecePos_ = nosepiecePos;
     lastCoverslipType_ = coverslipType;
 
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::MeasureZOffset()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Re-initialize ZDC if needed
+    long nosepiecePos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Nosepiece);
+    if (nosepiecePos != lastNosepiecePos_ || zdcInitNeeded_)
+    {
+        int ret = InitializeZDC();
+        if (ret != DEVICE_OK)
+            return ret;
+        zdcInitNeeded_ = false;
+    }
+
+    // Step 1: Store current focus position (user should have focused on sample)
+    long originalZPos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Focus);
+    if (originalZPos < 0)
+    {
+        LogMessage("Focus position unknown, cannot measure offset");
+        return ERR_POSITION_UNKNOWN;
+    }
+
+    std::ostringstream logMsg1;
+    logMsg1 << "Measuring Z-offset: Starting from position " << originalZPos;
+    LogMessage(logMsg1.str().c_str());
+
+    // Step 2: Run AF mode 1 (One-Shot Z-only)
+    std::string cmd = BuildCommand(CMD_AF_START_STOP, 1);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_AF_START_STOP))
+        return ERR_NEGATIVE_ACK;
+
+    // Step 3: Wait for AF to achieve focus (max 30 seconds)
+    const int maxWaitMs = 30000;
+    const int sleepIntervalMs = 100;
+    int elapsedMs = 0;
+
+    while (elapsedMs < maxWaitMs)
+    {
+        CDeviceUtils::SleepMs(sleepIntervalMs);
+        elapsedMs += sleepIntervalMs;
+
+        if (afStatus_ == 1)  // Focus achieved
+        {
+            // Stop AF (mode 1 requires manual stop)
+            ret = StopAF();
+            if (ret != DEVICE_OK)
+                return ret;
+
+            // Step 4: Read new focus position
+            long newZPos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Focus);
+
+            // Step 5: Calculate and store offset
+            // Offset = how to correct from ZDC's focus to user's desired focus
+            measuredZOffset_ = originalZPos - newZPos;
+            offsetMeasured_ = true;
+
+            // Notify core of property change
+            double offsetUm = measuredZOffset_ * FOCUS_STEP_SIZE_UM;
+            std::ostringstream valStr;
+            valStr << offsetUm;
+            OnPropertyChanged("Measured-Focus-Offset-um", valStr.str().c_str());
+
+            std::ostringstream logMsg2;
+            logMsg2 << "Measured Z-offset: " << measuredZOffset_ <<
+                      " steps (" << offsetUm << " um)";
+            LogMessage(logMsg2.str().c_str());
+
+            // Step 6: Return focus to original position
+            cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalZPos));
+            ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+                return ret;
+
+            if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+                return ERR_NEGATIVE_ACK;
+
+            // Wait for focus to return to original position
+            elapsedMs = 0;
+            while (elapsedMs < maxWaitMs)
+            {
+                CDeviceUtils::SleepMs(sleepIntervalMs);
+                elapsedMs += sleepIntervalMs;
+
+                long currentPos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Focus);
+                if (abs(currentPos - originalZPos) <= FOCUS_POSITION_TOLERANCE)
+                {
+                    LogMessage("Z-offset measurement complete, returned to original position");
+                    return DEVICE_OK;
+                }
+            }
+
+            LogMessage("Warning: Timeout returning to original position");
+            return DEVICE_OK;  // Offset measured successfully even if return timed out
+        }
+        else if (afStatus_ == 0)  // Stopped
+        {
+            // AF mode 1 auto-stops after completion (like AF mode 3)
+            // Check if focus position changed from original - if so, AF succeeded
+            long currentZPos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Focus);
+
+            if (currentZPos != originalZPos)
+            {
+                // Position changed - AF succeeded and auto-stopped
+                LogMessage("AF mode 1 completed and auto-stopped");
+
+                // Step 4: Read new focus position (already have it as currentZPos)
+                long newZPos = currentZPos;
+
+                // Step 5: Calculate and store offset
+                // Offset = how to correct from ZDC's focus to user's desired focus
+                measuredZOffset_ = originalZPos - newZPos;
+                offsetMeasured_ = true;
+
+                // Notify core of property change
+                double offsetUm = measuredZOffset_ * FOCUS_STEP_SIZE_UM;
+                std::ostringstream valStr;
+                valStr << offsetUm;
+                OnPropertyChanged("Measured-Focus-Offset-um", valStr.str().c_str());
+
+                std::ostringstream logMsg2;
+                logMsg2 << "Measured Z-offset: " << measuredZOffset_ <<
+                          " steps (" << offsetUm << " um)";
+                LogMessage(logMsg2.str().c_str());
+
+                // Step 6: Return focus to original position
+                cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalZPos));
+                ret = hub->ExecuteCommand(cmd, response);
+                if (ret != DEVICE_OK)
+                    return ret;
+
+                if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+                    return ERR_NEGATIVE_ACK;
+
+                // Wait for focus to return to original position
+                elapsedMs = 0;
+                while (elapsedMs < maxWaitMs)
+                {
+                    CDeviceUtils::SleepMs(sleepIntervalMs);
+                    elapsedMs += sleepIntervalMs;
+
+                    long currentPos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Focus);
+                    if (abs(currentPos - originalZPos) <= FOCUS_POSITION_TOLERANCE)
+                    {
+                        LogMessage("Z-offset measurement complete, returned to original position");
+                        return DEVICE_OK;
+                    }
+                }
+
+                LogMessage("Warning: Timeout returning to original position");
+                return DEVICE_OK;  // Offset measured successfully even if return timed out
+            }
+            else
+            {
+                // Position didn't change - AF failed
+                LogMessage("AF stopped without finding focus (position unchanged)");
+                return ERR_NEGATIVE_ACK;
+            }
+        }
+    }
+
+    // Timeout - stop AF and return error
+    StopAF();
+    LogMessage("Timeout during Z-offset measurement");
+    return ERR_COMMAND_TIMEOUT;
+}
+
+int EvidentAutofocus::FindFocusWithOffset()
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Verify offset has been measured
+    if (!offsetMeasured_)
+    {
+        LogMessage("Error: No Z-offset measured. Please run Measure-Offset workflow first.");
+        return ERR_INVALID_PARAMETER;
+    }
+
+    // Re-initialize ZDC if needed
+    long nosepiecePos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Nosepiece);
+    if (nosepiecePos != lastNosepiecePos_ || zdcInitNeeded_)
+    {
+        int ret = InitializeZDC();
+        if (ret != DEVICE_OK)
+            return ret;
+        zdcInitNeeded_ = false;
+    }
+
+    // Step 1: Run AF mode 3 (Offset lens mode)
+    std::string cmd = BuildCommand(CMD_AF_START_STOP, 3);
+    std::string response;
+    int ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_AF_START_STOP))
+        return ERR_NEGATIVE_ACK;
+
+    LogMessage("Find Focus with Offset: Running AF mode 3");
+
+    // Step 2: Wait for AF to achieve focus (max 30 seconds)
+    const int maxWaitMs = 30000;
+    const int sleepIntervalMs = 100;
+    int elapsedMs = 0;
+    bool focusAchieved = false;
+
+    while (elapsedMs < maxWaitMs)
+    {
+        CDeviceUtils::SleepMs(sleepIntervalMs);
+        elapsedMs += sleepIntervalMs;
+
+        if (afStatus_ == 1 || afStatus_ == 0)  // Focus achieved or auto-stopped
+        {
+            focusAchieved = true;
+            break;
+        }
+    }
+
+    if (!focusAchieved)
+    {
+        StopAF();
+        LogMessage("Timeout during Find Focus with Offset");
+        return ERR_COMMAND_TIMEOUT;
+    }
+
+    // Step 3: Stop AF (mode 3 may auto-stop, but ensure it's stopped)
+    ret = StopAF();
+    if (ret != DEVICE_OK)
+        LogMessage("Warning: Failed to stop AF, but continuing with offset application");
+
+    // Step 4: Apply stored offset to Focus Drive
+    long currentZPos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Focus);
+    long targetZPos = currentZPos + measuredZOffset_;
+
+    std::ostringstream logMsg;
+    logMsg << "Applying Z-offset: " << measuredZOffset_ <<
+              " steps (from " << currentZPos <<
+              " to " << targetZPos << ")";
+    LogMessage(logMsg.str().c_str());
+
+    cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(targetZPos));
+    ret = hub->ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+        return ERR_NEGATIVE_ACK;
+
+    LogMessage("Find Focus with Offset complete");
     return DEVICE_OK;
 }
 
@@ -4352,21 +4640,6 @@ int EvidentAutofocus::OnDICMode(MM::PropertyBase* pProp, MM::ActionType eAct)
     return DEVICE_OK;
 }
 
-int EvidentAutofocus::OnAFMode(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        pProp->Set(trackingMode_ == 2 ? "Focus Drive" : "Offset Lens");
-    }
-    else if (eAct == MM::AfterSet)
-    {
-        std::string val;
-        pProp->Get(val);
-        trackingMode_ = (val == "Focus Drive") ? 2 : 3;
-    }
-    return DEVICE_OK;
-}
-
 int EvidentAutofocus::OnBuzzerSuccess(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     EvidentHubWin* hub = GetHub();
@@ -4467,6 +4740,61 @@ int EvidentAutofocus::OnBuzzerFailure(MM::PropertyBase* pProp, MM::ActionType eA
 
         if (!IsPositiveAck(response, CMD_AF_BUZZER))
             return ERR_NEGATIVE_ACK;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnWorkflowMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        std::string mode;
+        switch (workflowMode_)
+        {
+            case 1: mode = "Measure-Offset"; break;
+            case 2: mode = "Find-Focus-With-Offset"; break;
+            case 3: mode = "Continuous-Focus"; break;
+            default: mode = "Continuous-Focus"; break;
+        }
+        pProp->Set(mode.c_str());
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        std::string val;
+        pProp->Get(val);
+        if (val == "Measure-Offset")
+            workflowMode_ = 1;
+        else if (val == "Find-Focus-With-Offset")
+            workflowMode_ = 2;
+        else if (val == "Continuous-Focus")
+            workflowMode_ = 3;
+    }
+    return DEVICE_OK;
+}
+
+int EvidentAutofocus::OnMeasuredFocusOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        double offset;
+        GetMeasuredZOffset(offset);  // Already converts steps to µm
+        pProp->Set(offset);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double offset;
+        pProp->Get(offset);
+        SetMeasuredZOffset(offset);  // Already converts µm to steps
+
+        // Notify core of property change
+        std::ostringstream valStr;
+        valStr << offset;
+        OnPropertyChanged("Measured-Focus-Offset-um", valStr.str().c_str());
+
+        // Log the change
+        std::ostringstream logMsg;
+        logMsg << "Measured focus offset set to " << offset << " um";
+        LogMessage(logMsg.str().c_str());
     }
     return DEVICE_OK;
 }
