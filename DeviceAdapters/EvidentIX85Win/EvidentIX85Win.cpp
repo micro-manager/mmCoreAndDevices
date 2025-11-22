@@ -4243,13 +4243,6 @@ int EvidentAutofocus::FindFocusWithOffset()
     if (!hub)
         return DEVICE_ERR;
 
-    // Verify offset has been measured
-    if (!offsetMeasured_)
-    {
-        LogMessage("Error: No Z-offset measured. Please run Measure-Offset workflow first.");
-        return ERR_INVALID_PARAMETER;
-    }
-
     // Re-initialize ZDC if needed
     long nosepiecePos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Nosepiece);
     if (nosepiecePos != lastNosepiecePos_ || zdcInitNeeded_)
