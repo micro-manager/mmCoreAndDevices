@@ -54,8 +54,14 @@ test: test-mmdevice test-mmcore
 
 # Clean build artifacts
 clean:
+    if [ -d MMDevice/builddir ]; then \
+        meson compile --clean -C MMDevice/builddir; fi
+    if [ -d MMCore/builddir ]; then \
+        meson compile --clean -C MMCore/builddir; fi
+
+# Remove everything produced by Meson
+zap:
     rm -rf MMDevice/builddir
-    rm -rf MMDevice/subprojects/Catch2-*
+    git clean -dxf MMDevice/subprojects
     rm -rf MMCore/builddir
-    rm -rf MMCore/subprojects/mmdevice
-    rm -rf MMCore/subprojects/Catch2-*
+    git clean -dxf MMCore/subprojects
