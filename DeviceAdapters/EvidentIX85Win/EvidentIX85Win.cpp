@@ -3685,6 +3685,15 @@ bool EvidentAutofocus::Busy()
     return (afStatus_ == 4);  // 4 = Search
 }
 
+void EvidentAutofocus::UpdateAFStatus(int status)
+{
+    if (afStatus_ != status)
+    {
+        afStatus_ = status;
+        OnPropertyChanged("AF Status", GetAFStatusString(afStatus_).c_str());
+    }
+}
+
 int EvidentAutofocus::SetContinuousFocusing(bool state)
 {
     EvidentHubWin* hub = GetHub();
@@ -3766,7 +3775,12 @@ bool EvidentAutofocus::IsContinuousFocusLocked()
     std::vector<std::string> params = ParseParameters(response);
     if (params.size() > 0 && params[0] != "X")
     {
-        afStatus_ = ParseIntParameter(params[0]);
+        int newStatus = ParseIntParameter(params[0]);
+        if (afStatus_ != newStatus)
+        {
+            afStatus_ = newStatus;
+            OnPropertyChanged("AF Status", GetAFStatusString(afStatus_).c_str());
+        }
     }
 
     // Locked when in Focus (1) or Track (2) state
@@ -3941,7 +3955,11 @@ int EvidentAutofocus::StopAF()
     if (!IsPositiveAck(response, CMD_AF_STOP))
         return ERR_NEGATIVE_ACK;
 
-    afStatus_ = 0;
+    if (afStatus_ != 0)
+    {
+        afStatus_ = 0;
+        OnPropertyChanged("AF Status", GetAFStatusString(afStatus_).c_str());
+    }
     return DEVICE_OK;
 }
 

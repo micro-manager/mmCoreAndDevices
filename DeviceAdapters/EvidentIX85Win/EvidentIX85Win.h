@@ -526,7 +526,8 @@ public:
     int OnMeasuredFocusOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     // Public method for hub to update AF status from notifications
-    void UpdateAFStatus(int status) { afStatus_ = status; }
+    void UpdateAFStatus(int status);
+
 
 private:
     EvidentHubWin* GetHub();
