@@ -111,6 +111,33 @@ EvidentHubWin::EvidentHubWin() :
     CPropertyAction* pAct = new CPropertyAction(this, &EvidentHubWin::OnSerialPort);
     CreateProperty(g_PropPort, "Undefined", MM::String, false, pAct, true);
 
+    // Enumerate available COM ports on Windows
+    // This allows pre-initialization port selection without requiring
+    // MMCore SerialManager ports to be loaded first.
+    AddAllowedValue(g_PropPort, "Undefined");
+
+    for (int i = 1; i <= 64; i++)  // Scan COM1-COM64
+    {
+        std::ostringstream oss;
+        oss << "COM" << i;
+        std::string portName = oss.str();
+        std::string portPath = "\\\\.\\" + portName;
+
+        HANDLE hCom = CreateFile(portPath.c_str(),
+                                 GENERIC_READ | GENERIC_WRITE,
+                                 0,                          // Exclusive access
+                                 NULL,                       // Default security
+                                 OPEN_EXISTING,
+                                 FILE_ATTRIBUTE_NORMAL,
+                                 NULL);
+
+        if (hCom != INVALID_HANDLE_VALUE)
+        {
+            AddAllowedValue(g_PropPort, portName.c_str());
+            CloseHandle(hCom);
+        }
+    }
+
     pAct = new CPropertyAction(this, &EvidentHubWin::OnDLLPath);
     CreateProperty(g_PropDLLPath, dllPath_.c_str(), MM::String, false, pAct, true);
 
