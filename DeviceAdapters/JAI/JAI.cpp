@@ -288,34 +288,57 @@ int JAICamera::Initialize()
 		int64_t ct{};
 		if (expSel->GetEntriesCount(ct).IsOK() && ct > 1)
 		{
-			pAct = new CPropertyAction(this, &JAICamera::OnExposureIsIndividual);
-			ret = CreateProperty("ExposureIsIndividual", "Off", MM::String, false, pAct);
-			AddAllowedValue("ExposureIsIndividual", "Off");
-			AddAllowedValue("ExposureIsIndividual", "On");
-
-			// Skip index 0 (the "common" selector)
-			for (int64_t i = 1; i < ct; i++)
+			// First, look for the "Common" selector; otherwise we don't know what to do.
+			for (int64_t i = 0; i < ct; i++)
 			{
 				const PvGenEnumEntry *entry = nullptr;
 				expSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
-
 				if (entry != nullptr && entry->IsAvailable())
 				{
 					PvString name;
 					entry->GetName(name);
-					std::string selectorName = name.GetAscii();
+					if (std::string(name.GetAscii()) == "Common")
+					{
+						commonExposureSelector_ = "Common";
+						break;
+					}
+				}
+			}
 
-					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
-						return OnSelectorExposure(selectorName, pProp, eAct);
-					});
-					const std::string propName = "Exposure_" + selectorName;
-					double eMs{};
-					GetSelectorExposure(selectorName, eMs);
-					double eMinMs{}, eMaxMs{};
-					GetSelectorExposureMinMax(selectorName, eMinMs, eMaxMs);
-					CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(eMs),
-						MM::Float, false, action);
-					SetPropertyLimits(propName.c_str(), eMinMs, eMaxMs);
+			if (!commonExposureSelector_.empty())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnExposureIsIndividual);
+				ret = CreateProperty("ExposureIsIndividual", "Off", MM::String, false, pAct);
+				AddAllowedValue("ExposureIsIndividual", "Off");
+				AddAllowedValue("ExposureIsIndividual", "On");
+
+				// Create properties for all selectors except "Common"
+				for (int64_t i = 0; i < ct; i++)
+				{
+					const PvGenEnumEntry *entry = nullptr;
+					expSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+					if (entry != nullptr && entry->IsAvailable())
+					{
+						PvString name;
+						entry->GetName(name);
+						std::string selectorName = name.GetAscii();
+
+						if (selectorName == commonExposureSelector_)
+							continue;  // Skip the common selector
+
+						auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+							return OnSelectorExposure(selectorName, pProp, eAct);
+						});
+						const std::string propName = "Exposure_" + selectorName;
+						double eMs{};
+						GetSelectorExposure(selectorName, eMs);
+						double eMinMs{}, eMaxMs{};
+						GetSelectorExposureMinMax(selectorName, eMinMs, eMaxMs);
+						CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(eMs),
+							MM::Float, false, action);
+						SetPropertyLimits(propName.c_str(), eMinMs, eMaxMs);
+					}
 				}
 			}
 		}
@@ -392,34 +415,57 @@ int JAICamera::Initialize()
 		int64_t ct{};
 		if (gainSel->GetEntriesCount(ct).IsOK() && ct > 1)
 		{
-			pAct = new CPropertyAction(this, &JAICamera::OnGainIsIndividual);
-			ret = CreateProperty("GainIsIndividual", "Off", MM::String, false, pAct);
-			AddAllowedValue("GainIsIndividual", "Off");
-			AddAllowedValue("GainIsIndividual", "On");
-
-			// Skip index 0 (the "common" selector)
-			for (int64_t i = 1; i < ct; i++)
+			// First, look for the "AnalogAll" selector; otherwise we don't know what to do
+			for (int64_t i = 0; i < ct; i++)
 			{
 				const PvGenEnumEntry *entry = nullptr;
 				gainSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
-
 				if (entry != nullptr && entry->IsAvailable())
 				{
 					PvString name;
 					entry->GetName(name);
-					std::string selectorName = name.GetAscii();
+					if (std::string(name.GetAscii()) == "AnalogAll")
+					{
+						commonGainSelector_ = "AnalogAll";
+						break;
+					}
+				}
+			}
 
-					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
-						return OnSelectorGain(selectorName, pProp, eAct);
-					});
-					const std::string propName = "Gain_" + selectorName;
-					double g{};
-					GetSelectorGain(selectorName, g);
-					double gMin{}, gMax{};
-					GetSelectorGainMinMax(selectorName, gMin, gMax);
-					CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(g),
-						MM::Float, false, action);
-					SetPropertyLimits(propName.c_str(), gMin, gMax);
+			if (!commonGainSelector_.empty())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnGainIsIndividual);
+				ret = CreateProperty("GainIsIndividual", "Off", MM::String, false, pAct);
+				AddAllowedValue("GainIsIndividual", "Off");
+				AddAllowedValue("GainIsIndividual", "On");
+
+				// Create properties for all selectors except "AnalogAll"
+				for (int64_t i = 0; i < ct; i++)
+				{
+					const PvGenEnumEntry *entry = nullptr;
+					gainSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+					if (entry != nullptr && entry->IsAvailable())
+					{
+						PvString name;
+						entry->GetName(name);
+						std::string selectorName = name.GetAscii();
+
+						if (selectorName == commonGainSelector_)
+							continue;  // Skip the common selector
+
+						auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+							return OnSelectorGain(selectorName, pProp, eAct);
+						});
+						const std::string propName = "Gain_" + selectorName;
+						double g{};
+						GetSelectorGain(selectorName, g);
+						double gMin{}, gMax{};
+						GetSelectorGainMinMax(selectorName, gMin, gMax);
+						CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(g),
+							MM::Float, false, action);
+						SetPropertyLimits(propName.c_str(), gMin, gMax);
+					}
 				}
 			}
 		}
@@ -441,6 +487,7 @@ int JAICamera::Initialize()
 	assert(ret == DEVICE_OK);
 
 	// BLACK LEVEL (per selector, or single if no selector)
+	// Always suffix property name with selector name when selector exists
 	PvGenEnum *blackLevelSel = genParams->GetEnum("BlackLevelSelector");
 	if (blackLevelSel != nullptr)
 	{
@@ -461,8 +508,7 @@ int JAICamera::Initialize()
 					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
 						return OnSelectorBlackLevel(selectorName, pProp, eAct);
 					});
-					// Index 0 -> "BlackLevel", others -> "BlackLevel_<name>"
-					const std::string propName = (i == 0) ? "BlackLevel" : ("BlackLevel_" + selectorName);
+					const std::string propName = "BlackLevel_" + selectorName;
 					double bl{};
 					GetSelectorBlackLevel(selectorName, bl);
 					double blMin{}, blMax{};

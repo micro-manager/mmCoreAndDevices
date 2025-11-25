@@ -201,7 +201,7 @@ int JAICamera::GetSelectorExposure(const std::string& selector, double& expMs)
 	PvResult pvr2 = genParams->GetFloatValue("ExposureTime", expUs);
 	expMs = expUs * 1e-3;
 
-	pvr = ets->SetValue(int64_t(0));
+	pvr = ets->SetValue(commonExposureSelector_.c_str());
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -220,7 +220,7 @@ int JAICamera::SetSelectorExposure(const std::string& selector, double expMs)
 	const double expUs = expMs * 1e3;
 	PvResult pvr2 = genParams->SetFloatValue("ExposureTime", expUs);
 
-	pvr = ets->SetValue(int64_t(0));
+	pvr = ets->SetValue(commonExposureSelector_.c_str());
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -241,7 +241,7 @@ int JAICamera::GetSelectorExposureMinMax(const std::string& selector, double& eM
 	eMinMs = eMinUs * 1e-3;
 	eMaxMs = eMaxUs * 1e-3;
 
-	pvr = ets->SetValue(int64_t(0));
+	pvr = ets->SetValue(commonExposureSelector_.c_str());
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -327,7 +327,7 @@ int JAICamera::GetSelectorGain(const std::string& selector, double& gain)
 
 	PvResult pvr2 = genParams->GetFloatValue("Gain", gain);
 
-	pvr = gs->SetValue(int64_t(0));
+	pvr = gs->SetValue(commonGainSelector_.c_str());
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -345,7 +345,7 @@ int JAICamera::SetSelectorGain(const std::string& selector, double gain)
 
 	PvResult pvr2 = genParams->SetFloatValue("Gain", gain);
 
-	pvr = gs->SetValue(int64_t(0));
+	pvr = gs->SetValue(commonGainSelector_.c_str());
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -363,7 +363,7 @@ int JAICamera::GetSelectorGainMinMax(const std::string& selector, double& gMin, 
 
 	PvResult pvr2 = genParams->GetFloatRange("Gain", gMin, gMax);
 
-	pvr = gs->SetValue(int64_t(0));
+	pvr = gs->SetValue(commonGainSelector_.c_str());
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -444,14 +444,9 @@ int JAICamera::GetSelectorBlackLevel(const std::string& selector, double& level)
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
-	PvResult pvr2 = genParams->GetFloatValue("BlackLevel", level);
-
-	pvr = bls->SetValue(int64_t(0));
+	pvr = genParams->GetFloatValue("BlackLevel", level);
 	if (!pvr.IsOK())
 		return processPvError(pvr);
-
-	if (!pvr2.IsOK())
-		return processPvError(pvr2);
 	return DEVICE_OK;
 }
 
@@ -462,14 +457,9 @@ int JAICamera::SetSelectorBlackLevel(const std::string& selector, double level)
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
-	PvResult pvr2 = genParams->SetFloatValue("BlackLevel", level);
-
-	pvr = bls->SetValue(int64_t(0));
+	pvr = genParams->SetFloatValue("BlackLevel", level);
 	if (!pvr.IsOK())
 		return processPvError(pvr);
-
-	if (!pvr2.IsOK())
-		return processPvError(pvr2);
 	return DEVICE_OK;
 }
 
@@ -480,14 +470,9 @@ int JAICamera::GetSelectorBlackLevelMinMax(const std::string& selector, double& 
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
-	PvResult pvr2 = genParams->GetFloatRange("BlackLevel", minLevel, maxLevel);
-
-	pvr = bls->SetValue(int64_t(0));
+	pvr = genParams->GetFloatRange("BlackLevel", minLevel, maxLevel);
 	if (!pvr.IsOK())
 		return processPvError(pvr);
-
-	if (!pvr2.IsOK())
-		return processPvError(pvr2);
 	return DEVICE_OK;
 }
 

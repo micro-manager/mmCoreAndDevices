@@ -222,6 +222,8 @@ private:
 	PvGenParameterArray* genParams;
 	std::string connectionId;
 	std::vector<PvBuffer*> pvBuffers;
+	std::string commonExposureSelector_;  // e.g., "Common"
+	std::string commonGainSelector_;      // e.g., "AnalogAll"
 
    friend class AcqSequenceThread;
    AcqSequenceThread*   liveAcqThd_;
