@@ -34,6 +34,7 @@
 #ifdef __linux__
 #endif
 
+#include <array>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -280,6 +281,36 @@ int JAICamera::Initialize()
 	int ret = CreateProperty(MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(expUs), MM::Float, false, pAct);
 	SetPropertyLimits(MM::g_Keyword_Exposure, expMinUs / 1000, expMaxUs / 1000);
 	assert(ret == DEVICE_OK);
+
+	// Individual RGB exposures (if supported)
+	PvGenEnum *expSel = genParams->GetEnum("ExposureTimeSelector");
+	if (expSel != nullptr)
+	{
+		int64_t ct{};
+		if (expSel->GetEntriesCount(ct).IsOK() && ct > 1)
+		{
+			pAct = new CPropertyAction(this, &JAICamera::OnExposureIsPerComponent);
+			ret = CreateProperty("ExposureIsPerComponent", "Off", MM::String, false, pAct);
+			AddAllowedValue("ExposureIsPerComponent", "Off");
+			AddAllowedValue("ExposureIsPerComponent", "On");
+
+			const std::array<std::string, 3> components{ "Red", "Green", "Blue" };
+			for (const auto& comp : components)
+			{
+				auto *action = new MM::ActionLambda([this, comp](MM::PropertyBase *pProp, MM::ActionType eAct) {
+					return OnComponentExposure(comp, pProp, eAct);
+				});
+				const std::string name = "Exposure_" + comp;
+				double eMs{};
+				GetComponentExposure(comp, eMs);
+				double eMinMs{}, eMaxMs{};
+				GetComponentExposureMinMax(comp, eMinMs, eMaxMs);
+				CreateProperty(name.c_str(), CDeviceUtils::ConvertToString(eMs),
+					MM::Float, false, action);
+				SetPropertyLimits(name.c_str(), eMinMs, eMaxMs);
+			}
+		}
+	}
 
 	// BINNING
 	pAct = new CPropertyAction(this, &JAICamera::OnBinning);

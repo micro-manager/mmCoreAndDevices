@@ -178,6 +178,8 @@ public:
    // action interface
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnExposureIsPerComponent(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnComponentExposure(const std::string& comp, MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -193,6 +195,9 @@ private:
 	static void convert_BGR12P_RGBA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
 	bool verifyPvFormat(const PvImage* pvimg);
 	void ClearPvBuffers();
+   int GetComponentExposure(const std::string& comp, double& expMs);
+   int SetComponentExposure(const std::string& comp, double expMs);
+   int GetComponentExposureMinMax(const std::string& comp, double& eMinMs, double& eMaxMs);
 
    ImgBuffer img;
    bool initialized;

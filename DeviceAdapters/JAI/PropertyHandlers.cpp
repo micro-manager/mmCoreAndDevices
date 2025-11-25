@@ -143,6 +143,113 @@ int JAICamera::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int JAICamera::OnExposureIsPerComponent(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   PvGenEnum* etm = genParams->GetEnum("ExposureTimeMode");
+	if (eAct == MM::AfterSet)
+	{
+		if (IsCapturing())
+			return ERR_NOT_ALLOWED_DURING_CAPTURE;
+		std::string val;
+		pProp->Get(val);
+		const bool on = (val == "On");
+		PvResult pvr = etm->SetValue(on ? "Individual" : "Common");
+		if (!pvr.IsOK())
+			return processPvError(pvr);
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		PvString val;
+		PvResult pvr = etm->GetValue(val);
+		if (!pvr.IsOK())
+			return processPvError(pvr);
+		const bool on = (val == "Individual");
+		pProp->Set(on ? "On" : "Off");
+	}
+	return DEVICE_OK;
+}
+
+int JAICamera::OnComponentExposure(const std::string& comp, MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		if (IsCapturing())
+			return ERR_NOT_ALLOWED_DURING_CAPTURE;
+		double val{};
+		pProp->Get(val);
+		return SetComponentExposure(comp, val);
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		double val{};
+		int ret = GetComponentExposure(comp, val);
+		if (ret != DEVICE_OK)
+			return ret;
+		pProp->Set(val);
+	}
+	return DEVICE_OK;
+}
+
+int JAICamera::GetComponentExposure(const std::string& comp, double& expMs)
+{
+	PvGenEnum *ets = genParams->GetEnum("ExposureTimeSelector");
+	PvResult pvr = ets->SetValue(comp.c_str());
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	double expUs{};
+	PvResult pvr2 = genParams->GetFloatValue("ExposureTime", expUs);
+	expMs = expUs * 1e-3;
+
+	pvr = ets->SetValue("Common");
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	if (!pvr2.IsOK())
+		return processPvError(pvr2);
+	return DEVICE_OK;
+}
+
+int JAICamera::SetComponentExposure(const std::string& comp, double expMs)
+{
+	PvGenEnum *ets = genParams->GetEnum("ExposureTimeSelector");
+	PvResult pvr = ets->SetValue(comp.c_str());
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	const double expUs = expMs * 1e3;
+	PvResult pvr2 = genParams->SetFloatValue("ExposureTime", expUs);
+
+	pvr = ets->SetValue("Common");
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	if (!pvr2.IsOK())
+		return processPvError(pvr2);
+	return DEVICE_OK;
+}
+
+int JAICamera::GetComponentExposureMinMax(const std::string& comp, double& eMinMs, double& eMaxMs)
+{
+	PvGenEnum *ets = genParams->GetEnum("ExposureTimeSelector");
+	PvResult pvr = ets->SetValue(comp.c_str());
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	double eMinUs{}, eMaxUs{};
+	PvResult pvr2 = genParams->GetFloatRange("ExposureTime", eMinUs, eMaxUs);
+	eMinMs = eMinUs * 1e-3;
+	eMaxMs = eMaxUs * 1e-3;
+
+	pvr = ets->SetValue("Common");
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	if (!pvr2.IsOK())
+		return processPvError(pvr2);
+	return DEVICE_OK;
+}
+
 int JAICamera::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::AfterSet)
