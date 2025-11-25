@@ -440,6 +440,58 @@ int JAICamera::Initialize()
 	SetPropertyLimits(g_Gamma, gammaMin, gammaMax);
 	assert(ret == DEVICE_OK);
 
+	// BLACK LEVEL (per selector, or single if no selector)
+	PvGenEnum *blackLevelSel = genParams->GetEnum("BlackLevelSelector");
+	if (blackLevelSel != nullptr)
+	{
+		int64_t ct{};
+		if (blackLevelSel->GetEntriesCount(ct).IsOK() && ct >= 1)
+		{
+			for (int64_t i = 0; i < ct; i++)
+			{
+				const PvGenEnumEntry *entry = nullptr;
+				blackLevelSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					std::string selectorName = name.GetAscii();
+
+					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+						return OnSelectorBlackLevel(selectorName, pProp, eAct);
+					});
+					// Index 0 -> "BlackLevel", others -> "BlackLevel_<name>"
+					const std::string propName = (i == 0) ? "BlackLevel" : ("BlackLevel_" + selectorName);
+					double bl{};
+					GetSelectorBlackLevel(selectorName, bl);
+					double blMin{}, blMax{};
+					GetSelectorBlackLevelMinMax(selectorName, blMin, blMax);
+					CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(bl),
+						MM::Float, false, action);
+					SetPropertyLimits(propName.c_str(), blMin, blMax);
+				}
+			}
+		}
+	}
+	else
+	{
+		// No selector - check if BlackLevel feature exists directly
+		double bl{}, blMin{}, blMax{};
+		pvr = genParams->GetFloatValue("BlackLevel", bl);
+		if (pvr.IsOK())
+		{
+			pvr = genParams->GetFloatRange("BlackLevel", blMin, blMax);
+			if (pvr.IsOK())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnBlackLevel);
+				CreateProperty("BlackLevel", CDeviceUtils::ConvertToString(bl),
+					MM::Float, false, pAct);
+				SetPropertyLimits("BlackLevel", blMin, blMax);
+			}
+		}
+	}
+
 	// TEST PATTERN
 	// list test pattern optiopns
 	pAct = new CPropertyAction(this, &JAICamera::OnTestPattern);

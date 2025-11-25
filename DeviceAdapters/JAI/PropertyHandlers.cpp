@@ -393,6 +393,104 @@ int JAICamera::OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int JAICamera::OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		if (IsCapturing())
+			return ERR_NOT_ALLOWED_DURING_CAPTURE;
+		double val{};
+		pProp->Get(val);
+		PvResult pvr = genParams->SetFloatValue("BlackLevel", val);
+		if (!pvr.IsOK())
+			return processPvError(pvr);
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		double val{};
+		PvResult pvr = genParams->GetFloatValue("BlackLevel", val);
+		if (!pvr.IsOK())
+			return processPvError(pvr);
+		pProp->Set(val);
+	}
+	return DEVICE_OK;
+}
+
+int JAICamera::OnSelectorBlackLevel(const std::string& selector, MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::AfterSet)
+	{
+		if (IsCapturing())
+			return ERR_NOT_ALLOWED_DURING_CAPTURE;
+		double val{};
+		pProp->Get(val);
+		return SetSelectorBlackLevel(selector, val);
+	}
+	else if (eAct == MM::BeforeGet)
+	{
+		double val{};
+		int ret = GetSelectorBlackLevel(selector, val);
+		if (ret != DEVICE_OK)
+			return ret;
+		pProp->Set(val);
+	}
+	return DEVICE_OK;
+}
+
+int JAICamera::GetSelectorBlackLevel(const std::string& selector, double& level)
+{
+	PvGenEnum *bls = genParams->GetEnum("BlackLevelSelector");
+	PvResult pvr = bls->SetValue(selector.c_str());
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	PvResult pvr2 = genParams->GetFloatValue("BlackLevel", level);
+
+	pvr = bls->SetValue(int64_t(0));
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	if (!pvr2.IsOK())
+		return processPvError(pvr2);
+	return DEVICE_OK;
+}
+
+int JAICamera::SetSelectorBlackLevel(const std::string& selector, double level)
+{
+	PvGenEnum *bls = genParams->GetEnum("BlackLevelSelector");
+	PvResult pvr = bls->SetValue(selector.c_str());
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	PvResult pvr2 = genParams->SetFloatValue("BlackLevel", level);
+
+	pvr = bls->SetValue(int64_t(0));
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	if (!pvr2.IsOK())
+		return processPvError(pvr2);
+	return DEVICE_OK;
+}
+
+int JAICamera::GetSelectorBlackLevelMinMax(const std::string& selector, double& minLevel, double& maxLevel)
+{
+	PvGenEnum *bls = genParams->GetEnum("BlackLevelSelector");
+	PvResult pvr = bls->SetValue(selector.c_str());
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	PvResult pvr2 = genParams->GetFloatRange("BlackLevel", minLevel, maxLevel);
+
+	pvr = bls->SetValue(int64_t(0));
+	if (!pvr.IsOK())
+		return processPvError(pvr);
+
+	if (!pvr2.IsOK())
+		return processPvError(pvr2);
+	return DEVICE_OK;
+}
+
 int JAICamera::OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	const char* pvCmd = "BalanceWhiteAuto";

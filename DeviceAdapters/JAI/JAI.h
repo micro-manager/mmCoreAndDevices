@@ -184,6 +184,8 @@ public:
    int OnGainIsIndividual(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSelectorGain(const std::string& selector, MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSelectorBlackLevel(const std::string& selector, MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -203,6 +205,9 @@ private:
    int GetSelectorGain(const std::string& selector, double& gain);
    int SetSelectorGain(const std::string& selector, double gain);
    int GetSelectorGainMinMax(const std::string& selector, double& gMin, double& gMax);
+   int GetSelectorBlackLevel(const std::string& selector, double& level);
+   int SetSelectorBlackLevel(const std::string& selector, double level);
+   int GetSelectorBlackLevelMinMax(const std::string& selector, double& minLevel, double& maxLevel);
 
    ImgBuffer img;
    bool initialized;
