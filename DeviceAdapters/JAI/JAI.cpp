@@ -376,6 +376,49 @@ int JAICamera::Initialize()
 	SetPropertyLimits(g_Gain, gainMin, gainMax);
 	assert(ret == DEVICE_OK);
 
+	// Individual gains (if supported)
+	PvGenEnum *gainSel = genParams->GetEnum("GainSelector");
+	if (gainSel != nullptr)
+	{
+		int64_t ct{};
+		if (gainSel->GetEntriesCount(ct).IsOK() && ct > 1)
+		{
+			pAct = new CPropertyAction(this, &JAICamera::OnGainIsIndividual);
+			ret = CreateProperty("GainIsIndividual", "Off", MM::String, false, pAct);
+			AddAllowedValue("GainIsIndividual", "Off");
+			AddAllowedValue("GainIsIndividual", "On");
+
+			for (int64_t i = 0; i < ct; i++)
+			{
+				const PvGenEnumEntry *entry = nullptr;
+				gainSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					std::string selectorName = name.GetAscii();
+
+					// Skip "AnalogAll" - that's the common gain mode
+					if (selectorName == "AnalogAll")
+						continue;
+
+					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+						return OnSelectorGain(selectorName, pProp, eAct);
+					});
+					const std::string propName = "Gain_" + selectorName;
+					double g{};
+					GetSelectorGain(selectorName, g);
+					double gMin{}, gMax{};
+					GetSelectorGainMinMax(selectorName, gMin, gMax);
+					CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(g),
+						MM::Float, false, action);
+					SetPropertyLimits(propName.c_str(), gMin, gMax);
+				}
+			}
+		}
+	}
+
 	// GAMMA
 	double gamma, gammaMin, gammaMax;
 	pvr = genParams->GetFloatValue("Gamma", gamma);
