@@ -34,7 +34,6 @@
 #ifdef __linux__
 #endif
 
-#include <array>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -289,25 +288,38 @@ int JAICamera::Initialize()
 		int64_t ct{};
 		if (expSel->GetEntriesCount(ct).IsOK() && ct > 1)
 		{
-			pAct = new CPropertyAction(this, &JAICamera::OnExposureIsPerComponent);
-			ret = CreateProperty("ExposureIsPerComponent", "Off", MM::String, false, pAct);
-			AddAllowedValue("ExposureIsPerComponent", "Off");
-			AddAllowedValue("ExposureIsPerComponent", "On");
+			pAct = new CPropertyAction(this, &JAICamera::OnExposureIsIndividual);
+			ret = CreateProperty("ExposureIsIndividual", "Off", MM::String, false, pAct);
+			AddAllowedValue("ExposureIsIndividual", "Off");
+			AddAllowedValue("ExposureIsIndividual", "On");
 
-			const std::array<std::string, 3> components{ "Red", "Green", "Blue" };
-			for (const auto& comp : components)
+			for (int64_t i = 0; i < ct; i++)
 			{
-				auto *action = new MM::ActionLambda([this, comp](MM::PropertyBase *pProp, MM::ActionType eAct) {
-					return OnComponentExposure(comp, pProp, eAct);
-				});
-				const std::string name = "Exposure_" + comp;
-				double eMs{};
-				GetComponentExposure(comp, eMs);
-				double eMinMs{}, eMaxMs{};
-				GetComponentExposureMinMax(comp, eMinMs, eMaxMs);
-				CreateProperty(name.c_str(), CDeviceUtils::ConvertToString(eMs),
-					MM::Float, false, action);
-				SetPropertyLimits(name.c_str(), eMinMs, eMaxMs);
+				const PvGenEnumEntry *entry = nullptr;
+				expSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					std::string selectorName = name.GetAscii();
+
+					// Skip "Common" - that's the common exposure mode
+					if (selectorName == "Common")
+						continue;
+
+					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+						return OnSelectorExposure(selectorName, pProp, eAct);
+					});
+					const std::string propName = "Exposure_" + selectorName;
+					double eMs{};
+					GetSelectorExposure(selectorName, eMs);
+					double eMinMs{}, eMaxMs{};
+					GetSelectorExposureMinMax(selectorName, eMinMs, eMaxMs);
+					CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(eMs),
+						MM::Float, false, action);
+					SetPropertyLimits(propName.c_str(), eMinMs, eMaxMs);
+				}
 			}
 		}
 	}

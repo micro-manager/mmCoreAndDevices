@@ -178,8 +178,8 @@ public:
    // action interface
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnExposureIsPerComponent(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnComponentExposure(const std::string& comp, MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnExposureIsIndividual(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSelectorExposure(const std::string& selector, MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnGainIsIndividual(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSelectorGain(const std::string& selector, MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -197,9 +197,9 @@ private:
 	static void convert_BGR12P_RGBA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
 	bool verifyPvFormat(const PvImage* pvimg);
 	void ClearPvBuffers();
-   int GetComponentExposure(const std::string& comp, double& expMs);
-   int SetComponentExposure(const std::string& comp, double expMs);
-   int GetComponentExposureMinMax(const std::string& comp, double& eMinMs, double& eMaxMs);
+   int GetSelectorExposure(const std::string& selector, double& expMs);
+   int SetSelectorExposure(const std::string& selector, double expMs);
+   int GetSelectorExposureMinMax(const std::string& selector, double& eMinMs, double& eMaxMs);
    int GetSelectorGain(const std::string& selector, double& gain);
    int SetSelectorGain(const std::string& selector, double gain);
    int GetSelectorGainMinMax(const std::string& selector, double& gMin, double& gMax);
