@@ -293,7 +293,8 @@ int JAICamera::Initialize()
 			AddAllowedValue("ExposureIsIndividual", "Off");
 			AddAllowedValue("ExposureIsIndividual", "On");
 
-			for (int64_t i = 0; i < ct; i++)
+			// Skip index 0 (the "common" selector)
+			for (int64_t i = 1; i < ct; i++)
 			{
 				const PvGenEnumEntry *entry = nullptr;
 				expSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
@@ -303,10 +304,6 @@ int JAICamera::Initialize()
 					PvString name;
 					entry->GetName(name);
 					std::string selectorName = name.GetAscii();
-
-					// Skip "Common" - that's the common exposure mode
-					if (selectorName == "Common")
-						continue;
 
 					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
 						return OnSelectorExposure(selectorName, pProp, eAct);
@@ -400,7 +397,8 @@ int JAICamera::Initialize()
 			AddAllowedValue("GainIsIndividual", "Off");
 			AddAllowedValue("GainIsIndividual", "On");
 
-			for (int64_t i = 0; i < ct; i++)
+			// Skip index 0 (the "common" selector)
+			for (int64_t i = 1; i < ct; i++)
 			{
 				const PvGenEnumEntry *entry = nullptr;
 				gainSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
@@ -410,10 +408,6 @@ int JAICamera::Initialize()
 					PvString name;
 					entry->GetName(name);
 					std::string selectorName = name.GetAscii();
-
-					// Skip "AnalogAll" - that's the common gain mode
-					if (selectorName == "AnalogAll")
-						continue;
 
 					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
 						return OnSelectorGain(selectorName, pProp, eAct);

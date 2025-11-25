@@ -201,7 +201,7 @@ int JAICamera::GetSelectorExposure(const std::string& selector, double& expMs)
 	PvResult pvr2 = genParams->GetFloatValue("ExposureTime", expUs);
 	expMs = expUs * 1e-3;
 
-	pvr = ets->SetValue("Common");
+	pvr = ets->SetValue(int64_t(0));
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -220,7 +220,7 @@ int JAICamera::SetSelectorExposure(const std::string& selector, double expMs)
 	const double expUs = expMs * 1e3;
 	PvResult pvr2 = genParams->SetFloatValue("ExposureTime", expUs);
 
-	pvr = ets->SetValue("Common");
+	pvr = ets->SetValue(int64_t(0));
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -241,7 +241,7 @@ int JAICamera::GetSelectorExposureMinMax(const std::string& selector, double& eM
 	eMinMs = eMinUs * 1e-3;
 	eMaxMs = eMaxUs * 1e-3;
 
-	pvr = ets->SetValue("Common");
+	pvr = ets->SetValue(int64_t(0));
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -327,7 +327,7 @@ int JAICamera::GetSelectorGain(const std::string& selector, double& gain)
 
 	PvResult pvr2 = genParams->GetFloatValue("Gain", gain);
 
-	pvr = gs->SetValue("AnalogAll");
+	pvr = gs->SetValue(int64_t(0));
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -345,7 +345,7 @@ int JAICamera::SetSelectorGain(const std::string& selector, double gain)
 
 	PvResult pvr2 = genParams->SetFloatValue("Gain", gain);
 
-	pvr = gs->SetValue("AnalogAll");
+	pvr = gs->SetValue(int64_t(0));
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
@@ -363,7 +363,7 @@ int JAICamera::GetSelectorGainMinMax(const std::string& selector, double& gMin, 
 
 	PvResult pvr2 = genParams->GetFloatRange("Gain", gMin, gMax);
 
-	pvr = gs->SetValue("AnalogAll");
+	pvr = gs->SetValue(int64_t(0));
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
