@@ -1129,11 +1129,14 @@ void JAICamera::ClearPvBuffers()
 
 int JAICamera::InsertImage()
 {
+   Metadata md;
    return GetCoreCallback()->InsertImage(this,
          img.GetPixels(),
          img.Width(),
          img.Height(),
-         img.Depth());
+         img.Depth(),
+         GetNumberOfComponents(),
+         md.Serialize().c_str());
 }
 
 /**
@@ -1273,11 +1276,13 @@ int AcqSequenceThread::svc (void)
 			}
 
 			// transfer pv image to camera buffer
-			// TODO Handle RGBA64 case correctly
 			uint8_t* pSrcImg = pvImg->GetDataPointer();
-			moduleInstance->img.Resize(width, height, 4); // RGBA format
+			moduleInstance->img.Resize(width, height, moduleInstance->pixelSize);
 			uint8_t* pDestImg = moduleInstance->img.GetPixelsRW();
-			JAICamera::convert_BGR8_RGBA32(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
+			if (moduleInstance->pixelSize == 4)
+				JAICamera::convert_BGR8_RGBA32(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
+			else if (moduleInstance->pixelSize == 8)
+				JAICamera::convert_BGR12P_RGBA64(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
 
 			// push image to queue
 			moduleInstance->InsertImage();
