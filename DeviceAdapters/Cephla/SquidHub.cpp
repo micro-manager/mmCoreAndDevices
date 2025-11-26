@@ -101,7 +101,7 @@ SquidHub::SquidHub() :
    busy_ = false;
 
    pAct = new CPropertyAction(this, &SquidHub::OnAutoHome);
-   CreateProperty(g_AutoHome, g_No, MM::String, false, pAct, true);
+   CreateProperty(g_AutoHome, g_Yes, MM::String, false, pAct, true);
    AddAllowedValue(g_AutoHome, g_Yes);
    AddAllowedValue(g_AutoHome, g_No);
 }
