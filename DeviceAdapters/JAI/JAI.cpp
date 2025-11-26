@@ -575,7 +575,8 @@ int JAICamera::Initialize()
 
    vector<string> pixelTypeValues;
 	pixelTypeValues.push_back(g_PixelType_32bitRGB);
-	pixelTypeValues.push_back(g_PixelType_64bitRGB);
+	pixelTypeValues.push_back(g_PixelType_64bitRGB_10bit);
+	pixelTypeValues.push_back(g_PixelType_64bitRGB_12bit);
 
    ret = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
    if (ret != DEVICE_OK)
@@ -761,10 +762,12 @@ int JAICamera::SnapImage()
 		uint8_t* pDestImg = img.GetPixelsRW();
 		if (pixelSize == 4)
 			convert_BGR8_BGRA32(pSrcImg, pDestImg, img.Width(), img.Height());
-		else if (pixelSize == 8)
+		else if (pixelSize == 8 && bitDepth == 10)
+			convert_BGR10P_BGRA64(pSrcImg, pDestImg, img.Width(), img.Height());
+		else if (pixelSize == 8 && bitDepth == 12)
 			convert_BGR12P_BGRA64(pSrcImg, pDestImg, img.Width(), img.Height());
 		else
-			assert(!"Wrong pixel size");
+			assert(!"Wrong pixel size or bit depth");
 	}
 	else
 	{
@@ -1022,6 +1025,45 @@ void JAICamera::convert_BGR8_BGRA32(const uint8_t * src, uint8_t * dest, unsigne
 }
 
 /**
+ * Converts BGR10p (packed 30-bit) image to BGRA 64-bit image. Alpha channel is set to 0.
+ *
+ * @param src - source buffer (BGR10p, 3.75 bytes per pixel)
+ * @param dest - destination buffer (BGRA, 8 bytes per pixel, 16-bit per component)
+ * @param w - image width in pixels
+ * @param h - image height in pixels
+ */
+void JAICamera::convert_BGR10P_BGRA64(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
+{
+	const int byteDepth = 8;
+	unsigned sizeInPixels = w * h;
+	for (unsigned i = 0; i < sizeInPixels; i++)
+	{
+		int pixPtrB = i * 30 / 8;
+		int bitPtrB = i * 30 % 8;
+		uint16_t* buf = (uint16_t*)(src + pixPtrB);
+		uint16_t b = *buf << bitPtrB;
+		b = b >> 6;
+		*((uint16_t*)(dest + i*byteDepth)) = b; // B
+
+		int pixPtrG = (i * 30 + 10) / 8;
+		int bitPtrG = (i * 30 + 10) % 8;
+		buf = (uint16_t*)(src + pixPtrG);
+		uint16_t g = *buf << bitPtrG;
+		g = g >> 6;
+		*((uint16_t*)(dest + i*byteDepth + 2)) = g; // G
+
+		int pixPtrR = (i * 30 + 20) / 8;
+		int bitPtrR = (i * 30 + 20) % 8;
+		buf = (uint16_t*)(src + pixPtrR);
+		uint16_t r = *buf << bitPtrR;
+		r = r >> 6;
+		*((uint16_t*)(dest + i*byteDepth + 4)) = r; // R
+
+		*((uint16_t*)(dest + i*byteDepth + 6)) = 0; // A
+	}
+}
+
+/**
  * Converts BGR12p (packed 36-bit) image to BGRA 64-bit image. Alpha channel is set to 0.
  *
  * @param src - source buffer (BGR12p, 4.5 bytes per pixel)
@@ -1082,20 +1124,20 @@ bool JAICamera::verifyPvFormat(const PvImage * pvImg)
 	}
 
 	uint32_t bpc = pvImg->GetBitsPerComponent(pt);
-	if (bpc != 8 && bpc != 12)
+	if (bpc != 8 && bpc != 10 && bpc != 12)
 	{
 		ostringstream os;
-		os << "Only 8-bits and 12-bits per color plane are supported: BPC=" << bpc;
+		os << "Only 8, 10, and 12 bits per color plane are supported: BPC=" << bpc;
 		LogMessage(os.str());
 		return false;
 	}
 
 	uint32_t pvPixSize = pvImg->GetPixelSize(pt);
 	uint32_t pvBpp = pvImg->GetBitsPerPixel();
-	if (pvPixSize != 24 && pvPixSize != 36)
+	if (pvPixSize != 24 && pvPixSize != 30 && pvPixSize != 36)
 	{
 		ostringstream os;
-		os << "Only 3-byte and 4-byte RGB camera pixels are supported: PixSize=" << pvPixSize << ", BPP=" << pvBpp;
+		os << "Only 24, 30, and 36 bit RGB camera pixels are supported: PixSize=" << pvPixSize << ", BPP=" << pvBpp;
 		LogMessage(os.str());
 		return false;
 	}
@@ -1281,7 +1323,9 @@ int AcqSequenceThread::svc (void)
 			uint8_t* pDestImg = moduleInstance->img.GetPixelsRW();
 			if (moduleInstance->pixelSize == 4)
 				JAICamera::convert_BGR8_BGRA32(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
-			else if (moduleInstance->pixelSize == 8)
+			else if (moduleInstance->pixelSize == 8 && moduleInstance->bitDepth == 10)
+				JAICamera::convert_BGR10P_BGRA64(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
+			else if (moduleInstance->pixelSize == 8 && moduleInstance->bitDepth == 12)
 				JAICamera::convert_BGR12P_BGRA64(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
 
 			// push image to queue

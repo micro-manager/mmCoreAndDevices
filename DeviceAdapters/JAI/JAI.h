@@ -61,7 +61,8 @@ static const char* g_Positive = "Positive";
 static const char* g_Negative = "Negative";
 
 static const char* g_PixelType_32bitRGB = "32bitRGB";
-static const char* g_PixelType_64bitRGB = "64bitRGB";
+static const char* g_PixelType_64bitRGB_10bit = "64bitRGB-10bit";
+static const char* g_PixelType_64bitRGB_12bit = "64bitRGB-12bit";
 
 static const char* g_pv_BinH = "BinningHorizontal";
 static const char* g_pv_BinV = "BinningVertical";
@@ -72,6 +73,7 @@ static const char* g_pv_OffsetY = "OffsetY";
 static const char* g_pv_PixelFormat = "PixelFormat";
 
 static const char* g_pv_PixelFormat_BGR8 = "BGR8";
+static const char* g_pv_PixelFormat_BGR10 = "BGR10p";
 static const char* g_pv_PixelFormat_BGR12 = "BGR12p";
 
 //////////////////////////////////////////////////////////////////////////////
@@ -196,6 +198,7 @@ private:
    int ResizeImageBuffer();
 	int processPvError(const PvResult& pvr);
 	static void convert_BGR8_BGRA32(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
+	static void convert_BGR10P_BGRA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
 	static void convert_BGR12P_BGRA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
 	bool verifyPvFormat(const PvImage* pvimg);
 	void ClearPvBuffers();
