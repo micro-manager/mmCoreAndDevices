@@ -564,23 +564,70 @@ int JAICamera::Initialize()
 	}
 
 	// PIXEL TYPE
-	pvr = genParams->SetEnumValue(g_pv_PixelFormat, g_pv_PixelFormat_BGR8);
+	// Query camera for available pixel formats
+	PvGenEnum* pixelFormatEnum = genParams->GetEnum(g_pv_PixelFormat);
+	int64_t numFormats = 0;
+	pixelFormatEnum->GetEntriesCount(numFormats);
+
+	bool hasBGR8 = false, hasBGR10p = false, hasBGR12p = false;
+	for (int64_t i = 0; i < numFormats; i++)
+	{
+		const PvGenEnumEntry* entry = nullptr;
+		pixelFormatEnum->GetEntryByIndex(i, &entry);
+		if (entry != nullptr && entry->IsAvailable())
+		{
+			PvString name;
+			entry->GetName(name);
+			if (strcmp(name.GetAscii(), g_pv_PixelFormat_BGR8) == 0)
+				hasBGR8 = true;
+			else if (strcmp(name.GetAscii(), g_pv_PixelFormat_BGR10) == 0)
+				hasBGR10p = true;
+			else if (strcmp(name.GetAscii(), g_pv_PixelFormat_BGR12) == 0)
+				hasBGR12p = true;
+		}
+	}
+
+	// Build list of available pixel types
+	vector<string> pixelTypeValues;
+	if (hasBGR8)
+		pixelTypeValues.push_back(g_PixelType_32bitRGB);
+	if (hasBGR10p)
+		pixelTypeValues.push_back(g_PixelType_64bitRGB_10bit);
+	if (hasBGR12p)
+		pixelTypeValues.push_back(g_PixelType_64bitRGB_12bit);
+
+	if (pixelTypeValues.empty())
+	{
+		LogMessage("No supported pixel formats available from camera");
+		return ERR_UNSUPPORTED_IMAGE_FORMAT;
+	}
+
+	// Set initial pixel format (prefer BGR8 if available)
+	const char* initialFormat = hasBGR8 ? g_pv_PixelFormat_BGR8 :
+		(hasBGR10p ? g_pv_PixelFormat_BGR10 : g_pv_PixelFormat_BGR12);
+	pvr = genParams->SetEnumValue(g_pv_PixelFormat, initialFormat);
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
-   pAct = new CPropertyAction (this, &JAICamera::OnPixelType);
-	pixelSize = 4; // 32bitRGB
-   ret = CreateStringProperty(MM::g_Keyword_PixelType, g_PixelType_32bitRGB, false, pAct);
-   assert(ret == DEVICE_OK);
+	// Set pixelSize and bitDepth based on initial format
+	if (hasBGR8) {
+		pixelSize = 4;
+		bitDepth = 8;
+	} else if (hasBGR10p) {
+		pixelSize = 8;
+		bitDepth = 10;
+	} else {
+		pixelSize = 8;
+		bitDepth = 12;
+	}
 
-   vector<string> pixelTypeValues;
-	pixelTypeValues.push_back(g_PixelType_32bitRGB);
-	pixelTypeValues.push_back(g_PixelType_64bitRGB_10bit);
-	pixelTypeValues.push_back(g_PixelType_64bitRGB_12bit);
+	pAct = new CPropertyAction (this, &JAICamera::OnPixelType);
+	ret = CreateStringProperty(MM::g_Keyword_PixelType, pixelTypeValues[0].c_str(), false, pAct);
+	assert(ret == DEVICE_OK);
 
-   ret = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
-   if (ret != DEVICE_OK)
-      return ret;
+	ret = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
+	if (ret != DEVICE_OK)
+		return ret;
 
 	// disable multi roi mode
 	pvr = genParams->SetEnumValue("MultiRoiMode", "Off");
