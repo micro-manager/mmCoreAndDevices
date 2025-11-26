@@ -760,9 +760,9 @@ int JAICamera::SnapImage()
 		uint8_t* pSrcImg = pvImg->GetDataPointer();
 		uint8_t* pDestImg = img.GetPixelsRW();
 		if (pixelSize == 4)
-			convert_BGR8_RGBA32(pSrcImg, pDestImg, img.Width(), img.Height());
+			convert_BGR8_BGRA32(pSrcImg, pDestImg, img.Width(), img.Height());
 		else if (pixelSize == 8)
-			convert_BGR12P_RGBA64(pSrcImg, pDestImg, img.Width(), img.Height());
+			convert_BGR12P_BGRA64(pSrcImg, pDestImg, img.Width(), img.Height());
 		else
 			assert(!"Wrong pixel size");
 	}
@@ -1000,47 +1000,47 @@ int JAICamera::processPvError(const PvResult& pvr)
 }
 
 /**
- * Converts BGR 24-bit image to RGBA 32-bit image. Alpha channel is set to 0.
+ * Converts BGR 24-bit image to BGRA 32-bit image. Alpha channel is set to 0.
  *
- * @return void
- * @param src - source buffer, should be pixSize * 3 bytes
- * @param dest - destination buffer, should be pixSize * 4 bytes
- * @param pixSize - image buffer size in pixels
+ * @param src - source buffer (BGR, 3 bytes per pixel)
+ * @param dest - destination buffer (BGRA, 4 bytes per pixel)
+ * @param w - image width in pixels
+ * @param h - image height in pixels
  */
-void JAICamera::convert_BGR8_RGBA32(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
+void JAICamera::convert_BGR8_BGRA32(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
 {
 	const int byteDepth = 4;
 	int srcCounter = 0;
 	unsigned sizeInPixels = w * h;
 	for (unsigned i = 0; i < sizeInPixels; i++)
 	{
-		dest[i*byteDepth] = src[srcCounter++]; // R
+		dest[i*byteDepth] = src[srcCounter++]; // B
 		dest[i*byteDepth + 1] = src[srcCounter++]; // G
-		dest[i*byteDepth + 2] = src[srcCounter++]; // B
-		dest[i*byteDepth + 3] = 0; // alpha
+		dest[i*byteDepth + 2] = src[srcCounter++]; // R
+		dest[i*byteDepth + 3] = 0; // A
 	}
 }
 
 /**
- * Converts BGR 36-bit image to RGBA 64-bit image. Alpha channel is set to 0.
+ * Converts BGR12p (packed 36-bit) image to BGRA 64-bit image. Alpha channel is set to 0.
  *
- * @return void
- * @param src - source buffer, should be pixSize * 3 bytes
- * @param dest - destination buffer, should be pixSize * 4 bytes
- * @param pixSize - image buffer size in pixels
+ * @param src - source buffer (BGR12p, 4.5 bytes per pixel)
+ * @param dest - destination buffer (BGRA, 8 bytes per pixel, 16-bit per component)
+ * @param w - image width in pixels
+ * @param h - image height in pixels
  */
-void JAICamera::convert_BGR12P_RGBA64(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
+void JAICamera::convert_BGR12P_BGRA64(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
 {
 	const int byteDepth = 8;
 	unsigned sizeInPixels = w * h;
 	for (unsigned i = 0; i < sizeInPixels; i++)
 	{
-		int pixPtrR = i * 36 / 8;
-		int bitPtrR = i * 36 % 8;
-		uint16_t* buf = (uint16_t*)(src + pixPtrR);
-		uint16_t r = *buf << bitPtrR;
-		r = r >> 4;
-		*((uint16_t*)(dest + i*byteDepth)) = r; // R
+		int pixPtrB = i * 36 / 8;
+		int bitPtrB = i * 36 % 8;
+		uint16_t* buf = (uint16_t*)(src + pixPtrB);
+		uint16_t b = *buf << bitPtrB;
+		b = b >> 4;
+		*((uint16_t*)(dest + i*byteDepth)) = b; // B
 
 		int pixPtrG = (i * 36 + 12) / 8;
 		int bitPtrG = (i * 36 + 12) % 8;
@@ -1049,14 +1049,14 @@ void JAICamera::convert_BGR12P_RGBA64(const uint8_t * src, uint8_t * dest, unsig
 		g = g >> 4;
 		*((uint16_t*)(dest + i*byteDepth + 2)) = g; // G
 
-		int pixPtrB = (i * 36 + 24) / 8;
-		int bitPtrB = (i * 36 + 24) % 8;
-		buf = (uint16_t*)(src + pixPtrB);
-		uint16_t b = *buf << bitPtrB;
-		b = b >> 4;
-		*((uint16_t*)(dest + i*byteDepth + 4)) = b; // B
+		int pixPtrR = (i * 36 + 24) / 8;
+		int bitPtrR = (i * 36 + 24) % 8;
+		buf = (uint16_t*)(src + pixPtrR);
+		uint16_t r = *buf << bitPtrR;
+		r = r >> 4;
+		*((uint16_t*)(dest + i*byteDepth + 4)) = r; // R
 
-		*((uint16_t*)(dest + i*byteDepth + 6)) = 0; // alpha
+		*((uint16_t*)(dest + i*byteDepth + 6)) = 0; // A
 	}
 }
 
@@ -1280,9 +1280,9 @@ int AcqSequenceThread::svc (void)
 			moduleInstance->img.Resize(width, height, moduleInstance->pixelSize);
 			uint8_t* pDestImg = moduleInstance->img.GetPixelsRW();
 			if (moduleInstance->pixelSize == 4)
-				JAICamera::convert_BGR8_RGBA32(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
+				JAICamera::convert_BGR8_BGRA32(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
 			else if (moduleInstance->pixelSize == 8)
-				JAICamera::convert_BGR12P_RGBA64(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
+				JAICamera::convert_BGR12P_BGRA64(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
 
 			// push image to queue
 			moduleInstance->InsertImage();
