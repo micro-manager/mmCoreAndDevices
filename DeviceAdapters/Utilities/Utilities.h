@@ -953,13 +953,11 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
       int OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnCamera(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct);
-      /*
-      int OnROIX(MM::PropertyBase* pProp, MM::ActionType eAct);
-      int OnROIY(MM::PropertyBase* pProp, MM::ActionType eAct);
-      int OnROIWidth(MM::PropertyBase* pProp, MM::ActionType eAct);
-      int OnROIHeight(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnROI_X(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnROI_Y(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnROI_Width(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnROI_Height(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
-      */
 
 private:
       int SnapAndAnalyze();
@@ -974,6 +972,12 @@ private:
       double offset_;
       std::string algorithm_;
       ImgBuffer img_;
+      // Camera ROI and binning settings
+      unsigned roiX_;
+      unsigned roiY_;
+      unsigned roiWidth_;
+      unsigned roiHeight_;
+      long binning_;
 };
 
 

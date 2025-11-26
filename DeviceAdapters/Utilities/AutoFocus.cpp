@@ -39,7 +39,12 @@ AutoFocus::AutoFocus() :
    initialized_(false),
    continuousFocusing_(false),
    offset_(0.0),
-   algorithm_(g_Alg_Standard)
+   algorithm_(g_Alg_Standard),
+   roiX_(0),
+   roiY_(0),
+   roiWidth_(0),
+   roiHeight_(0),
+   binning_(1)
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_NO_PHYSICAL_CAMERA, "No physical camera found.  Please select a valid camera in the Camera property.");
@@ -128,6 +133,61 @@ int AutoFocus::Initialize()
    CreateProperty(g_Alg, g_Alg_Standard, MM::String, false, pAct);
    AddAllowedValue(g_Alg, g_Alg_Standard);
 
+   // Query camera for current ROI and dimensions
+   MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+   if (camera != nullptr)
+   {
+      unsigned x, y, xSize, ySize;
+      int ret = camera->GetROI(x, y, xSize, ySize);
+      if (ret == DEVICE_OK)
+      {
+         // If no ROI is set, use full frame
+         if (xSize == 0 || ySize == 0)
+         {
+            roiWidth_ = camera->GetImageWidth();
+            roiHeight_ = camera->GetImageHeight();
+            roiX_ = 0;
+            roiY_ = 0;
+         }
+         else
+         {
+            roiX_ = x;
+            roiY_ = y;
+            roiWidth_ = xSize;
+            roiHeight_ = ySize;
+         }
+      }
+
+      // Get current binning
+      binning_ = camera->GetBinning();
+      if (binning_ <= 0)
+         binning_ = 1;
+   }
+
+   // Create ROI-X property
+   pAct = new CPropertyAction(this, &AutoFocus::OnROI_X);
+   CreateIntegerProperty("ROI-X", (long)roiX_, false, pAct);
+   SetPropertyLimits("ROI-X", 0, 65536);
+
+   // Create ROI-Y property
+   pAct = new CPropertyAction(this, &AutoFocus::OnROI_Y);
+   CreateIntegerProperty("ROI-Y", (long)roiY_, false, pAct);
+   SetPropertyLimits("ROI-Y", 0, 65536);
+
+   // Create ROI-Width property
+   pAct = new CPropertyAction(this, &AutoFocus::OnROI_Width);
+   CreateIntegerProperty("ROI-Width", (long)roiWidth_, false, pAct);
+   SetPropertyLimits("ROI-Width", 0, 65536);
+
+   // Create ROI-Height property
+   pAct = new CPropertyAction(this, &AutoFocus::OnROI_Height);
+   CreateIntegerProperty("ROI-Height", (long)roiHeight_, false, pAct);
+   SetPropertyLimits("ROI-Height", 0, 65536);
+
+   // Create Binning property
+   pAct = new CPropertyAction(this, &AutoFocus::OnBinning);
+   CreateIntegerProperty("Binning", binning_, false, pAct);
+   SetPropertyLimits("Binning", 1, 10);
 
    initialized_ = true;
    return DEVICE_OK;
@@ -163,6 +223,146 @@ int AutoFocus::OnAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet) {
       pProp->Get(algorithm_);
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnROI_X(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long)roiX_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long value;
+      pProp->Get(value);
+      roiX_ = (unsigned)value;
+
+      // Apply ROI to camera
+      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+      if (camera != nullptr)
+      {
+         int ret = camera->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
+         if (ret != DEVICE_OK)
+         {
+            // Restore previous value
+            pProp->Set((long)roiX_);
+            return ret;
+         }
+      }
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnROI_Y(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long)roiY_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long value;
+      pProp->Get(value);
+      roiY_ = (unsigned)value;
+
+      // Apply ROI to camera
+      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+      if (camera != nullptr)
+      {
+         int ret = camera->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
+         if (ret != DEVICE_OK)
+         {
+            // Restore previous value
+            pProp->Set((long)roiY_);
+            return ret;
+         }
+      }
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnROI_Width(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long)roiWidth_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long value;
+      pProp->Get(value);
+      roiWidth_ = (unsigned)value;
+
+      // Apply ROI to camera
+      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+      if (camera != nullptr)
+      {
+         int ret = camera->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
+         if (ret != DEVICE_OK)
+         {
+            // Restore previous value
+            pProp->Set((long)roiWidth_);
+            return ret;
+         }
+      }
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnROI_Height(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long)roiHeight_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long value;
+      pProp->Get(value);
+      roiHeight_ = (unsigned)value;
+
+      // Apply ROI to camera
+      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+      if (camera != nullptr)
+      {
+         int ret = camera->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
+         if (ret != DEVICE_OK)
+         {
+            // Restore previous value
+            pProp->Set((long)roiHeight_);
+            return ret;
+         }
+      }
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(binning_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long value;
+      pProp->Get(value);
+
+      // Apply binning to camera
+      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+      if (camera != nullptr)
+      {
+         int ret = camera->SetBinning((int)value);
+         if (ret != DEVICE_OK)
+         {
+            // Restore previous value
+            pProp->Set(binning_);
+            return ret;
+         }
+         binning_ = value;
+      }
    }
    return DEVICE_OK;
 }
