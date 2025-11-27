@@ -78,7 +78,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 SquidHub::SquidHub() :
    initialized_(false),
-   autoHome_(false),
+   autoHome_(true),
    monitoringThread_(0),
    xyStageDevice_(0),
    zStageDevice_(0),
@@ -101,7 +101,7 @@ SquidHub::SquidHub() :
    busy_ = false;
 
    pAct = new CPropertyAction(this, &SquidHub::OnAutoHome);
-   CreateProperty(g_AutoHome, g_Yes, MM::String, false, pAct, true);
+   CreateProperty(g_AutoHome, autoHome_ ? g_Yes : g_No, MM::String, false, pAct, true);
    AddAllowedValue(g_AutoHome, g_Yes);
    AddAllowedValue(g_AutoHome, g_No);
 }
