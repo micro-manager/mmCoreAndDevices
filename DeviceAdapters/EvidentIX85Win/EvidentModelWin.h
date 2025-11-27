@@ -54,7 +54,8 @@ enum DeviceType
     DeviceType_CorrectionCollar,
     DeviceType_Autofocus,
     DeviceType_OffsetLens,
-    DeviceType_ManualControl
+    DeviceType_ManualControl,
+    DeviceType_ZDCVirtualOffset
 };
 
 // Objective lens information structure
@@ -166,9 +167,18 @@ public:
     // Clear all state
     void Clear();
 
+    // ZDC measured offset management (in steps)
+    void SetMeasuredZOffset(long offset);
+    long GetMeasuredZOffset() const;
+    bool IsMeasuredZOffsetValid() const;
+
 private:
     mutable std::mutex mutex_;
     std::map<DeviceType, DeviceState> devices_;
+
+    // ZDC measured offset (in steps) - shared between Autofocus and ZDCVirtualOffset
+    long measuredZOffset_;
+    bool measuredZOffsetValid_;
 
     // Helper to get or create device state
     DeviceState& GetOrCreateState(DeviceType type);

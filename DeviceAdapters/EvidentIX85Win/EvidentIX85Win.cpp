@@ -119,6 +119,8 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
         return new EvidentAutofocus();
     else if (strcmp(deviceName, g_OffsetLensDeviceName) == 0)
         return new EvidentOffsetLens();
+    else if (strcmp(deviceName, g_ZDCVirtualOffsetDeviceName) == 0)
+        return new EvidentZDCVirtualOffset();
     else if (strcmp(deviceName, g_ObjectiveSetupDeviceName) == 0)
         return new EvidentObjectiveSetup();
 
@@ -3510,8 +3512,6 @@ EvidentAutofocus::EvidentAutofocus() :
     lastNosepiecePos_(-1),
     lastCoverslipType_(-1),
     zdcInitNeeded_(false),
-    measuredZOffset_(0),
-    offsetMeasured_(false),
     workflowMode_(3)      // Default to Continuous Focus mode
 {
     InitializeDefaultErrorMessages();
@@ -3693,6 +3693,15 @@ void EvidentAutofocus::UpdateAFStatus(int status)
         afStatus_ = status;
         OnPropertyChanged("AF Status", GetAFStatusString(afStatus_).c_str());
     }
+}
+
+void EvidentAutofocus::UpdateMeasuredZOffset(long offsetSteps)
+{
+    // Update property to reflect new offset
+    double offsetUm = offsetSteps * FOCUS_STEP_SIZE_UM;
+    std::ostringstream valStr;
+    valStr << offsetUm;
+    OnPropertyChanged("Measured-Focus-Offset-um", valStr.str().c_str());
 }
 
 int EvidentAutofocus::SetContinuousFocusing(bool state)
@@ -3927,16 +3936,28 @@ int EvidentAutofocus::SetOffset(double offset)
 
 int EvidentAutofocus::GetMeasuredZOffset(double& offset)
 {
-    // Get stored Z-offset in micrometers
-    offset = measuredZOffset_ * FOCUS_STEP_SIZE_UM;
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Get stored Z-offset in micrometers from the model
+    offset = hub->GetModel()->GetMeasuredZOffset() * FOCUS_STEP_SIZE_UM;
     return DEVICE_OK;
 }
 
 int EvidentAutofocus::SetMeasuredZOffset(double offset)
 {
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
     // Set stored Z-offset (for manual override)
-    measuredZOffset_ = static_cast<long>(offset / FOCUS_STEP_SIZE_UM);
-    offsetMeasured_ = (measuredZOffset_ != 0);
+    long offsetSteps = static_cast<long>(offset / FOCUS_STEP_SIZE_UM);
+    hub->GetModel()->SetMeasuredZOffset(offsetSteps);
+
+    // Notify both devices that the offset has changed
+    hub->NotifyMeasuredZOffsetChanged(offsetSteps);
+
     return DEVICE_OK;
 }
 
@@ -4143,19 +4164,22 @@ int EvidentAutofocus::MeasureZOffset()
 
             // Step 5: Calculate and store offset
             // Offset = how to correct from ZDC's focus to user's desired focus
-            measuredZOffset_ = originalZPos - newZPos;
-            offsetMeasured_ = true;
+            long measuredZOffset = originalZPos - newZPos;
+            hub->GetModel()->SetMeasuredZOffset(measuredZOffset);
 
-            // Notify core of property change
-            double offsetUm = measuredZOffset_ * FOCUS_STEP_SIZE_UM;
+            // Notify both devices and core of property change
+            double offsetUm = measuredZOffset * FOCUS_STEP_SIZE_UM;
             std::ostringstream valStr;
             valStr << offsetUm;
             OnPropertyChanged("Measured-Focus-Offset-um", valStr.str().c_str());
 
             std::ostringstream logMsg2;
-            logMsg2 << "Measured Z-offset: " << measuredZOffset_ <<
+            logMsg2 << "Measured Z-offset: " << measuredZOffset <<
                       " steps (" << offsetUm << " um)";
             LogMessage(logMsg2.str().c_str());
+
+            // Notify other devices of offset change
+            hub->NotifyMeasuredZOffsetChanged(measuredZOffset);
 
             // Step 6: Return focus to original position
             cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalZPos));
@@ -4200,19 +4224,22 @@ int EvidentAutofocus::MeasureZOffset()
 
                 // Step 5: Calculate and store offset
                 // Offset = how to correct from ZDC's focus to user's desired focus
-                measuredZOffset_ = originalZPos - newZPos;
-                offsetMeasured_ = true;
+                long measuredZOffset = originalZPos - newZPos;
+                hub->GetModel()->SetMeasuredZOffset(measuredZOffset);
 
                 // Notify core of property change
-                double offsetUm = measuredZOffset_ * FOCUS_STEP_SIZE_UM;
+                double offsetUm = measuredZOffset * FOCUS_STEP_SIZE_UM;
                 std::ostringstream valStr;
                 valStr << offsetUm;
                 OnPropertyChanged("Measured-Focus-Offset-um", valStr.str().c_str());
 
                 std::ostringstream logMsg2;
-                logMsg2 << "Measured Z-offset: " << measuredZOffset_ <<
+                logMsg2 << "Measured Z-offset: " << measuredZOffset <<
                           " steps (" << offsetUm << " um)";
                 LogMessage(logMsg2.str().c_str());
+
+                // Notify other devices of offset change
+                hub->NotifyMeasuredZOffsetChanged(measuredZOffset);
 
                 // Step 6: Return focus to original position
                 cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(originalZPos));
@@ -4316,10 +4343,11 @@ int EvidentAutofocus::FindFocusWithOffset()
 
     // Step 4: Apply stored offset to Focus Drive
     long currentZPos = hub->GetModel()->GetPosition(EvidentIX85Win::DeviceType_Focus);
-    long targetZPos = currentZPos + measuredZOffset_;
+    long measuredZOffset = hub->GetModel()->GetMeasuredZOffset();
+    long targetZPos = currentZPos + measuredZOffset;
 
     std::ostringstream logMsg;
-    logMsg << "Applying Z-offset: " << measuredZOffset_ <<
+    logMsg << "Applying Z-offset: " << measuredZOffset <<
               " steps (from " << currentZPos <<
               " to " << targetZPos << ")";
     LogMessage(logMsg.str().c_str());
@@ -5058,30 +5086,142 @@ int EvidentZDCVirtualOffset::Initialize()
     if (!hub->IsDevicePresent(EvidentIX85Win::DeviceType_Autofocus))
         return ERR_DEVICE_NOT_AVAILABLE;
 
-    // Query initial position
-
+    // Get initial position from model
+    long offset = hub->GetModel()->GetMeasuredZOffset();
+    double offsetUm = offset * stepSizeUm_;
 
     // Create Position property
-    CPropertyAction* pAct = new CPropertyAction(this, &EvidentOffsetLens::OnPosition);
-    ret = CreateProperty("Position (um)", "0", MM::Float, false, pAct);
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentZDCVirtualOffset::OnPosition);
+    int ret = CreateProperty(MM::g_Keyword_Position, std::to_string(offsetUm).c_str(), MM::Float, false, pAct);
     if (ret != DEVICE_OK)
         return ret;
 
-    // Enable notifications
-    EnableNotifications(true);
+    hub->RegisterDeviceAsUsed(DeviceType_ZDCVirtualOffset, this);
 
-    hub->RegisterDeviceAsUsed(EvidentIX85Win::DeviceType_OffsetLens, this);
     initialized_ = true;
     return DEVICE_OK;
 }
 
-int EvidentOffsetLens::Shutdown()
+int EvidentZDCVirtualOffset::Shutdown()
 {
     if (initialized_)
     {
+        // Unregister from hub
         EvidentHubWin* hub = GetHub();
         if (hub)
-        {
-            EnableNotifications(false);
-            hub->UnRegisterDeviceAsUsed(EvidentIX85Win::DeviceType_OffsetLens);
-        }
+            hub->UnRegisterDeviceAsUsed(DeviceType_ZDCVirtualOffset);
+
+        initialized_ = false;
+    }
+    return DEVICE_OK;
+}
+
+bool EvidentZDCVirtualOffset::Busy()
+{
+    // Virtual offset is never busy
+    return false;
+}
+
+int EvidentZDCVirtualOffset::SetPositionUm(double pos)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    // Convert μm to steps
+    long steps = static_cast<long>(pos / stepSizeUm_);
+
+    // Update the model
+    hub->GetModel()->SetMeasuredZOffset(steps);
+
+    // Notify both devices that the offset has changed
+    hub->NotifyMeasuredZOffsetChanged(steps);
+
+    return DEVICE_OK;
+}
+
+int EvidentZDCVirtualOffset::GetPositionUm(double& pos)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    long steps = hub->GetModel()->GetMeasuredZOffset();
+    pos = steps * stepSizeUm_;
+    return DEVICE_OK;
+}
+
+int EvidentZDCVirtualOffset::SetPositionSteps(long steps)
+{
+    return SetPositionUm(steps * stepSizeUm_);
+}
+
+int EvidentZDCVirtualOffset::GetPositionSteps(long& steps)
+{
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    steps = hub->GetModel()->GetMeasuredZOffset();
+    return DEVICE_OK;
+}
+
+int EvidentZDCVirtualOffset::SetOrigin()
+{
+    // Set current position as zero offset
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    hub->GetModel()->SetMeasuredZOffset(0);
+    hub->NotifyMeasuredZOffsetChanged(0);
+
+    return DEVICE_OK;
+}
+
+int EvidentZDCVirtualOffset::GetLimits(double& lower, double& upper)
+{
+    // Use focus limits as reference
+    lower = FOCUS_MIN_POS * stepSizeUm_;
+    upper = FOCUS_MAX_POS * stepSizeUm_;
+    return DEVICE_OK;
+}
+
+int EvidentZDCVirtualOffset::OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        double pos;
+        int ret = GetPositionUm(pos);
+        if (ret != DEVICE_OK)
+            return ret;
+        pProp->Set(pos);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        double pos;
+        pProp->Get(pos);
+        int ret = SetPositionUm(pos);
+        if (ret != DEVICE_OK)
+            return ret;
+    }
+    return DEVICE_OK;
+}
+
+EvidentHubWin* EvidentZDCVirtualOffset::GetHub()
+{
+    MM::Hub* hub = GetParentHub();
+    if (!hub)
+        return nullptr;
+    return dynamic_cast<EvidentHubWin*>(hub);
+}
+
+void EvidentZDCVirtualOffset::UpdateMeasuredZOffset(long offsetSteps)
+{
+    // Update property to reflect new offset
+    double offsetUm = offsetSteps * stepSizeUm_;
+    std::ostringstream valStr;
+    valStr << offsetUm;
+    OnPropertyChanged(MM::g_Keyword_Position, valStr.str().c_str());
+    OnStagePositionChanged(offsetUm);
+}

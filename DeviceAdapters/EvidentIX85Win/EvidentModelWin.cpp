@@ -25,7 +25,9 @@
 
 namespace EvidentIX85Win {
 
-MicroscopeModel::MicroscopeModel()
+MicroscopeModel::MicroscopeModel() :
+    measuredZOffset_(0),
+    measuredZOffsetValid_(false)
 {
 }
 
@@ -179,6 +181,8 @@ void MicroscopeModel::Clear()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     devices_.clear();
+    measuredZOffset_ = 0;
+    measuredZOffsetValid_ = false;
 }
 
 DeviceState& MicroscopeModel::GetOrCreateState(DeviceType type)
@@ -201,6 +205,25 @@ const DeviceState& MicroscopeModel::GetStateConst(DeviceType type) const
     if (it == devices_.end())
         return emptyState;
     return it->second;
+}
+
+void MicroscopeModel::SetMeasuredZOffset(long offset)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    measuredZOffset_ = offset;
+    measuredZOffsetValid_ = true;
+}
+
+long MicroscopeModel::GetMeasuredZOffset() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return measuredZOffset_;
+}
+
+bool MicroscopeModel::IsMeasuredZOffsetValid() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return measuredZOffsetValid_;
 }
 
 } // namespace EvidentIX85Win

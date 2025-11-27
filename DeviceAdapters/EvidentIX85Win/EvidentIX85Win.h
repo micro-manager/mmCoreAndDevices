@@ -527,6 +527,7 @@ public:
 
     // Public method for hub to update AF status from notifications
     void UpdateAFStatus(int status);
+    void UpdateMeasuredZOffset(long offsetSteps);
 
 
 private:
@@ -547,8 +548,6 @@ private:
     long lastNosepiecePos_;  // Track objective changes
     int lastCoverslipType_;   // Track coverslip type changes
     bool zdcInitNeeded_;      // Flag to defer ZDC initialization
-    long measuredZOffset_;    // Stored Z-offset in steps (difference before/after AF)
-    bool offsetMeasured_;     // Flag indicating if offset has been measured
     int workflowMode_;        // 1=Measure Offset, 2=Find Focus with Offset, 3=Continuous Focus
 };
 
@@ -592,7 +591,7 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////////
-// Offset Lens (ZDC)
+// ZDC Virtual Offset
 //////////////////////////////////////////////////////////////////////////////
 
 class EvidentZDCVirtualOffset : public CStageBase<EvidentZDCVirtualOffset>
@@ -620,9 +619,11 @@ public:
     // Action interface
     int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+    // Public method for hub to notify of measured offset changes
+    void UpdateMeasuredZOffset(long offsetSteps);
+
 private:
     EvidentHubWin* GetHub();
-    int EnableNotifications(bool enable);
 
     bool initialized_;
     std::string name_;

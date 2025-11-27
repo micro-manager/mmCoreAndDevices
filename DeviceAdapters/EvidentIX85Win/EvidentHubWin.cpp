@@ -48,6 +48,7 @@ extern const char* g_EPINDDeviceName;
 extern const char* g_CorrectionCollarDeviceName;
 extern const char* g_AutofocusDeviceName;
 extern const char* g_OffsetLensDeviceName;
+extern const char* g_ZDCVirtualOffsetDeviceName;
 extern const char* g_ObjectiveSetupDeviceName;
 
 // Property names
@@ -1088,10 +1089,13 @@ int EvidentHubWin::DoDeviceDetection()
     {
         LogMessage("Detected ZDC unit (Autofocus, OffsetLens)");
 
-        // Autofocus
+        // Autofocus (includes virtual offset
         model_.SetDevicePresent(DeviceType_Autofocus, true);
         availableDevices_.push_back(DeviceType_Autofocus);
         detectedDevicesByName_.push_back(g_AutofocusDeviceName);
+        model_.SetDevicePresent(DeviceType_ZDCVirtualOffset, true);
+        availableDevices_.push_back(DeviceType_ZDCVirtualOffset);
+        detectedDevicesByName_.push_back(g_ZDCVirtualOffsetDeviceName);
 
         // Offset Lens
         model_.SetDevicePresent(DeviceType_OffsetLens, true);
@@ -1872,6 +1876,30 @@ int EvidentHubWin::UpdateEPIShutter1Indicator(int state)
 
     LogMessage(("Sent EPI shutter indicator command: " + cmd).c_str(), true);
     return DEVICE_OK;
+}
+
+void EvidentHubWin::NotifyMeasuredZOffsetChanged(long offsetSteps)
+{
+    // Notify EvidentAutofocus device if it's in use
+    auto afIt = usedDevices_.find(EvidentIX85Win::DeviceType_Autofocus);
+    if (afIt != usedDevices_.end() && afIt->second != nullptr)
+    {
+        EvidentAutofocus* afDevice = dynamic_cast<EvidentAutofocus*>(afIt->second);
+        if (afDevice)
+        {
+            afDevice->UpdateMeasuredZOffset(offsetSteps);
+        }
+    }
+
+    auto zfIt = usedDevices_.find(EvidentIX85Win::DeviceType_ZDCVirtualOffset);
+    if (zfIt != usedDevices_.end() && zfIt->second != nullptr)
+    {
+        EvidentZDCVirtualOffset* zdcDevice = dynamic_cast<EvidentZDCVirtualOffset*>(zfIt->second);
+        if (zdcDevice)
+        {
+            zdcDevice->UpdateMeasuredZOffset(offsetSteps);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2658,8 +2686,8 @@ int EvidentHubWin::EnumerateAndOpenInterface()
 // SDK Callback Handlers
 ///////////////////////////////////////////////////////////////////////////////
 
-int CALLBACK EvidentHubWin::CommandCallbackStatic(ULONG MsgId, ULONG wParam, ULONG lParam,
-                                                    PVOID pv, PVOID pContext, PVOID pCaller)
+int CALLBACK EvidentHubWin::CommandCallbackStatic(ULONG /* MsgId */, ULONG /* wParam */, ULONG /* lParam */,
+                                                    PVOID pv, PVOID pContext, PVOID /* pCaller */)
 {
     EvidentHubWin* pHub = static_cast<EvidentHubWin*>(pContext);
     if (pHub != nullptr)
@@ -2670,8 +2698,8 @@ int CALLBACK EvidentHubWin::CommandCallbackStatic(ULONG MsgId, ULONG wParam, ULO
     return 0;
 }
 
-int CALLBACK EvidentHubWin::NotifyCallbackStatic(ULONG MsgId, ULONG wParam, ULONG lParam,
-                                                   PVOID pv, PVOID pContext, PVOID pCaller)
+int CALLBACK EvidentHubWin::NotifyCallbackStatic(ULONG /* MsgId */, ULONG /* wParam */, ULONG /* lParam */,
+                                                   PVOID pv, PVOID pContext, PVOID /* pCaller */)
 {
     EvidentHubWin* pHub = static_cast<EvidentHubWin*>(pContext);
     if (pHub != nullptr && pv != nullptr)
@@ -2683,8 +2711,8 @@ int CALLBACK EvidentHubWin::NotifyCallbackStatic(ULONG MsgId, ULONG wParam, ULON
     return 0;
 }
 
-int CALLBACK EvidentHubWin::ErrorCallbackStatic(ULONG MsgId, ULONG wParam, ULONG lParam,
-                                                  PVOID pv, PVOID pContext, PVOID pCaller)
+int CALLBACK EvidentHubWin::ErrorCallbackStatic(ULONG /* MsgId */, ULONG /* wParam */, ULONG /* lParam */,
+                                                  PVOID pv, PVOID pContext, PVOID /* pCaller */)
 {
     EvidentHubWin* pHub = static_cast<EvidentHubWin*>(pContext);
     if (pHub != nullptr)

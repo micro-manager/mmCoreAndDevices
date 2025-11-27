@@ -88,6 +88,9 @@ public:
     int GetRememberedDIABrightness() const { return rememberedDIABrightness_; }
     void SetRememberedDIABrightness(int brightness) { rememberedDIABrightness_ = brightness; }
 
+    // Measured Z-offset notification (when autofocus measures the offset)
+    void NotifyMeasuredZOffsetChanged(long offsetSteps);
+
 private:
     // Initialization helpers
     int SetRemoteMode();
