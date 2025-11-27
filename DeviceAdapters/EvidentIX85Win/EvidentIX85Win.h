@@ -576,7 +576,46 @@ public:
     int SetOrigin();
     int GetLimits(double& lower, double& upper);
     int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; };
-    bool IsContinuousFocusDrive() const { return false; };
+   // Check if a stage has continuous focusing capability (positions can be set while continuous focus runs).
+    bool IsContinuousFocusDrive() const { return true; };
+
+    // Action interface
+    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+    EvidentHubWin* GetHub();
+    int EnableNotifications(bool enable);
+
+    bool initialized_;
+    std::string name_;
+    double stepSizeUm_;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// Offset Lens (ZDC)
+//////////////////////////////////////////////////////////////////////////////
+
+class EvidentZDCVirtualOffset : public CStageBase<EvidentZDCVirtualOffset>
+{
+public:
+    EvidentZDCVirtualOffset();
+    ~EvidentZDCVirtualOffset();
+
+    // MMDevice API
+    int Initialize();
+    int Shutdown();
+    void GetName(char* pszName) const;
+    bool Busy();
+
+    // Stage API
+    int SetPositionUm(double pos);
+    int GetPositionUm(double& pos);
+    int SetPositionSteps(long steps);
+    int GetPositionSteps(long& steps);
+    int SetOrigin();
+    int GetLimits(double& lower, double& upper);
+    int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; };
+    bool IsContinuousFocusDrive() const { return true; };
 
     // Action interface
     int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);

@@ -48,6 +48,7 @@ const char* g_EPINDDeviceName = "IX85-EPIND";
 const char* g_CorrectionCollarDeviceName = "IX85-CorrectionCollar";
 const char* g_AutofocusDeviceName = "IX85-Autofocus";
 const char* g_OffsetLensDeviceName = "IX85-OffsetLens";
+const char* g_ZDCVirtualOffsetDeviceName = "IX85-ZDCVirtualOffset";
 const char* g_ObjectiveSetupDeviceName = "IX85-ObjectiveSetup";
 
 // Property Names
@@ -5016,3 +5017,71 @@ int EvidentOffsetLens::EnableNotifications(bool enable)
 
     return hub->EnableNotification(CMD_OFFSET_LENS_NOTIFY, enable);
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+// EvidentZDCVirtualOffset - Virtual Offset Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+
+ EvidentZDCVirtualOffset::EvidentZDCVirtualOffset() :
+    initialized_(false),
+    name_(g_ZDCVirtualOffsetDeviceName),
+    // since we operate on the Focus drive, the step size is the same as Focus
+    stepSizeUm_(FOCUS_STEP_SIZE_UM)
+{
+    InitializeDefaultErrorMessages();
+    SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "Offset lens not available on this microscope");
+
+    CreateHubIDProperty();
+}
+
+EvidentZDCVirtualOffset::~EvidentZDCVirtualOffset()
+{
+    Shutdown();
+}
+
+void EvidentZDCVirtualOffset::GetName(char* pszName) const
+{
+    CDeviceUtils::CopyLimitedString(pszName, name_.c_str());
+}
+
+int EvidentZDCVirtualOffset::Initialize()
+{
+    if (initialized_)
+        return DEVICE_OK;
+
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return DEVICE_ERR;
+
+    if (!hub->IsDevicePresent(EvidentIX85Win::DeviceType_Autofocus))
+        return ERR_DEVICE_NOT_AVAILABLE;
+
+    // Query initial position
+
+
+    // Create Position property
+    CPropertyAction* pAct = new CPropertyAction(this, &EvidentOffsetLens::OnPosition);
+    ret = CreateProperty("Position (um)", "0", MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+
+    // Enable notifications
+    EnableNotifications(true);
+
+    hub->RegisterDeviceAsUsed(EvidentIX85Win::DeviceType_OffsetLens, this);
+    initialized_ = true;
+    return DEVICE_OK;
+}
+
+int EvidentOffsetLens::Shutdown()
+{
+    if (initialized_)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (hub)
+        {
+            EnableNotifications(false);
+            hub->UnRegisterDeviceAsUsed(EvidentIX85Win::DeviceType_OffsetLens);
+        }
