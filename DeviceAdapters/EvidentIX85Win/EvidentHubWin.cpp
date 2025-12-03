@@ -72,7 +72,7 @@ const char* g_IndicatorDark = "Dark";
 EvidentHubWin::EvidentHubWin() :
     initialized_(false),
     port_(""),
-    dllPath_("C:\\Users\\nstuurman\\projects\\Evident\\IX5_SDK_v1\\IX-Library\\msl_pm_ix85.dll"),
+    dllPath_("IX5_Library\\msl_pm_ix85.dll"),
     answerTimeoutMs_(ANSWER_TIMEOUT_MS),
     dllHandle_(NULL),
     interfaceHandle_(nullptr),
