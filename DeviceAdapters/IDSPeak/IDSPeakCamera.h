@@ -36,8 +36,8 @@
 #include "DeviceThreads.h"
 #include <string>
 
-#include <peak/peak.hpp>
-#include <peak_ipl/peak_ipl.hpp>
+#include "peak/peak.hpp"
+#include "peak_ipl/peak_ipl.hpp"
 
 #define EXPOSURE_MAX 1000000
 
@@ -81,7 +81,7 @@ public:
     int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
     int ClearROI();
     int GetBinning() const;
-	int SetBinning(int binF);
+    int SetBinning(int binF);
     double GetExposure() const;
     double GetSequenceExposure();
     void SetExposure(double exp);
@@ -104,6 +104,7 @@ public:
     int OnEnableTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBinningEngine(MM::PropertyBase* pProp, MM::ActionType eAct); // Added handler for FPGA Binning
     int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -197,7 +198,7 @@ private:
     bool enableDigitalGain_ = false;
     bool enableTemperature_ = false;
     bool enableTrigger_ = false;
-    
+
     // Exposure time
     double exposureCur_ = 0;
     double exposureMin_ = 0;
