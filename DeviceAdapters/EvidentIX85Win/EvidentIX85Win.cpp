@@ -3644,8 +3644,13 @@ int EvidentAutofocus::Shutdown()
 
 bool EvidentAutofocus::Busy()
 {
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return false;
+
     // AF is busy during One-Shot or Focus Search operations
-    return (afStatus_ == 4);  // 4 = Search
+    // also check the focus drive as we may be moving it to an in focus position
+    return (afStatus_ == 4) || hub->GetModel()->IsBusy(DeviceType_Focus);  // 4 = Search
 }
 
 void EvidentAutofocus::UpdateAFStatus(int status)
