@@ -38,7 +38,7 @@ const char NEGATIVE_ACK = '!';
 const char UNKNOWN_RESPONSE = 'X';
 
 const int MAX_COMMAND_LENGTH = 128;
-const long ANSWER_TIMEOUT_MS = 4000;
+const long ANSWER_TIMEOUT_MS = 6000;
 
 // Serial port settings
 const int BAUD_RATE = 115200;

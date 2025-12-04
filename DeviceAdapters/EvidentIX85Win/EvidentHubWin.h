@@ -91,6 +91,8 @@ public:
     // Measured Z-offset notification (when autofocus measures the offset)
     void NotifyMeasuredZOffsetChanged(long offsetSteps);
 
+    int SetFocusPositionSteps(long position);
+
 private:
     // Initialization helpers
     int SetRemoteMode();

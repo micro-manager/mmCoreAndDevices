@@ -232,45 +232,7 @@ int EvidentFocus::SetPositionUm(double pos)
     if (steps < FOCUS_MIN_POS) steps = FOCUS_MIN_POS;
     if (steps > FOCUS_MAX_POS) steps = FOCUS_MAX_POS;
 
-    // Check if we're already at the target position
-    long currentPos = hub->GetModel()->GetPosition(DeviceType_Focus);
-    bool alreadyAtTarget = IsAtTargetPosition(currentPos, steps, FOCUS_POSITION_TOLERANCE);
-
-    // Set target position BEFORE sending command so notifications can check against it
-    hub->GetModel()->SetTargetPosition(DeviceType_Focus, steps);
-    hub->GetModel()->SetBusy(DeviceType_Focus, true);
-
-    std::string cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(steps));
-    std::string response;
-    int ret = hub->ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
-    {
-        // Command failed - clear busy state
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-        return ret;
-    }
-
-    if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
-    {
-        // Command rejected - clear busy state
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-
-        // Check for specific error: position out of range
-        if (IsPositionOutOfRangeError(response))
-        {
-            return ERR_POSITION_OUT_OF_RANGE;
-        }
-        return ERR_NEGATIVE_ACK;
-    }
-
-    // If we're already at the target, firmware won't send notifications, so clear busy immediately
-    if (alreadyAtTarget)
-    {
-        hub->GetModel()->SetBusy(DeviceType_Focus, false);
-    }
-
-    // Command accepted - if not already at target, busy will be cleared by notification when target reached
-    return DEVICE_OK;
+    return hub->SetFocusPositionSteps(steps);
 }
 
 int EvidentFocus::GetPositionUm(double& pos)
@@ -4285,6 +4247,7 @@ int EvidentAutofocus::MeasureZOffset()
 
 int EvidentAutofocus::FindFocusWithOffset()
 {
+   // TODO: evaluate if we should set Busy to true and execute this in a separate thread
     EvidentHubWin* hub = GetHub();
     if (!hub)
         return DEVICE_ERR;
@@ -4352,16 +4315,9 @@ int EvidentAutofocus::FindFocusWithOffset()
               " to " << targetZPos << ")";
     LogMessage(logMsg.str().c_str());
 
-    cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(targetZPos));
-    ret = hub->ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
-        return ret;
-
-    if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
-        return ERR_NEGATIVE_ACK;
-
-    LogMessage("Find Focus with Offset complete");
-    return DEVICE_OK;
+    // Step 5: Move Focus Drive to new position
+    // Sets the Focus drive busy flag
+    return hub->SetFocusPositionSteps(targetZPos);
 }
 
 std::string EvidentAutofocus::GetAFStatusString(int status)

@@ -1902,6 +1902,49 @@ void EvidentHubWin::NotifyMeasuredZOffsetChanged(long offsetSteps)
     }
 }
 
+int EvidentHubWin::SetFocusPositionSteps(long steps)
+{
+    // Check if we're already at the target position
+    long currentPos = GetModel()->GetPosition(DeviceType_Focus);
+    bool alreadyAtTarget = IsAtTargetPosition(currentPos, steps, FOCUS_POSITION_TOLERANCE);
+
+    // Set target position BEFORE sending command so notifications can check against it
+    GetModel()->SetTargetPosition(DeviceType_Focus, steps);
+    GetModel()->SetBusy(DeviceType_Focus, true);
+
+    std::string cmd = BuildCommand(CMD_FOCUS_GOTO, static_cast<int>(steps));
+    std::string response;
+    int ret = ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+    {
+        // Command failed - clear busy state
+        GetModel()->SetBusy(DeviceType_Focus, false);
+        return ret;
+    }
+
+    if (!IsPositiveAck(response, CMD_FOCUS_GOTO))
+    {
+        // Command rejected - clear busy state
+        GetModel()->SetBusy(DeviceType_Focus, false);
+
+        // Check for specific error: position out of range
+        if (IsPositionOutOfRangeError(response))
+        {
+            return ERR_POSITION_OUT_OF_RANGE;
+        }
+        return ERR_NEGATIVE_ACK;
+    }
+
+    // If we're already at the target, firmware won't send notifications, so clear busy immediately
+    if (alreadyAtTarget)
+    {
+        GetModel()->SetBusy(DeviceType_Focus, false);
+    }
+
+    // Command accepted - if not already at target, busy will be cleared by notification when target reached
+    return DEVICE_OK;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Notification Processing
 ///////////////////////////////////////////////////////////////////////////////
