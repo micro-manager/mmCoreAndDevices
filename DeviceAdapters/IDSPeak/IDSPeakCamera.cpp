@@ -72,7 +72,7 @@ const char* g_keyword_Peak_PixelFormat = "IDS Pixel Format";
 * The constructor does not access the hardware at all. The verification whether
 * these features are actually supported happens during the initialization.
 * Features are simply skipped if they turn out not to be supported.
-* 
+*
 * @params idx - Unique Camera id
 */
 CIDSPeakCamera::CIDSPeakCamera(int idx) :
@@ -94,7 +94,7 @@ CIDSPeakCamera::CIDSPeakCamera(int idx) :
     pAct = new CPropertyAction(this, &CIDSPeakCamera::OnEnableDigitalGain);
     CreateStringProperty("Enable digital gain", allowedValues[1].c_str(), false, pAct, true);
     SetAllowedValues("Enable digitgal gain", allowedValues);
-    
+
     // Enable temperature monitor
     pAct = new CPropertyAction(this, &CIDSPeakCamera::OnEnableTemperature);
     CreateStringProperty("Enable temperature", allowedValues[1].c_str(), false, pAct, true);
@@ -198,7 +198,7 @@ int CIDSPeakCamera::Initialize()
     // Various camera properties
     int ret = InitializeCameraDescription();
     if (DEVICE_OK != ret) { return ret; }
-    
+
     // ExposureTime
     ret = InitializeExposureTime();
     if (DEVICE_OK != ret) { return ret; }
@@ -305,7 +305,7 @@ int CIDSPeakCamera::SnapImage()
     PrepareBuffer();
     ret = StartAcquisition(1);
     if (DEVICE_OK != ret)
-    { 
+    {
         StopAcquisition();
         return ret;
     }
@@ -330,7 +330,7 @@ int CIDSPeakCamera::SnapImage()
     }
 
     // Acquire and transfer the image to MM
-    uint64_t timeout_ms = exposureCur_ * 3;
+    uint64_t timeout_ms = (uint64_t)(exposureCur_ * 3);
     ret = AcquireAndTransferImage(timeout_ms, true);
     // Unblock the camera
     StopAcquisition();
@@ -428,15 +428,15 @@ long CIDSPeakCamera::GetImageBufferSize() const
 */
 int CIDSPeakCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
-    try 
+    try
     {
-        if (!CheckAccess(nodeMapRemoteDevice->FindNode<IntNode>("OffsetX"), AccessTypes::READWRITE)) 
+        if (!CheckAccess(nodeMapRemoteDevice->FindNode<IntNode>("OffsetX"), AccessTypes::READWRITE))
         {
             LogMessage("IDS error: Could not set ROI, due to lack of READWRITE access.");
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not determine whether ROI is writeable.");
         LogMessage(e.what());
@@ -444,7 +444,7 @@ int CIDSPeakCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySiz
     }
 
     // if xSize and ySize are 0, set ROI to full frame
-    if (0 == xSize && 0 == ySize) 
+    if (0 == xSize && 0 == ySize)
     {
         x = 0;
         y = 0;
@@ -488,7 +488,7 @@ int CIDSPeakCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySiz
         y = (sensorHeight_ / binSize_) - ySize;
     }
 
-    try 
+    try
     {
         // Adjust offset to make sure window doesn't exceed sensor
         nodeMapRemoteDevice->FindNode<IntNode>("OffsetX")->SetValue(0);
@@ -500,7 +500,7 @@ int CIDSPeakCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySiz
         nodeMapRemoteDevice->FindNode<IntNode>("OffsetX")->SetValue(x);
         nodeMapRemoteDevice->FindNode<IntNode>("OffsetY")->SetValue(y);
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: An error occurred while setting the ROI.");
         LogMessage(e.what());
@@ -509,6 +509,7 @@ int CIDSPeakCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySiz
 
     // Update framerate limits
     int ret = GetBoundaries(nodeMapRemoteDevice->FindNode<FloatNode>("AcquisitionFrameRate"), frameRateMin_, frameRateMax_, frameRateInc_);
+    if (DEVICE_OK != ret) { return ret; }
     SetPropertyLimits("MDA framerate", frameRateMin_, frameRateMax_);
 
     img_.Resize(xSize, ySize);
@@ -563,7 +564,7 @@ int CIDSPeakCamera::GetBinning() const
 */
 int CIDSPeakCamera::SetBinning(int binF)
 {
-    try 
+    try
     {
         nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")
             ->SetCurrentEntry(binningSelector_);
@@ -572,7 +573,7 @@ int CIDSPeakCamera::SetBinning(int binF)
         nodeMapRemoteDevice->FindNode<IntNode>("BinningVertical")
             ->SetValue(binF);
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: An error occurred while setting binning.");
         LogMessage(e.what());
@@ -628,7 +629,7 @@ void CIDSPeakCamera::SetExposure(double exp)
 {
     // Check for access
     auto node = nodeMapRemoteDevice->FindNode<FloatNode>("ExposureTime");
-    if (node->AccessStatus() != peak::core::nodes::NodeAccessStatus::ReadWrite) 
+    if (node->AccessStatus() != peak::core::nodes::NodeAccessStatus::ReadWrite)
     {
         LogMessage("IDS error: No write access to ExposureTime.");
         return;
@@ -636,30 +637,30 @@ void CIDSPeakCamera::SetExposure(double exp)
 
     // Check if exposure time is less than the minimun exposure time
     // If so, set it to minimum exposure time.
-    if (exp <= exposureMin_) 
+    if (exp <= exposureMin_)
     {
         exp = exposureMin_;
         LogMessage("IDS warning: Exposure time too short. Exposure time set to minimum.");
     }
     // Check if exposure time is less than the maximum exposure time
     // If so, set it to maximum exposure time.
-    else if (exp >= exposureMax_) 
-   {
+    else if (exp >= exposureMax_)
+    {
         exp = exposureMax_;
         LogMessage("IDS warning: Exposure time too long. Exposure time set to maximum.");
     }
-    
+
     // Convert milliseconds to microseconds (peak cameras expect time in microseconds)
     // and make exposure set multiple of increment.
     double exposureSet = multipleOfIncrement(exp * 1000, exposureInc_);
-    
+
     // Set new exposure time and get actual value after set
-    try 
+    try
     {
         node->SetValue(exposureSet);
         exposureCur_ = node->Value() / 1000;
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not set exposure time.");
         LogMessage(e.what());
@@ -667,13 +668,13 @@ void CIDSPeakCamera::SetExposure(double exp)
     }
 
     // Update framerate range
-    try 
+    try
     {
         auto nodeFrameRate = nodeMapRemoteDevice->FindNode<FloatNode>("AcquisitionFrameRate");
         frameRateMin_ = nodeFrameRate->Minimum();
         frameRateMax_ = nodeFrameRate->Maximum();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not read acquisition framerate");
         LogMessage(e.what());
@@ -788,9 +789,9 @@ int CIDSPeakCamera::SendExposureSequence() const
 */
 int CIDSPeakCamera::StartSequenceAcquisition(double interval)
 {
-    if ("On" == triggerMode_) 
+    if ("On" == triggerMode_)
     {
-        LogMessage("IDS warning: Cannot use \"Live\" mode while TriggerMode is On." + 
+        LogMessage("IDS warning: Cannot use \"Live\" mode while TriggerMode is On." +
             std::string(" Turned off TriggerMode automatically.")
         );
         nodeMapRemoteDevice->FindNode<EnumNode>("TriggerMode")->SetCurrentEntry("Off");
@@ -818,7 +819,7 @@ int CIDSPeakCamera::StartSequenceAcquisition(long numImages, double interval_ms,
     int ret = DEVICE_OK;
 
     // Adjust framerate to match requested interval between frames
-    if (interval_ms > 0) 
+    if (interval_ms > 0)
     {
         ret = SetFrameRate(1000 / interval_ms);
         if (DEVICE_OK != ret) { return ret; }
@@ -849,7 +850,7 @@ int CIDSPeakCamera::StartSequenceAcquisition(long numImages, double interval_ms,
 */
 int CIDSPeakCamera::StopSequenceAcquisition()
 {
-    if (!thd_->IsStopped()) 
+    if (!thd_->IsStopped())
     {
         thd_->Stop();
         thd_->wait();
@@ -868,13 +869,13 @@ int CIDSPeakCamera::StopSequenceAcquisition()
 * @param eAct - type of action performed on property (eg get/set)
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::OnEnableTemperature(MM::PropertyBase* pProp, MM::ActionType eAct) 
+int CIDSPeakCamera::OnEnableTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set((enableTemperature_) ? "true" : "false");
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
@@ -891,11 +892,11 @@ int CIDSPeakCamera::OnEnableTemperature(MM::PropertyBase* pProp, MM::ActionType 
 * @returns Integer status code - Returns DEVICE_OK on success
 */
 int CIDSPeakCamera::OnEnableAnalogGain(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set((enableAnalogGain_) ? "true" : "false");
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
@@ -912,11 +913,11 @@ int CIDSPeakCamera::OnEnableAnalogGain(MM::PropertyBase* pProp, MM::ActionType e
 * @returns Integer status code - Returns DEVICE_OK on success
 */
 int CIDSPeakCamera::OnEnableDigitalGain(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set((enableDigitalGain_) ? "true" : "false");
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
@@ -933,11 +934,11 @@ int CIDSPeakCamera::OnEnableDigitalGain(MM::PropertyBase* pProp, MM::ActionType 
 * @returns Integer status code - Returns DEVICE_OK on success
 */
 int CIDSPeakCamera::OnEnableAutoWhitebalance(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set((enableAutoWhitebalance_) ? "true" : "false");
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
@@ -954,11 +955,11 @@ int CIDSPeakCamera::OnEnableAutoWhitebalance(MM::PropertyBase* pProp, MM::Action
 * @returns Integer status code - Returns DEVICE_OK on success
 */
 int CIDSPeakCamera::OnEnableTrigger(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set((enableTrigger_) ? "true" : "false");
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
@@ -1008,12 +1009,12 @@ int CIDSPeakCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
         ret = GetBoundaries(nodeMapRemoteDevice->FindNode<IntNode>("Height"),
             roiHeightMin_, roiHeightMax_, roiHeightIncrement_);
         if (DEVICE_OK != ret) { return ret; }
-        
+
         // Request new ROI values
         try
         {
-            roiX_ = nodeMapRemoteDevice->FindNode<IntNode>("OffsetX")->Value();
-            roiY_ = nodeMapRemoteDevice->FindNode<IntNode>("OffsetY")->Value();
+            roiX_ = (unsigned int)nodeMapRemoteDevice->FindNode<IntNode>("OffsetX")->Value();
+            roiY_ = (unsigned int)nodeMapRemoteDevice->FindNode<IntNode>("OffsetY")->Value();
             unsigned width = (unsigned)nodeMapRemoteDevice->FindNode<IntNode>("Width")->Value();
             unsigned height = (unsigned)nodeMapRemoteDevice->FindNode<IntNode>("Height")->Value();
             img_.Resize(width, height);
@@ -1043,6 +1044,70 @@ int CIDSPeakCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
         break;
     }
     return ret;
+}
+
+/**
+* Handles the BinningEngine property.
+* @param pProp - pointer to property
+* @param eAct - type of action performed on property (eg get/set)
+* @returns Integer status code - Returns DEVICE_OK on success
+*/
+int CIDSPeakCamera::OnBinningEngine(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        try {
+            std::string currentSel = nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->CurrentEntry()->SymbolicValue();
+            if (currentSel == "Region0")
+            {
+                pProp->Set("FPGA");
+            }
+            else
+            {
+                pProp->Set("Sensor");
+            }
+            binningSelector_ = currentSel;
+        }
+        catch (std::exception& e) {
+            LogMessage("IDS exception: Could not get the binning selector.");
+            LogMessage(e.what());
+            return DEVICE_ERR;
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        if (IsCapturing()) return DEVICE_CAMERA_BUSY_ACQUIRING;
+
+        std::string val;
+        pProp->Get(val);
+        std::string genicamSelector = (val == "FPGA") ? "Region0" : "Sensor";
+
+        try {
+            nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->SetCurrentEntry(genicamSelector);
+            binningSelector_ = genicamSelector;
+            int64_t maxVal = nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->Maximum();
+            std::vector<std::string> binningValues;
+            int64_t i = 1;
+            while (i <= maxVal)
+            {
+                binningValues.push_back(std::to_string(i));
+                i *= 2;
+            }
+            int ret = SetAllowedValues(MM::g_Keyword_Binning, binningValues);
+            if (ret != DEVICE_OK) { return ret; }
+
+            int targetBinning = (binSize_ > maxVal) ? 1 : binSize_;
+            SetBinning(targetBinning);
+            SetProperty(MM::g_Keyword_Binning, std::to_string(targetBinning).c_str());
+            ClearROI();
+        }
+        catch (std::exception& e) {
+            LogMessage("IDS exception: Could not set the binning selector.");
+            LogMessage(e.what());
+            return DEVICE_ERR;
+        }
+    }
+    return DEVICE_OK;
 }
 
 /**
@@ -1092,7 +1157,7 @@ int CIDSPeakCamera::OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct)
         // Check if pixelFormat didn't change
         if (temp == pixelFormat_) { return DEVICE_OK; }
 
-        try 
+        try
         {
             // Check for write access
             auto node = nodeMapRemoteDevice->FindNode<EnumNode>("PixelFormat");
@@ -1130,7 +1195,7 @@ int CIDSPeakCamera::OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct)
             SetAllowedValues(g_PixelType, pixelTypes);
             pixelFormat_ = temp;
         }
-        catch (std::exception& e) 
+        catch (std::exception& e)
         {
             LogMessage("IDS exception: Could not set PixelFormat.");
             LogMessage(e.what());
@@ -1166,19 +1231,19 @@ int CIDSPeakCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     case MM::BeforeGet:
     {
-        if (nComponents_ == 1 && bitDepth_ == 8) 
+        if (nComponents_ == 1 && bitDepth_ == 8)
         {
             pProp->Set(g_PixelType_8bit);
         }
-        else if (nComponents_ == 1 && bitDepth_ == 16) 
+        else if (nComponents_ == 1 && bitDepth_ == 16)
         {
             pProp->Set(g_PixelType_16bit);
         }
-        else if (nComponents_ == 4 && bitDepth_ == 8) 
+        else if (nComponents_ == 4 && bitDepth_ == 8)
         {
             pProp->Set(g_PixelType_32bitBGRA);
         }
-        else 
+        else
         {
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
@@ -1207,12 +1272,12 @@ int CIDSPeakCamera::OnAutoWhitebalance(MM::PropertyBase* pProp, MM::ActionType e
             LogMessage("IDS error: Auto whitebalance read mode not available currently.");
             return DEVICE_ERR;
         }
-        
-        try 
+
+        try
         {
             whitebalanceCurr_ = node->CurrentEntry()->SymbolicValue();
         }
-        catch (std::exception& e) 
+        catch (std::exception& e)
         {
             LogMessage("IDS exception: Could not read the auto whitebalance mode.");
             LogMessage(e.what());
@@ -1225,7 +1290,7 @@ int CIDSPeakCamera::OnAutoWhitebalance(MM::PropertyBase* pProp, MM::ActionType e
 
         std::string autoWB;
         pProp->Get(autoWB);
-        
+
         // Already in that mode
         if (autoWB == whitebalanceCurr_) { return DEVICE_OK; }
 
@@ -1236,12 +1301,12 @@ int CIDSPeakCamera::OnAutoWhitebalance(MM::PropertyBase* pProp, MM::ActionType e
             return DEVICE_ERR;
         }
 
-        try 
+        try
         {
             node->SetCurrentEntry(autoWB);
             whitebalanceCurr_ = node->CurrentEntry()->SymbolicValue();
         }
-        catch (std::exception& e) 
+        catch (std::exception& e)
         {
             LogMessage(("IDS exception: Could not set the auto whitebalance to: " + autoWB).c_str());
             LogMessage(e.what());
@@ -1492,30 +1557,30 @@ int CIDSPeakCamera::OnDigitalBlue(MM::PropertyBase* pProp, MM::ActionType eAct)
 * @param eAct - type of action performed on property (eg get/set)
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct) 
+int CIDSPeakCamera::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set(triggerMode_.c_str());
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
         if (temp == triggerMode_) { return DEVICE_OK; }
 
         auto node = nodeMapRemoteDevice->FindNode<EnumNode>("TriggerMode");
-        if (!CheckAccess(node, AccessTypes::READWRITE)) 
+        if (!CheckAccess(node, AccessTypes::READWRITE))
         {
             LogMessage("IDS error: Could not set TriggerMode, due to lack of READWRITE access.");
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
-        try 
+        try
         {
             node->SetCurrentEntry(temp); // Actually set node
             triggerMode_ = node->CurrentEntry()->SymbolicValue(); // Verify value
         }
-        catch (std::exception & e) 
+        catch (std::exception& e)
         {
             LogMessage("IDS exception: Could not set Trigger Mode.");
             LogMessage(e.what());
@@ -1532,30 +1597,30 @@ int CIDSPeakCamera::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 * @param eAct - type of action performed on property (eg get/set)
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct) 
+int CIDSPeakCamera::OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set(triggerSelector_.c_str());
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
         if (temp == triggerSelector_) { return DEVICE_OK; }
-        
+
         auto node = nodeMapRemoteDevice->FindNode<EnumNode>("TriggerSelector");
-        if (!CheckAccess(node, AccessTypes::READWRITE)) 
+        if (!CheckAccess(node, AccessTypes::READWRITE))
         {
             LogMessage("IDS error: Could not set TriggerSelector, due to lack of READWRITE access.");
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
-        try 
+        try
         {
             node->SetCurrentEntry(temp);
             triggerSelector_ = node->CurrentEntry()->SymbolicValue();
         }
-        catch (std::exception& e) 
+        catch (std::exception& e)
         {
             LogMessage("IDS exception: Could not set TriggerSelector.");
             LogMessage(e.what());
@@ -1572,25 +1637,25 @@ int CIDSPeakCamera::OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eA
 * @param eAct - type of action performed on property (eg get/set)
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct) 
+int CIDSPeakCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set(triggerSource_.c_str());
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
         if (temp == triggerSource_) { return DEVICE_OK; }
 
         auto node = nodeMapRemoteDevice->FindNode<EnumNode>("TriggerSource");
-        if (!CheckAccess(node, AccessTypes::READWRITE)) 
+        if (!CheckAccess(node, AccessTypes::READWRITE))
         {
             LogMessage("IDS error: Could not set TriggerSource, due to lack of READWRITE access.");
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
-        try 
+        try
         {
             node->SetCurrentEntry(temp);
             triggerSource_ = node->CurrentEntry()->SymbolicValue();
@@ -1611,13 +1676,13 @@ int CIDSPeakCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct
 * @param eAct - type of action performed on property (eg get/set)
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAct) 
+int CIDSPeakCamera::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set(triggerActivate_);
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         long temp = 0;
         pProp->Get(temp);
@@ -1625,17 +1690,17 @@ int CIDSPeakCamera::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType 
         if (temp == 0) { return DEVICE_OK; }
 
         auto node = nodeMapRemoteDevice->FindNode<CommandNode>("TriggerSoftware");
-        if (!CheckAccess(node, AccessTypes::WRITEONLY)) 
+        if (!CheckAccess(node, AccessTypes::WRITEONLY))
         {
             LogMessage("IDS error: Could not activate trigger, due to lack of READWRITE access.");
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
-        try 
+        try
         {
             node->Execute();
             node->WaitUntilDone();
         }
-        catch (std::exception& e) 
+        catch (std::exception& e)
         {
             LogMessage("IDS exception: Could not activate trigger.");
             LogMessage(e.what());
@@ -1652,30 +1717,30 @@ int CIDSPeakCamera::OnTriggerActivation(MM::PropertyBase* pProp, MM::ActionType 
 * @param eAct - type of action performed on property (eg get/set)
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::OnTriggerEdge(MM::PropertyBase* pProp, MM::ActionType eAct) 
+int CIDSPeakCamera::OnTriggerEdge(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    if (eAct == MM::BeforeGet) 
+    if (eAct == MM::BeforeGet)
     {
         pProp->Set(triggerEdge_.c_str());
     }
-    else if (eAct == MM::AfterSet) 
+    else if (eAct == MM::AfterSet)
     {
         std::string temp;
         pProp->Get(temp);
         if (temp == triggerEdge_) { return DEVICE_OK; }
 
         auto node = nodeMapRemoteDevice->FindNode<EnumNode>("TriggerActivation");
-        if (!CheckAccess(node, AccessTypes::READWRITE)) 
+        if (!CheckAccess(node, AccessTypes::READWRITE))
         {
             LogMessage("IDS error: Could not set TriggerEdge, due to lack of READWRITE access.");
             return DEVICE_CAN_NOT_SET_PROPERTY;
         }
-        try 
+        try
         {
             node->SetCurrentEntry(temp);
             triggerEdge_ = node->CurrentEntry()->SymbolicValue();
         }
-        catch (std::exception& e) 
+        catch (std::exception& e)
         {
             LogMessage("IDS exception: Could not set TriggerEdge.");
             LogMessage(e.what());
@@ -1696,7 +1761,7 @@ int CIDSPeakCamera::OnSensorTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
     // This is a readonly function
     if (eAct == MM::BeforeGet)
     {
-        try 
+        try
         {
             auto node = nodeMapRemoteDevice->FindNode<FloatNode>("DeviceTemperature");
             if (!CheckAccess(node, AccessTypes::READONLY))
@@ -1706,7 +1771,7 @@ int CIDSPeakCamera::OnSensorTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
             }
             sensorTemp_ = node->Value();
         }
-        catch (std::exception& e) 
+        catch (std::exception& e)
         {
             LogMessage("IDS exception: Could not read temperature.");
             LogMessage(e.what());
@@ -1725,7 +1790,7 @@ int CIDSPeakCamera::OnSensorTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
 * Create general camera description properties
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeCameraDescription() 
+int CIDSPeakCamera::InitializeCameraDescription()
 {
     // Name
     int ret = CreateStringProperty(MM::g_Keyword_Name, g_IDSPeakCameraName, true);
@@ -1736,12 +1801,12 @@ int CIDSPeakCamera::InitializeCameraDescription()
     if (DEVICE_OK != ret) { return ret; }
 
     // CameraName and SerialNumber
-    try 
+    try
     {
         modelName_ = descriptor->ModelName();
         serialNumber_ = descriptor->SerialNumber();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not get model name or serial number.");
         LogMessage(e.what());
@@ -1753,12 +1818,12 @@ int CIDSPeakCamera::InitializeCameraDescription()
     if (DEVICE_OK != ret) { return ret; }
 
     // Sensor information
-    try 
+    try
     {
         sensorHeight_ = (long)nodeMapRemoteDevice->FindNode<IntNode>("SensorHeight")->Value();
         sensorWidth_ = (long)nodeMapRemoteDevice->FindNode<IntNode>("SensorWidth")->Value();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not get sensor information (heigt/width).");
         LogMessage(e.what());
@@ -1769,12 +1834,12 @@ int CIDSPeakCamera::InitializeCameraDescription()
     if (DEVICE_OK != ret) { return ret; }
 
     // Get current acquisition Mode
-    try 
+    try
     {
         acquisitionMode_ = nodeMapRemoteDevice->FindNode<EnumNode>("AcquisitionMode")
             ->CurrentEntry()->SymbolicValue();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not get acquisition mode.");
         LogMessage(e.what());
@@ -1784,14 +1849,14 @@ int CIDSPeakCamera::InitializeCameraDescription()
 }
 
 /**
-* Initialize exposure time property. NOTE: Micro-Manager expects the 
+* Initialize exposure time property. NOTE: Micro-Manager expects the
 * exposure time in milliseconds, whereas IDS expects them in microseconds.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeExposureTime() 
+int CIDSPeakCamera::InitializeExposureTime()
 {
     // Exposure time, divide by 1000 to convert us to ms.
-    try 
+    try
     {
         auto node = nodeMapRemoteDevice->FindNode<FloatNode>("ExposureTime");
         exposureCur_ = node->Value() / 1000;
@@ -1799,7 +1864,7 @@ int CIDSPeakCamera::InitializeExposureTime()
         exposureMax_ = node->Maximum() / 1000;
         exposureInc_ = node->Increment() / 1000;
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not read exposure time.");
         LogMessage(e.what());
@@ -1815,19 +1880,19 @@ int CIDSPeakCamera::InitializeExposureTime()
 * Initialize FrameRate property
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeFramerate() 
+int CIDSPeakCamera::InitializeFramerate()
 {
-    try 
+    try
     {
         auto node = nodeMapRemoteDevice->FindNode<FloatNode>("AcquisitionFrameRate");
         frameRateCur_ = node->Value();
         frameRateMin_ = node->Minimum();
         frameRateMax_ = node->Maximum();
-        if (node->HasConstantIncrement()) 
+        if (node->HasConstantIncrement())
         {
             frameRateInc_ = node->Increment();
         }
-        else 
+        else
         {
             frameRateInc_ = 0.001;
         }
@@ -1844,29 +1909,31 @@ int CIDSPeakCamera::InitializeFramerate()
     return ret;
 }
 
+
 /**
-* Initialize the Binning property, and set it to 1.
+* Initialize the Binning property, including the new Engine selector (FPGA vs Sensor).
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeBinning() 
+int CIDSPeakCamera::InitializeBinning()
 {
     std::vector<std::string> binningValues;
-    try 
+    try
     {
         binningSelector_ = nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->CurrentEntry()->SymbolicValue();
-        
+
+        nodeMapRemoteDevice->FindNode<IntNode>("BinningVertical")->SetValue(1);
+        nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->SetValue(1);
+        binSize_ = 1;
+        // Calculate valid binning factors for the CURRENT engine (Sensor or FPGA)
         int64_t maxVal = nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->Maximum();
         int64_t i = 1;
-        while (i <= maxVal) 
+        while (i <= maxVal)
         {
             binningValues.push_back(std::to_string(i));
             i *= 2;
         }
-        nodeMapRemoteDevice->FindNode<IntNode>("BinningVertical")->SetValue(1);
-        nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->SetValue(1);
-        binSize_ = 1;
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: An error occurred while getting available binning options.");
         LogMessage(e.what());
@@ -1875,25 +1942,55 @@ int CIDSPeakCamera::InitializeBinning()
 
     CPropertyAction* pAct = new CPropertyAction(this, &CIDSPeakCamera::OnBinning);
     int ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, false, pAct);
-    if (DEVICE_OK != ret) { return ret; }
+    if (DEVICE_OK != ret) { return ret;  }
     ret = SetAllowedValues(MM::g_Keyword_Binning, binningValues);
+    if (DEVICE_OK != ret) { return ret; }
+
+    pAct = new CPropertyAction(this, &CIDSPeakCamera::OnBinningEngine);
+    std::string initialEngine = (binningSelector_ == "Region0") ? "FPGA" : "Sensor";
+    ret = CreateStringProperty("BinningEngine", initialEngine.c_str(), false, pAct);
+    if (DEVICE_OK != ret) { return ret; }
+
+    std::vector<std::string> binningDrivers;
+    try
+    {
+        if (nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->HasEntry("Sensor"))
+        {
+            binningDrivers.push_back("Sensor");
+        }
+        if (nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->HasEntry("Region0"))
+        {
+            binningDrivers.push_back("FPGA");
+        }
+    }
+    catch (std::exception& e)
+    {
+        LogMessage("IDS exception: Could not determine which binning engines are available.");
+        LogMessage("    Defaulted to currently active binning engine.");
+        LogMessage(e.what());
+        binningDrivers.push_back(binningSelector_);
+        return DEVICE_ERR;
+    }
+    ret = SetAllowedValues("BinningEngine", binningDrivers);
     return ret;
 }
+
+
 
 /**
 * Initialize IDS PixelFormat and MM PixelType and the conversion between them.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializePixelTypes() 
+int CIDSPeakCamera::InitializePixelTypes()
 {
     // IDS PixelFormat
     std::vector<std::string> availablePixelFormats = GetAvailableEntries("PixelFormat");
-    try 
+    try
     {
         auto node = nodeMapRemoteDevice->FindNode<EnumNode>("PixelFormat");
         pixelFormat_ = node->CurrentEntry()->SymbolicValue();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: An error occurred while reading all available PixelFormats");
         LogMessage(e.what());
@@ -1918,9 +2015,9 @@ int CIDSPeakCamera::InitializePixelTypes()
 * Initialize the ROI property and set it to full frame.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeROI() 
+int CIDSPeakCamera::InitializeROI()
 {
-    try 
+    try
     {
         // Get minimum roi values
         roiOffsetXMin_ = (unsigned int)nodeMapRemoteDevice->FindNode<IntNode>("OffsetX")->Minimum();
@@ -1950,7 +2047,7 @@ int CIDSPeakCamera::InitializeROI()
         nodeMapRemoteDevice->FindNode<IntNode>("Width")->SetValue(roiWidthMax_);
         nodeMapRemoteDevice->FindNode<IntNode>("Height")->SetValue(roiHeightMax_);
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: An error occurred while getting the minimum and maximum ROI");
         LogMessage(e.what());
@@ -1963,13 +2060,13 @@ int CIDSPeakCamera::InitializeROI()
 * Initializes the buffer from the MM side, and device side.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeBuffer() 
+int CIDSPeakCamera::InitializeBuffer()
 {
     img_ = ImgBuffer(roiWidthMax_, roiHeightMax_, 1);
-    try 
+    try
     {
         auto dataStreams = device->DataStreams();
-        if (dataStreams.empty()) 
+        if (dataStreams.empty())
         {
             LogMessage("IDS error: Could not find any data streams.");
             return DEVICE_ERR;
@@ -1978,7 +2075,7 @@ int CIDSPeakCamera::InitializeBuffer()
         nodeMapDataStream = dataStream->NodeMaps().at(0);
         nBuffers_ = 20;
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not prepare camera buffer");
         LogMessage(e.what());
@@ -1991,9 +2088,9 @@ int CIDSPeakCamera::InitializeBuffer()
 * Initializes the auto whitebalance property.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeAutoWhiteBalance() 
+int CIDSPeakCamera::InitializeAutoWhiteBalance()
 {
-    if (!nodeMapRemoteDevice->HasNode<EnumNode>("GainAuto")) 
+    if (!nodeMapRemoteDevice->HasNode<EnumNode>("GainAuto"))
     {
         LogMessage("IDS warning: This IDS camera does not seem support auto whitebalance.");
         LogMessage("\tPlease verify this with the specifications on the manufacturers website. Look for \"Auto Gain\"");
@@ -2011,17 +2108,17 @@ int CIDSPeakCamera::InitializeAutoWhiteBalance()
 * Initializes the analog gain.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeAnalogGain() 
+int CIDSPeakCamera::InitializeAnalogGain()
 {
-    try 
+    try
     {
-        if (!nodeMapRemoteDevice->HasNode<EnumNode>("GainSelector")) 
+        if (!nodeMapRemoteDevice->HasNode<EnumNode>("GainSelector"))
         {
             LogMessage("IDS warning: This camera does not support Analog gain.");
             return DEVICE_OK;
         }
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not verify if Analog gain is supported.");
         LogMessage(e.what());
@@ -2041,17 +2138,17 @@ int CIDSPeakCamera::InitializeAnalogGain()
 * Initializes the digital gain.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeDigitalGain() 
+int CIDSPeakCamera::InitializeDigitalGain()
 {
-    try 
+    try
     {
-        if (!nodeMapRemoteDevice->HasNode<EnumNode>("GainSelector")) 
+        if (!nodeMapRemoteDevice->HasNode<EnumNode>("GainSelector"))
         {
             LogMessage("IDS warning: This camera does not support Digital gain.");
             return DEVICE_OK;
         }
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not verify if Digital gain is supported.");
         LogMessage(e.what());
@@ -2072,26 +2169,26 @@ int CIDSPeakCamera::InitializeDigitalGain()
 * Initializes the temperature property.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeTemperature() 
+int CIDSPeakCamera::InitializeTemperature()
 {
-    try 
+    try
     {
-        if (!nodeMapRemoteDevice->HasNode<FloatNode>("DeviceTemperature")) 
+        if (!nodeMapRemoteDevice->HasNode<FloatNode>("DeviceTemperature"))
         {
-            LogMessage(std::string("IDS warning: This device does not support temperature monitoring. ") + 
+            LogMessage(std::string("IDS warning: This device does not support temperature monitoring. ") +
                 "The temperature property is skipped."
             );
             return DEVICE_OK;
         }
         auto node = nodeMapRemoteDevice->FindNode<FloatNode>("DeviceTemperature");
-        if (!CheckAccess(node, AccessTypes::READONLY)) 
+        if (!CheckAccess(node, AccessTypes::READONLY))
         {
             LogMessage("IDS warning: Temperature not available");
             return DEVICE_OK;
         }
         sensorTemp_ = node->Value();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: An error occurred while reading the temperature");
         LogMessage(e.what());
@@ -2106,11 +2203,11 @@ int CIDSPeakCamera::InitializeTemperature()
 * Initializes the trigger property.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::InitializeTrigger() 
+int CIDSPeakCamera::InitializeTrigger()
 {
-    try 
+    try
     {
-        if (!nodeMapRemoteDevice->HasNode<EnumNode>("TriggerMode")) 
+        if (!nodeMapRemoteDevice->HasNode<EnumNode>("TriggerMode"))
         {
             LogMessage("IDS warning: This camera does not support triggers. Please verify");
         }
@@ -2158,7 +2255,7 @@ int CIDSPeakCamera::InitializeTrigger()
         ret = SetAllowedValues("TriggerEdge", allowedEdgeValues);
         return ret;
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not initialize Trigger.");
         LogMessage(e.what());
@@ -2182,9 +2279,9 @@ int CIDSPeakCamera::CreateGain(std::string gainType, double& gain,
     int(CIDSPeakCamera::* fpt)(MM::PropertyBase* pProp, MM::ActionType eAct))
 {
     double min = 0, max = 0, increment = 0;
-    try 
+    try
     {
-        if (!nodeMapRemoteDevice->FindNode<EnumNode>("GainSelector")->HasEntry(gainType)) 
+        if (!nodeMapRemoteDevice->FindNode<EnumNode>("GainSelector")->HasEntry(gainType))
         {
             LogMessage("IDS message: " + gainType + " not supported by this camera.");
             return DEVICE_OK;
@@ -2204,7 +2301,7 @@ int CIDSPeakCamera::CreateGain(std::string gainType, double& gain,
         max = node->Maximum();
         gain = node->Value();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Error occurred during creation of: " + gainType);
         LogMessage(e.what());
@@ -2225,14 +2322,14 @@ int CIDSPeakCamera::CreateGain(std::string gainType, double& gain,
 * @param gain - double output value
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::GetGain(const std::string& gainType, double& gain) 
+int CIDSPeakCamera::GetGain(const std::string& gainType, double& gain)
 {
-    try 
+    try
     {
         nodeMapRemoteDevice->FindNode<EnumNode>("GainSelector")->SetCurrentEntry(gainType);
         gain = nodeMapRemoteDevice->FindNode<FloatNode>("Gain")->Value();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not get " + gainType);
         LogMessage(e.what());
@@ -2247,16 +2344,16 @@ int CIDSPeakCamera::GetGain(const std::string& gainType, double& gain)
 * @param gain - Value to be set
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::SetGain(const std::string& gainType, double gain) 
+int CIDSPeakCamera::SetGain(const std::string& gainType, double gain)
 {
     if (IsCapturing()) { return DEVICE_CAMERA_BUSY_ACQUIRING; }
 
-    try 
+    try
     {
         nodeMapRemoteDevice->FindNode<EnumNode>("GainSelector")->SetCurrentEntry(gainType);
         nodeMapRemoteDevice->FindNode<FloatNode>("Gain")->SetValue(gain);
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not set " + gainType);
         LogMessage(e.what());
@@ -2318,25 +2415,25 @@ int CIDSPeakCamera::InsertImage()
 * Flushes the camera datastream and revokes the allocated buffers.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::ClearBuffer() 
+int CIDSPeakCamera::ClearBuffer()
 {
-    if (!dataStream) 
+    if (!dataStream)
     {
         LogMessage("IDS error: No data stream to clear buffer. This error is unrecoverable.");
         return DEVICE_ERR;
     }
 
-    try 
+    try
     {
         // Flush queue (input and output)
         dataStream->Flush(peak::core::DataStreamFlushMode::DiscardAll);
         // Revoke all old buffers
-        for (const auto& buffer : dataStream->AnnouncedBuffers()) 
+        for (const auto& buffer : dataStream->AnnouncedBuffers())
         {
             dataStream->RevokeBuffer(buffer);
         }
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not clear buffer.");
         LogMessage(e.what());
@@ -2349,23 +2446,23 @@ int CIDSPeakCamera::ClearBuffer()
 * Prepares the buffers for acquisition. It allocates memory for the camera to transfer its data.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::PrepareBuffer() 
+int CIDSPeakCamera::PrepareBuffer()
 {
     int ret = ClearBuffer();
     if (DEVICE_OK != ret) { return ret; }
 
-    try 
+    try
     {
         payloadSize_ = nodeMapRemoteDevice->FindNode<IntNode>("PayloadSize")->Value();
 
         // Allocate buffers
-        for (size_t count = 0; count < nBuffers_; count++) 
+        for (size_t count = 0; count < nBuffers_; count++)
         {
             auto buffer = dataStream->AllocAndAnnounceBuffer(static_cast<size_t>(payloadSize_), nullptr);
             dataStream->QueueBuffer(buffer);
         }
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not allocate buffers.");
         LogMessage(e.what());
@@ -2381,20 +2478,20 @@ int CIDSPeakCamera::PrepareBuffer()
 * @param insertImage - Insert the image into Micro-Manager's circular buffer
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::AcquireAndTransferImage(uint64_t timeout_ms, bool insertImage) 
+int CIDSPeakCamera::AcquireAndTransferImage(uint64_t timeout_ms, bool insertImage)
 {
-    try 
+    try
     {
         MMThreadGuard g(imgPixelsLock_);
         unsigned char* pBuf = (unsigned char*) const_cast<unsigned char*>(img_.GetPixels());
-        
+
         // Get image from camera buffer
         const auto buffer = dataStream->WaitForFinishedBuffer(
             ("On" == triggerMode_) ? peak::core::Timeout::INFINITE_TIMEOUT : timeout_ms
         );
 
         // Convert buffer to expected format
-        if (pixelFormat_ != destinationFormat_.Name()) 
+        if (pixelFormat_ != destinationFormat_.Name())
         {
             converter.Convert(
                 peak::BufferTo<peak::ipl::Image>(buffer),
@@ -2412,7 +2509,7 @@ int CIDSPeakCamera::AcquireAndTransferImage(uint64_t timeout_ms, bool insertImag
         // Requeue (release) buffer
         dataStream->QueueBuffer(buffer);
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not acquire image or transfer it to the Micro-Manager buffer.");
         LogMessage(e.what());
@@ -2467,22 +2564,22 @@ void CIDSPeakCamera::OnThreadExiting()
 * @param numImages - Number of images to be acquired. LONG_MAX means collected until manually stopped
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::StartAcquisition(long numImages) 
+int CIDSPeakCamera::StartAcquisition(long numImages)
 {
-    try 
+    try
     {
-        if (numImages == LONG_MAX) 
+        if (numImages == LONG_MAX)
         {
             dataStream->StartAcquisition(peak::core::AcquisitionStartMode::Default, PEAK_INFINITE_NUMBER);
         }
-        else 
+        else
         {
             dataStream->StartAcquisition(peak::core::AcquisitionStartMode::Default, numImages);
         }
         nodeMapRemoteDevice->FindNode<IntNode>("TLParamsLocked")->SetValue(1); // Lock acq params
         nodeMapRemoteDevice->FindNode<CommandNode>("AcquisitionStart")->Execute();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not start acquisition");
         LogMessage(e.what());
@@ -2496,9 +2593,9 @@ int CIDSPeakCamera::StartAcquisition(long numImages)
 * allowing parameters to be changed.
 * @returns Integer status code - Returns DEVICE_OK on success
 */
-int CIDSPeakCamera::StopAcquisition() 
+int CIDSPeakCamera::StopAcquisition()
 {
-    try 
+    try
     {
         auto node = nodeMapRemoteDevice->FindNode<CommandNode>("AcquisitionStop");
         node->Execute();
@@ -2506,7 +2603,7 @@ int CIDSPeakCamera::StopAcquisition()
         nodeMapRemoteDevice->FindNode<IntNode>("TLParamsLocked")->SetValue(0); // Unlock acq params
         dataStream->StopAcquisition(peak::core::AcquisitionStopMode::Default);
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not stop acquisition.");
         LogMessage(e.what());
@@ -2519,11 +2616,11 @@ int CIDSPeakCamera::StopAcquisition()
 // IDS Setters
 ////////////////////////////////////////////////////////////////////////////////
 
-int CIDSPeakCamera::SetFrameRate(double frameRate) 
+int CIDSPeakCamera::SetFrameRate(double frameRate)
 {
     auto node = nodeMapRemoteDevice->FindNode<FloatNode>("AcquisitionFrameRate");
     // Check if we have access
-    if (node->AccessStatus() != peak::core::nodes::NodeAccessStatus::ReadWrite) 
+    if (node->AccessStatus() != peak::core::nodes::NodeAccessStatus::ReadWrite)
     {
         LogMessage("IDS error: Could not set frame rate, due to lack of write access.");
         return DEVICE_CAN_NOT_SET_PROPERTY;
@@ -2531,12 +2628,12 @@ int CIDSPeakCamera::SetFrameRate(double frameRate)
 
     // Make sure frameRate is multiple of increment
     frameRate = std::floor(frameRate / frameRateInc_) * frameRateInc_;
-    try 
+    try
     {
         node->SetValue(frameRate);
         frameRateCur_ = node->Value();
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: Could not set frame rate.");
         LogMessage(e.what());
@@ -2545,31 +2642,31 @@ int CIDSPeakCamera::SetFrameRate(double frameRate)
     return DEVICE_OK;
 }
 
-int CIDSPeakCamera::SetFrameCount(long count) 
+int CIDSPeakCamera::SetFrameCount(long count)
 {
     auto node = nodeMapRemoteDevice->FindNode<EnumNode>("AcquisitionMode");
-    if (node->AccessStatus() != peak::core::nodes::NodeAccessStatus::ReadWrite) 
+    if (node->AccessStatus() != peak::core::nodes::NodeAccessStatus::ReadWrite)
     {
         return DEVICE_CAN_NOT_SET_PROPERTY;
     }
 
-    try 
+    try
     {
-        if (count == 1) 
+        if (count == 1)
         {
             node->SetCurrentEntry("SingleFrame");
         }
-        else if (count == LONG_MAX) 
+        else if (count == LONG_MAX)
         {
             node->SetCurrentEntry("Continuous");
         }
-        else 
+        else
         {
             node->SetCurrentEntry("MultiFrame");
             nodeMapRemoteDevice->FindNode<IntNode>("AcquisitionFrameCount")->SetValue(count);
         }
     }
-    catch (std::exception& e) 
+    catch (std::exception& e)
     {
         LogMessage("IDS exception: An error occurred while setting acquisition mode.");
         LogMessage(e.what());
@@ -2582,25 +2679,25 @@ int CIDSPeakCamera::SetPixelType(const std::string& pixelType)
 {
     if (IsCapturing()) { return DEVICE_CAMERA_BUSY_ACQUIRING; }
 
-    if (pixelType == g_PixelType_8bit) 
+    if (pixelType == g_PixelType_8bit)
     {
         nComponents_ = 1;
         bitDepth_ = 8;
         destinationFormat_ = peak::ipl::PixelFormatName::Mono8;
     }
-    else if (pixelType == g_PixelType_16bit) 
+    else if (pixelType == g_PixelType_16bit)
     {
         nComponents_ = 1;
         bitDepth_ = 16;
         destinationFormat_ = peak::ipl::PixelFormatName::Mono16;
     }
-    else if (pixelType == g_PixelType_32bitBGRA) 
+    else if (pixelType == g_PixelType_32bitBGRA)
     {
         nComponents_ = 4;
         bitDepth_ = 8;
         destinationFormat_ = peak::ipl::PixelFormatName::BGRa8;
     }
-    else 
+    else
     {
         return DEVICE_CAN_NOT_SET_PROPERTY;
     }
@@ -2668,14 +2765,14 @@ int CIDSPeakCamera::GetBoundaries(std::shared_ptr<FloatNode> node, double& minVa
 /**
 * Gets all available entries from an EnumNode. Available means accessible with
 * any perimission (READONLY, WRITEONLY, READWRITE).
-* @params nodeName - Name of EnumNode 
+* @params nodeName - Name of EnumNode
 * @returns vector with available entries
 */
-std::vector<std::string> CIDSPeakCamera::GetAvailableEntries(const std::string& nodeName) 
+std::vector<std::string> CIDSPeakCamera::GetAvailableEntries(const std::string& nodeName)
 {
     auto allEntries = nodeMapRemoteDevice->FindNode<EnumNode>(nodeName)->Entries();
     std::vector<std::string> stringEntries = {};
-    for (const auto& entry : allEntries) 
+    for (const auto& entry : allEntries)
     {
         if (!CheckAccess(entry, AccessTypes::ANY)) { continue; }
         stringEntries.push_back(entry->StringValue());
@@ -2688,40 +2785,40 @@ std::vector<std::string> CIDSPeakCamera::GetAvailableEntries(const std::string& 
 * @params pixelFormat - Name of the PixelFormat
 * @returns list of available pixelTypes
 */
- std::vector<std::string> CIDSPeakCamera::GetAvailablePixelTypes(const std::string& pixelFormat) 
- {
-     const peak::ipl::PixelFormat inputFormat =
-         (const peak::ipl::PixelFormatName)nodeMapRemoteDevice->FindNode<EnumNode>("PixelFormat")->FindEntry(pixelFormat)->NumericValue();
-     std::vector<std::string> output = {};
-     std::vector<peak::ipl::PixelFormatName> outputFormats = converter.SupportedOutputPixelFormatNames(inputFormat);
-     for (auto& outputFormat : outputFormats) 
-     {
-         if (peak::ipl::PixelFormatName::Mono8 == outputFormat) 
-         {
-             output.push_back(g_PixelType_8bit);
-         }
-         else if (peak::ipl::PixelFormatName::Mono16 == outputFormat) 
-         {
-             output.push_back(g_PixelType_16bit);
-         }
-         else if (peak::ipl::PixelFormatName::BGRa8 == outputFormat) 
-         {
-             output.push_back(g_PixelType_32bitBGRA);
-         }
-     }
-     return output;
- }
-
- /**
- * Verifies if it has the right access to a node.
- * @params node - NodeType pointer to the node
- * @params type - Access required (READ/WRITE/READWRITE)
- * @returns bool whether or not it has the right access
- */
-template <class NodeType, typename std::enable_if<std::is_base_of<peak::core::nodes::Node, NodeType>::value, int>::type>
-bool CIDSPeakCamera::CheckAccess(std::shared_ptr<NodeType> node, AccessTypes type) 
+std::vector<std::string> CIDSPeakCamera::GetAvailablePixelTypes(const std::string& pixelFormat)
 {
-    switch (node->AccessStatus()) 
+    const peak::ipl::PixelFormat inputFormat =
+        (const peak::ipl::PixelFormatName)nodeMapRemoteDevice->FindNode<EnumNode>("PixelFormat")->FindEntry(pixelFormat)->NumericValue();
+    std::vector<std::string> output = {};
+    std::vector<peak::ipl::PixelFormatName> outputFormats = converter.SupportedOutputPixelFormatNames(inputFormat);
+    for (auto& outputFormat : outputFormats)
+    {
+        if (peak::ipl::PixelFormatName::Mono8 == outputFormat)
+        {
+            output.push_back(g_PixelType_8bit);
+        }
+        else if (peak::ipl::PixelFormatName::Mono16 == outputFormat)
+        {
+            output.push_back(g_PixelType_16bit);
+        }
+        else if (peak::ipl::PixelFormatName::BGRa8 == outputFormat)
+        {
+            output.push_back(g_PixelType_32bitBGRA);
+        }
+    }
+    return output;
+}
+
+/**
+* Verifies if it has the right access to a node.
+* @params node - NodeType pointer to the node
+* @params type - Access required (READ/WRITE/READWRITE)
+* @returns bool whether or not it has the right access
+*/
+template <class NodeType, typename std::enable_if<std::is_base_of<peak::core::nodes::Node, NodeType>::value, int>::type>
+bool CIDSPeakCamera::CheckAccess(std::shared_ptr<NodeType> node, AccessTypes type)
+{
+    switch (node->AccessStatus())
     {
     case peak::core::nodes::NodeAccessStatus::ReadWrite:
         return true;
@@ -2776,7 +2873,8 @@ MySequenceThread::MySequenceThread(CIDSPeakCamera* pCam)
     , startTime_(0)
     , actualDuration_(0)
     , lastFrameTime_(0)
-{};
+{
+};
 
 MySequenceThread::~MySequenceThread() {};
 
