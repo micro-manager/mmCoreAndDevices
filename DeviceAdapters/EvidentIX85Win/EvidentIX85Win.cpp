@@ -3474,7 +3474,7 @@ EvidentAutofocus::EvidentAutofocus() :
     lastNosepiecePos_(-1),
     lastCoverslipType_(-1),
     zdcInitNeeded_(false),
-    workflowMode_(3)      // Default to Continuous Focus mode
+    workflowMode_(2)      // Default to Find-Focus-With-Offset mode
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_DEVICE_NOT_AVAILABLE, "ZDC Autofocus not available on this microscope");
@@ -3596,7 +3596,7 @@ int EvidentAutofocus::Initialize()
 
     // Create AF Workflow Mode property
     pAct = new CPropertyAction(this, &EvidentAutofocus::OnWorkflowMode);
-    ret = CreateProperty("AF-Workflow-Mode", "Continuous-Focus", MM::String, false, pAct);
+    ret = CreateProperty("AF-Workflow-Mode", "Find-Focus-With-Offset", MM::String, false, pAct);
     if (ret != DEVICE_OK)
         return ret;
     AddAllowedValue("AF-Workflow-Mode", "Measure-Offset");
