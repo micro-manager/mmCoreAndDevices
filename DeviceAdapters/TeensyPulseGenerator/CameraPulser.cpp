@@ -516,13 +516,6 @@ int CameraPulser::StartSequenceAcquisition(double interval)
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
       if (camera != 0)
       {
-         std::ostringstream os;
-         os << i;
-         camera->AddTag(MM::g_Keyword_CameraChannelName, usedCameras_[i].c_str(),
-            usedCameras_[i].c_str());
-         camera->AddTag(MM::g_Keyword_CameraChannelIndex, usedCameras_[i].c_str(),
-            os.str().c_str());
-
          ret = camera->StartSequenceAcquisition(interval);
          if (ret != DEVICE_OK)
             return ret;
@@ -585,13 +578,6 @@ int CameraPulser::StopSequenceAcquisition()
          ret = camera->StopSequenceAcquisition();
          if (ret != DEVICE_OK)
             return ret;
-
-         std::ostringstream os;
-         os << i;
-         camera->AddTag(MM::g_Keyword_CameraChannelName, usedCameras_[i].c_str(),
-            "");
-         camera->AddTag(MM::g_Keyword_CameraChannelIndex, usedCameras_[i].c_str(),
-            os.str().c_str());
       }
    }
    std::ostringstream os;

@@ -522,13 +522,6 @@ int ArduinoCounterCamera::StartSequenceAcquisition(double interval)
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
       if (camera != 0)
       {
-         std::ostringstream os;
-         os << i;
-         camera->AddTag(MM::g_Keyword_CameraChannelName, usedCameras_[i].c_str(),
-            usedCameras_[i].c_str());
-         camera->AddTag(MM::g_Keyword_CameraChannelIndex, usedCameras_[i].c_str(),
-            os.str().c_str());
-
          int ret = camera->StartSequenceAcquisition(interval);
          if (ret != DEVICE_OK)
             return ret;
@@ -573,13 +566,6 @@ int ArduinoCounterCamera::StopSequenceAcquisition()
             return ret;
          if (ret2 != DEVICE_OK)
             return ret2;
-
-         std::ostringstream os;
-         os << i;
-         camera->AddTag(MM::g_Keyword_CameraChannelName, usedCameras_[i].c_str(),
-            "");
-         camera->AddTag(MM::g_Keyword_CameraChannelIndex, usedCameras_[i].c_str(),
-            os.str().c_str());
       }
    }
    return DEVICE_OK;
