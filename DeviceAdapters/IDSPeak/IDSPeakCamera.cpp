@@ -330,7 +330,7 @@ int CIDSPeakCamera::SnapImage()
     }
 
     // Acquire and transfer the image to MM
-    uint64_t timeout_ms = exposureCur_ * 3;
+    uint64_t timeout_ms = (uint64_t)(exposureCur_ * 3);
     ret = AcquireAndTransferImage(timeout_ms, true);
     // Unblock the camera
     StopAcquisition();
@@ -509,6 +509,7 @@ int CIDSPeakCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySiz
 
     // Update framerate limits
     int ret = GetBoundaries(nodeMapRemoteDevice->FindNode<FloatNode>("AcquisitionFrameRate"), frameRateMin_, frameRateMax_, frameRateInc_);
+    if (DEVICE_OK != ret) { return ret; }
     SetPropertyLimits("MDA framerate", frameRateMin_, frameRateMax_);
 
     img_.Resize(xSize, ySize);
@@ -1012,8 +1013,8 @@ int CIDSPeakCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
         // Request new ROI values
         try
         {
-            roiX_ = nodeMapRemoteDevice->FindNode<IntNode>("OffsetX")->Value();
-            roiY_ = nodeMapRemoteDevice->FindNode<IntNode>("OffsetY")->Value();
+            roiX_ = (unsigned int)nodeMapRemoteDevice->FindNode<IntNode>("OffsetX")->Value();
+            roiY_ = (unsigned int)nodeMapRemoteDevice->FindNode<IntNode>("OffsetY")->Value();
             unsigned width = (unsigned)nodeMapRemoteDevice->FindNode<IntNode>("Width")->Value();
             unsigned height = (unsigned)nodeMapRemoteDevice->FindNode<IntNode>("Height")->Value();
             img_.Resize(width, height);
@@ -1045,6 +1046,69 @@ int CIDSPeakCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
     return ret;
 }
 
+/**
+* Handles the BinningEngine property.
+* @param pProp - pointer to property
+* @param eAct - type of action performed on property (eg get/set)
+* @returns Integer status code - Returns DEVICE_OK on success
+*/
+int CIDSPeakCamera::OnBinningEngine(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        try {
+            std::string currentSel = nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->CurrentEntry()->SymbolicValue();
+            if (currentSel == "Region0")
+            {
+                pProp->Set("FPGA");
+            }
+            else
+            {
+                pProp->Set("Sensor");
+            }
+            binningSelector_ = currentSel;
+        }
+        catch (std::exception& e) {
+            LogMessage("IDS exception: Could not get the binning selector.");
+            LogMessage(e.what());
+            return DEVICE_ERR;
+        }
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        if (IsCapturing()) return DEVICE_CAMERA_BUSY_ACQUIRING;
+
+        std::string val;
+        pProp->Get(val);
+        std::string genicamSelector = (val == "FPGA") ? "Region0" : "Sensor";
+
+        try {
+            nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->SetCurrentEntry(genicamSelector);
+            binningSelector_ = genicamSelector;
+            int64_t maxVal = nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->Maximum();
+            std::vector<std::string> binningValues;
+            int64_t i = 1;
+            while (i <= maxVal)
+            {
+                binningValues.push_back(std::to_string(i));
+                i *= 2;
+            }
+            int ret = SetAllowedValues(MM::g_Keyword_Binning, binningValues);
+            if (ret != DEVICE_OK) { return ret; }
+
+            int targetBinning = (binSize_ > maxVal) ? 1 : binSize_;
+            SetBinning(targetBinning);
+            SetProperty(MM::g_Keyword_Binning, std::to_string(targetBinning).c_str());
+            ClearROI();
+        }
+        catch (std::exception& e) {
+            LogMessage("IDS exception: Could not set the binning selector.");
+            LogMessage(e.what());
+            return DEVICE_ERR;
+        }
+    }
+    return DEVICE_OK;
+}
 
 /**
 * Handles the FrameRate property. The main way for the user to set the frame rate.
@@ -1845,42 +1909,6 @@ int CIDSPeakCamera::InitializeFramerate()
     return ret;
 }
 
-///**
-//* Initialize the Binning property, and set it to 1.
-//* @returns Integer status code - Returns DEVICE_OK on success
-//*/
-//int CIDSPeakCamera::InitializeBinning()
-//{
-//    std::vector<std::string> binningValues;
-//    try
-//    {
-//        binningSelector_ = nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->CurrentEntry()->SymbolicValue();
-//
-//        int64_t maxVal = nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->Maximum();
-//        int64_t i = 1;
-//        while (i <= maxVal)
-//        {
-//            binningValues.push_back(std::to_string(i));
-//            i *= 2;
-//        }
-//        nodeMapRemoteDevice->FindNode<IntNode>("BinningVertical")->SetValue(1);
-//        nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->SetValue(1);
-//        binSize_ = 1;
-//    }
-//    catch (std::exception& e)
-//    {
-//        LogMessage("IDS exception: An error occurred while getting available binning options.");
-//        LogMessage(e.what());
-//        return DEVICE_ERR;
-//    }
-//
-//    CPropertyAction* pAct = new CPropertyAction(this, &CIDSPeakCamera::OnBinning);
-//    int ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, false, pAct);
-//    if (DEVICE_OK != ret) { return ret; }
-//    ret = SetAllowedValues(MM::g_Keyword_Binning, binningValues);
-//    return ret;
-//}
-
 
 /**
 * Initialize the Binning property, including the new Engine selector (FPGA vs Sensor).
@@ -1911,25 +1939,39 @@ int CIDSPeakCamera::InitializeBinning()
         LogMessage(e.what());
         return DEVICE_ERR;
     }
+
     CPropertyAction* pAct = new CPropertyAction(this, &CIDSPeakCamera::OnBinning);
     int ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, false, pAct);
-    if (DEVICE_OK != ret) {
-        return ret; 
-    }
+    if (DEVICE_OK != ret) { return ret;  }
     ret = SetAllowedValues(MM::g_Keyword_Binning, binningValues);
     if (DEVICE_OK != ret) { return ret; }
 
-    CPropertyAction* pActEngine = new CPropertyAction(this, &CIDSPeakCamera::OnBinningEngine);
+    pAct = new CPropertyAction(this, &CIDSPeakCamera::OnBinningEngine);
     std::string initialEngine = (binningSelector_ == "Region0") ? "FPGA" : "Sensor";
-    ret = CreateStringProperty("BinningEngine", initialEngine.c_str(), false, pActEngine);
-    if (DEVICE_OK != ret) { 
-        return ret; 
-    }
-    std::vector<std::string> binningDrivers;
-    binningDrivers.push_back("Sensor");
-    binningDrivers.push_back("FPGA");
-    ret = SetAllowedValues("BinningEngine", binningDrivers);
+    ret = CreateStringProperty("BinningEngine", initialEngine.c_str(), false, pAct);
+    if (DEVICE_OK != ret) { return ret; }
 
+    std::vector<std::string> binningDrivers;
+    try
+    {
+        if (nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->HasEntry("Sensor"))
+        {
+            binningDrivers.push_back("Sensor");
+        }
+        if (nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->HasEntry("Region0"))
+        {
+            binningDrivers.push_back("FPGA");
+        }
+    }
+    catch (std::exception& e)
+    {
+        LogMessage("IDS exception: Could not determine which binning engines are available.");
+        LogMessage("    Defaulted to currently active binning engine.");
+        LogMessage(e.what());
+        binningDrivers.push_back(binningSelector_);
+        return DEVICE_ERR;
+    }
+    ret = SetAllowedValues("BinningEngine", binningDrivers);
     return ret;
 }
 
@@ -2912,59 +2954,3 @@ int MySequenceThread::svc(void) throw()
     return ret;
 }
 
-// helper function for binning
-int CIDSPeakCamera::OnBinningEngine(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        try {
-            std::string currentSel = nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->CurrentEntry()->SymbolicValue();
-            if (currentSel == "Region0")
-                pProp->Set("FPGA");
-            else
-                pProp->Set("Sensor");
-
-            binningSelector_ = currentSel;
-        }
-        catch (...) {
-            return DEVICE_ERR;
-        }
-    }
-    else if (eAct == MM::AfterSet)
-    {
-        if (IsCapturing()) return DEVICE_CAMERA_BUSY_ACQUIRING;
-
-        std::string val;
-        pProp->Get(val);
-        std::string genicamSelector = (val == "FPGA") ? "Region0" : "Sensor";
-
-        try {
-            nodeMapRemoteDevice->FindNode<EnumNode>("BinningSelector")->SetCurrentEntry(genicamSelector);
-            binningSelector_ = genicamSelector;
-            int64_t maxVal = nodeMapRemoteDevice->FindNode<IntNode>("BinningHorizontal")->Maximum();
-            std::vector<std::string> binningValues;
-            int64_t i = 1;
-            while (i <= maxVal) {
-                binningValues.push_back(std::to_string(i));
-                i *= 2;
-            }
-            int ret = SetAllowedValues(MM::g_Keyword_Binning, binningValues);
-            if (ret != DEVICE_OK) return ret;
-
-            int targetBinning = binSize_;
-            if (targetBinning > maxVal) {
-                targetBinning = 1; // Reset to 1 if current is too high (e.g. 8x -> Sensor)
-            }
-            SetBinning(targetBinning);
-            SetProperty(MM::g_Keyword_Binning, std::to_string(targetBinning).c_str());
-
-            ClearROI();
-        }
-        catch (std::exception& e) {
-            LogMessage("IDS Exception in OnBinningEngine");
-            LogMessage(e.what());
-            return DEVICE_ERR;
-        }
-    }
-    return DEVICE_OK;
-}

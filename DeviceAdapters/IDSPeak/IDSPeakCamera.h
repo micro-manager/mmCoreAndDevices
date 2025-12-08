@@ -36,8 +36,8 @@
 #include "DeviceThreads.h"
 #include <string>
 
-#include "peak/peak.hpp"
-#include "peak_ipl/peak_ipl.hpp"
+#include <peak/peak.hpp>
+#include <peak_ipl/peak_ipl.hpp>
 
 #define EXPOSURE_MAX 1000000
 
