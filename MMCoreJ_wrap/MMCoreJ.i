@@ -1182,12 +1182,6 @@ namespace std {
     %template(DoubleVector) vector<double>;
     %template(StrVector)    vector<string>;
     %template(UnsignedVector) vector<unsigned>;
-    %template(pair_ss)      pair<string, string>;
-    %template(StrMap)       map<string, string>;
-
-
-
-
 }
 
 
