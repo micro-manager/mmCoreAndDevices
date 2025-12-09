@@ -636,6 +636,13 @@
 %ignore MetadataKeyError;
 %ignore MetadataIndexError;
 
+// Hide methods that take istringstream, which is not usable from Java
+%ignore Metadata::readLine;
+%ignore MetadataTag::ReadLine;
+%ignore MetadataTag::Restore;
+%ignore MetadataArrayTag::Restore;
+%ignore MetadataSingleTag::Restore;
+
 
 %typemap(javaimports) CMMCore %{
    import mmcorej.org.json.JSONObject;
