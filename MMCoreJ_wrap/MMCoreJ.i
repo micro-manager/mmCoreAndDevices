@@ -990,11 +990,11 @@ namespace std {
          if (0==size())
             return new Character[0];
 
-         Character ints[] = new Character[(int) size()];
+         Character cs[] = new Character[(int) size()];
          for (int i=0; i<size(); ++i) {
-            ints[i] = get(i);
+            cs[i] = get(i);
          }
-         return ints;
+         return cs;
       }
    %}
    
@@ -1037,11 +1037,11 @@ namespace std {
          if (0==size())
             return new Integer[0];
 
-         Integer ints[] = new Integer[(int) size()];
+         Integer is[] = new Integer[(int) size()];
          for (int i=0; i<size(); ++i) {
-            ints[i] = get(i);
+            is[i] = get(i);
          }
-         return ints;
+         return is;
       }
    %}
    
@@ -1079,11 +1079,11 @@ namespace std {
          if (0==size())
             return new Double[0];
 
-         Double ints[] = new Double[(int) size()];
+         Double ds[] = new Double[(int) size()];
          for (int i=0; i<size(); ++i) {
-            ints[i] = get(i);
+            ds[i] = get(i);
          }
-         return ints;
+         return ds;
       }
    %}
 
@@ -1166,11 +1166,11 @@ namespace std {
          if (0==size())
             return new Long[0];
 
-         Long ints[] = new Long[(int) size()];
+         Long ls[] = new Long[(int) size()];
          for (int i=0; i<size(); ++i) {
-            ints[i] = get(i);
+            ls[i] = get(i);
          }
-         return ints;
+         return ls;
       }
    %}
 
