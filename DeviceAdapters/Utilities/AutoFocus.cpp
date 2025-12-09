@@ -118,24 +118,21 @@ int AutoFocus::Initialize()
    }
    pAct = new CPropertyAction(this, &AutoFocus::OnCamera);
    std::string defaultCamera = "Undefined";
-   if (availableCameras_.size() >= 1)
-      defaultCamera = availableCameras_[0];
    CreateProperty(g_Camera, defaultCamera.c_str(), MM::String, false, pAct, false);
-   if (availableCameras_.size() >= 1)
-      SetAllowedValues(g_Camera, availableCameras_);
-   else
-      return ERR_NO_PHYSICAL_CAMERA;
-   // This is needed, otherwise Camera_ is not always set resulting in crashes
-   // This could lead to strange problems if multiple camera devices are loaded
-   SetProperty(g_Camera, defaultCamera.c_str());
+   AddAllowedValue(g_Camera, defaultCamera.c_str());
+   for (int i = 0; i < availableCameras_.size(); i++)
+   {
+      AddAllowedValue(g_Camera, availableCameras_[i].c_str());
+   }
 
    pAct = new CPropertyAction(this, &AutoFocus::OnAlgorithm);
    CreateProperty(g_Alg, g_Alg_Standard, MM::String, false, pAct);
    AddAllowedValue(g_Alg, g_Alg_Standard);
 
    // Query camera for current ROI and dimensions
+   /*
    MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
-   if (camera != nullptr)
+   if (camera != 0)
    {
       unsigned x, y, xSize, ySize;
       int ret = camera->GetROI(x, y, xSize, ySize);
@@ -163,25 +160,26 @@ int AutoFocus::Initialize()
       if (binning_ <= 0)
          binning_ = 1;
    }
+   */
 
    // Create ROI-X property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_X);
-   CreateIntegerProperty("ROI-X", (long)roiX_, false, pAct);
+   CreateIntegerProperty("ROI-X", 0, false, pAct);
    SetPropertyLimits("ROI-X", 0, 65536);
 
    // Create ROI-Y property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Y);
-   CreateIntegerProperty("ROI-Y", (long)roiY_, false, pAct);
+   CreateIntegerProperty("ROI-Y", 65536, false, pAct);
    SetPropertyLimits("ROI-Y", 0, 65536);
 
    // Create ROI-Width property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Width);
-   CreateIntegerProperty("ROI-Width", (long)roiWidth_, false, pAct);
+   CreateIntegerProperty("ROI-Width", 65536, false, pAct);
    SetPropertyLimits("ROI-Width", 0, 65536);
 
    // Create ROI-Height property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Height);
-   CreateIntegerProperty("ROI-Height", (long)roiHeight_, false, pAct);
+   CreateIntegerProperty("ROI-Height", 65536, false, pAct);
    SetPropertyLimits("ROI-Height", 0, 65536);
 
    // Create Binning property
@@ -211,7 +209,46 @@ int AutoFocus::OnCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Set(camera_.c_str());
    }
    else if (eAct == MM::AfterSet) {
+      std::string oldCamera = camera_;
       pProp->Get(camera_);
+      // Query camera for current ROI and dimensions
+      MM::Camera* pCam = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+      if (pCam != 0)
+      {
+         unsigned x, y, xSize, ySize;
+         int ret = pCam->GetROI(x, y, xSize, ySize);
+         if (ret == DEVICE_OK)
+         {
+            // If no ROI is set, use full frame
+            if (xSize == 0 || ySize == 0)
+            {
+               roiWidth_ = pCam->GetImageWidth();
+               roiHeight_ = pCam->GetImageHeight();
+               roiX_ = 0;
+               roiY_ = 0;
+            }
+            else
+            {
+               roiX_ = x;
+               roiY_ = y;
+               roiWidth_ = xSize;
+               roiHeight_ = ySize;
+            }
+         }
+
+         // Get current binning
+         binning_ = pCam->GetBinning();
+         if (binning_ <= 0)
+            binning_ = 1;
+      }
+      else
+      {
+         // Restore previous value
+         camera_ = oldCamera;
+         pProp->Set(camera_.c_str());
+         return ERR_NO_PHYSICAL_CAMERA;
+      }
+
    }
    return DEVICE_OK;
 }
