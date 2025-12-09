@@ -604,7 +604,6 @@
 // Map all exception objects coming from C++ level
 // generic Java Exception
 //
-%rename(eql) operator=;
 
 // CMMError used by MMCore
 %typemap(throws, throws="java.lang.Exception") CMMError {
