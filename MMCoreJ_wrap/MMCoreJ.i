@@ -632,6 +632,7 @@
 // We've translated exceptions to java.lang.Exception, so don't wrap the unused
 // C++ exception classes.
 %ignore CMMError;
+%ignore MetadataError;
 %ignore MetadataKeyError;
 %ignore MetadataIndexError;
 
