@@ -979,10 +979,6 @@ namespace std {
                   throw new NoSuchElementException();
                }
             }
-
-            public void remove() throws UnsupportedOperationException {
-               throw new UnsupportedOperationException();
-            }
          };
       }
 
@@ -1030,10 +1026,6 @@ namespace std {
                   throw new NoSuchElementException();
                }
             }
-
-            public void remove() throws UnsupportedOperationException {
-               throw new UnsupportedOperationException();
-            }
          };
       }
 
@@ -1075,10 +1067,6 @@ namespace std {
                } else {
                   throw new NoSuchElementException();
                }
-            }
-
-            public void remove() throws UnsupportedOperationException {
-               throw new UnsupportedOperationException();
             }
          };
       }
@@ -1124,10 +1112,6 @@ namespace std {
 					throw new NoSuchElementException();
 					}
 				}
-					
-				public void remove() throws UnsupportedOperationException {
-					throw new UnsupportedOperationException();
-				}		
 			};
 		}
 		
@@ -1174,10 +1158,6 @@ namespace std {
 					throw new NoSuchElementException();
 					}
 				}
-					
-				public void remove() throws UnsupportedOperationException {
-					throw new UnsupportedOperationException();
-				}		
 			};
 		}
 		
@@ -1221,10 +1201,6 @@ namespace std {
                } else {
                   throw new NoSuchElementException();
                }
-            }
-
-            public void remove() throws UnsupportedOperationException {
-               throw new UnsupportedOperationException();
             }
          };
       }
