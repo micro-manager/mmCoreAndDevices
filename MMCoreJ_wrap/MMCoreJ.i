@@ -954,9 +954,6 @@
 %extend std::vector {
    vector(size_type count) { return new std::vector<T>(count); }
 }
-%extend std::vector<bool> {
-   vector(size_type count) { return new std::vector<bool>(count); }
-}
 
 namespace std {
 	%typemap(javaimports) vector<char> %{
@@ -1134,53 +1131,6 @@ namespace std {
 		}
 		
 	%}
-	
-   
-
-	%typemap(javaimports) vector<bool> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
-	
-	%typemap(javainterfaces) vector<bool> %{ Iterable<Boolean>%}
-	
-	%typemap(javacode) vector<bool> %{
-	
-		public Iterator<Boolean> iterator() {
-			return new Iterator<Boolean>() {
-			
-				private int i_=0;
-			
-				public boolean hasNext() {
-					return (i_<size());
-				}
-				
-				public Boolean next() throws NoSuchElementException {
-					if (hasNext()) {
-						++i_;
-						return get(i_-1);
-					} else {
-					throw new NoSuchElementException();
-					}
-				}
-			};
-		}
-		
-		public Boolean[] toArray() {
-			if (0==size())
-				return new Boolean[0];
-			
-			Boolean strs[] = new Boolean[(int) size()];
-			for (int i=0; i<size(); ++i) {
-				strs[i] = get(i);
-			}
-			return strs;
-		}
-		
-	%}
-	
 
 	%typemap(javaimports) vector<unsigned> %{
 		import java.lang.Iterable;
@@ -1231,7 +1181,6 @@ namespace std {
     %template(LongVector)   vector<long>;
     %template(DoubleVector) vector<double>;
     %template(StrVector)    vector<string>;
-    %template(BooleanVector)    vector<bool>;
     %template(UnsignedVector) vector<unsigned>;
     %template(pair_ss)      pair<string, string>;
     %template(StrMap)       map<string, string>;
