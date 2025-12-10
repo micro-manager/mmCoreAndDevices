@@ -7,10 +7,12 @@
 
 #include "LightSheetDeviceManager.h"
 
+#include <string>
+
 LightSheetDeviceManager::LightSheetDeviceManager() :
     initialized_(false),
-    geometryType_("diSPIM"),
-    lightSheetType_("Scanned"),
+    geometryType_("SCAPE"),
+    lightSheetType_("Static"),
     numImagingPaths_(1),
     numIlluminationPaths_(1),
     numSimultaneousCameras_(1) {
@@ -22,23 +24,23 @@ LightSheetDeviceManager::LightSheetDeviceManager() :
     CPropertyAction* pAct = nullptr;
     
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnMicroscopeGeometry);
-    CreateProperty(gMicroscopeGeometry, "diSPIM", MM::String, false, pAct, true);
+    CreateProperty(gMicroscopeGeometry, geometryType_.c_str(), MM::String, false, pAct, true);
     SetAllowedValues(gMicroscopeGeometry, geometry_.GetGeometryTypes());
 
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumSimultaneousCameras);
-    CreateProperty(gSimultaneousCameras, "1", MM::Integer, false, pAct, true);
+    CreateProperty(gSimultaneousCameras, std::to_string(numSimultaneousCameras_).c_str(), MM::Integer, false, pAct, true);
     SetPropertyLimits(gSimultaneousCameras, 1, 8);
 
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumImagingPaths);
-    CreateProperty(gImagingPaths, "1", MM::Integer, false, pAct, true);
+    CreateProperty(gImagingPaths, std::to_string(numImagingPaths_).c_str(), MM::Integer, false, pAct, true);
     SetPropertyLimits(gImagingPaths, 1, 8);
 
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumIlluminationPaths);
-    CreateProperty(gIlluminationPaths, "1", MM::Integer, false, pAct, true);
+    CreateProperty(gIlluminationPaths, std::to_string(numIlluminationPaths_).c_str(), MM::Integer, false, pAct, true);
     SetPropertyLimits(gIlluminationPaths, 1, 8);
 
     pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnLightSheetType);
-    CreateProperty(gLightSheetType, gLightSheetTypeScanned, MM::String, false, pAct, true);
+    CreateProperty(gLightSheetType, lightSheetType_.c_str(), MM::String, false, pAct, true);
     AddAllowedValue(gLightSheetType, gLightSheetTypeScanned);
     AddAllowedValue(gLightSheetType, gLightSheetTypeStatic);
 }

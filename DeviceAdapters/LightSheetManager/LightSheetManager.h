@@ -13,7 +13,7 @@
 #include "LightSheetDeviceManager.h"
 
 // version number
-const char* const gVersionNumber = "0.1.0";
+const char* const gVersionNumber = "0.1.1";
 const char* const gVersionNumberPropertyName = "Version";
 
 // device name and description
