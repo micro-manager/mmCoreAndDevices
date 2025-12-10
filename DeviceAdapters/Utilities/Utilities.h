@@ -961,8 +961,10 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
 
 private:
       int SnapAndAnalyze();
-      cv::Mat GetImageFromBuffer();
-      int AnalyzeImage(cv::Mat, double& score, double& x, double& y);
+      int GetImageFromBuffer(ImgBuffer& img);
+      int AnalyzeImage(ImgBuffer img, double& score1, double& x1, double& y1, double& score2, double& x2, double& y2);
+      int SetCameraROI();
+      int SetCameraBinning();
       std::vector<std::string> availableShutters_;
       std::string shutter_;
       std::vector<std::string> availableCameras_;

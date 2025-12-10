@@ -104,7 +104,8 @@ int AutoFocus::Initialize()
    // This is needed, otherwise Shutter_ is not always set resulting in crashes
    // This could lead to strange problems if multiple shutter devices are loaded
    SetProperty("Shutter", defaultShutter.c_str());
-   // get list with available physical cameras.
+
+   // Get list with available physical cameras.
    deviceIterator = 0;
    for (;;)
    {
@@ -129,63 +130,26 @@ int AutoFocus::Initialize()
    CreateProperty(g_Alg, g_Alg_Standard, MM::String, false, pAct);
    AddAllowedValue(g_Alg, g_Alg_Standard);
 
-   // Query camera for current ROI and dimensions
-   /*
-   MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
-   if (camera != 0)
-   {
-      unsigned x, y, xSize, ySize;
-      int ret = camera->GetROI(x, y, xSize, ySize);
-      if (ret == DEVICE_OK)
-      {
-         // If no ROI is set, use full frame
-         if (xSize == 0 || ySize == 0)
-         {
-            roiWidth_ = camera->GetImageWidth();
-            roiHeight_ = camera->GetImageHeight();
-            roiX_ = 0;
-            roiY_ = 0;
-         }
-         else
-         {
-            roiX_ = x;
-            roiY_ = y;
-            roiWidth_ = xSize;
-            roiHeight_ = ySize;
-         }
-      }
-
-      // Get current binning
-      binning_ = camera->GetBinning();
-      if (binning_ <= 0)
-         binning_ = 1;
-   }
-   */
 
    // Create ROI-X property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_X);
    CreateIntegerProperty("ROI-X", 0, false, pAct);
-   SetPropertyLimits("ROI-X", 0, 65536);
 
    // Create ROI-Y property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Y);
    CreateIntegerProperty("ROI-Y", 65536, false, pAct);
-   SetPropertyLimits("ROI-Y", 0, 65536);
 
    // Create ROI-Width property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Width);
    CreateIntegerProperty("ROI-Width", 65536, false, pAct);
-   SetPropertyLimits("ROI-Width", 0, 65536);
 
    // Create ROI-Height property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Height);
    CreateIntegerProperty("ROI-Height", 65536, false, pAct);
-   SetPropertyLimits("ROI-Height", 0, 65536);
 
    // Create Binning property
    pAct = new CPropertyAction(this, &AutoFocus::OnBinning);
    CreateIntegerProperty("Binning", binning_, false, pAct);
-   SetPropertyLimits("Binning", 1, 10);
 
    initialized_ = true;
    return DEVICE_OK;
@@ -211,42 +175,18 @@ int AutoFocus::OnCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       std::string oldCamera = camera_;
       pProp->Get(camera_);
-      // Query camera for current ROI and dimensions
-      MM::Camera* pCam = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
-      if (pCam != 0)
+      if (camera_ != "" && camera_ != "Undefined")
       {
-         unsigned x, y, xSize, ySize;
-         int ret = pCam->GetROI(x, y, xSize, ySize);
+         int ret = SetCameraBinning();
          if (ret == DEVICE_OK)
+            ret = SetCameraROI();
+         if (ret != DEVICE_OK)
          {
-            // If no ROI is set, use full frame
-            if (xSize == 0 || ySize == 0)
-            {
-               roiWidth_ = pCam->GetImageWidth();
-               roiHeight_ = pCam->GetImageHeight();
-               roiX_ = 0;
-               roiY_ = 0;
-            }
-            else
-            {
-               roiX_ = x;
-               roiY_ = y;
-               roiWidth_ = xSize;
-               roiHeight_ = ySize;
-            }
+            // Restore previous value
+            camera_ = oldCamera;
+            pProp->Set(camera_.c_str());
+            return ERR_NO_PHYSICAL_CAMERA;
          }
-
-         // Get current binning
-         binning_ = pCam->GetBinning();
-         if (binning_ <= 0)
-            binning_ = 1;
-      }
-      else
-      {
-         // Restore previous value
-         camera_ = oldCamera;
-         pProp->Set(camera_.c_str());
-         return ERR_NO_PHYSICAL_CAMERA;
       }
 
    }
@@ -275,19 +215,7 @@ int AutoFocus::OnROI_X(MM::PropertyBase* pProp, MM::ActionType eAct)
       long value;
       pProp->Get(value);
       roiX_ = (unsigned)value;
-
-      // Apply ROI to camera
-      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
-      if (camera != nullptr)
-      {
-         int ret = camera->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
-         if (ret != DEVICE_OK)
-         {
-            // Restore previous value
-            pProp->Set((long)roiX_);
-            return ret;
-         }
-      }
+      return SetCameraROI();
    }
    return DEVICE_OK;
 }
@@ -303,19 +231,7 @@ int AutoFocus::OnROI_Y(MM::PropertyBase* pProp, MM::ActionType eAct)
       long value;
       pProp->Get(value);
       roiY_ = (unsigned)value;
-
-      // Apply ROI to camera
-      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
-      if (camera != nullptr)
-      {
-         int ret = camera->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
-         if (ret != DEVICE_OK)
-         {
-            // Restore previous value
-            pProp->Set((long)roiY_);
-            return ret;
-         }
-      }
+      return SetCameraROI();
    }
    return DEVICE_OK;
 }
@@ -331,19 +247,7 @@ int AutoFocus::OnROI_Width(MM::PropertyBase* pProp, MM::ActionType eAct)
       long value;
       pProp->Get(value);
       roiWidth_ = (unsigned)value;
-
-      // Apply ROI to camera
-      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
-      if (camera != nullptr)
-      {
-         int ret = camera->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
-         if (ret != DEVICE_OK)
-         {
-            // Restore previous value
-            pProp->Set((long)roiWidth_);
-            return ret;
-         }
-      }
+      return SetCameraROI();
    }
    return DEVICE_OK;
 }
@@ -359,19 +263,7 @@ int AutoFocus::OnROI_Height(MM::PropertyBase* pProp, MM::ActionType eAct)
       long value;
       pProp->Get(value);
       roiHeight_ = (unsigned)value;
-
-      // Apply ROI to camera
-      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
-      if (camera != nullptr)
-      {
-         int ret = camera->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
-         if (ret != DEVICE_OK)
-         {
-            // Restore previous value
-            pProp->Set((long)roiHeight_);
-            return ret;
-         }
-      }
+      return SetCameraROI();
    }
    return DEVICE_OK;
 }
@@ -384,22 +276,8 @@ int AutoFocus::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      long value;
-      pProp->Get(value);
-
-      // Apply binning to camera
-      MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
-      if (camera != nullptr)
-      {
-         int ret = camera->SetBinning((int)value);
-         if (ret != DEVICE_OK)
-         {
-            // Restore previous value
-            pProp->Set(binning_);
-            return ret;
-         }
-         binning_ = value;
-      }
+      pProp->Get(binning_);
+      return SetCameraBinning();
    }
    return DEVICE_OK;
 }
@@ -477,60 +355,56 @@ int AutoFocus::SnapAndAnalyze()
    // Snap image with shutter closed
    camera->SnapImage();
    // TODO: take dark image only once
-   cv::Mat darkImage = GetImageFromBuffer();
+   ImgBuffer darkImage;
+   int ret = GetImageFromBuffer(darkImage);
 
    shutter->SetOpen(true);
    CDeviceUtils::SleepMs(10); // wait for shutter to open
    // Snap image with shutter open
    camera->SnapImage();
-   cv::Mat lightImage = GetImageFromBuffer();
+   ImgBuffer lightImage;
+   ret = GetImageFromBuffer(lightImage);
 
-   cv::Mat resultImage;
 
    // Subtract image2 from image1
-   cv::subtract(lightImage, darkImage, resultImage);
+   //Subtract(lightImage, darkImage, resultImage);
 
-   double scoreOpen;
-   double xOpen, yOpen;
-   AnalyzeImage(resultImage, scoreOpen, xOpen, yOpen);
+   double score1, xOpen1, yOpen1;
+   double score2, xOpen2, yOpen2;
+   AnalyzeImage(lightImage, score1, xOpen1, yOpen1, score2, xOpen2, yOpen2);
 
    // Here we would implement the logic to adjust focus based on scores
    // For now, we just return OK
    return DEVICE_OK;
 }
 
-cv::Mat AutoFocus::GetImageFromBuffer()
+
+int AutoFocus::GetImageFromBuffer(ImgBuffer& img)
 {
    // Get camera device
    MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
    if (camera == nullptr)
-      return cv::Mat();
-   // Get image buffer
-   const unsigned int width = camera->GetImageWidth();
-   const unsigned int height = camera->GetImageHeight();
-   const unsigned int bpp = camera->GetImageBytesPerPixel();
+      return ERR_NO_PHYSICAL_CAMERA;
+
    const unsigned char* imgBuffer = camera->GetImageBuffer();
-   if (imgBuffer == nullptr || width == 0 || height == 0)
-      return cv::Mat();
-   cv::Mat image(height, width, CV_16UC3, (void *) imgBuffer);
-   return image;
+   if (imgBuffer == nullptr)
+      return ERR_NO_PHYSICAL_CAMERA;
+
+   unsigned int width = camera->GetImageWidth();
+   unsigned int height = camera->GetImageHeight();
+   unsigned int byteDepth = camera->GetImageBytesPerPixel();
+   img = ImgBuffer(width, height, byteDepth);
+   img.SetPixels(imgBuffer);
+
+   return DEVICE_OK;
 }
 
-int AutoFocus::AnalyzeImage(cv::Mat image, double& score, double& x, double& y)
+int AutoFocus::AnalyzeImage(ImgBuffer img, double& score1, double& x1, double& y1, double& score2, double& x2, double& y2)
 {
-   // convert grayscale to binary image
-   cv::Mat thr;
-   cv::threshold(image, thr, 100, 65000, cv::THRESH_BINARY);
+   // Find up to two spots in the image, return their (x,y) coordinates and scores
 
-   // find moments of the image
-   cv::Moments m = moments(thr, true);
-   cv::Point p(m.m10 / m.m00, m.m01 / m.m00);
 
-   // coordinates of centroid
-   std::ostringstream os;
-   os << p.x << p.y ;
-   this->LogMessage(os.str().c_str());
-   
+
 
 /*
    // Simple analysis: compute center of mass as focus point
@@ -561,6 +435,76 @@ int AutoFocus::AnalyzeImage(cv::Mat image, double& score, double& x, double& y)
    }
    */
    return DEVICE_OK;
+}
+
+int AutoFocus::SetCameraBinning()
+{
+   if (camera_ == "" || camera_ == "Undefined")
+   {
+      // even though we are not setting binning, things get complicated if we return an error here
+      return DEVICE_OK;
+   }
+   MM::Camera* pCam = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+   if (pCam == nullptr)
+   {
+      return ERR_NO_PHYSICAL_CAMERA;
+   }
+   // Apply current settings, if that fails, read them from the camera
+   int ret = pCam->SetBinning(binning_);
+   if (ret != DEVICE_OK)
+   {
+      // Get current binning
+      binning_ = pCam->GetBinning();
+      if (binning_ <= 0)
+         binning_ = 1;
+      GetCoreCallback()->OnPropertyChanged(this, "Binning", CDeviceUtils::ConvertToString(binning_));
+   }
+   return DEVICE_OK;
+}
+
+
+int AutoFocus::SetCameraROI()
+{
+   if (camera_ == "" || camera_ == "Undefined")
+   {
+      // even though we are not setting binning, things get complicated if we return an error here
+      return DEVICE_OK;
+   }
+   MM::Camera* pCam = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
+   if (pCam == nullptr)
+   {
+      return ERR_NO_PHYSICAL_CAMERA;
+   }
+   int ret = pCam->SetROI(roiX_, roiY_, roiWidth_, roiHeight_);
+   if (ret != DEVICE_OK)
+   {
+      unsigned x, y, xSize, ySize;
+      int ret2 = pCam->GetROI(x, y, xSize, ySize);
+      if (ret2 == DEVICE_OK)
+      {
+         // If no ROI is set, use full frame
+         if (xSize == 0 || ySize == 0)
+         {
+            roiWidth_ = pCam->GetImageWidth();
+            roiHeight_ = pCam->GetImageHeight();
+            roiX_ = 0;
+            roiY_ = 0;
+         }
+         else
+         {
+            roiX_ = x;
+            roiY_ = y;
+            roiWidth_ = xSize;
+            roiHeight_ = ySize;
+
+         }
+         GetCoreCallback()->OnPropertyChanged(this, "ROI-X", CDeviceUtils::ConvertToString((long)roiX_));
+         GetCoreCallback()->OnPropertyChanged(this, "ROI-Y", CDeviceUtils::ConvertToString((long)roiY_));
+         GetCoreCallback()->OnPropertyChanged(this, "ROI-Width", CDeviceUtils::ConvertToString((long)roiWidth_));
+         GetCoreCallback()->OnPropertyChanged(this, "ROI-Height", CDeviceUtils::ConvertToString((long)roiHeight_));
+      }
+   }
+   return ret;
 }
 
 
