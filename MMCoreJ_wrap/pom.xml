@@ -49,18 +49,37 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <meson.build.dir>builddir</meson.build.dir>
+
+        <!-- Native library packaging configuration.
+             Profiles are used to set the following properties based on the
+             current JVM:
+             - natives.os
+             - natives.arch
+             - native.library.prefix
+             - native.library.suffix
+             For a cross build, override all 4 of these properties from the
+             command line. If you are building for the same OS but different
+             architecture, you only need to set natives.arch.
+        -->
+        <natives.classifier>natives-${natives.os}-${natives.arch}</natives.classifier>
+        <native.library.name>${native.library.prefix}MMCoreJ_wrap${native.library.suffix}</native.library.name>
+        <native.library.path>${meson.build.dir}/${native.library.name}</native.library.path>
+
+        <!-- Set to true to skip natives JAR and build only the main JAR -->
+        <skip.natives>false</skip.natives>
     </properties>
 
     <build>
         <plugins>
-            <!-- Maven version requirement (setting this simplifies the output
-                 of 'mvn versions:display-plugin-updates') -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <version>3.6.2</version>
                 <executions>
                     <execution>
+                        <!-- Maven version requirement
+                             (setting this simplifies the output of
+                             'mvn versions:display-plugin-updates') -->
                         <id>enforce-maven</id>
                         <goals>
                             <goal>enforce</goal>
@@ -70,6 +89,60 @@
                                 <requireMavenVersion>
                                     <version>3.6.3</version>
                                 </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>enforce-platform-supported</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.natives}</skip>
+                            <rules>
+                                <requireProperty>
+                                    <property>natives.os</property>
+                                    <message>
+Property natives.os is not set, probably because the OS could not be detected.
+Set natives.os to a supported value: linux, macos, windows.
+Also set native.library.prefix and native.library.suffix appropriately.
+Set -Dskip.natives=true to build only the main JAR.
+                                    </message>
+                                </requireProperty>
+                                <requireProperty>
+                                    <property>natives.arch</property>
+                                    <message>
+Property natives.arch is not set, probably because it could not be detected.
+Set natives.arch to a supported value: x86_64, arm64, or arm32.
+Set -Dskip.natives=true to build only the main JAR.
+                                    </message>
+                                </requireProperty>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>enforce-native-library-exists</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.natives}</skip>
+                            <rules>
+                                <requireFilesExist>
+                                    <files>
+                                        <file>${native.library.path}</file>
+                                    </files>
+                                    <message>
+Native library not found: ${native.library.path}
+Run the Meson build first:
+    meson setup ${meson.build.dir}
+    meson compile -C ${meson.build.dir}
+Also check that native.library.prefix and native.library.suffix are correct.
+Or set -Dskip.natives=true to build only the main JAR.
+                                    </message>
+                                </requireFilesExist>
                             </rules>
                         </configuration>
                     </execution>
@@ -146,6 +219,147 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Stage native library for packaging -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.4.0</version>
+                <executions>
+                    <execution>
+                        <id>stage-native-library</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.natives}</skip>
+                            <outputDirectory>${project.build.directory}/natives-staging/natives/${natives.os}/${natives.arch}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${meson.build.dir}</directory>
+                                    <includes>
+                                        <include>${native.library.name}</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Package natives JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>natives-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <skipIfEmpty>true</skipIfEmpty>
+                            <classifier>${natives.classifier}</classifier>
+                            <classesDirectory>${project.build.directory}/natives-staging</classesDirectory>
+                            <includes>
+                                <include>natives/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- OS mapping profiles -->
+        <profile>
+            <id>natives-os-linux</id>
+            <activation>
+                <os><name>Linux</name></os>
+            </activation>
+            <properties>
+                <natives.os>linux</natives.os>
+                <native.library.prefix>lib</native.library.prefix>
+                <native.library.suffix>.so</native.library.suffix>
+            </properties>
+        </profile>
+        <profile>
+            <id>natives-os-macos</id>
+            <activation>
+                <os><family>mac</family></os>
+            </activation>
+            <properties>
+                <natives.os>macos</natives.os>
+                <native.library.prefix>lib</native.library.prefix>
+                <native.library.suffix>.dylib</native.library.suffix>
+            </properties>
+        </profile>
+        <profile>
+            <id>natives-os-windows</id>
+            <activation>
+                <os><family>windows</family></os>
+            </activation>
+            <properties>
+                <natives.os>windows</natives.os>
+                <native.library.prefix></native.library.prefix>
+                <native.library.suffix>.dll</native.library.suffix>
+            </properties>
+        </profile>
+
+        <!-- Architecture mapping profiles -->
+        <profile>
+            <!-- x86_64 is usually 'amd64' -->
+            <id>natives-arch-amd64</id>
+            <activation>
+                <os><arch>amd64</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>x86_64</natives.arch>
+            </properties>
+        </profile>
+        <profile>
+            <!-- But JDK on Intel macOS usually has 'x86_64' -->
+            <id>natives-arch-x86_64</id>
+            <activation>
+                <os><arch>x86_64</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>x86_64</natives.arch>
+            </properties>
+        </profile>
+        <profile>
+            <!-- 64-bit ARM is almost always 'aarch64' -->
+            <id>natives-arch-aarch64</id>
+            <activation>
+                <os><arch>aarch64</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>arm64</natives.arch>
+            </properties>
+        </profile>
+        <profile>
+            <!-- 32-bit ARM is most often 'arm' -->
+            <id>natives-arch-arm</id>
+            <activation>
+                <os><arch>arm</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>arm32</natives.arch>
+            </properties>
+        </profile>
+        <profile>
+            <!-- 32-bit ARM on (older) Raspberry Pi is usually 'armv7l' -->
+            <id>natives-arch-armv7l</id>
+            <activation>
+                <os><arch>armv7l</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>arm32</natives.arch>
+            </properties>
+        </profile>
+    </profiles>
 </project>
