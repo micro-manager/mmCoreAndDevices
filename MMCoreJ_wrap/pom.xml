@@ -8,8 +8,8 @@
     <artifactId>MMCoreJ</artifactId>
     <version>11.11.0</version>
 
-    <name>Micro-Manager Java Interface to MMCore</name>
-    <description>Micro-Manager is open source software for control of automated/motorized microscopes.  This specific packages provides the Java interface to the device abstraction layer (MMCore) that is written in C++ with a C-interface</description>
+    <name>MMCore Java API</name>
+    <description>Java bindings for MMCore, the device abstraction layer of Micro-Manager, the microscope control and acquisition platform.</description>
     <url>https://micro-manager.org</url>
 
     <licenses>
@@ -29,12 +29,12 @@
         <developer>
             <id>marktsuchida</id>
             <name>Mark Tsuchida</name>
-            <organization>University of Wisconsin, Madison</organization>
+            <organization>University of Wisconsin–Madison</organization>
         </developer>
         <developer>
             <id>nicost</id>
             <name>Nico Stuurman</name>
-            <organization>UCSF/HHMI</organization>
+            <organization>University of California, San Francisco</organization>
         </developer>
     </developers>
 
