@@ -89,6 +89,12 @@ swig_gen_java_source_names = [
     'UnsignedVector.java',
 ]
 
+swig_gen_java_src_dir = 'generated-java/mmcorej'
+swig_gen_java_sources = []
+foreach src : swig_gen_java_source_names
+    swig_gen_java_sources += swig_gen_java_src_dir / src
+endforeach
+
 swig_gen = custom_target(
     'swig-mmcorej',
     input: 'MMCoreJ.i',
@@ -98,7 +104,12 @@ swig_gen = custom_target(
         swig_gen_java_source_names,
     ],
     depfile: 'MMCoreJ_swig_wrap.d',
+    # Run via wrapper script because outdir needs to pre-exist.
     command: [
+        import('python').find_installation(),
+        files('scripts/run_swig.py'),
+        '--outdir', '@OUTDIR@' / swig_gen_java_src_dir,
+        '--',
         swig,
         '-c++',
         '-java',
@@ -108,7 +119,7 @@ swig_gen = custom_target(
         '-MD', '-MF', '@DEPFILE@',
         '-o', '@OUTPUT0@',
         '-oh', '@OUTPUT1@',
-        '-outdir', '@OUTDIR@',
+        '-outdir', '@OUTDIR@' / swig_gen_java_src_dir,
         '@INPUT@',
     ],
 )
@@ -129,3 +140,5 @@ shared_library(
     gnu_symbol_visibility: 'inlineshidden',
     install: false,
 )
+
+# Note: We do not compile Java sources; leave that to Maven.
