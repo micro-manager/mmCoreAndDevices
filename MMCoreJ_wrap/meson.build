@@ -56,8 +56,6 @@ foreach abspath : swig_include_dirs
     )
 endforeach
 
-subdir('src/main/java')  # Get java_sources
-
 # TODO Add check to ensure we don't miss any
 swig_gen_java_source_names = [
     'ActionType.java',
@@ -117,14 +115,6 @@ swig_gen = custom_target(
 
 swig_gen_cpp_sources = [swig_gen[0], swig_gen[1]]
 
-swig_gen_java_sources = []
-foreach src : swig_gen.to_list()
-    if src.full_path().endswith('.h') or src.full_path().endswith('.cpp')
-        continue
-    endif
-    swig_gen_java_sources += src
-endforeach
-
 # Note that JNI libraries are supposed to be dylibs, not Mach-O bundles, on
 # macOS, even though they are loaded by dlopen() (other platforms don't have
 # this distinction). So we use shared_library(), not shared_module().
@@ -139,19 +129,3 @@ shared_library(
     gnu_symbol_visibility: 'inlineshidden',
     install: false,
 )
-
-jar(
-    'MMCoreJ',
-    java_sources,
-    swig_gen_java_sources,
-    java_resources: structured_sources([
-        # TODO pom.xml
-    ]),
-    override_options: [
-        'warning_level=1',  # Disable -Xdoclint:all, keep -Xlint:all
-    ],
-    install: true,
-)
-
-# TODO Javadoc jar (needs parsing of Doxygen XML; see old generator)
-# TODO Source jar (create externally from source dist?)
