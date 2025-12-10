@@ -1,18 +1,24 @@
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project
+    xmlns="https://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>org.micro-manager.mmcorej</groupId>
     <artifactId>MMCoreJ</artifactId>
-    <packaging>jar</packaging>
     <version>11.11.0</version>
+
     <name>Micro-Manager Java Interface to MMCore</name>
     <description>Micro-Manager is open source software for control of automated/motorized microscopes.  This specific packages provides the Java interface to the device abstraction layer (MMCore) that is written in C++ with a C-interface</description>
     <url>https://micro-manager.org</url>
 
-    <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+    <licenses>
+        <license>
+            <name>LGPL-2.1</name>
+            <url>https://github.com/micro-manager/mmCoreAndDevices/blob/main/MMCoreJ_wrap/license.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <developers>
         <developer>
@@ -38,13 +44,11 @@
         <developerConnection>scm:git:git@github.com:micro-manager/mmCoreAndDevices.git</developerConnection>
     </scm>
 
-    <licenses>
-        <license>
-            <name>LGPL-2.1</name>
-            <url>https://github.com/micro-manager/mmCoreAndDevices/blob/main/MMCoreJ_wrap/license.txt</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
     <!--
         Do not use maven to build MMCoreJ.jar.
