@@ -40,7 +40,7 @@
 
     <scm>
         <url>https://github.com/micro-manager/mmCoreAndDevices</url>
-        <connection>scm:git:git://github.com/micro-manager/mmCoreAndDevices.git</connection>
+        <connection>scm:git:https://github.com/micro-manager/mmCoreAndDevices.git</connection>
         <developerConnection>scm:git:git@github.com:micro-manager/mmCoreAndDevices.git</developerConnection>
     </scm>
 
