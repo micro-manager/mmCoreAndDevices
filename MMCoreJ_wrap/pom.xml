@@ -48,6 +48,8 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Set to Meson build directory. -->
         <meson.build.dir>builddir</meson.build.dir>
 
         <!-- Native library packaging configuration.
@@ -65,7 +67,7 @@
         <native.library.name>${native.library.prefix}MMCoreJ_wrap${native.library.suffix}</native.library.name>
         <native.library.path>${meson.build.dir}/${native.library.name}</native.library.path>
 
-        <!-- Set to true to skip natives JAR and build only the main JAR -->
+        <!-- Set to true to skip natives JAR and build only the main JAR. -->
         <skip.natives>false</skip.natives>
     </properties>
 
