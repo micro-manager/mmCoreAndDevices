@@ -244,6 +244,31 @@ Run the Meson build first:
                 </executions>
             </plugin>
 
+            <!-- Clean natives staging to remove stale libraries from previous
+                 builds -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>clean-natives-staging</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}/natives-staging</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Stage native library for packaging -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
