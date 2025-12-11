@@ -1,12 +1,6 @@
 # This Meson script is experimental and potentially incomplete. It is not part
 # of the supported build system for Micro-Manager or mmCoreAndDevices.
 
-# IMPORTANT: This build script uses mmcore and mmdevice from the mirror
-# repositories, not the MMCore/ and MMDevice/ in mmCoreAndDevices. This is
-# because this build script is expected to be put in use when MMCoreJ is moved
-# out of mmCoreAndDevices.
-# The versions used are defined in mmdevice.wrap and mmcore.wrap.
-
 project(
     'mmcorej',
     'cpp', 'java',
@@ -41,7 +35,7 @@ mmcore_proj = subproject(
         'tests': 'disabled',
     },
 )
-mmcore_dep = mmcore_proj.get_variable('mmcore')
+mmcore_dep = mmcore_proj.get_variable('mmcore_dep')
 
 jni_dep = dependency('jni', version: '>= 1.8.0', modules: ['jvm'])
 
