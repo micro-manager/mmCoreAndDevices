@@ -28,13 +28,6 @@ const char* const gIllumBeamPropertyName = "IllumBeam";
 const std::string gIllumPrefix = "Illum";
 const std::string gImagingPrefix = "Imaging";
 
-// pre-init properties
-const char* const gMicroscopeGeometry = "MicroscopeGeometry";
-const char* const gSimultaneousCameras = "SimultaneousCameras";
-const char* const gIlluminationPaths = "IlluminationPaths";
-const char* const gLightSheetType = "LightSheetType";
-const char* const gImagingPaths = "ImagingPaths";
-
 // types of light sheets
 const char* const gLightSheetTypeStatic = "Static";
 const char* const gLightSheetTypeScanned = "Scanned";

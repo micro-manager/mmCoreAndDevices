@@ -26,18 +26,12 @@ public:
     bool Busy();
     void GetName(char* name) const;
 
-    // Pre-init Property Actions
-    int OnNumImagingPaths(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnNumIlluminationPaths(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnNumSimultaneousCameras(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnMicroscopeGeometry(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnLightSheetType(MM::PropertyBase* pProp, MM::ActionType eAct);
-
 private:
     // Create properties for all properties in the device map.
     void CreateDeviceProperties(const std::map<std::string, MM::DeviceType>& deviceMap);
 
-    // Create properties for the imaging camera based on the number of imaging paths and simultaneous cameras on each imaging path.
+    // Create properties for the imaging camera based on the number of imaging paths,
+    // and the number of simultaneous cameras on each imaging path.
     void CreateCameraProperties();
 
     // Returns true if the string starts with the search term.
@@ -49,6 +43,13 @@ private:
     // Create multiple properties with the light path prefix.
     void CreatePrefixProperties(const std::string& propertyName, const std::string& prefix, 
         const int numProperties, MM::DeviceType deviceType);
+
+    // Pre-init Properties
+    void CreateNumIlluminationPathsProperty();
+    void CreateNumImagingPathsProperty();
+    void CreateLightSheetTypeProperty();
+    void CreateMicroscopeGeometryProperty();
+    void CreateNumSimultaneousCamerasProperty();
 
     std::map<MM::DeviceType, std::vector<std::string>> devices_;
     MicroscopeGeometry geometry_;
