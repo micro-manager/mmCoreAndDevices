@@ -23,12 +23,11 @@ void MicroscopeGeometry::CreateGeometryTypes() {
     }
 }
 
-// The return value is a reference so that it can be used in SetAllowedValues
-std::vector<std::string>& MicroscopeGeometry::GetGeometryTypes() {
+std::vector<std::string> MicroscopeGeometry::GetGeometryTypes() const {
     return geometryTypes_;
 }
 
-std::map<std::string, MM::DeviceType> MicroscopeGeometry::GetDeviceMap(const std::string& geometryType) {
+std::map<std::string, MM::DeviceType> MicroscopeGeometry::GetDeviceMap(const std::string& geometryType) const {
     return deviceMap_.at(geometryType);
 }
 

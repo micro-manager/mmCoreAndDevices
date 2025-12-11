@@ -7,8 +7,6 @@
 
 #include "LightSheetDeviceManager.h"
 
-#include <string>
-
 LightSheetDeviceManager::LightSheetDeviceManager() :
     initialized_(false),
     geometryType_("SCAPE"),
@@ -247,10 +245,11 @@ void LightSheetDeviceManager::CreateMicroscopeGeometryProperty() {
                 geometryType_ = geometryType;
             }
             return DEVICE_OK;
-            }),
+        }),
         true
     );
-    SetAllowedValues(propertyName.c_str(), geometry_.GetGeometryTypes());
+    std::vector<std::string> allowedValues = geometry_.GetGeometryTypes();
+    SetAllowedValues(propertyName.c_str(), allowedValues);
 }
 
 void LightSheetDeviceManager::CreateNumSimultaneousCamerasProperty() {
