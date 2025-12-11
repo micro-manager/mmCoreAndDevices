@@ -59,7 +59,22 @@ mmdevice_lib = static_library(
     gnu_symbol_visibility: 'inlineshidden',
 )
 
-subdir('unittest')
+# Special handling for 'tests' option. We want to:
+# - Enable tests by default when built as a stand-alone project ('auto' but
+#   will be enabled unless wrap fallback disabled).
+# - Disable by default when built as subproject of a device adapter, because
+#   we might be building many at once. But allow to enable if wanted.
+# - Follow the parent project when built as subproject of mmcore ('yield: true'
+#   in the option definition).
+build_tests = get_option('tests').allowed()
+if meson.is_subproject() and not get_option('client_interface')
+    if get_option('tests').auto()
+        build_tests = false
+    endif
+endif
+if build_tests
+    subdir('unittest')
+endif
 
 mmdevice_dep = declare_dependency(
     compile_args: build_mode_args,
