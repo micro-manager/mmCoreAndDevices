@@ -146,6 +146,28 @@ Or set -Dskip.natives=true to build only the main JAR.
                             </rules>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>enforce-generated-sources-exist</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireFilesExist>
+                                    <files>
+                                        <file>${meson.build.dir}/generated-java/mmcorej/CMMCore.java</file>
+                                    </files>
+                                    <message>
+Generated Java sources not found: ${meson.build.dir}/generated-java/mmcorej/*.java
+Run the Meson build first:
+    meson setup ${meson.build.dir}
+    meson compile -C ${meson.build.dir}
+                                    </message>
+                                </requireFilesExist>
+                            </rules>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
