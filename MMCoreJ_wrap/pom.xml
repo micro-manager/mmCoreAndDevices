@@ -194,7 +194,8 @@ Run the Meson build first:
                 </executions>
             </plugin>
 
-            <!-- Source JAR -->
+            <!-- Source JAR (Java sources only but includes generated sources;
+                 good for IDEs to pull) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -205,6 +206,28 @@ Run the Meson build first:
                         <goals>
                             <goal>jar-no-fork</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Full source JAR (A full source distribution including mmcore
+                 and mmdevice, but excluding generated sources) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <executions>
+                    <execution>
+                        <id>full-sources-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/full-sources.xml</descriptor>
+                            </descriptors>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
