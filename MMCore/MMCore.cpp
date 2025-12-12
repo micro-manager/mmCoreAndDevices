@@ -817,6 +817,14 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
 
       mm::DeviceModuleLockGuard guard(pDevice);
       LOG_DEBUG(coreLogger_) << "Will unload device " << label;
+      
+      // Clean up initial state labels for this device if it exists
+      auto it = initialStateLabels_.find(label);
+      if (it != initialStateLabels_.end()) {
+         initialStateLabels_.erase(it);
+         LOG_DEBUG(coreLogger_) << "Cleaned up initial state labels for device " << label;
+      }
+      
       deviceManager_->UnloadDevice(pDevice);
       LOG_DEBUG(coreLogger_) << "Did unload device " << label;
       
@@ -854,6 +862,10 @@ void CMMCore::unloadAllDevices() MMCORE_LEGACY_THROW(CMMError)
       }
 
       LOG_DEBUG(coreLogger_) << "Will unload all devices";
+      
+      // Clear all initial state labels since all devices are being unloaded
+      initialStateLabels_.clear();
+      
       deviceManager_->UnloadAllDevices();
       LOG_INFO(coreLogger_) << "Did unload all devices";
 
@@ -954,6 +966,9 @@ void CMMCore::initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError)
       LOG_INFO(coreLogger_) << "Will initialize device " << devices[i];
       pDevice->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << devices[i];
+
+      // Capture initial state labels for State devices
+      captureInitialStateLabels(pDevice, devices[i].c_str());
 
       assignDefaultRole(pDevice);
    }
@@ -1064,12 +1079,16 @@ void CMMCore::initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError)
  * This helper function is executed by a single thread, allowing initializeAllDevices to operate multi-threaded.
  * All devices are supposed to originate from the same device adapter
  */
+
 int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> devicesLabels) {
    for (auto& deviceLabel : devicesLabels) {
       mm::DeviceModuleLockGuard guard(deviceLabel.first);
       LOG_INFO(coreLogger_) << "Will initialize device " << deviceLabel.second;
       deviceLabel.first->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << deviceLabel.second;
+
+      // Capture initial state labels for State devices
+      captureInitialStateLabels(deviceLabel.first, deviceLabel.second.c_str());
    }
    return DEVICE_OK;
 }
@@ -1122,7 +1141,63 @@ void CMMCore::initializeDevice(const char* label ///< the device to initialize
    pDevice->Initialize();
    LOG_INFO(coreLogger_) << "Did initialize device " << label;
 
+   // Capture initial state labels for State devices
+   captureInitialStateLabels(pDevice, label);
+
    updateCoreProperties();
+}
+
+
+/**
+ * Helper function to capture initial state labels for State devices after initialization.
+ * This function should be called after any device initialization to ensure state labels are captured.
+ *
+ * @param pDevice   the initialized device instance
+ * @param label     the device label
+ */
+void CMMCore::captureInitialStateLabels(std::shared_ptr<DeviceInstance> pDevice, const char* label)
+{
+   // For State devices, capture initial position labels after initialization
+   if (pDevice->GetType() == MM::StateDevice)
+   {
+      try 
+      {
+
+         std::shared_ptr<StateInstance> pStateDev = 
+            deviceManager_->GetDeviceOfType<StateInstance>(label);
+         
+         unsigned long numPositions = pStateDev->GetNumberOfPositions();
+         std::map<long, std::string> initialLabels;
+         
+         for (unsigned long pos = 0; pos < numPositions; pos++)
+         {
+            try 
+            {
+               std::string posLabel = pStateDev->GetPositionLabel(pos);
+               if (!posLabel.empty())
+               {
+                  initialLabels[pos] = posLabel;
+               }
+            }
+            catch (const CMMError&)
+            {
+               // Label not defined for this position, skip
+            }
+         }
+         
+         // Store the initial labels for this device
+         initialStateLabels_[label] = initialLabels;
+
+         LOG_DEBUG(coreLogger_) << "Captured " << initialLabels.size() 
+                               << " initial state labels for device " << label;
+      }
+      catch (const CMMError& e)
+      {
+         // Log but don't fail initialization if we can't capture labels
+         LOG_WARNING(coreLogger_) << "Failed to capture initial state labels for device " 
+                                  << label << ": " << e.getMsg();
+      }
+   }
 }
 
 
@@ -7120,6 +7195,8 @@ void CMMCore::loadSystemState(const char* fileName) MMCORE_LEGACY_THROW(CMMError
  * Saves the current system configuration to a text file of the MM specific format.
  * The configuration file records only the information essential to the hardware
  * setup: devices, labels, pre-initialization properties, and configurations.
+ * For state devices, only position labels that have been modified from their 
+ * initial values (captured during device initialization) are saved.
  * The file format is the same as for the system state.
  */
 void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(CMMError)
@@ -7226,6 +7303,11 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
          deviceManager_->GetDeviceOfType<StateInstance>(deviceLabels[i]);
       mm::DeviceModuleLockGuard guard(pSD);
       unsigned numPos = pSD->GetNumberOfPositions();
+      
+      // Check if we have initial labels stored for this device
+      auto initialLabelsIt = initialStateLabels_.find(deviceLabels[i]);
+      bool hasInitialLabels = (initialLabelsIt != initialStateLabels_.end());
+      
       for (unsigned long j=0; j<numPos; j++)
       {
          std::string stateLabel;
@@ -7240,7 +7322,26 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
          }
          if (!stateLabel.empty())
          {
-            os << MM::g_CFGCommand_Label << ',' << deviceLabels[i] << ',' << j << ',' << stateLabel << '\n';
+            bool shouldSaveLabel = true;
+            
+            // If we have initial labels, only save if the current label is different
+            if (hasInitialLabels)
+            {
+               auto& initialLabels = initialLabelsIt->second;
+               auto initialLabelIt = initialLabels.find(j);
+               
+               if (initialLabelIt != initialLabels.end() && 
+                   initialLabelIt->second == stateLabel)
+               {
+                  // Current label matches initial label, don't save it
+                  shouldSaveLabel = false;
+               }
+            }
+            
+            if (shouldSaveLabel)
+            {
+               os << MM::g_CFGCommand_Label << ',' << deviceLabels[i] << ',' << j << ',' << stateLabel << '\n';
+            }
          }
       }
    }
