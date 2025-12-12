@@ -952,23 +952,52 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
       // action interface
       int OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnCamera(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnFocusStage(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnROI_X(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnROI_Y(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnROI_Width(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnROI_Height(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnDeviceSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnSpotSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+      struct CalibrationData {
+         double offsetX;
+         double offsetY;
+         double slopeX;
+         double slopeY;
+         double refSpotX;    // Reference spot X (fitted value at refZ)
+         double refSpotY;    // Reference spot Y (fitted value at refZ)
+         double refZ;        // Reference Z position (startPos during calibration)
+
+         // Spot identification data
+         char dominantAxis;     // 'X' or 'Y' - which axis has larger movement
+         bool topIsHigher;       // true if spot 1 is top surface, false if bottom
+         double slope1Dominant; // slope of spot 1 on dominant axis
+         double slope2Dominant; // slope of spot 2 on dominant axis
+         std::string spotSelection; // Spot selection used during calibration ("Top" or "Bottom")
+      };
+
       int SnapAndAnalyze();
       int GetImageFromBuffer(ImgBuffer& img);
       int AnalyzeImage(ImgBuffer img, double& score1, double& x1, double& y1, double& score2, double& x2, double& y2);
       int SetCameraROI();
       int SetCameraBinning();
+      int PerformCalibration();
+      int SaveCalibrationData();
+      int LoadCalibrationData();
+      double CalculateTargetZDiff(const CalibrationData& cal, double spotX, double spotY);
+      int ValidateZPosition(double targetZ);
+
       std::vector<std::string> availableShutters_;
       std::string shutter_;
       std::vector<std::string> availableCameras_;
       std::string camera_;
+      std::vector<std::string> availableFocusStages_;
+      std::string focusStage_;
       bool initialized_;
       bool continuousFocusing_;
       double offset_;
@@ -980,6 +1009,14 @@ private:
       unsigned roiWidth_;
       unsigned roiHeight_;
       long binning_;
+      // Last spot measurement
+      double lastSpotX_;
+      double lastSpotY_;
+      double lastSpotScore_;
+      // Device settings and calibration
+      long deviceSettings_;
+      std::string spotSelection_;
+      std::map<long, CalibrationData> calibrationMap_;
 };
 
 
