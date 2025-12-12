@@ -1613,8 +1613,8 @@ namespace MM {
 
       // These functions violate the separation between device adapters and
       // will be removed as soon as we remove all uses. Never use in new code.
-      MM_DEPRECATED(virtual int GetFocusPosition(double& pos)) = 0;
-      MM_DEPRECATED(virtual MM::SignalIO* GetSignalIODevice(const MM::Device* caller, const char* deviceName)) = 0;
+      MMDEVICE_DEPRECATED virtual int GetFocusPosition(double& pos) = 0;
+      MMDEVICE_DEPRECATED virtual MM::SignalIO* GetSignalIODevice(const MM::Device* caller, const char* deviceName) = 0;
 
       virtual MM::Hub* GetParentHub(const MM::Device* caller) const = 0;
    };

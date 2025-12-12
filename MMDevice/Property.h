@@ -254,7 +254,7 @@ public:
          }
       } catch (...)
       {
-         return MM_CODE_ERR;
+         return DEVICE_ERR;
       }
 
       return DEVICE_OK;
@@ -269,7 +269,7 @@ public:
             return DEVICE_SEQUENCE_TOO_LARGE;
       } catch (...)
       {
-         return MM_CODE_ERR;
+         return DEVICE_ERR;
       }
 
       return DEVICE_OK;

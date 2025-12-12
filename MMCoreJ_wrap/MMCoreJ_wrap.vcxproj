@@ -59,6 +59,7 @@
       </PrecompiledHeader>
       <DisableSpecificWarnings>4290;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalOptions>/w34996 %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>MMDEVICE_CLIENT_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)MMCoreJ_wrap.dll</OutputFile>
@@ -73,7 +74,7 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>..\MMCore;..\MMDevice;$(JAVA_HOME)\include\win32;$(JAVA_HOME)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MMDEVICE_CLIENT_BUILD;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
       </PrecompiledHeader>
