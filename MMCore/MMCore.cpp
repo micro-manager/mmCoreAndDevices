@@ -135,7 +135,7 @@ CMMCore::CMMCore() :
    pluginManager_(new mmi::CPluginManager()),
    deviceManager_(new mmi::DeviceManager())
 {
-   configGroups_ = new ConfigGroupCollection();
+   configGroups_ = new mmi::ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
 
    InitializeErrorMessages();
@@ -7963,58 +7963,58 @@ void CMMCore::InitializeErrorMessages()
 
 void CMMCore::CreateCoreProperties()
 {
-   properties_ = new CorePropertyCollection(this);
+   properties_ = new mmi::CorePropertyCollection(this);
 
    // Initialize
-   CoreProperty propInit("0", false, MM::Integer);
+   mmi::CoreProperty propInit("0", false, MM::Integer);
    propInit.AddAllowedValue("0");
    propInit.AddAllowedValue("1");
    properties_->Add(MM::g_Keyword_CoreInitialize, propInit);
 
    // Auto shutter
-   CoreProperty propAutoShutter("1", false, MM::Integer);
+   mmi::CoreProperty propAutoShutter("1", false, MM::Integer);
    propAutoShutter.AddAllowedValue("0");
    propAutoShutter.AddAllowedValue("1");
    properties_->Add(MM::g_Keyword_CoreAutoShutter, propAutoShutter);
 
-   CoreProperty propCamera;
+   mmi::CoreProperty propCamera;
    properties_->Add(MM::g_Keyword_CoreCamera, propCamera);
    properties_->AddAllowedValue(MM::g_Keyword_CoreCamera, "");
 
-   CoreProperty propShutter;
+   mmi::CoreProperty propShutter;
    properties_->Add(MM::g_Keyword_CoreShutter, propShutter);
    properties_->AddAllowedValue(MM::g_Keyword_CoreShutter, "");
 
-   CoreProperty propFocus;
+   mmi::CoreProperty propFocus;
    properties_->Add(MM::g_Keyword_CoreFocus, propFocus);
    properties_->AddAllowedValue(MM::g_Keyword_CoreFocus, "");
 
-   CoreProperty propXYStage;
+   mmi::CoreProperty propXYStage;
    properties_->Add(MM::g_Keyword_CoreXYStage, propXYStage);
    properties_->AddAllowedValue(MM::g_Keyword_CoreXYStage, "");
 
-   CoreProperty propAutoFocus;
+   mmi::CoreProperty propAutoFocus;
    properties_->Add(MM::g_Keyword_CoreAutoFocus, propAutoFocus);
    properties_->AddAllowedValue(MM::g_Keyword_CoreAutoFocus, "");
 
-   CoreProperty propImageProc;
+   mmi::CoreProperty propImageProc;
    properties_->Add(MM::g_Keyword_CoreImageProcessor, propImageProc);
    properties_->AddAllowedValue(MM::g_Keyword_CoreImageProcessor, "");
 
-   CoreProperty propSLM;
+   mmi::CoreProperty propSLM;
    properties_->Add(MM::g_Keyword_CoreSLM, propSLM);
    properties_->AddAllowedValue(MM::g_Keyword_CoreSLM, "");
 
-   CoreProperty propGalvo;
+   mmi::CoreProperty propGalvo;
    properties_->Add(MM::g_Keyword_CoreGalvo, propGalvo);
    properties_->AddAllowedValue(MM::g_Keyword_CoreGalvo, "");
 
-   CoreProperty propChannelGroup;
+   mmi::CoreProperty propChannelGroup;
    properties_->Add(MM::g_Keyword_CoreChannelGroup, propChannelGroup);
    properties_->AddAllowedValue(MM::g_Keyword_CoreChannelGroup, "");
 
    // Time after which we give up on checking the Busy flag status
-   CoreProperty propBusyTimeoutMs("5000", false, MM::Integer);
+   mmi::CoreProperty propBusyTimeoutMs("5000", false, MM::Integer);
    properties_->Add(MM::g_Keyword_CoreTimeoutMs, propBusyTimeoutMs);
 
    properties_->Refresh();

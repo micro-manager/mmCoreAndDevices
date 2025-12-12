@@ -76,8 +76,6 @@
 #endif
 
 
-class ConfigGroupCollection;
-class CorePropertyCollection;
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
@@ -99,7 +97,9 @@ namespace internal {
    class VolumetricPumpInstance;
 
    class CircularBuffer;
+   class ConfigGroupCollection;
    class CoreCallback;
+   class CorePropertyCollection;
    class CPluginManager;
    class DeviceManager;
    class LogManager;
@@ -127,7 +127,7 @@ enum DeviceInitializationState {
 class CMMCore
 {
    friend class mmcore::internal::CoreCallback;
-   friend class CorePropertyCollection;
+   friend class mmcore::internal::CorePropertyCollection;
 
 public:
    CMMCore();
@@ -713,8 +713,8 @@ private:
    bool autoShutter_;
    std::vector<double> *nullAffine_;
    MM::Core* callback_;                 // core services for devices
-   ConfigGroupCollection* configGroups_;
-   CorePropertyCollection* properties_;
+   mmcore::internal::ConfigGroupCollection* configGroups_;
+   mmcore::internal::CorePropertyCollection* properties_;
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
    mmcore::internal::CircularBuffer* cbuf_;

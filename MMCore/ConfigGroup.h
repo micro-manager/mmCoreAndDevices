@@ -150,6 +150,9 @@ class ConfigGroup : public ConfigGroupBase<Configuration>
 {
 };
 
+namespace mmcore {
+namespace internal {
+
 /**
  * Encapsulates a collection of preset groups.
  */
@@ -342,6 +345,9 @@ public:
 private:
    std::map<std::string, ConfigGroup> groups_;
 };
+
+} // namespace internal
+} // namespace mmcore
 
 /**
  * Specialized form of configuration designed to detect pixel size
