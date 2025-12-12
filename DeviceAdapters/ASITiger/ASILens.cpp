@@ -37,8 +37,6 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // CLens
@@ -68,16 +66,14 @@ int CLens::Initialize()
    // read the unit multiplier
    // ASI's unit multiplier is how many units per mm, so divide by 1000 here to get units per micron
    // we store the micron-based unit multiplier for MM use, not the mm-based one ASI uses
-   ostringstream command;
-   command.str("");
+   std::ostringstream command;
    double tmp;
-   command << "UM " << axisLetter_ << "? ";
+   command << "UM " << axisLetter_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    unitMult_ = tmp/1000;
-   command.str("");
 
-   // Not needed for Tunable Lens , smalled unit is "1"
+   // Not needed for Tunable Lens , smallest unit is "1"
 //   // set controller card to return positions with 2 decimal places (3 is max allowed currently, 2 gives 1nm resolution)
 //   command.str("");
 //   command << addressChar_ << "VB Z=2";
@@ -143,7 +139,6 @@ int CLens::Initialize()
    AddAllowedValue(g_LensModePropertyName, g_TLCMode_0);
    AddAllowedValue(g_LensModePropertyName, g_TLCMode_1);
 
-
    // Motor enable/disable (MC)
    pAct = new CPropertyAction (this, &CLens::OnMotorControl);
    CreateProperty(g_MotorControlPropertyName, g_OnState, MM::String, false, pAct);
@@ -208,7 +203,6 @@ int CLens::Initialize()
    AddAllowedValue(g_AxisPolarity, g_FocusPolarityASIDefault);
    AddAllowedValue(g_AxisPolarity, g_FocusPolarityMicroManagerDefault);
 
-
    // end now if we are pre-2.8 firmware
    if (!FirmwareVersionAtLeast(2.8))
    {
@@ -220,7 +214,7 @@ int CLens::Initialize()
    // single-axis and SPIM function only supported in Micromanager with firmware 2.8 and above for simplicity
 
    // get build info so we can add optional properties
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR( hub_->GetBuildInfo(addressChar_, build) );
 
    // add single-axis properties if supported
@@ -267,7 +261,7 @@ int CLens::Initialize()
    if (FirmwareVersionAtLeast(2.81) && (build.vAxesProps[0] & BIT1))
    {
       // get the number of ring buffer positions from the BU X output
-      string rb_define = hub_->GetDefineString(build, "RING BUFFER");
+      std::string rb_define = hub_->GetDefineString(build, "RING BUFFER");
 
       ring_buffer_capacity_ = 0;
       if (rb_define.size() > 12)
@@ -328,9 +322,7 @@ int CLens::Initialize()
       CreateProperty(g_TTLoutName, "0", MM::Integer, false, pAct);
       SetPropertyLimits(g_TTLoutName,0,30);
 	  UpdateProperty(g_TTLoutName);
-
    }
-
 
       //VectorMove
    pAct = new CPropertyAction (this, &CLens::OnVector);
@@ -344,7 +336,7 @@ int CLens::Initialize()
 
 int CLens::GetPositionUm(double& pos)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(pos) );
@@ -354,14 +346,14 @@ int CLens::GetPositionUm(double& pos)
 
 int CLens::SetPositionUm(double pos)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "M " << axisLetter_ << "=" << pos*unitMult_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
 int CLens::GetPositionSteps(long& steps)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    double tmp;
@@ -372,14 +364,14 @@ int CLens::GetPositionSteps(long& steps)
 
 int CLens::SetPositionSteps(long steps)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "M " << axisLetter_ << "=" << steps*unitMult_*stepSizeUm_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
 int CLens::SetRelativePositionUm(double d)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "R " << axisLetter_ << "=" << d*unitMult_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
@@ -387,14 +379,14 @@ int CLens::SetRelativePositionUm(double d)
 int CLens::GetLimits(double& min, double& max)
 {
    // ASI limits are always returned in terms of mm, independent of unit multiplier
-   ostringstream command; command.str("");
-   command << "SL " << axisLetter_ << "? ";
+   std::ostringstream command;
+   command << "SL " << axisLetter_ << "?";
    double tmp;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    min = tmp*1000;
    command.str("");
-   command << "SU " << axisLetter_ << "? ";
+   command << "SU " << axisLetter_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    max = tmp*1000;
@@ -404,7 +396,7 @@ int CLens::GetLimits(double& min, double& max)
 int CLens::Stop()
 {
    // note this stops the card, \ stops all stages
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << addressChar_ << "halt";
    return hub_->QueryCommand(command.str());
 }
@@ -419,7 +411,7 @@ int CLens::Home()
    {
       SetProperty(g_SAModePropertyName, g_SAMode_0);
    }
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "! " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    return DEVICE_OK;
@@ -432,15 +424,15 @@ bool CLens::Busy()
 
 int CLens::SetOrigin()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "H " << axisLetter_ << "=" << 0;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
-int CLens::StopStageSequence()
 // disables TTL triggering; doesn't actually stop anything already happening on controller
+int CLens::StopStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (!ttl_trigger_supported_)
    {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -450,10 +442,10 @@ int CLens::StopStageSequence()
    return DEVICE_OK;
 }
 
-int CLens::StartStageSequence()
 // enables TTL triggering; doesn't actually start anything going on controller
+int CLens::StartStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (!ttl_trigger_supported_)
    {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -471,7 +463,7 @@ int CLens::StartStageSequence()
 
 int CLens::SendStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (!ttl_trigger_supported_)
    {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -490,7 +482,7 @@ int CLens::SendStageSequence()
 
 int CLens::ClearStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (!ttl_trigger_supported_)
    {
       return DEVICE_UNSUPPORTED_COMMAND;
@@ -511,17 +503,15 @@ int CLens::AddToStageSequence(double position)
    return DEVICE_OK;
 }
 
-
-////////////////
 // action handlers
 
-int CLens::OnSaveJoystickSettings()
 // redoes the joystick settings so they can be saved using SS Z
+int CLens::OnSaveJoystickSettings()
 {
    long tmp;
-   string tmpstr;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::string tmpstr;
+   std::ostringstream command;
+   std::ostringstream response;
    command << "J " << axisLetter_ << "?";
    response << ":A " << axisLetter_ << "=";
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
@@ -535,24 +525,24 @@ int CLens::OnSaveJoystickSettings()
 
 int CLens::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   ostringstream command; command.str("");
+   std::string tmpstr;
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'Y';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
-      else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
+      else if (tmpstr == g_SaveSettingsZJoystick)
       {
          command << 'Z';
          // do save joystick settings first
@@ -568,21 +558,19 @@ int CLens::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 int CLens::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -605,8 +593,8 @@ int CLens::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnUpperLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -629,14 +617,15 @@ int CLens::OnUpperLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnLensMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
       command << "PM " << axisLetter_ << "?";
-      ostringstream response; response.str(""); response << axisLetter_ << "=";
+      std::ostringstream response;
+      response << axisLetter_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       bool success = 0;
@@ -649,12 +638,13 @@ int CLens::OnLensMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_TLCMode_0) == 0)
+      if (tmpstr == g_TLCMode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_TLCMode_1) == 0)
+      else if (tmpstr == g_TLCMode_1)
          tmp = 1;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -666,8 +656,8 @@ int CLens::OnLensMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -686,9 +676,9 @@ int CLens::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_OffState) == 0)
+      if (tmpstr == g_OffState)
          command << "MC " << axisLetter_ << "-";
       else
          command << "MC " << axisLetter_ << "+";
@@ -697,12 +687,12 @@ int CLens::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -732,12 +722,12 @@ int CLens::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -767,12 +757,12 @@ int CLens::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -792,13 +782,13 @@ int CLens::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       double joystickFast = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickFastSpeedPropertyName, joystickFast) );
       double joystickSlow = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickSlowSpeedPropertyName, joystickSlow) );
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          command << addressChar_ << "JS X=-" << joystickFast << " Y=-" << joystickSlow;
       else
          command << addressChar_ << "JS X=" << joystickFast << " Y=" << joystickSlow;
@@ -810,8 +800,8 @@ int CLens::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -834,20 +824,21 @@ int CLens::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       // don't complain if value is unsupported, just leave as-is
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_JSCode_0) == 0)
+      if (tmpstr == g_JSCode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_JSCode_1) == 0)
+      else if (tmpstr == g_JSCode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_JSCode_2) == 0)
+      else if (tmpstr == g_JSCode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_JSCode_3) == 0)
+      else if (tmpstr == g_JSCode_3)
          tmp = 3;
-      else if (tmpstr.compare(g_JSCode_22) == 0)
+      else if (tmpstr == g_JSCode_22)
          tmp = 22;
-      else if (tmpstr.compare(g_JSCode_23) == 0)
+      else if (tmpstr == g_JSCode_23)
          tmp = 23;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -857,12 +848,12 @@ int CLens::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -892,12 +883,12 @@ int CLens::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -915,7 +906,7 @@ int CLens::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_OK;
       pProp->Get(tmp);
       char wheelMirror[MM::MaxStrLength];
-      RETURN_ON_MM_ERROR ( GetProperty(g_JoystickMirrorPropertyName, wheelMirror) );
+      RETURN_ON_MM_ERROR ( GetProperty(g_WheelMirrorPropertyName, wheelMirror) );
       if (strcmp(wheelMirror, g_YesState) == 0)
          command << addressChar_ << "JS T=-" << tmp;
       else
@@ -927,12 +918,12 @@ int CLens::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -952,13 +943,13 @@ int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       double wheelFast = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelFastSpeedPropertyName, wheelFast) );
       double wheelSlow = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelSlowSpeedPropertyName, wheelSlow) );
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          command << addressChar_ << "JS F=-" << wheelFast << " T=-" << wheelSlow;
       else
          command << addressChar_ << "JS F=" << wheelFast << " T=" << wheelSlow;
@@ -970,17 +961,17 @@ int CLens::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
       // change the unit mult that converts controller coordinates to micro-manager coordinates
       // micro-manager defines positive towards sample, ASI controllers just opposite
-      if (tmpstr.compare(g_FocusPolarityMicroManagerDefault) == 0) {
+      if (tmpstr == g_FocusPolarityMicroManagerDefault) {
          unitMult_ = -1*abs(unitMult_);
       } else {
          unitMult_ = abs(unitMult_);
@@ -989,19 +980,18 @@ int CLens::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-
-
-int CLens::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
+int CLens::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
       return DEVICE_OK; // do nothing
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
       {
          CPropertyAction* pAct;
 
@@ -1040,8 +1030,8 @@ int CLens::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1065,8 +1055,8 @@ int CLens::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1090,8 +1080,8 @@ int CLens::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1115,8 +1105,8 @@ int CLens::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CLens::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    static bool justSet = false;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1139,16 +1129,17 @@ int CLens::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
       justSet = false;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAMode_0) == 0)
+      if (tmpstr == g_SAMode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAMode_1) == 0)
+      else if (tmpstr == g_SAMode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_SAMode_2) == 0)
+      else if (tmpstr == g_SAMode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_SAMode_3) == 0)
+      else if (tmpstr == g_SAMode_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1163,8 +1154,8 @@ int CLens::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1187,16 +1178,17 @@ int CLens::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAPattern_0) == 0)
+      if (tmpstr == g_SAPattern_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAPattern_1) == 0)
+      else if (tmpstr == g_SAPattern_1)
          tmp = 1;
-      else if (tmpstr.compare(g_SAPattern_2) == 0)
+      else if (tmpstr == g_SAPattern_2)
          tmp = 2;
-      else if (tmpstr.compare(g_SAPattern_3) == 0)
+      else if (tmpstr == g_SAPattern_3)
          tmp = 3;
 	  else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1215,11 +1207,11 @@ int CLens::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+// always read
 int CLens::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
-// get every single time
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1240,8 +1232,8 @@ int CLens::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1262,12 +1254,13 @@ int CLens::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAClkSrc_0) == 0)
+      if (tmpstr == g_SAClkSrc_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAClkSrc_1) == 0)
+      else if (tmpstr == g_SAClkSrc_1)
          tmp = BIT7;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1288,8 +1281,8 @@ int CLens::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1310,12 +1303,13 @@ int CLens::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAClkPol_0) == 0)
+      if (tmpstr == g_SAClkPol_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAClkPol_1) == 0)
+      else if (tmpstr == g_SAClkPol_1)
          tmp = BIT6;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1336,8 +1330,8 @@ int CLens::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1358,12 +1352,13 @@ int CLens::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SATTLOut_0) == 0)
+      if (tmpstr == g_SATTLOut_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SATTLOut_1) == 0)
+      else if (tmpstr == g_SATTLOut_1)
          tmp = BIT5;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1384,8 +1379,8 @@ int CLens::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1406,12 +1401,13 @@ int CLens::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SATTLPol_0) == 0)
+      if (tmpstr == g_SATTLPol_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SATTLPol_1) == 0)
+      else if (tmpstr == g_SATTLPol_1)
          tmp = BIT4;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1432,9 +1428,9 @@ int CLens::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp;
    if (eAct == MM::BeforeGet)
    {
@@ -1462,13 +1458,13 @@ int CLens::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_RB_OnePoint_1) == 0)
+      if (tmpstr == g_RB_OnePoint_1)
          tmp = 1;
-      else if (tmpstr.compare(g_RB_PlayOnce_2) == 0)
+      else if (tmpstr == g_RB_PlayOnce_2)
          tmp = 2;
-      else if (tmpstr.compare(g_RB_PlayRepeat_3) == 0)
+      else if (tmpstr == g_RB_PlayRepeat_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1481,16 +1477,16 @@ int CLens::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
    else  if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          command << addressChar_ << "RM";
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
@@ -1502,9 +1498,9 @@ int CLens::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp = 0;
    static bool justSet;
    if (eAct == MM::BeforeGet)
@@ -1540,7 +1536,7 @@ int CLens::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1566,7 +1562,6 @@ int CLens::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
    if (eAct == MM::BeforeGet)
    {
       if (ttl_trigger_enabled_)
@@ -1575,18 +1570,18 @@ int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
          pProp->Set(g_NoState);
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      ttl_trigger_enabled_ = (ttl_trigger_supported_ && (tmpstr.compare(g_YesState) == 0));
+      ttl_trigger_enabled_ = ttl_trigger_supported_ && (tmpstr == g_YesState);
       return OnUseSequence(pProp, MM::BeforeGet);  // refresh value
    }
    return DEVICE_OK;
 }
 
-   int CLens::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CLens::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1607,10 +1602,10 @@ int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-   int CLens::OnTTLin(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CLens::OnTTLin(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1635,10 +1630,10 @@ int CLens::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-   int CLens::OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CLens::OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {

@@ -105,7 +105,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 AmScope::AmScope() :
-	CCameraBase<AmScope> (),
 	dPhase_(0),
 	binning_(1),
 	autoExposure_(1),
@@ -342,8 +341,7 @@ int AmScope::Initialize()
 
    // Physical pixel size (um)
    Toupcam_get_PixelSize(m_Htoupcam, 0, &orgPixelSizeXUm_, &orgPixelSizeYUm_);
-   nominalPixelSizeUm_ = orgPixelSizeXUm_;
-   pixelSizeXUm_ = (float)nominalPixelSizeUm_;
+   pixelSizeXUm_ = orgPixelSizeXUm_;
    pixelSizeYUm_ = orgPixelSizeYUm_;
    pAct = new CPropertyAction (this, &AmScope::OnPixelSizeXUm);
    CreateFloatProperty("PixelSizeX(um)", pixelSizeXUm_, true, pAct);
@@ -752,7 +750,6 @@ int AmScope::StartSequenceAcquisition(long numImages, double interval_ms, bool s
    sequenceStartTime_ = GetCurrentMMTime();
    imageCounter_ = 0;
    thd_->Start(numImages,interval_ms);
-   stopOnOverflow_ = stopOnOverflow;
 
    return DEVICE_OK;
 }
@@ -781,14 +778,6 @@ int AmScope::InsertImage()
   unsigned int b = GetImageBytesPerPixel();  
 
   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str() );
-
-  if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-  {  
-    // do not stop on overflow - just reset the buffer
-    GetCoreCallback()->ClearImageBuffer(this);
-    // don't process this same image again...
-    ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-  }
   
   if (ret == DEVICE_OK)
   {

@@ -6,7 +6,7 @@
 // DESCRIPTION:   pco camera module
 //                
 // AUTHOR:        Franz Reitner, Franz.Reitner@pco.de, 11/01/2010
-// COPYRIGHT:     PCO AG, Kelheim, 2010-up to now ;-)
+// COPYRIGHT:     Excelitas - PCO, Kelheim, 2010-up to now ;-)
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
 //
@@ -94,7 +94,6 @@ MODULE_API MM::Device* CreateDevice(const char* pszDeviceName)
 // CPCOCam constructor/destructor
 
 CPCOCam::CPCOCam() :
-CCameraBase<CPCOCam>(),
 m_bSequenceRunning(false),
 m_bInitialized(false),
 m_bBusy(false),
@@ -334,7 +333,7 @@ int CPCOCam::OnCCDType(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPCOCam::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-  int tb[3] = {1000000, 1000, 1};
+  double tb[3] = {1000000.0, 1000.0, 1.0};
   if(eAct == MM::BeforeGet)
   {
     if(m_pCamera->m_iCamClass == 3)
@@ -406,7 +405,10 @@ int CPCOCam::OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if(m_iAcquireMode == 0)
         pProp->Set("Internal");
       else
+      if (m_iAcquireMode == 1)
         pProp->Set("External");
+      else
+        pProp->Set("Sequence Trigger");
     }
   }
   else if(eAct == MM::AfterSet)
@@ -421,8 +423,12 @@ int CPCOCam::OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct)
     if(ihelp != m_iAcquireMode)
     {
       m_iAcquireMode = ihelp;
-      if(m_pCamera->m_iCamClass == 3)
-        m_pCamera->m_strCamera.strRecording.wAcquMode = (WORD) m_iAcquireMode;
+      if (m_pCamera->m_iCamClass == 3)
+      {
+        if(m_iAcquireMode == 2)
+          m_iAcquireMode = 4;
+        m_pCamera->m_strCamera.strRecording.wAcquMode = (WORD)m_iAcquireMode;
+      }
 
       nErr = SetupCamera(true, false);
     }
@@ -433,6 +439,32 @@ int CPCOCam::OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct)
   return DEVICE_OK;
 }
 
+int CPCOCam::OnAcquireModeNumImages(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  long lhelp;
+  if (eAct == MM::BeforeGet)
+  {
+    lhelp = m_pCamera->m_strCamera.strRecording.dwAcquModeExNumberImages;
+    pProp->Set(lhelp);
+  }
+  else if (eAct == MM::AfterSet)
+  {
+    int nErr = 0;
+
+    ((MM::IntegerProperty*)pProp)->Get(lhelp);
+    if (lhelp != (long) m_pCamera->m_strCamera.strRecording.dwAcquModeExNumberImages)
+    {
+      if(lhelp > 10000)
+       lhelp = 10000;
+      m_pCamera->m_strCamera.strRecording.dwAcquModeExNumberImages = lhelp;
+      nErr = SetupCamera(true, false);
+    }
+
+    if (nErr != 0)
+      return nErr;
+  }
+  return DEVICE_OK;
+}
 
 int CPCOCam::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1474,6 +1506,20 @@ int CPCOCam::Initialize()
       nRet = AddAllowedValue("Acquiremode", "External", 1);
       if(nRet != DEVICE_OK)
         return nRet;
+      if ((m_pCamera->m_strCamera.strSensor.strDescription.dwGeneralCapsDESC1 & GENERALCAPS1_EXT_ACQUIRE) == GENERALCAPS1_EXT_ACQUIRE)
+      {
+        nRet = AddAllowedValue("Acquiremode", "Sequence Trigger", 2);
+        if (nRet != DEVICE_OK)
+          return nRet;
+        pAct = new CPropertyAction(this, &CPCOCam::OnAcquireModeNumImages);
+        nRet = CreateProperty("Acquire Sequence Number Images", "1", MM::Integer, false, pAct);
+        if (nRet != DEVICE_OK)
+          return nRet;
+        nRet = SetPropertyLimits("Acquire Sequence Number Images", 0, 10000);
+        if (nRet != DEVICE_OK)
+          return nRet;
+      }
+
     }
 
     if((m_nCameraType == CAMERATYPE_PCO_EDGE) ||// fps setting for pco.edge
@@ -2181,7 +2227,7 @@ int CPCOCam::ClearROI()
 
 void CPCOCam::SetExposure(double dExp)
 {
-  SetProperty(MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(dExp));
+  SetProperty(MM::g_Keyword_Exposure, std::to_string(dExp).c_str());
 }
 
 int CPCOCam::ResizeImageBuffer()
@@ -2442,12 +2488,6 @@ int CPCOCam::InsertImage()
 
       m_iNumImagesInserted++;
       ret = pcore->InsertImage(this, img, m_iWidth, m_iHeight, m_iBytesPerPixel);
-      if(!m_bStopOnOverflow && ret == DEVICE_BUFFER_OVERFLOW)
-      {
-        // do not stop on overflow - just reset the buffer
-        pcore->ClearImageBuffer(this);
-        return pcore->InsertImage(this, img, m_iWidth, m_iHeight, m_iBytesPerPixel);
-      }
     }
   }
   else                                 // Else path for Unit-Tester
@@ -2499,7 +2539,6 @@ int CPCOCam::SequenceThread::svc()
       err = 1;
       break;
     }
-    //CDeviceUtils::SleepMs(20);
     count = camera_->m_iNumImagesInserted;
     ReleaseMutex(camera_->mxMutex);
   }

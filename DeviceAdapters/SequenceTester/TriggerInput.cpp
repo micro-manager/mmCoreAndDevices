@@ -24,7 +24,6 @@
 #include "TriggerInput.h"
 #include "SequenceTester.h"
 
-#include <boost/bind/bind.hpp>
 #include <string>
 
 
@@ -38,12 +37,12 @@ TriggerInput::Initialize(InterDevice::Ptr device,
    triggerSourceDevice_ = StringSetting::New(device_->GetLogger(),
          device_.get(), settingNamePrefix_ + "TriggerSourceDevice");
    triggerSourceDevice_->GetPostSetSignal().connect(
-         boost::bind(&TriggerInput::UpdateTriggerConnection, this));
+         [this] { UpdateTriggerConnection(); });
 
    triggerSourcePort_ = StringSetting::New(device_->GetLogger(),
          device_.get(), settingNamePrefix_ + "TriggerSourcePort");
    triggerSourcePort_->GetPostSetSignal().connect(
-         boost::bind(&TriggerInput::UpdateTriggerConnection, this));
+         [this] { UpdateTriggerConnection(); });
 
    sequenceMaxLength_ = IntegerSetting::New(device_->GetLogger(),
          device_.get(), settingNamePrefix_ + "TriggerSequenceMaxLength",

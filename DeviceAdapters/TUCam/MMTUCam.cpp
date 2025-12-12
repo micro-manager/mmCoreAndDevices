@@ -38,7 +38,6 @@
 #pragma comment(lib, "shlwapi.lib")
 
 using namespace std;
-const double CMMTUCam::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 
 // External names used used by the rest of the system
@@ -253,7 +252,6 @@ int CMMTUCam::s_nCntCam  = 0;
 * perform most of the initialization in the Initialize() method.
 */
 CMMTUCam::CMMTUCam() :
-    CCameraBase<CMMTUCam> (),
     exposureMaximum_(10000.0),     
     exposureMinimum_(0.0),
     dPhase_(0),
@@ -2880,8 +2878,7 @@ int CMMTUCam::InsertImage()
 
     // Important:  metadata about the image are generated here:
     Metadata md;
-    md.put("Camera", label);
-    ///md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
+    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
     md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
     md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
     md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
@@ -2905,16 +2902,7 @@ int CMMTUCam::InsertImage()
     unsigned int h = GetImageHeight();
     unsigned int b = GetImageBytesPerPixel();
 
-    int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-    
-    // Note: According to the updated MM::Core API, InsertImage() no longer returns
-    // DEVICE_BUFFER_OVERFLOW when stopOnOverflow_ == false. The API comment states:
-    // "InsertImage() no longer ever returns that particular error when stopOnOverflow == false.
-    // So cameras should always just stop the acquisition if InsertImage() returns any error."
-    // Therefore, we no longer need to handle DEVICE_BUFFER_OVERFLOW specially or call
-    // the deprecated ClearImageBuffer() method.
-    
-    return ret;
+    return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
 }
 
 /*

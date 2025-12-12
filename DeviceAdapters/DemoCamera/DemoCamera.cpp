@@ -33,7 +33,10 @@
 #include <iostream>
 #include <future>
 
-const double CDemoCamera::nominalPixelSizeUm_ = 1.0;
+#ifdef _WIN32
+   #include <timeapi.h>
+#endif
+
 double g_IntensityFactor_ = 1.0;
 
 // External names used used by the rest of the system
@@ -51,6 +54,8 @@ const char* g_DADeviceName = "D-DA";
 const char* g_DA2DeviceName = "D-DA2";
 const char* g_GalvoDeviceName = "DGalvo";
 const char* g_MagnifierDeviceName = "DOptovar";
+const char* g_PressurePumpDeviceName = "DPressurePump";
+const char* g_VolumetricPumpDeviceName = "DVolumetricPump";
 const char* g_HubDeviceName = "DHub";
 
 // constants for naming pixel types (allowed values of the "PixelType" property)
@@ -65,7 +70,7 @@ const char* g_Sine_Wave = "Artificial Waves";
 const char* g_Norm_Noise = "Noise";
 const char* g_Color_Test = "Color Test Pattern";
 
-enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST };
+const char* g_PropImposedPressure = "Imposed Pressure";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -86,6 +91,8 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DA2DeviceName, MM::SignalIODevice, "Demo DA-2");
    RegisterDevice(g_MagnifierDeviceName, MM::MagnifierDevice, "Demo Optovar");
    RegisterDevice(g_GalvoDeviceName, MM::GalvoDevice, "Demo Galvo");
+   RegisterDevice(g_PressurePumpDeviceName, MM::PressurePumpDevice, "Demo Pressure Pump");
+   RegisterDevice(g_VolumetricPumpDeviceName, MM::VolumetricPumpDevice, "Demo Volumetric Pump");
    RegisterDevice("TransposeProcessor", MM::ImageProcessorDevice, "TransposeProcessor");
    RegisterDevice("ImageFlipX", MM::ImageProcessorDevice, "ImageFlipX");
    RegisterDevice("ImageFlipY", MM::ImageProcessorDevice, "ImageFlipY");
@@ -164,7 +171,6 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       // create Galvo 
       return new DemoGalvo();
    }
-
    else if(strcmp(deviceName, "TransposeProcessor") == 0)
    {
       return new TransposeProcessor();
@@ -180,6 +186,14 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if(strcmp(deviceName, "MedianFilter") == 0)
    {
       return new MedianFilter();
+   }
+   else if (strcmp(deviceName, g_PressurePumpDeviceName) == 0)
+   {
+      return new DemoPressurePump();
+   }
+   else if (strcmp(deviceName, g_VolumetricPumpDeviceName) == 0)
+   {
+      return new DemoVolumetricPump();
    }
    else if (strcmp(deviceName, g_HubDeviceName) == 0)
    {
@@ -209,42 +223,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * the constructor. We should do as little as possible in the constructor and
 * perform most of the initialization in the Initialize() method.
 */
-CDemoCamera::CDemoCamera() :
-   CCameraBase<CDemoCamera> (),
-   exposureMaximum_(10000.0),
-   dPhase_(0),
-   initialized_(false),
-   readoutUs_(0.0),
-   scanMode_(1),
-   bitDepth_(8),
-   roiX_(0),
-   roiY_(0),
-   sequenceStartTime_(0),
-   isSequenceable_(false),
-   sequenceMaxLength_(100),
-   sequenceRunning_(false),
-   sequenceIndex_(0),
-	binSize_(1),
-	cameraCCDXSize_(512),
-	cameraCCDYSize_(512),
-   ccdT_ (0.0),
-   triggerDevice_(""),
-   stopOnOverflow_(false),
-	dropPixels_(false),
-   fastImage_(false),
-   saturatePixels_(false),
-	fractionOfPixelsToDropOrSaturate_(0.002),
-   shouldRotateImages_(false),
-   shouldDisplayImageNumber_(false),
-   stripeWidth_(1.0),
-   supportsMultiROI_(false),
-   multiROIFillValue_(0),
-   nComponents_(1),
-   mode_(MODE_ARTIFICIAL_WAVES),
-   imgManpl_(0),
-   pcf_(1.0),
-   photonFlux_(50.0),
-   readNoise_(2.5)
+CDemoCamera::CDemoCamera()
 {
    memset(testProperty_,0,sizeof(testProperty_));
 
@@ -589,9 +568,6 @@ int CDemoCamera::Shutdown()
 */
 int CDemoCamera::SnapImage()
 {
-	static int callCounter = 0;
-	++callCounter;
-
    MM::MMTime startTime = GetCurrentMMTime();
    double exp = GetExposure();
    if (sequenceRunning_ && IsCapturing()) 
@@ -1093,7 +1069,8 @@ int CDemoCamera::InsertImage()
    // Important:  metadata about the image are generated here:
    Metadata md;
    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   std::string elapsed = CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec());
+   md.put(MM::g_Keyword_Elapsed_Time_ms, elapsed);
    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
@@ -1112,18 +1089,7 @@ int CDemoCamera::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, nComponents_, md.Serialize().c_str());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-      return GetCoreCallback()->InsertImage(this, pI, w, h, b, nComponents_, md.Serialize().c_str(), false);
-   }
-   else
-   {
-      return ret;
-   }
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, nComponents_, md.Serialize().c_str());
 }
 
 /*
@@ -1132,7 +1098,6 @@ int CDemoCamera::InsertImage()
  */
 int CDemoCamera::RunSequenceOnThread()
 {
-   int ret=DEVICE_ERR;
    MM::MMTime startTime = GetCurrentMMTime();
    
    // Trigger
@@ -1149,21 +1114,20 @@ int CDemoCamera::RunSequenceOnThread()
    if (!fastImage_)
    {
       GenerateSyntheticImage(img_, exposure);
+
+      // Simulate exposure duration
+      while ((GetCurrentMMTime() - startTime).getMsec() < exposure)
+      {
+         CDeviceUtils::SleepMs(1);
+      }
+   }
+   else {
+      unsigned long wait = (unsigned long) exposure;
+      wait = wait < 1 ? 1ul : wait;
+      CDeviceUtils::SleepMs(wait);
    }
 
-   // Simulate exposure duration
-   while ((GetCurrentMMTime() - startTime).getMsec() < exposure)
-   {
-      CDeviceUtils::SleepMs(1);
-   }
-
-   ret = InsertImage();
-
-   if (ret != DEVICE_OK)
-   {
-      return ret;
-   }
-   return ret;
+   return InsertImage();
 };
 
 bool CDemoCamera::IsCapturing() {
@@ -1187,19 +1151,9 @@ void CDemoCamera::OnThreadExiting() throw()
 }
 
 
-MySequenceThread::MySequenceThread(CDemoCamera* pCam)
-   :intervalMs_(default_intervalMS)
-   ,numImages_(default_numImages)
-   ,imageCounter_(0)
-   ,stop_(true)
-   ,suspend_(false)
-   ,camera_(pCam)
-   ,startTime_(0)
-   ,actualDuration_(0)
-   ,lastFrameTime_(0)
-{};
+MySequenceThread::MySequenceThread(CDemoCamera* pCam) : camera_(pCam) {}
 
-MySequenceThread::~MySequenceThread() {};
+MySequenceThread::~MySequenceThread() {}
 
 void MySequenceThread::Stop() {
    MMThreadGuard g(this->stopLock_);
@@ -1244,6 +1198,9 @@ void MySequenceThread::Resume() {
 int MySequenceThread::svc(void) throw()
 {
    int ret=DEVICE_ERR;
+   #ifdef _WIN32
+      timeBeginPeriod(1);
+   #endif
    try 
    {
       do
@@ -1257,6 +1214,9 @@ int MySequenceThread::svc(void) throw()
    }
    stop_=true;
    actualDuration_ = camera_->GetCurrentMMTime() - startTime_;
+   #ifdef _WIN32
+      timeEndPeriod(1);
+   #endif
    camera_->OnThreadExiting();
    return ret;
 }
@@ -1984,8 +1944,10 @@ int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       else if (choice == "Divide by Zero")
       {
-         volatile int i = 1, j = 0, k;
-         k = i / j;
+         volatile int i = 1, j = 0;
+         volatile int k = i / j;
+         // to suppress compiler warning
+         (void) k;
       }
    }
    return DEVICE_OK;
@@ -2673,11 +2635,7 @@ int CDemoCamera::RegisterImgManipulatorCallBack(ImgManipulator* imgManpl)
 // CDemoFilterWheel implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CDemoFilterWheel::CDemoFilterWheel() : 
-numPos_(10), 
-initialized_(false), 
-changedTime_(0.0),
-position_(0)
+CDemoFilterWheel::CDemoFilterWheel()
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
@@ -2821,16 +2779,7 @@ int CDemoFilterWheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 // CDemoStateDevice implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CDemoStateDevice::CDemoStateDevice() : 
-numPatterns_(50),
-numPos_(10), 
-initialized_(false),
-changedTime_(0.0),
-busy_(false),
-sequenceOn_(false),
-gateOpen_(true),
-position_(0),
-isClosed_(true)
+CDemoStateDevice::CDemoStateDevice()
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
@@ -3060,10 +3009,7 @@ int CDemoStateDevice::OnNumberOfStates(MM::PropertyBase* pProp, MM::ActionType e
 // CDemoLightPath implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CDemoLightPath::CDemoLightPath() : 
-numPos_(3), 
-busy_(false), 
-initialized_(false)
+CDemoLightPath::CDemoLightPath()
 {
    InitializeDefaultErrorMessages();
    // parent ID display
@@ -3179,12 +3125,7 @@ int CDemoLightPath::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 // CDemoObjectiveTurret implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CDemoObjectiveTurret::CDemoObjectiveTurret() : 
-   numPos_(6), 
-   busy_(false), 
-   initialized_(false),
-   sequenceRunning_(false),
-   sequenceMaxSize_(10)
+CDemoObjectiveTurret::CDemoObjectiveTurret()
 {
    SetErrorText(ERR_IN_SEQUENCE, "Error occurred while executing sequence");
    SetErrorText(ERR_SEQUENCE_INACTIVE, "Sequence triggered, but sequence is not running");
@@ -3365,14 +3306,7 @@ int CDemoObjectiveTurret::OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct
 // CDemoStage implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CDemoStage::CDemoStage() : 
-   stepSize_um_(0.025),
-   pos_um_(0.0),
-   busy_(false),
-   initialized_(false),
-   lowerLimit_(-300.0),
-   upperLimit_(300.0),
-   sequenceable_(false)
+CDemoStage::CDemoStage()
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_UNKNOWN_POSITION, "Position out of range");
@@ -3587,17 +3521,7 @@ int CDemoStage::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 // CDemoXYStage implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CDemoXYStage::CDemoXYStage() : 
-CXYStageBase<CDemoXYStage>(),
-stepSize_um_(0.015),
-posX_um_(0.0),
-posY_um_(0.0),
-busy_(false),
-timeOutTimer_(0),
-velocity_(10.0), // in micron per second
-initialized_(false),
-lowerLimit_(0.0),
-upperLimit_(20000.0)
+CDemoXYStage::CDemoXYStage()
 {
    InitializeDefaultErrorMessages();
 
@@ -3643,6 +3567,11 @@ int CDemoXYStage::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   CPropertyAction* pAct = new CPropertyAction(this, &CDemoXYStage::OnVelocity);
+   ret = CreateFloatProperty("Velocity", 10.0, false, pAct, false);
+   if (ret != DEVICE_OK)
+      return ret;
+
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
@@ -3675,22 +3604,44 @@ bool CDemoXYStage::Busy()
 
 int CDemoXYStage::SetPositionSteps(long x, long y)
 {
-   if (timeOutTimer_ != 0)
+   MM::MMTime currentTime = GetCurrentMMTime();
+   double newTargetX = x * stepSize_um_;
+   double newTargetY = y * stepSize_um_;
+
+   // If a move is in progress, compute the intermediate position and cancel the old move.
+   if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
    {
-      if (!timeOutTimer_->expired(GetCurrentMMTime()))
-         return ERR_STAGE_MOVING;
-      delete (timeOutTimer_);
+      double currentPosX, currentPosY;
+      ComputeIntermediatePosition(currentTime, currentPosX, currentPosY);
+      startPosX_um_ = currentPosX;
+      startPosY_um_ = currentPosY;
+      delete timeOutTimer_;
+      timeOutTimer_ = nullptr;
    }
-   double newPosX = x * stepSize_um_;
-   double newPosY = y * stepSize_um_;
-   double difX = newPosX - posX_um_;
-   double difY = newPosY - posY_um_;
-   double distance = sqrt( (difX * difX) + (difY * difY) );
-   long timeOut = (long) (distance / velocity_);
-   timeOutTimer_ = new MM::TimeoutMs(GetCurrentMMTime(),  timeOut);
-   posX_um_ = x * stepSize_um_;
-   posY_um_ = y * stepSize_um_;
-   int ret = OnXYStagePositionChanged(posX_um_, posY_um_);
+   else
+   {
+      // No move in progress; start from the last settled position.
+      startPosX_um_ = posX_um_;
+      startPosY_um_ = posY_um_;
+   }
+
+   // Set the new target.
+   targetPosX_um_ = newTargetX;
+   targetPosY_um_ = newTargetY;
+
+   // Calculate the distance and determine the move duration (in ms)
+   double difX = targetPosX_um_ - startPosX_um_;
+   double difY = targetPosY_um_ - startPosY_um_;
+   double distance = sqrt((difX * difX) + (difY * difY));
+   moveDuration_ms_ = (long)(distance / velocity_);
+   if (moveDuration_ms_ < 1)
+      moveDuration_ms_ = 1;  // enforce a minimum duration
+
+   moveStartTime_ = currentTime;
+   timeOutTimer_ = new MM::TimeoutMs(currentTime, moveDuration_ms_);
+
+   // Optionally, notify listeners of the starting position (as an acknowledgement)
+   int ret = OnXYStagePositionChanged(startPosX_um_, startPosY_um_);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -3699,8 +3650,27 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
 
 int CDemoXYStage::GetPositionSteps(long& x, long& y)
 {
-   x = (long)(posX_um_ / stepSize_um_);
-   y = (long)(posY_um_ / stepSize_um_);
+   MM::MMTime currentTime = GetCurrentMMTime();
+   if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
+   {
+      double currentPosX, currentPosY;
+      ComputeIntermediatePosition(currentTime, currentPosX, currentPosY);
+      x = (long)(currentPosX / stepSize_um_);
+      y = (long)(currentPosY / stepSize_um_);
+   }
+   else
+   {
+      // Movement complete; ensure final position is set.
+      if (timeOutTimer_ != nullptr)
+      {
+         posX_um_ = targetPosX_um_;
+         posY_um_ = targetPosY_um_;
+         delete timeOutTimer_;
+         timeOutTimer_ = nullptr;
+      }
+      x = (long)(posX_um_ / stepSize_um_);
+      y = (long)(posY_um_ / stepSize_um_);
+   }
    return DEVICE_OK;
 }
 
@@ -3712,12 +3682,59 @@ int CDemoXYStage::SetRelativePositionSteps(long x, long y)
    return this->SetPositionSteps(xSteps+x, ySteps+y);
 }
 
+// currentTime: the current time
+// currentPosX, currentPosY: output parameters for the computed position in microns
+void CDemoXYStage::ComputeIntermediatePosition(
+   const MM::MMTime& currentTime, double& currentPosX, double& currentPosY)
+{
+   double elapsed_ms = (currentTime - moveStartTime_).getMsec();
+   double fraction = elapsed_ms / moveDuration_ms_;
+   if (fraction > 1.0)
+      fraction = 1.0;
+   currentPosX = startPosX_um_ + fraction * (targetPosX_um_ - startPosX_um_);
+   currentPosY = startPosY_um_ + fraction * (targetPosY_um_ - startPosY_um_);
+}
+
+void CDemoXYStage::CommitCurrentIntermediatePosition_(const MM::MMTime& now)
+{
+   if (timeOutTimer_ && !timeOutTimer_->expired(now))
+   {
+      // freeze where we *are* now
+      ComputeIntermediatePosition(now, posX_um_, posY_um_);
+      (void)OnXYStagePositionChanged(posX_um_, posY_um_);
+   }
+   // Drop the timer so Busy() instantly goes idle
+   delete timeOutTimer_;
+   timeOutTimer_ = nullptr;
+}
+
+int CDemoXYStage::Stop()
+{
+   MM::MMTime now = GetCurrentMMTime();
+   CommitCurrentIntermediatePosition_(now);
+   return DEVICE_OK;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
-// none implemented
 
+int CDemoXYStage::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct){
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(velocity_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      double newVelocity;
+      pProp->Get(newVelocity);
+      // Enforce a minimum positive velocity
+      if (newVelocity <= 0.0)
+         newVelocity = 0.1;
+      velocity_ = newVelocity;
+   }
+   return DEVICE_OK;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // CDemoShutter implementation
@@ -3811,6 +3828,7 @@ int DemoShutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
       // apply the value
       state_ = pos == 0 ? false : true;
+      GetCoreCallback()->OnShutterOpenChanged(this, state_);
    }
 
    return DEVICE_OK;
@@ -3820,11 +3838,7 @@ int DemoShutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 ///////////////////////////////////////////////////////////////////////////////
 // CDemoMagnifier implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DemoMagnifier::DemoMagnifier () :
-      position_ (0),
-      zoomPosition_(1.0),
-      highMag_ (1.6),
-      variable_ (false)
+DemoMagnifier::DemoMagnifier ()
 {
    CPropertyAction* pAct = new CPropertyAction (this, &DemoMagnifier::OnHighMag);
    CreateFloatProperty("High Position Magnification", 1.6, false, pAct, true);
@@ -3981,15 +3995,7 @@ int DemoMagnifier::OnVariable(MM::PropertyBase* pProp, MM::ActionType eAct)
 * Demo DA device
 */
 
-DemoDA::DemoDA (uint8_t n) : 
-n_(n),
-volt_(0), 
-gatedVolts_(0), 
-open_(true),
-sequenceRunning_(false),
-sequenceIndex_(0),
-sentSequence_(std::vector<double>()),
-nascentSequence_(std::vector<double>())
+DemoDA::DemoDA (uint8_t n) : n_(n)
 {
    SetErrorText(ERR_SEQUENCE_INACTIVE, "Sequence triggered, but sequence is not running");
 
@@ -4206,36 +4212,7 @@ int DemoAutoFocus::Initialize()
 
 ///////////////////////////////////////////////////////////
 // DemoGalvo
-DemoGalvo::DemoGalvo() :
-   demoCamera_(0),
-   pfExpirationTime_(0),
-   initialized_(false),
-   busy_(false),
-   illuminationState_(false),
-   pointAndFire_(false),
-   runROIS_(false),
-   xRange_(10.0),
-   yRange_(10.0),
-   currentX_(0.0),
-   currentY_(0.0),
-   offsetX_(20),
-   vMaxX_(10.0),
-   offsetY_(15),
-   vMaxY_(10.0),
-   pulseTime_Us_(100000.0)
-{
-   // handwritten 5x5 gaussian kernel, no longer used
-   /*
-   unsigned short gaussianMask[5][5] = {
-      {1, 4, 7, 4, 1},
-      {4, 16, 26, 16, 4},
-      {7, 26, 41, 26, 7},
-      {4, 16, 26, 16, 4},
-      {1, 4, 7, 4, 1}
-   };
-   */
-
-}
+DemoGalvo::DemoGalvo() {}
 
 
 DemoGalvo::~DemoGalvo() 
@@ -5022,3 +4999,32 @@ void DemoHub::GetName(char* pName) const
 {
    CDeviceUtils::CopyLimitedString(pName, g_HubDeviceName);
 }
+
+int DemoPressurePump::Initialize()
+{
+   CPropertyAction* pAct = new CPropertyAction(this, &DemoPressurePump::OnImposedPressure);
+   int ret  = CreateFloatProperty(g_PropImposedPressure, 0.0, false, pAct);
+   if (ret!= DEVICE_OK)
+      return ret;
+   SetPropertyLimits(g_PropImposedPressure, 0.0, 100.0);
+
+   initialized_ = true;
+   return DEVICE_OK;
+}
+
+int DemoPressurePump::OnImposedPressure(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(currentPressure_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(currentPressure_);
+
+      OnPropertyChanged(g_PropImposedPressure, CDeviceUtils::ConvertToString(currentPressure_));
+   }
+   return DEVICE_OK;
+}
+
+

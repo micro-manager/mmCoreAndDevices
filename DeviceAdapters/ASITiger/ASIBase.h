@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h
 //
 
-#ifndef _ASIBase_H_
-#define _ASIBase_H_
+#ifndef ASIBASE_H
+#define ASIBASE_H
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -95,8 +95,8 @@ public:
 protected:
    bool initialized_;      // used to signal that device properties have been read from controller
    double firmwareVersion_; // firmware version
-   string firmwareDate_;    // firmware compile date
-   string firmwareBuild_;   // firmware build name
+   std::string firmwareDate_;    // firmware compile date
+   std::string firmwareBuild_;   // firmware build name
 
    bool FirmwareVersionAtLeast(double minimumFirmwareVersion)
    {
@@ -125,4 +125,4 @@ protected:
    }
 };
 
-#endif // _ASIBase_H_
+#endif // ASIBASE_H

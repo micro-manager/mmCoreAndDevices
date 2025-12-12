@@ -205,7 +205,6 @@ const int g_UniversalParamsCount = sizeof(g_UniversalParams)/sizeof(ParamNameIdP
 // The name parameter is only used to return the device name. The physical
 // camera to use is determined by the cameraId parameter.
 Universal::Universal(short cameraId, const char* name) :
-   CCameraBase<Universal> (),
    initialized_(false),
    curImageCnt_(0),
    hPICAM_(0),
@@ -1835,7 +1834,7 @@ int Universal::ClearROI()
 
 bool Universal::GetErrorText(int errorCode, char* text) const
 {
-   if (CCameraBase<Universal>::GetErrorText(errorCode, text))
+   if (CLegacyCameraBase<Universal>::GetErrorText(errorCode, text))
       return true; // base message
 
    return false;
@@ -1940,7 +1939,7 @@ int Universal::buildSpdTable()
 
 
    for (int portIndex = 0; portIndex < nPortMax; portIndex++){
-      const pichar* adc_string;
+      const pichar* adc_string = nullptr;
 
 
       if (port_capable){
@@ -2250,7 +2249,7 @@ int Universal::ResizeImageBufferSingle()
 
 #ifndef linux
 /*
- * Overrides a virtual function from the CCameraBase class
+ * Overrides a virtual function from the CLegacyCameraBase class
  * Do actual capture
  * Called from the acquisition thread function
  */
@@ -2504,7 +2503,7 @@ void Universal::OnThreadExiting() throw ()
       isAcquiring_       = false;
 
       // The AcqFinished is called inside the parent OnThreadExiting()
-      CCameraBase<Universal>::OnThreadExiting();
+      CLegacyCameraBase<Universal>::OnThreadExiting();
    }
    catch (...)
    {
@@ -2553,30 +2552,14 @@ int Universal::PushImage(const unsigned char* pixBuffer, Metadata* pMd )
 {
    START_METHOD("Universal::PushImage");
 
-   int nRet = DEVICE_ERR;
    MM::Core* pCore = GetCoreCallback();
    // This method inserts a new image into the circular buffer (residing in MMCore)
-   nRet = pCore->InsertMultiChannel(this,
+   return pCore->InsertImage(this,
          pixBuffer,
-         1,
          GetImageWidth(),
          GetImageHeight(),
          GetImageBytesPerPixel(),
-         pMd); // Inserting the md causes crash in debug builds
-   if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      pCore->ClearImageBuffer(this);
-      nRet = pCore->InsertMultiChannel(this,
-            pixBuffer,
-            1,
-            GetImageWidth(),
-            GetImageHeight(),
-            GetImageBytesPerPixel(),
-            pMd);
-   }
-
-   return nRet;
+         pMd->Serialize().c_str());
 }
 
 
@@ -2592,7 +2575,7 @@ int Universal::LogMMError(int errCode, int lineNr, std::string message, bool deb
    try
    {
       char strText[MM::MaxStrLength];
-      if (!CCameraBase<Universal>::GetErrorText(errCode, strText))
+      if (!CLegacyCameraBase<Universal>::GetErrorText(errCode, strText))
       {
          CDeviceUtils::CopyLimitedString(strText, "Unknown");
       }

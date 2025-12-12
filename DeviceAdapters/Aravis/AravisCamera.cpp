@@ -32,7 +32,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-
+#include <cstdint>
 
 std::vector<std::string> supportedPixelFormats = {
   "Mono8",
@@ -112,7 +112,6 @@ stream_callback (void *user_data, ArvStreamCallbackType type, ArvBuffer *arv_buf
  * Camera class and methods.
  */
 AravisCamera::AravisCamera(const char *name) :
-  CCameraBase<AravisCamera>(),
   capturing(false),
   counter(0),
   exposure_time(0.0),
@@ -172,7 +171,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
     md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)img_buffer_width));
     md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)img_buffer_height));
     md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(counter));
-    md.put(MM::g_Keyword_Meatdata_Exposure, exposure_time);
+    md.put(MM::g_Keyword_Metadata_Exposure, exposure_time);
     md.put(MM::g_Keyword_PixelType, pixel_type);
     
     // Pass data to MM.
@@ -184,10 +183,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 					     1,
 					     md.Serialize().c_str(),
 					     FALSE);
-    if (ret == DEVICE_BUFFER_OVERFLOW) {
-      GetCoreCallback()->ClearImageBuffer(this);
-    }
-    
+
     arv_stream_push_buffer(arv_stream, cb_arv_buffer);
     counter += 1;
     break;

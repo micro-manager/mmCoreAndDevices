@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASIZStage_H_
-#define _ASIZStage_H_
+#ifndef ASIZSTAGE_H
+#define ASIZSTAGE_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -36,18 +36,16 @@ public:
    ~CZStage() { }
   
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // ZStage API
-   // -----------
    int Stop();
    int Home();
 
    // the step size is the programming unit for dimensions and is integer
    // see http://micro-manager.3463995.n2.nabble.com/what-are-quot-steps-quot-for-stages-td7580724.html
-   double GetStepSize() {return stepSizeUm_;}
+   double GetStepSize() const { return stepSizeUm_; }
    int GetPositionSteps(long& steps);
    int SetPositionSteps(long steps);
    int SetPositionUm(double pos);
@@ -69,7 +67,6 @@ public:
    int SendStageSequence();
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnWaitTime             (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -127,7 +124,7 @@ public:
 private:
    double unitMult_;
    double stepSizeUm_;
-   string axisLetter_;
+   std::string axisLetter_;
    bool advancedPropsEnabled_;
    bool speedTruth_;
    double lastSpeed_;
@@ -139,8 +136,7 @@ private:
    std::vector<double> sequence_;
    unsigned int axisIndex_;
 
-   // private helper functions
    int OnSaveJoystickSettings();
 };
 
-#endif //_ASIZStage_H_
+#endif // ASIZSTAGE_H

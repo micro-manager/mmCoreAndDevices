@@ -616,7 +616,7 @@ int MUCamSource::SetBinning(int binF)
 
 bool MUCamSource::IsCapturing()
 {
-    if(CCameraBase<MUCamSource>::IsCapturing())
+    if(CLegacyCameraBase<MUCamSource>::IsCapturing())
     {
         return true;
     }

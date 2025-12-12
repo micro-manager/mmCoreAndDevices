@@ -28,7 +28,8 @@
 #include "CoreUtils.h"
 #include "MMCore.h"
 #include "Error.h"
-#include "../MMDevice/DeviceUtils.h"
+
+#include "DeviceUtils.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -251,6 +252,16 @@ bool CorePropertyCollection::IsReadOnly(const char* propName) const
             MMERR_InvalidCoreProperty);
 
    return it->second.IsReadOnly();
+}
+
+MM::PropertyType CorePropertyCollection::GetPropertyType(const char* propName) const
+{
+   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
+   if (it == properties_.end())
+      throw CMMError("Invalid Core property (" + ToString(propName) + ")",
+            MMERR_InvalidCoreProperty);
+
+   return it->second.GetType();
 }
 
 std::vector<std::string> CorePropertyCollection::GetAllowedValues(const char* propName) const

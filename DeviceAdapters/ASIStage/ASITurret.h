@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASITURRET_H_
-#define _ASITURRET_H_
+#ifndef ASITURRET_H
+#define ASITURRET_H
 
 #include "ASIBase.h"
 
@@ -18,7 +18,7 @@ public:
 
 	// MMDevice API
 	bool Busy();
-	void GetName(char* pszName) const;
+	void GetName(char* name) const;
 	unsigned long GetNumberOfPositions() const { return numPos_; }
 
 	int Initialize();
@@ -28,9 +28,9 @@ public:
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-	long numPos_;
 	MM::MMTime changedTime_;
+	long numPos_;
 	long position_;
 };
 
-#endif // _ASITURRET_H_
+#endif // ASITURRET_H

@@ -55,7 +55,7 @@ using namespace std;
 #define g_Keyword_Cameras         "Devices"
 #define g_Keyword_MoticUI         "MoticInterface"
 
-class MUCamSource : public CCameraBase<MUCamSource>
+class MUCamSource : public CLegacyCameraBase<MUCamSource>
 {
 public:
     MUCamSource();

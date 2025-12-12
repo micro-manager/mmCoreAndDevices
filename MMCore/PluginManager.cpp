@@ -20,23 +20,17 @@
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 08/10/2005
 
-#ifdef _WIN32
-   #define WIN32_LEAN_AND_MEAN
-   #include <Windows.h>
-   #include <io.h>
-#else
-   #include <sys/types.h>
-   #include <dirent.h>
-#endif // _WIN32
-
-#include "../MMDevice/ModuleInterface.h"
 #include "CoreUtils.h"
 #include "Devices/DeviceInstance.h"
 #include "Devices/HubInstance.h"
 #include "Error.h"
 #include "LibraryInfo/LibraryPaths.h"
 #include "LoadableModules/LoadedDeviceAdapter.h"
+#include "LoadableModules/LoadedDeviceAdapterImplMock.h"
+#include "LoadableModules/LoadedDeviceAdapterImplRegular.h"
 #include "PluginManager.h"
+
+#include "ModuleInterface.h"
 
 #include <algorithm>
 #include <cstring>
@@ -45,6 +39,15 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#ifdef _WIN32
+   #define WIN32_LEAN_AND_MEAN
+   #include <Windows.h>
+   #include <io.h>
+#else
+   #include <sys/types.h>
+   #include <dirent.h>
+#endif // _WIN32
 
 
 #ifdef _WIN32
@@ -138,8 +141,17 @@ CPluginManager::GetDeviceAdapter(const std::string& moduleName)
    filename += LIB_NAME_SUFFIX;
    filename = FindInSearchPath(filename);
 
-   std::shared_ptr<LoadedDeviceAdapter> module =
-      std::make_shared<LoadedDeviceAdapter>(moduleName, filename);
+   auto module = [&] {
+      try {
+         auto impl = std::make_unique<LoadedDeviceAdapterImplRegular>(filename);
+         return std::make_shared<LoadedDeviceAdapter>(moduleName, std::move(impl));
+      }
+      catch (const CMMError& e) {
+         throw CMMError("Failed to load device adapter " + ToQuotedString(moduleName) +
+            " from " + ToQuotedString(filename), e);
+      }
+   }();
+
    moduleMap_[moduleName] = module;
    return module;
 }
@@ -153,6 +165,25 @@ CPluginManager::GetDeviceAdapter(const char* moduleName)
    }
    return GetDeviceAdapter(std::string(moduleName));
 }
+
+void
+CPluginManager::LoadMockAdapter(const std::string& name, MockDeviceAdapter* impl)
+{
+   if (name.empty())
+   {
+      throw CMMError("Empty device adapter module name");
+   }
+
+   auto it = moduleMap_.find(name);
+   if (it != moduleMap_.end())
+   {
+      throw CMMError("Device adapter with name " + ToQuotedString(name) + " is already loaded");
+   }
+
+   moduleMap_[name] = std::make_shared<LoadedDeviceAdapter>(
+      name, std::make_unique<LoadedDeviceAdapterImplMock>(impl));
+}
+
 
 /** 
  * Unload a module.

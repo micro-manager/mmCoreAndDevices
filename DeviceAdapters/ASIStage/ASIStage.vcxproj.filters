@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ASICRIF.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ASICRISP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -51,9 +48,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ASIBase.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ASICRIF.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ASICRISP.cpp">

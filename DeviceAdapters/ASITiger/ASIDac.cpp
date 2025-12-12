@@ -22,7 +22,6 @@
 // BASED ON:      ASILED.c, ASIPmt.c and others
 //
 
-
 #include "ASIDac.h"
 #include "ASITiger.h"
 #include "ASIHub.h"
@@ -35,8 +34,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-using namespace std;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -65,8 +62,7 @@ int CDAC::Initialize()
 	// call generic Initialize first, this gets hub
 	RETURN_ON_MM_ERROR(PeripheralInitialize());
 
-	ostringstream command;
-	command.str("");
+	std::ostringstream command;
 	CPropertyAction* pAct;
 	double tmp;
 
@@ -79,7 +75,7 @@ int CDAC::Initialize()
 	// ASI's unit multiplier is how many units per volt, so divide by 1 here to get units per volt, divide by 1000 to get units in millivolts
 	// except for GetSignal() and SetSignal() which deals in Volts, we will make all properties units millivolt
 	command.str("");
-	command << "UM " << axisLetter_ << "? ";
+	command << "UM " << axisLetter_ << "?";
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":"));
 	RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
 	unitMult_ = tmp / 1000;
@@ -122,12 +118,10 @@ int CDAC::Initialize()
 	command.str("");
 	command << maxvolts_;
 	CreateProperty(g_DACMaxVoltsPropertyName, command.str().c_str(), MM::Float, true);
-	
 
 	command.str("");
 	command << minvolts_;
 	CreateProperty(g_DACMinVoltsPropertyName, command.str().c_str(), MM::Float, true);
-	
 
 	//DAC gate open or closed
 	pAct = new CPropertyAction(this, &CDAC::OnDACGate);
@@ -135,7 +129,6 @@ int CDAC::Initialize()
 	AddAllowedValue(g_DACGatePropertyName, g_OpenState);
 	AddAllowedValue(g_DACGatePropertyName, g_ClosedState);
 	UpdateProperty(g_DACGatePropertyName);
-
 
 	// filter cut-off frequency
 	pAct = new CPropertyAction(this, &CDAC::OnCutoffFreq);
@@ -151,9 +144,8 @@ int CDAC::Initialize()
 
 	///////////////////// Optional Modules ////////////////////////////////////
 
-
    // get build info so we can add optional properties
-	build_info_type build;
+	FirmwareBuild build;
 	RETURN_ON_MM_ERROR(hub_->GetBuildInfo(addressChar_, build));
 
 	// add single-axis properties if supported
@@ -202,7 +194,7 @@ int CDAC::Initialize()
 	if (build.vAxesProps[0] & BIT1)
 	{
 		// get the number of ring buffer positions from the BU X output
-		string rb_define = hub_->GetDefineString(build, "RING BUFFER");
+		std::string rb_define = hub_->GetDefineString(build, "RING BUFFER");
 
 		ring_buffer_capacity_ = 0;
 		if (rb_define.size() > 12)
@@ -262,10 +254,9 @@ int CDAC::Initialize()
 			pAct = new CPropertyAction(this, &CDAC::OnAddtoRBSequence);
 			CreateProperty(g_AddtoRBSequencePropertyName, "0", MM::Float, false, pAct);
 			SetPropertyLimits(g_AddtoRBSequencePropertyName, minvolts_*1000, maxvolts_ * 1000);
-
 		}
-
 	}
+
 	// Normally we check for version, but this card is always going to have v3.30 and above
 	if (hub_->IsDefinePresent(build, "IN0_INT") && ring_buffer_supported_)
 	{
@@ -276,39 +267,33 @@ int CDAC::Initialize()
 		CreateProperty(g_TTLinName, "0", MM::Integer, false, pAct);
 		SetPropertyLimits(g_TTLinName, 0, 30);
 		UpdateProperty(g_TTLinName);
+
 		//TTL Out Mode
 		pAct = new CPropertyAction(this, &CDAC::OnTTLout);
 		CreateProperty(g_TTLoutName, "0", MM::Integer, false, pAct);
 		SetPropertyLimits(g_TTLoutName, 0, 30);
 		UpdateProperty(g_TTLoutName);
-
 	}
 
-
-	////////////////////// Before we Bail /////////////////////////////////////
 	initialized_ = true;
 	return DEVICE_OK;
+}
 
-}//end of   CDAC::Initialize()
-
-
-int CDAC::SetSignalmv(double millivolts) {
-
-	ostringstream command; command.str("");
+int CDAC::SetSignalmv(double millivolts)
+{
+	std::ostringstream command;
 	command << "M " << axisLetter_ << "=" << millivolts * unitMult_;
 	return hub_->QueryCommandVerify(command.str(), ":A");
-
 }
 
-int CDAC::SetSignal(double volts) {
-
-
+int CDAC::SetSignal(double volts)
+{
 	return SetSignalmv(volts * 1000);
-
 }
 
-int CDAC::GetSignalmv(double &millivolts) {
-	ostringstream command; command.str("");
+int CDAC::GetSignalmv(double &millivolts)
+{
+	std::ostringstream command;
 	command << "W " << axisLetter_;
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition2(millivolts));
@@ -316,28 +301,32 @@ int CDAC::GetSignalmv(double &millivolts) {
 	return DEVICE_OK;
 }
 
-int CDAC::GetSignal(double &volts) {
-
+int CDAC::GetSignal(double &volts)
+{
 	double mvolts;
-
 	RETURN_ON_MM_ERROR(GetSignalmv(mvolts));
 	volts = mvolts / 1000;
 	return DEVICE_OK;
 }
 
-int CDAC::GetLimits(double& minVolts, double& maxVolts) { minVolts = minvolts_; maxVolts = maxvolts_; return DEVICE_OK; };
+int CDAC::GetLimits(double& minVolts, double& maxVolts)
+{
+	minVolts = minvolts_;
+	maxVolts = maxvolts_;
+	return DEVICE_OK;
+}
 
-
-int CDAC::SetGateOpen(bool open) {
-
-	ostringstream command;
-
-	if (open) {
+int CDAC::SetGateOpen(bool open)
+{
+	std::ostringstream command;
+	if (open)
+	{
 		command.str("");
 		command << "MC " << axisLetter_ << "+";
 		RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	}
-	else {
+	else
+	{
 		command.str("");
 		command << "MC " << axisLetter_ << "-";
 		RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
@@ -345,29 +334,28 @@ int CDAC::SetGateOpen(bool open) {
 	return DEVICE_OK;
 }
 
-int CDAC::GetGateOpen(bool &open) {
-
-	ostringstream command;
+int CDAC::GetGateOpen(bool &open)
+{
+	std::ostringstream command;
 	long tmp;
-	command.str("");
-	command << "MC " << axisLetter_ << "? ";
+	command << "MC " << axisLetter_ << "?";
 
 	open = false;//incase of error we return that gate is closed
 	// "MC <Axis>?" replies look like ":A 1"
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterPosition(3, tmp));
 
-	if (tmp == 1) open = true;
-
+	if (tmp == 1)
+	{
+		open = true;
+	}
 	return DEVICE_OK;
 }
 
 int CDAC::GetMaxVolts(double &volts)
 {
-	ostringstream command;
-
-	command.str("");
-	command << "SU " << axisLetter_ << "? ";
+	std::ostringstream command;
+	command << "SU " << axisLetter_ << "?";
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(volts));
 	return DEVICE_OK;
@@ -375,10 +363,8 @@ int CDAC::GetMaxVolts(double &volts)
 
 int CDAC::GetMinVolts(double &volts)
 {
-	ostringstream command;
-
-	command.str("");
-	command << "SL " << axisLetter_ << "? ";
+	std::ostringstream command;
+	command << "SL " << axisLetter_ << "?";
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(volts));
 	return DEVICE_OK;
@@ -386,10 +372,10 @@ int CDAC::GetMinVolts(double &volts)
 
 //////////////// Sequence Stuff/////////////////////////////
 
-
-int CDAC::StartDASequence()// enables TTL triggering; doesn't actually start anything going on controller
+// enables TTL triggering; doesn't actually start anything going on controller
+int CDAC::StartDASequence()
 {
-	ostringstream command; command.str("");
+	std::ostringstream command;
 	if (!ttl_trigger_supported_)
 	{
 		return DEVICE_UNSUPPORTED_COMMAND;
@@ -405,10 +391,10 @@ int CDAC::StartDASequence()// enables TTL triggering; doesn't actually start any
 	return DEVICE_OK;
 }
 
-int CDAC::StopDASequence()
 // disables TTL triggering; doesn't actually stop anything already happening on controller
+int CDAC::StopDASequence()
 {
-	ostringstream command; command.str("");
+	std::ostringstream command;
 	if (!ttl_trigger_supported_)
 	{
 		return DEVICE_UNSUPPORTED_COMMAND;
@@ -420,7 +406,7 @@ int CDAC::StopDASequence()
 
 int CDAC::ClearDASequence()
 {
-	ostringstream command; command.str("");
+	std::ostringstream command;
 	if (!ttl_trigger_supported_)
 	{
 		return DEVICE_UNSUPPORTED_COMMAND;
@@ -430,6 +416,7 @@ int CDAC::ClearDASequence()
 	RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	return DEVICE_OK;
 }
+
 int CDAC::AddToDASequence(double voltage)
 {
 	if (!ttl_trigger_supported_)
@@ -440,10 +427,9 @@ int CDAC::AddToDASequence(double voltage)
 	return DEVICE_OK;
 }
 
-
 int CDAC::SendDASequence()
 {
-	ostringstream command; command.str("");
+	std::ostringstream command;
 	if (!ttl_trigger_supported_)
 	{
 		return DEVICE_UNSUPPORTED_COMMAND;
@@ -456,90 +442,76 @@ int CDAC::SendDASequence()
 		command << "LD " << axisLetter_ << "=" << sequence_[i] * 1000 * unitMult_;
 		RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	}
-
 	return DEVICE_OK;
 }
 
-
-
-////////////////
 // action handlers
 
 int CDAC::OnDACVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
 	double tmp = 0.0;
 	if (eAct == MM::BeforeGet)
 	{
 		if (!refreshProps_ && initialized_)
 			return DEVICE_OK;
-
-
 		RETURN_ON_MM_ERROR(GetSignalmv(tmp));
 		pProp->Set(tmp);
 		return DEVICE_OK;
-
 	}
-	else if (eAct == MM::AfterSet) {
+	else if (eAct == MM::AfterSet)
+	{
 		pProp->Get(tmp);
 		RETURN_ON_MM_ERROR(SetSignalmv(tmp));
-
-
 	}
 	return DEVICE_OK;
-}// end of OnDacVoltage
+}
 
 int CDAC::OnDACGate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-
 	bool gtmp;
 	if (eAct == MM::BeforeGet)
 	{
 		if (!refreshProps_ && initialized_)
+		{
 			return DEVICE_OK;
-
-
+		}
 		RETURN_ON_MM_ERROR(GetGateOpen(gtmp));
-
-		if (gtmp) {//true
-
+		if (gtmp)
+		{
 			pProp->Set(g_OpenState);
 		}
-		else {
-
+		else
+		{
 			pProp->Set(g_ClosedState);
 		}
-
-
 		return DEVICE_OK;
-
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_OpenState) == 0) {
+		if (tmpstr == g_OpenState) {
 			gtmp = true;
 		}
-		else {
+		else
+		{
 			gtmp = false;
 		}
-
 		RETURN_ON_MM_ERROR(SetGateOpen(gtmp));
-
 	}
 	return DEVICE_OK;
-}// end of OnDacVoltage
+}
 
-
+// Needs controller restart for settings to take effect
 int CDAC::OnDACMode(MM::PropertyBase* pProp, MM::ActionType eAct)
-{	//Will need controller restart for settings to take effect
-	ostringstream command; command.str("");
+{
+	std::ostringstream command;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
 		if (!refreshProps_ && initialized_)
 			return DEVICE_OK;
-		ostringstream response; response.str("");
+		std::ostringstream response;
 		command << "PR " << axisLetter_ << "?"; //On SIGNAL_DAC this is on PR(system flag) instead of PM because I needed upper and lower limits to change too 
 		response << ":A " << axisLetter_ << "="; // Reply for PR command is ":A H=6 <CR><LF>"
 		RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), response.str()));
@@ -561,21 +533,21 @@ int CDAC::OnDACMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return DEVICE_INVALID_PROPERTY_VALUE;
 	}
 	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_DACOutputMode_0) == 0)
+		if (tmpstr == g_DACOutputMode_0)
 			tmp = 0;
-		else if (tmpstr.compare(g_DACOutputMode_1) == 0)
+		else if (tmpstr == g_DACOutputMode_1)
 			tmp = 1;
-		else if (tmpstr.compare(g_DACOutputMode_2) == 0)
+		else if (tmpstr == g_DACOutputMode_2)
 			tmp = 2;
-		else if (tmpstr.compare(g_DACOutputMode_4) == 0)
+		else if (tmpstr == g_DACOutputMode_4)
 			tmp = 4;
-		else if (tmpstr.compare(g_DACOutputMode_5) == 0)
+		else if (tmpstr == g_DACOutputMode_5)
 			tmp = 5;
-		else if (tmpstr.compare(g_DACOutputMode_6) == 0)
+		else if (tmpstr == g_DACOutputMode_6)
 			tmp = 6;
-		else if (tmpstr.compare(g_DACOutputMode_7) == 0)
+		else if (tmpstr == g_DACOutputMode_7)
 			tmp = 7;
 		else
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -583,13 +555,12 @@ int CDAC::OnDACMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 		RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
 	}
 	return DEVICE_OK;
-}// end of OnDacMode
-
+}
 
 int CDAC::OnCutoffFreq(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	double tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -612,22 +583,22 @@ int CDAC::OnCutoffFreq(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	string tmpstr;
-	ostringstream command; command.str("");
+	std::string tmpstr;
+	std::ostringstream command;
 	if (eAct == MM::AfterSet) {
 		if (hub_->UpdatingSharedProperties())
 			return DEVICE_OK;
 		pProp->Get(tmpstr);
 		command << addressChar_ << "SS ";
-		if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+		if (tmpstr == g_SaveSettingsOrig)
 			return DEVICE_OK;
-		if (tmpstr.compare(g_SaveSettingsDone) == 0)
+		if (tmpstr == g_SaveSettingsDone)
 			return DEVICE_OK;
-		if (tmpstr.compare(g_SaveSettingsX) == 0)
+		if (tmpstr == g_SaveSettingsX)
 			command << 'X';
-		else if (tmpstr.compare(g_SaveSettingsY) == 0)
+		else if (tmpstr == g_SaveSettingsY)
 			command << 'Y';
-		else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+		else if (tmpstr == g_SaveSettingsZ)
 			command << 'Z';
 		RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A", (long)200));  // note 200ms delay added
 		pProp->Set(g_SaveSettingsDone);
@@ -639,32 +610,29 @@ int CDAC::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	string tmpstr;
-	if (eAct == MM::AfterSet) {
+	if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_YesState) == 0)
-			refreshProps_ = true;
-		else
-			refreshProps_ = false;
+		refreshProps_ = (tmpstr == g_YesState) ? true : false;
 	}
 	return DEVICE_OK;
 }
 
-
-
 ///////////////////////////////////// Single Axis Functions/////////////////////////////
 
-int CDAC::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 // special property, when set to "yes" it creates a set of little-used properties that can be manipulated thereafter
+int CDAC::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
 		return DEVICE_OK; // do nothing
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_YesState) == 0)
+		if (tmpstr == g_YesState)
 		{
 			CPropertyAction* pAct;
 
@@ -703,8 +671,8 @@ int CDAC::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	double tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -728,8 +696,8 @@ int CDAC::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	double tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -753,8 +721,8 @@ int CDAC::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -778,8 +746,8 @@ int CDAC::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CDAC::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	static bool justSet = false;
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -802,16 +770,17 @@ int CDAC::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return DEVICE_INVALID_PROPERTY_VALUE;
 		justSet = false;
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SAMode_0) == 0)
+		if (tmpstr == g_SAMode_0)
 			tmp = 0;
-		else if (tmpstr.compare(g_SAMode_1) == 0)
+		else if (tmpstr == g_SAMode_1)
 			tmp = 1;
-		else if (tmpstr.compare(g_SAMode_2) == 0)
+		else if (tmpstr == g_SAMode_2)
 			tmp = 2;
-		else if (tmpstr.compare(g_SAMode_3) == 0)
+		else if (tmpstr == g_SAMode_3)
 			tmp = 3;
 		else
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -826,8 +795,8 @@ int CDAC::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -850,16 +819,17 @@ int CDAC::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (!success)
 			return DEVICE_INVALID_PROPERTY_VALUE;
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SAPattern_0) == 0)
+		if (tmpstr == g_SAPattern_0)
 			tmp = 0;
-		else if (tmpstr.compare(g_SAPattern_1) == 0)
+		else if (tmpstr == g_SAPattern_1)
 			tmp = 1;
-		else if (tmpstr.compare(g_SAPattern_2) == 0)
+		else if (tmpstr == g_SAPattern_2)
 			tmp = 2;
-		else if (tmpstr.compare(g_SAPattern_3) == 0)
+		else if (tmpstr == g_SAPattern_3)
 			tmp = 3;
 		else
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -878,11 +848,11 @@ int CDAC::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+// always read
 int CDAC::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
-// get every single time
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -901,11 +871,10 @@ int CDAC::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-
 int CDAC::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -926,12 +895,13 @@ int CDAC::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (!success)
 			return DEVICE_INVALID_PROPERTY_VALUE;
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SAClkSrc_0) == 0)
+		if (tmpstr == g_SAClkSrc_0)
 			tmp = 0;
-		else if (tmpstr.compare(g_SAClkSrc_1) == 0)
+		else if (tmpstr == g_SAClkSrc_1)
 			tmp = BIT7;
 		else
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -952,8 +922,8 @@ int CDAC::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -974,12 +944,13 @@ int CDAC::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (!success)
 			return DEVICE_INVALID_PROPERTY_VALUE;
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SAClkPol_0) == 0)
+		if (tmpstr == g_SAClkPol_0)
 			tmp = 0;
-		else if (tmpstr.compare(g_SAClkPol_1) == 0)
+		else if (tmpstr == g_SAClkPol_1)
 			tmp = BIT6;
 		else
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1000,8 +971,8 @@ int CDAC::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -1022,12 +993,13 @@ int CDAC::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (!success)
 			return DEVICE_INVALID_PROPERTY_VALUE;
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SATTLOut_0) == 0)
+		if (tmpstr == g_SATTLOut_0)
 			tmp = 0;
-		else if (tmpstr.compare(g_SATTLOut_1) == 0)
+		else if (tmpstr == g_SATTLOut_1)
 			tmp = BIT5;
 		else
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1048,8 +1020,8 @@ int CDAC::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -1070,12 +1042,13 @@ int CDAC::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (!success)
 			return DEVICE_INVALID_PROPERTY_VALUE;
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_SATTLPol_0) == 0)
+		if (tmpstr == g_SATTLPol_0)
 			tmp = 0;
-		else if (tmpstr.compare(g_SATTLPol_1) == 0)
+		else if (tmpstr == g_SATTLPol_1)
 			tmp = BIT4;
 		else
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1096,12 +1069,11 @@ int CDAC::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 /////////////////////////////////////// RING BUFFER //////////////////////////
 
-
 int CDAC::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
-	string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+	std::ostringstream command;
+	std::ostringstream response;
+	std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
 	long tmp;
 	if (eAct == MM::BeforeGet)
 	{
@@ -1129,13 +1101,13 @@ int CDAC::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 	else if (eAct == MM::AfterSet) {
 		if (hub_->UpdatingSharedProperties())
 			return DEVICE_OK;
-		string tmpstr;
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_RB_OnePoint_1) == 0)
+		if (tmpstr == g_RB_OnePoint_1)
 			tmp = 1;
-		else if (tmpstr.compare(g_RB_PlayOnce_2) == 0)
+		else if (tmpstr == g_RB_PlayOnce_2)
 			tmp = 2;
-		else if (tmpstr.compare(g_RB_PlayRepeat_3) == 0)
+		else if (tmpstr == g_RB_PlayRepeat_3)
 			tmp = 3;
 		else
 			return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1148,16 +1120,16 @@ int CDAC::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
+	std::ostringstream command;
 	if (eAct == MM::BeforeGet) {
 		pProp->Set(g_IdleState);
 	}
 	else  if (eAct == MM::AfterSet) {
 		if (hub_->UpdatingSharedProperties())
 			return DEVICE_OK;
-		string tmpstr;
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_DoItState) == 0)
+		if (tmpstr == g_DoItState)
 		{
 			command << addressChar_ << "RM";
 			RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
@@ -1169,9 +1141,9 @@ int CDAC::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
-	string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+	std::ostringstream command;
+	std::ostringstream response;
+	std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
 	long tmp = 0;
 	static bool justSet;
 	if (eAct == MM::BeforeGet)
@@ -1207,7 +1179,7 @@ int CDAC::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
+	std::ostringstream command;
 	long tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -1231,11 +1203,8 @@ int CDAC::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-
-
 int CDAC::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
 	if (eAct == MM::BeforeGet)
 	{
 		if (ttl_trigger_enabled_)
@@ -1243,57 +1212,67 @@ int CDAC::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 		else
 			pProp->Set(g_NoState);
 	}
-	else if (eAct == MM::AfterSet) {
-		string tmpstr;
+	else if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		ttl_trigger_enabled_ = (ttl_trigger_supported_ && (tmpstr.compare(g_YesState) == 0));
+		ttl_trigger_enabled_ = ttl_trigger_supported_ && (tmpstr == g_YesState);
 		return OnUseSequence(pProp, MM::BeforeGet);  // refresh value
 	}
 	return DEVICE_OK;
 }
 
 int CDAC::OnRBSequenceState(MM::PropertyBase* pProp, MM::ActionType eAct) {
-	if (eAct == MM::BeforeGet) {
+	if (eAct == MM::BeforeGet)
+	{
 		pProp->Set(g_IdleState);
 	}
-	else  if (eAct == MM::AfterSet) {
-		
-		string tmpstr;
+	else  if (eAct == MM::AfterSet)
+	{
+		std::string tmpstr;
 		pProp->Get(tmpstr);
-		if (tmpstr.compare(g_RBSequenceStart) == 0)	        RETURN_ON_MM_ERROR(StartDASequence());
-		else if (tmpstr.compare(g_RBSequenceStop) == 0)     RETURN_ON_MM_ERROR(StopDASequence());
-		else if (tmpstr.compare(g_RBSequenceClearSeq) == 0) RETURN_ON_MM_ERROR(ClearDASequence());
-		else if (tmpstr.compare(g_RBSequenceSendSeq) == 0)  RETURN_ON_MM_ERROR(SendDASequence());
-		
+		if (tmpstr == g_RBSequenceStart)
+		{
+			RETURN_ON_MM_ERROR(StartDASequence());
+		}
+		else if (tmpstr == g_RBSequenceStop)
+		{
+			RETURN_ON_MM_ERROR(StopDASequence());
+		}
+		else if (tmpstr == g_RBSequenceClearSeq)
+		{
+			RETURN_ON_MM_ERROR(ClearDASequence());
+		}
+		else if (tmpstr == g_RBSequenceSendSeq)
+		{
+			RETURN_ON_MM_ERROR(SendDASequence());
+		}
 		pProp->Set(g_DoneState);
-		
 	}
 	return DEVICE_OK;
-
 }
 
 int CDAC::OnAddtoRBSequence(MM::PropertyBase* pProp, MM::ActionType eAct) {
-	if (eAct == MM::BeforeGet) {
+	if (eAct == MM::BeforeGet)
+	{
 		pProp->Set(0.00);
 	}
-	else  if (eAct == MM::AfterSet) {
+	else  if (eAct == MM::AfterSet)
+	{
 		double tmp;
 		pProp->Get(tmp);
-
 		tmp = tmp / 1000; //to go from mv to volts
 		RETURN_ON_MM_ERROR(AddToDASequence(tmp));
-		
 	}
 	return DEVICE_OK;
-
 }
 
 ////////////////////////////////////// TTL ////////////////////////////////
 
 int CDAC::OnTTLin(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	double tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{
@@ -1320,8 +1299,8 @@ int CDAC::OnTTLin(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDAC::OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	ostringstream command; command.str("");
-	ostringstream response; response.str("");
+	std::ostringstream command;
+	std::ostringstream response;
 	double tmp = 0;
 	if (eAct == MM::BeforeGet)
 	{

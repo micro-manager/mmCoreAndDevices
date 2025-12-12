@@ -1,13 +1,25 @@
-﻿//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // FILE:          OpenFlexure.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Adapter for the OpenFlexure Microscope. This adapter is used on the v5 Sangaboard.
+// DESCRIPTION:   Adapter for the OpenFlexure Microscope. This adapter is used on the v5 Sangaboard. 
+//					- Tested with Sangaboard Firmware v1.0.1-dev || Sangaboard v0.5.x
+//                
+// AUTHOR:        Samdrea Hsu, samdreahsu@gmail.com, 09/23/2024
 //
 // COPYRIGHT:     Samdrea Hsu
 //
-// AUTHOR:        Samdrea Hsu, samdreahsu@gmail.com, 06/22/2024
+// LICENSE:       This file is distributed under the BSD license.
+//                License text is included with the source distribution.
+//
+//                This file is distributed in the hope that it will be useful,
+//                but WITHOUT ANY WARRANTY; without even the implied warranty
+//                of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+//
+//                IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+//                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+//                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 //////////////////////////////////////////////////////////////////////////////
 

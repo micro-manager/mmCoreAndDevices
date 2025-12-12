@@ -557,6 +557,8 @@ int AlliedVisionCamera::ClearROI()
 
 int AlliedVisionCamera::IsExposureSequenceable(bool &isSequenceable) const
 {
+    isSequenceable = false;
+  
     // TODO implement
     return VmbErrorSuccess;
 }
@@ -1389,13 +1391,6 @@ void AlliedVisionCamera::insertFrame(VmbFrame_t *frame)
         VmbUint8_t *buffer = reinterpret_cast<VmbUint8_t *>(frame->buffer);
         err = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(), GetImageHeight(), m_currentPixelFormat.getBytesPerPixel(),
                                              m_currentPixelFormat.getNumberOfComponents(), md.Serialize().c_str());
-
-        if (err == DEVICE_BUFFER_OVERFLOW)
-        {
-            GetCoreCallback()->ClearImageBuffer(this);
-            err = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(), GetImageHeight(), m_currentPixelFormat.getBytesPerPixel(),
-                                                 m_currentPixelFormat.getNumberOfComponents(), md.Serialize().c_str(), false);
-        }
 
         if (IsCapturing())
         {

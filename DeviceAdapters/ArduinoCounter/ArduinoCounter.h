@@ -83,6 +83,8 @@ public:
 
    void GetName(char* name) const;
 
+   bool Busy() { return false; }
+
    int SnapImage();
    const unsigned char* GetImageBuffer();
    const unsigned char* GetImageBuffer(unsigned channelNr);
@@ -121,7 +123,6 @@ public:
 private:
    int Logical2Physical(int logical);
    bool ImageSizesAreEqual();
-   unsigned char* imageBuffer_;
    int startCommunication();
    int startCounting(int number);
    int stopCounting();

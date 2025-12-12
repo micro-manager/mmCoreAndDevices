@@ -128,7 +128,6 @@ const int n_param = sizeof(param_set)/sizeof(SParam);
 ///////////////////////////////////////////////////////////////////////////////
 // &Universal constructor/destructor
 Universal::Universal(short cameraId) :
-CCameraBase<Universal> (),
 restart_(false),
 initialized_(false),
 busy_(false),
@@ -2139,19 +2138,6 @@ int Universal::PushImage()
       GetImageHeight(),
       GetImageBytesPerPixel(),
       &md);
-
-   if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      nRet = GetCoreCallback()->InsertMultiChannel(this,
-         (unsigned char*) pixBuffer,
-         1,
-         GetImageWidth(),
-         GetImageHeight(),
-         GetImageBytesPerPixel(),
-         &md);
-   }
 
    ostringstream txtEnd;
    txtEnd << name_ << " exited PushImage()";

@@ -118,7 +118,6 @@ int ClearPort(MM::Device& device, MM::Core& core, std::string port)
 Camera::Camera() :
 	// initialization of parameters
 	SigmaBase(this),
-	CCameraBase<Camera>(),
 	initialized_(false),
 	isMonochrome_(false),
 	enabledROI_(false),
@@ -968,20 +967,7 @@ int Camera::InsertImage()
 	unsigned int h = GetImageHeight();
 	unsigned int b = GetImageBytesPerPixel();
 	cout << "bytes per pixel    = " << b << endl;
-	int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-
-	if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		// don't process this same image again...
-		cout << "Stop On overflow   = " << stopOnOverflow_ << endl;
-		return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-	}
-	else
-	{
-		return ret;
-	}
+	return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
 }
 
 /*

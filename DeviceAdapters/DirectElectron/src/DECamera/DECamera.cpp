@@ -114,7 +114,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CDECamera::CDECamera() :
-	CCameraBase<CDECamera> (),
 	initialized_(false),
 	initializedProperties_(false),
 	readoutUs_(0.0),
@@ -350,7 +349,7 @@ int CDECamera::StartSequenceAcquisition(long numImages, double interval_ms, bool
 	if (IsCapturing())
 		return DEVICE_CAMERA_BUSY_ACQUIRING;
 
-	int ret = GetCoreCallback()->PrepareForAcq((CCameraBase<CDECamera>*)this);
+	int ret = GetCoreCallback()->PrepareForAcq(this);
 	if (ret != DEVICE_OK)
 		return ret;
 
@@ -371,7 +370,7 @@ int CDECamera::StartSequenceAcquisition(long numImages, double interval_ms, bool
 	}	
 
 	 // Start thread.
-   CCameraBase::StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
+   CLegacyCameraBase::StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
 	return DEVICE_OK;
 }
 
@@ -384,7 +383,7 @@ int CDECamera::StopSequenceAcquisition()
 
 	try {
 		// Call base method to finish up acquisition.
-		CCameraBase<CDECamera>::StopSequenceAcquisition();
+		CLegacyCameraBase<CDECamera>::StopSequenceAcquisition();
 
 		if (this->HasProperty(g_Property_DE_AcquisitionMode))
 			this->SetProperty(g_Property_DE_AcquisitionMode, g_Property_DE_Acquisition_SingleCapture);
@@ -964,16 +963,6 @@ int CDECamera::ResizeImageBuffer()
 	img_.Resize(width, height, this->bitDepth_/8);
 
 	return DEVICE_OK;
-}
-
-double CDECamera::GetNominalPixelSizeUm() const
-{
-	return pixelSize_.x;
-}
-
-double CDECamera::GetPixelSizeUm() const
-{
-	return pixelSize_.x  * this->GetBinning();
 }
 
 void CDECamera::SetupProperty(string label, PropertyHelper settings)

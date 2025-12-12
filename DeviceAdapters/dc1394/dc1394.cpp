@@ -2145,13 +2145,6 @@ int Cdc1394::PushImage(dc1394video_frame_t *myframe)
 
    // insert image into the circular MMCore buffer
    int ret =  GetCoreCallback()->InsertImage(this, buf, width_, height_, GetBytesPerPixel());
-
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW) {
-      // do not stop on overflow - just reset the buffer                     
-      GetCoreCallback()->ClearImageBuffer(this);                             
-      ret =  GetCoreCallback()->InsertImage(this, buf, width_, height_, GetBytesPerPixel());
-   }
-
    free(buf);
    return ret;
 }

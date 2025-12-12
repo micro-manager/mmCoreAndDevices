@@ -179,7 +179,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 POACamera::POACamera() :
-    CCameraBase<POACamera>(),
     exposureMaximum_(2000000.0),
     initialized_(false),
     roiX_(0),
@@ -193,7 +192,6 @@ POACamera::POACamera() :
     gammaValue_(g_gamma_def),
     p8bitGammaTable(nullptr),
     p16bitGammaTable(nullptr),
-    nominalPixelSizeUm_(1.0),
     pRGB24(nullptr),
     RGB24BufSize_(0),
     readoutUs_(0.0),
@@ -235,7 +233,10 @@ POACamera::POACamera() :
             continue;
         }
 
-        connectCamerasName_.push_back(std::string(camProp.cameraModelName));
+        std::string itemName = camProp.cameraModelName;
+        itemName += ' ';
+        itemName += camProp.SN;
+        connectCamerasName_.push_back(itemName);
     }
     
     CPropertyAction* pAct = new CPropertyAction(this, &POACamera::OnSelectCamIndex);
@@ -378,8 +379,6 @@ int POACamera::Initialize()
     p8bitGammaTable = new unsigned char[256];
     p16bitGammaTable = new unsigned short[65536];
     ResetGammaTable();
-
-    nominalPixelSizeUm_ = camProp_.pixelSize;
 
     char* pCameraName = camProp_.cameraModelName;
 
@@ -815,6 +814,11 @@ int POACamera::SnapImage()
     }
 
     m_bIsToStopExposure = false;
+
+    if (exp > 20.0)
+    {
+       CDeviceUtils::SleepMs((long) (exp - 10.0));
+    }
     
     do
     {
@@ -1392,17 +1396,7 @@ int POACamera::InsertImage()
     unsigned int h = GetImageHeight();
     unsigned int b = GetImageBytesPerPixel();
 
-    int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-
-    if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-    {
-        // do not stop on overflow - just reset the buffer
-        GetCoreCallback()->ClearImageBuffer(this);
-        // don't process this same image again...
-        return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-    }
-    else
-        return ret;
+    return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
 }
 
 /*

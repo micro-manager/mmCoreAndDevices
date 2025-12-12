@@ -118,9 +118,12 @@ bool DAShutter::Busy()
 int DAShutter::SetOpen(bool open)
 {
    MM::SignalIO* da = (MM::SignalIO*)GetDevice(DADeviceName_.c_str());
+   int ret = DEVICE_OK;
    if (da != 0)
-      return da->SetGateOpen(open);
-   return DEVICE_OK;
+      ret = da->SetGateOpen(open);
+   if (ret == DEVICE_OK)
+      GetCoreCallback()->OnShutterOpenChanged(this, open);
+   return ret;
 }
 
 int DAShutter::GetOpen(bool& open)

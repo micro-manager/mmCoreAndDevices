@@ -16,7 +16,6 @@ using namespace std;
 
 #include "AutoTimeMeasure.h"
 
-const double CABSCamera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 // External names used used by the rest of the system
 // to load particular device from the "DemoCamera.dll" library
@@ -175,7 +174,6 @@ const char* g_IOPort_None = " none";
 * perform most of the initialization in the Initialize() method.
 */
 CABSCamera::CABSCamera() :
-CCameraBase<CABSCamera> (),
 dPhase_(0),
 initialized_(false),
 readoutUs_(1.0),
@@ -1276,14 +1274,6 @@ int CABSCamera::InsertImage()
   
 
   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str() );
-
-  if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-  {  
-    // do not stop on overflow - just reset the buffer
-    GetCoreCallback()->ClearImageBuffer(this);
-    // don't process this same image again...
-    ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-  }
 
   if (ret == DEVICE_OK)
     imageCounter_++;

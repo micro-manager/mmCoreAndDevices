@@ -55,7 +55,6 @@ using namespace std;
 // XYStageDeviceDevice
 //
 XYStageDevice::XYStageDevice (): 
-CXYStageBase<XYStageDevice>(),
 	initialized_ (false),
 	stepSize_um_(0.001),
 	can29_(),

@@ -49,6 +49,11 @@
 #define HUB_NOT_AVAILABLE        107
 
 const char* NoHubError = "Parent Hub not defined.";
+extern const char* g_PressurePumpDeviceName;
+extern const char* g_PropImposedPressure;
+extern const char* g_VolumetricPumpDeviceName;
+
+enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST };
 
 // Defines which segments in a seven-segment display are lit up for each of
 // the numbers 0-9. Segments are:
@@ -125,6 +130,8 @@ public:
    int Shutdown();
   
    void GetName(char* name) const;      
+
+   bool Busy() { return false; }
    
    // MMCamera API
    // ------------
@@ -156,8 +163,6 @@ public:
    int RunSequenceOnThread();
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    int GetBinning() const;
    int SetBinning(int bS);
 
@@ -223,45 +228,42 @@ private:
    bool GenerateColorTestPattern(ImgBuffer& img);
    int ResizeImageBuffer();
 
-   static const double nominalPixelSizeUm_;
-
-   double exposureMaximum_;
-   double dPhase_;
+   double exposureMaximum_ = 10000.0;
+   double dPhase_ = 0.0;
    ImgBuffer img_;
-   bool busy_;
-   bool stopOnOverFlow_;
-   bool initialized_;
-   double readoutUs_;
+   bool stopOnOverFlow_{};
+   bool initialized_ = false;
+   double readoutUs_ = 0.0;
    MM::MMTime readoutStartTime_;
-   long scanMode_;
-   int bitDepth_;
-   unsigned roiX_;
-   unsigned roiY_;
+   long scanMode_ = 1;
+   int bitDepth_ = 8;
+   unsigned roiX_ = 0;
+   unsigned roiY_ = 0;
    MM::MMTime sequenceStartTime_;
-   bool isSequenceable_;
-   long sequenceMaxLength_;
-   bool sequenceRunning_;
-   unsigned long sequenceIndex_;
+   bool isSequenceable_ = false;
+   long sequenceMaxLength_ = 100;
+   bool sequenceRunning_ = false;
+   unsigned long sequenceIndex_ = 0;
    double GetSequenceExposure();
    std::vector<double> exposureSequence_;
-   long imageCounter_;
-	long binSize_;
-	long cameraCCDXSize_;
-	long cameraCCDYSize_;
-   double ccdT_;
+   long imageCounter_ = 0;
+   long binSize_ = 1;
+   long cameraCCDXSize_ = 512;
+	long cameraCCDYSize_ = 512;
+   double ccdT_ = 0.0;
 	std::string triggerDevice_;
 
-   bool stopOnOverflow_;
+   bool stopOnOverflow_ = false;
 
-	bool dropPixels_;
-   bool fastImage_;
-	bool saturatePixels_;
-	double fractionOfPixelsToDropOrSaturate_;
-   bool shouldRotateImages_;
-   bool shouldDisplayImageNumber_;
-   double stripeWidth_;
-   bool supportsMultiROI_;
-   int multiROIFillValue_;
+	bool dropPixels_ = false;
+   bool fastImage_ = false;
+	bool saturatePixels_ = false;
+	double fractionOfPixelsToDropOrSaturate_ = 0.002;
+   bool shouldRotateImages_ = false;
+   bool shouldDisplayImageNumber_ = false;
+   double stripeWidth_ = 1.0;
+   bool supportsMultiROI_ = false;
+   int multiROIFillValue_ = 0;
    std::vector<unsigned> multiROIXs_;
    std::vector<unsigned> multiROIYs_;
    std::vector<unsigned> multiROIWidths_;
@@ -273,20 +275,19 @@ private:
    MMThreadLock imgPixelsLock_;
    MMThreadLock asyncFollowerLock_;
    friend class MySequenceThread;
-   int nComponents_;
+   int nComponents_ = 1;
    MySequenceThread * thd_;
    std::future<void> fut_;
-   int mode_;
-   ImgManipulator* imgManpl_;
-   double pcf_;
-   double photonFlux_;
-   double readNoise_;
+   int mode_ = MODE_ARTIFICIAL_WAVES;
+   ImgManipulator* imgManpl_ = nullptr;
+   double pcf_ = 1.0;
+   double photonFlux_ = 50.0;
+   double readNoise_ = 2.5;
 };
 
 class MySequenceThread : public MMDeviceThreadBase
 {
    friend class CDemoCamera;
-   enum { default_numImages=1, default_intervalMS = 100 };
    public:
       MySequenceThread(CDemoCamera* pCam);
       ~MySequenceThread();
@@ -302,20 +303,20 @@ class MySequenceThread : public MMDeviceThreadBase
       long GetImageCounter(){return imageCounter_;}                             
       MM::MMTime GetStartTime(){return startTime_;}                             
       MM::MMTime GetActualDuration(){return actualDuration_;}
-   private:                                                                     
+   private:
       int svc(void) throw();
-      double intervalMs_;                                                       
-      long numImages_;                                                          
-      long imageCounter_;                                                       
-      bool stop_;                                                               
-      bool suspend_;                                                            
-      CDemoCamera* camera_;                                                     
-      MM::MMTime startTime_;                                                    
-      MM::MMTime actualDuration_;                                               
-      MM::MMTime lastFrameTime_;                                                
-      MMThreadLock stopLock_;                                                   
-      MMThreadLock suspendLock_;                                                
-}; 
+      double intervalMs_ = 100;
+      long numImages_ = 1;
+      long imageCounter_ = 0;
+      bool stop_ = true;
+      bool suspend_ = false;
+      CDemoCamera *camera_{};
+      MM::MMTime startTime_;
+      MM::MMTime actualDuration_;
+      MM::MMTime lastFrameTime_;
+      MMThreadLock stopLock_;
+      MMThreadLock suspendLock_;
+};
 
 //////////////////////////////////////////////////////////////////////////////
 // CDemoFilterWheel class
@@ -342,10 +343,10 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   long numPos_;
-   bool initialized_;
+   long numPos_ = 10;
+   bool initialized_ = false;
    MM::MMTime changedTime_;
-   long position_;
+   long position_ = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -372,10 +373,10 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   long numPos_;
-   bool busy_;
-   bool initialized_;
-   long position_;
+   long numPos_ = 3;
+   bool busy_ = false;
+   bool initialized_ = false;
+   long position_ = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -404,14 +405,14 @@ public:
    int OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   long numPos_;
-   bool busy_;
-   bool initialized_;
-   bool sequenceRunning_;
-   unsigned long sequenceMaxSize_;
-   unsigned long sequenceIndex_;
+   long numPos_ = 6;
+   bool busy_ = false;
+   bool initialized_ = false;
+   bool sequenceRunning_ = false;
+   unsigned long sequenceMaxSize_ = 10;
+   unsigned long sequenceIndex_ = 0;
    std::vector<std::string> sequence_;
-   long position_;
+   long position_ = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -445,15 +446,14 @@ public:
    int GetGateOpen(bool& open);
 
 private:
-   uint16_t numPatterns_;
-   long numPos_;
-   bool initialized_;
+   uint16_t numPatterns_ = 50;
+   long numPos_ = 10;
+   bool initialized_ = false;
    MM::MMTime changedTime_;
-   bool busy_;
-   bool sequenceOn_;
-   bool gateOpen_;
-   bool isClosed_;
-   long position_;
+   bool sequenceOn_ = false;
+   bool gateOpen_ = true;
+   bool isClosed_ = true;
+   long position_ = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -514,13 +514,13 @@ public:
 
 private:
    void SetIntensityFactor(double pos);
-   double stepSize_um_;
-   double pos_um_;
-   bool busy_;
-   bool initialized_;
-   double lowerLimit_;
-   double upperLimit_;
-   bool sequenceable_;
+   double stepSize_um_ = 0.025;
+   double pos_um_ = 0.0;
+   bool busy_ = false;
+   bool initialized_ = false;
+   double lowerLimit_ = -300.0;
+   double upperLimit_ = 300.0;
+   bool sequenceable_ = false;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -553,7 +553,7 @@ public:
    virtual int GetPositionSteps(long& x, long& y);
    virtual int SetRelativePositionSteps(long x, long y);
    virtual int Home() { return DEVICE_OK; }
-   virtual int Stop() { return DEVICE_OK; }
+   virtual int Stop();
 
    /* This sets the 0,0 position of the adapter to the current position.  
     * If possible, the stage controller itself should also be set to 0,0
@@ -582,17 +582,26 @@ public:
    // action interface
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   double stepSize_um_;
-   double posX_um_;
-   double posY_um_;
-   bool busy_;
-   MM::TimeoutMs* timeOutTimer_;
-   double velocity_;
-   bool initialized_;
-   double lowerLimit_;
-   double upperLimit_;
+   double stepSize_um_ = 0.015;
+   double posX_um_ = 0.0;
+   double posY_um_ = 0.0;
+   double startPosX_um_ = 0.0, startPosY_um_ = 0.0;
+   double targetPosX_um_ = 0.0, targetPosY_um_ = 0.0;
+   MM::MMTime moveStartTime_;     // from GetCurrentMMTime()
+   long moveDuration_ms_ = 100;   // duration of current move in milliseconds
+   MM::TimeoutMs* timeOutTimer_ = nullptr;
+   double velocity_ = 10.0;  // in mm/s ( = um/ms)
+   bool initialized_ = false;
+   double lowerLimit_ = 0.0;
+   double upperLimit_ = 20000.0;
+
+   void CommitCurrentIntermediatePosition_(const MM::MMTime& now);
+   void ComputeIntermediatePosition(const MM::MMTime& currentTime,
+      double& currentPosX,
+      double& currentPosY);
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -602,7 +611,7 @@ private:
 class DemoShutter : public CShutterBase<DemoShutter>
 {
 public:
-   DemoShutter() : state_(false), initialized_(false), changedTime_(0.0)
+   DemoShutter()
    {
       EnableDelay(); // signals that the dealy setting will be used
       
@@ -622,6 +631,7 @@ public:
    {
       state_ = open;
       changedTime_ = GetCurrentMMTime();
+      GetCoreCallback()->OnShutterOpenChanged(this, open);
       return DEVICE_OK;
    }
    int GetOpen(bool& open)
@@ -636,8 +646,8 @@ public:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool state_;
-   bool initialized_;
+   bool state_ = false;
+   bool initialized_ = false;
    MM::MMTime changedTime_;
 };
 
@@ -695,12 +705,12 @@ public:
    int OnRealVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   uint8_t n_;
-   double volt_;
-   double gatedVolts_;
-   bool open_;
-   bool sequenceRunning_;
-   unsigned long sequenceIndex_;
+   uint8_t n_{};
+   double volt_ = 0;
+   double gatedVolts_ = 0;
+   bool open_ = true;
+   bool sequenceRunning_ = false;
+   unsigned long sequenceIndex_ = 0;
    std::vector<double> sentSequence_;
    std::vector<double> nascentSequence_;
 
@@ -741,10 +751,10 @@ public:
 private:
    std::string highMagString();
 
-   int position_;
-   double zoomPosition_;
-   double highMag_;
-   bool variable_;
+   int position_ = 0;
+   double zoomPosition_ = 1.0;
+   double highMag_ = 1.6;
+   bool variable_ = false;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -755,7 +765,7 @@ private:
 class TransposeProcessor : public CImageProcessorBase<TransposeProcessor>
 {
 public:
-   TransposeProcessor () : inPlace_ (false), pTemp_(NULL), tempSize_(0), busy_(false)
+   TransposeProcessor ()
    {
       // parent ID display
       CreateHubIDProperty();
@@ -830,10 +840,10 @@ public:
    int OnInPlaceAlgorithm(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool inPlace_;
-   void* pTemp_;
-   unsigned long tempSize_;
-   bool busy_;
+   bool inPlace_ = false;
+   void* pTemp_ = nullptr;
+   unsigned long tempSize_ = 0;
+   bool busy_ = false;
 };
 
 
@@ -846,9 +856,6 @@ private:
 class ImageFlipX : public CImageProcessorBase<ImageFlipX>
 {
 public:
-   ImageFlipX () :  busy_(false) {}
-   ~ImageFlipX () {  }
-
    int Shutdown() {return DEVICE_OK;}
    void GetName(char* name) const {strcpy(name,"ImageFlipX");}
 
@@ -877,7 +884,7 @@ public:
    int OnPerformanceTiming(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool busy_;
+   bool busy_ = false;
    MM::MMTime performanceTiming_;
 };
 
@@ -890,9 +897,6 @@ private:
 class ImageFlipY : public CImageProcessorBase<ImageFlipY>
 {
 public:
-   ImageFlipY () : busy_(false), performanceTiming_(0.) {}
-   ~ImageFlipY () {  }
-
    int Shutdown() {return DEVICE_OK;}
    void GetName(char* name) const {strcpy(name,"ImageFlipY");}
 
@@ -924,9 +928,8 @@ public:
    int OnPerformanceTiming(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool busy_;
+   bool busy_ = false;
    MM::MMTime performanceTiming_;
-
 };
 
 
@@ -939,7 +942,7 @@ private:
 class MedianFilter : public CImageProcessorBase<MedianFilter>
 {
 public:
-   MedianFilter () : busy_(false), performanceTiming_(0.),pSmoothedIm_(0), sizeOfSmoothedIm_(0)
+   MedianFilter ()
    {
       // parent ID display
       CreateHubIDProperty();
@@ -1044,13 +1047,10 @@ public:
    int OnPerformanceTiming(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool busy_;
+   bool busy_ = false;
    MM::MMTime performanceTiming_;
-   void*  pSmoothedIm_;
-   unsigned long sizeOfSmoothedIm_;
-   
-
-
+   void*  pSmoothedIm_ = nullptr;
+   unsigned long sizeOfSmoothedIm_ = 0;
 };
 
 
@@ -1063,16 +1063,11 @@ private:
 class DemoAutoFocus : public CAutoFocusBase<DemoAutoFocus>
 {
 public:
-   DemoAutoFocus() : 
-      running_(false), 
-      busy_(false), 
-      initialized_(false)  
-      {
-         CreateHubIDProperty();
-      }
+   DemoAutoFocus()
+   {
+      CreateHubIDProperty();
+   }
 
-   ~DemoAutoFocus() {}
-      
    // MMDevice API
    bool Busy() {return busy_;}
    void GetName(char* pszName) const;
@@ -1104,13 +1099,22 @@ public:
       score = 1.0;
       return DEVICE_OK;
    }
-   virtual int GetOffset(double& /*offset*/) { return DEVICE_OK; }
-   virtual int SetOffset(double /*offset*/) { return DEVICE_OK; }
+   virtual int GetOffset(double& offset)
+   {
+      offset = offset_;
+      return DEVICE_OK;
+   }
+   virtual int SetOffset(double offset)
+   {
+      offset_ = offset;
+      return DEVICE_OK;
+   }
 
 private:
-   bool running_;
-   bool busy_;
-   bool initialized_;
+   bool running_ = false;
+   bool busy_ = false;
+   bool initialized_ = false;
+   double offset_ = 0.0;
 };
 
 struct Point
@@ -1168,8 +1172,8 @@ public:
 
 private:
 
-   CDemoCamera* demoCamera_;
-   unsigned short gaussianMask_[10][10];
+   CDemoCamera* demoCamera_ = nullptr;
+   unsigned short gaussianMask_[10][10]{};
 
    double GaussValue(double amplitude, double sigmaX, double sigmaY, int muX, int muY, int x, int y);
    Point GalvoToCameraPoint(PointD GalvoPoint, ImgBuffer& img);
@@ -1178,18 +1182,277 @@ private:
 
    std::map<int, std::vector<PointD> > vertices_;
    MM::MMTime pfExpirationTime_;
-   bool initialized_;
+   bool initialized_ = false;
+   bool busy_ = false;
+   bool illuminationState_ = false;
+   bool pointAndFire_ = false;
+   bool runROIS_ = false;
+   double xRange_ = 10.0;
+   double yRange_ = 10.0;
+   double currentX_ = 0.0;
+   double currentY_ = 0.0;
+   int offsetX_ = 20;
+   double vMaxX_ = 10.0;
+   int offsetY_ = 15;
+   double vMaxY_ = 10.0;
+   double pulseTime_Us_ = 100000.0;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// DemoPressurePump class
+// Simulation of PressurePump
+//////////////////////////////////////////////////////////////////////////////
+class DemoPressurePump : public CPressurePumpBase<DemoPressurePump>
+{
+public:
+   DemoPressurePump() : 
+      initialized_ (false),
+      currentPressure_ (0.),
+      busy_(false) 
+   {};
+
+   ~DemoPressurePump() {
+      if (initialized_)
+         Shutdown();
+   };
+
+   void GetName(char* name) const {strcpy(name, g_PressurePumpDeviceName);}
+
+   bool Busy() {return busy_;}
+
+   int Initialize();
+
+   int Shutdown() 
+   {
+      initialized_ = false; 
+      return DEVICE_OK;
+   }
+
+   int Stop() {
+      currentPressure_ = 0.0; 
+      OnPropertyChanged(g_PropImposedPressure, "0.0");
+      return DEVICE_OK;
+   };
+
+   int OnImposedPressure(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   bool RequiresCalibration() {
+      return false;
+   };
+
+   int SetPressureKPa(double pressureKPa) {
+      // TODO: more realistic, build it up slowly;)
+      currentPressure_ = pressureKPa;
+      OnPropertyChanged(g_PropImposedPressure, CDeviceUtils::ConvertToString(currentPressure_));
+      return DEVICE_OK;
+   };
+
+   int GetPressureKPa(double& pressureKPa) {
+      pressureKPa = currentPressure_;
+      return DEVICE_OK;
+   };
+
+private:
    bool busy_;
-   bool illuminationState_;
-   bool pointAndFire_;
-   bool runROIS_;
-   double xRange_;
-   double yRange_;
-   double currentX_;
-   double currentY_;
-   int offsetX_;
-   double vMaxX_;
-   int offsetY_;
-   double vMaxY_;
-   double pulseTime_Us_;
+   bool initialized_;
+   double currentPressure_;
+};
+
+class DemoVolumetricPump : public CVolumetricPumpBase<DemoVolumetricPump>
+{
+public:
+   DemoVolumetricPump() :
+      busy_ (false),
+      initialized_ (false),
+      currentVolumeUl_(0.0),
+      maxVolumeUl_ (200.0),
+      flowRateUlpS_ (10.0)
+   {};
+   ~DemoVolumetricPump() {
+      if (initialized_)
+         Shutdown();
+   };
+
+   void GetName(char* name) const {strcpy(name, g_VolumetricPumpDeviceName);}
+
+   bool Busy() {return busy_;}
+
+   int Initialize() {
+      initialized_ = true;
+      return DEVICE_OK;
+   }
+
+   int Shutdown() {
+      initialized_ = false;
+      return DEVICE_OK;
+   }
+
+
+    /**
+     * Homes the pump. If no homing is supported, just return
+     * DEVICE_UNSUPPORTED_COMMAND.
+     *
+     * Optional function of VolumetricPump API
+     */
+   int Home() { return DEVICE_UNSUPPORTED_COMMAND; };
+
+    /**
+     * Stops the pump. The implementation should halt any dispensing/withdrawal,
+     * and make the pump available again (make Busy() return false).
+     *
+     * Required function of VolumetricPump API
+     */
+   int Stop() {
+      // TODO: implement!
+      return DEVICE_OK;
+   }
+
+    /**
+     * Flag to check whether the pump requires homing before being operational
+     *
+     * Required function of VolumetricPump API
+     */
+    bool RequiresHoming() { return false; };
+
+    /**
+     * Sets the direction of the pump. Certain pump
+     * (e.g. peristaltic and DC pumps) don't have an apriori forward-reverse direction,
+     * as it depends on how it is connected. This function allows you to switch
+     * forward and reverse.
+     *
+     * If the pump is uni-directional, this function does not need to be
+     * implemented (return DEVICE_UNSUPPORTED_COMMAND).
+     *
+     * Optional function of VolumetricPump API
+     */
+    int InvertDirection(bool /* inverted */) { return DEVICE_UNSUPPORTED_COMMAND; };
+
+    /**
+     * Sets the direction of the pump. Certain pump
+     * (e.g. peristaltic and DC pumps) don't have an apriori forward-reverse direction,
+     * as it depends on how it is connected. This function allows you to switch
+     * forward and reverse.
+     *
+     * When the pump is uni-directional, this function should always assign
+     * false to `inverted`
+     *
+     * Required function of VolumetricPump API
+     */
+    int IsDirectionInverted(bool& inverted) {
+       inverted = false;
+       return DEVICE_OK;
+    };
+
+    /**
+     * Sets the current volume of the pump in microliters (uL).
+     *
+     * Required function of VolumetricPump API
+     */
+    int SetVolumeUl(double volUl) {
+       currentVolumeUl_ = volUl;
+       return DEVICE_OK;
+    };
+
+    /**
+     * Gets the current volume of the pump in microliters (uL).
+     *
+     * Required function of VolumetricPump API
+     */
+    int GetVolumeUl(double& volUl) {
+       volUl = currentVolumeUl_;
+       return DEVICE_OK;
+    };
+
+    /**
+     * Sets the maximum volume of the pump in microliters (uL).
+     *
+     * Required function of VolumetricPump API
+     */
+    int SetMaxVolumeUl(double volUl) {
+       maxVolumeUl_ = volUl;
+       return DEVICE_OK;
+    };
+
+    /**
+     * Gets the maximum volume of the pump in microliters (uL).
+     *
+     * Required function of VolumetricPump API
+     */
+    int GetMaxVolumeUl(double& volUl) {
+       volUl = maxVolumeUl_;
+       return DEVICE_OK;
+    };
+
+    /**
+     * Sets the flowrate in microliter (uL) per second. The implementation
+     * should convert the provided flowrate to whichever unit the pump desires
+     * (steps/s, mL/h, V).
+     *
+     * Required function of VolumetricPump API
+     */
+    int SetFlowrateUlPerSecond(double flowrate) {
+       flowRateUlpS_ = flowrate;
+       return DEVICE_OK;
+    };
+
+    /**
+     * Gets the flowrate in microliter (uL) per second.
+     *
+     * Required function of VolumetricPump API
+     */
+    int GetFlowrateUlPerSecond(double& flowrate) {
+       flowrate = flowRateUlpS_;
+       return DEVICE_OK;
+    };
+
+    /**
+     * Dispenses/withdraws until the minimum or maximum volume has been
+     * reached, or the pumping is manually stopped
+     *
+     * Required function of VolumetricPump API
+     */
+    int Start() {
+       // TODO run a thread, time things, and set variables accordingly.  Will need a mutex on our variables
+       return DEVICE_OK;
+    };
+
+    /**
+     * Dispenses/withdraws for the provided time, with the flowrate provided
+     * by GetFlowrate_uLperMin
+     * Dispensing for an undetermined amount of time can be done with DBL_MAX
+     * During the dispensing/withdrawal, Busy() should return "true".
+     *
+     * Required function of VolumetricPump API
+     */
+    int DispenseDurationSeconds(double /*durSec */) {
+       // TODO run a thread, time things, and set variables accordingly.  Will need a mutex on our variables
+       return DEVICE_OK;
+    };
+
+    /**
+     * Dispenses/withdraws the provided volume.
+     *
+     * The implementation should cause positive volumes to be dispensed, whereas
+     * negative volumes should be withdrawn. The implementation should prevent
+     * the volume to go negative (i.e. stop the pump once the syringe is empty),
+     * or to go over the maximum volume (i.e. stop the pump once it is full).
+     * This automatically allows for dispensing/withdrawal for an undetermined
+     * amount of time by providing DBL_MAX for dispense, and DBL_MIN for
+     * withdraw.
+     *
+     * During the dispensing/withdrawal, Busy() should return "true".
+     *
+     * Required function of VolumetricPump API
+     */
+    int DispenseVolumeUl(double /* volUl */) {
+       // TODO run a thread, time things, and set variables accordingly.  Will need a mutex on our variables
+       return DEVICE_OK;
+    };
+
+    private:
+       bool busy_;
+       bool initialized_;
+       double currentVolumeUl_;
+       double maxVolumeUl_;
+       double flowRateUlpS_;
 };

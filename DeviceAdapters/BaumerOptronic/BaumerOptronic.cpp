@@ -80,9 +80,6 @@ there is too much uncommented magic in this code.
 
 using namespace std;
 
-
-const double CBaumerOptronic::nominalPixelSizeUm_ = 1.0;
-
 // External names used by the rest of the system
 const char* g_CameraDeviceName = "BaumerOptronic";
 
@@ -1544,7 +1541,6 @@ unsigned int __stdcall mSeqEventHandler(void* pArguments)
  * perform most of the initialization in the Initialize() method.
  */
 CBaumerOptronic::CBaumerOptronic() :
-   CCameraBase<CBaumerOptronic>(),
    initialized_(false),
    pWorkerThread_(NULL),
    stopOnOverflow_(false)
@@ -2286,18 +2282,7 @@ int CBaumerOptronic::SendImageToCore()
    unsigned h = GetImageHeight();
    unsigned b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
-
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      return GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
-   }
-   else
-   {
-      return ret;
-   }
+   return GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
 }
 
 

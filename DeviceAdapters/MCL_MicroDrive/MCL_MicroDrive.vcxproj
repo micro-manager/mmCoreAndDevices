@@ -20,13 +20,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -93,6 +93,7 @@
     <ClCompile Include="mdutils.cpp" />
     <ClCompile Include="MicroDriveXYStage.cpp" />
     <ClCompile Include="MicroDriveZStage.cpp" />
+    <ClCompile Include="MotorizedMicroMirrorTIRF.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcquireDevice.h" />
@@ -104,6 +105,7 @@
     <ClInclude Include="MicroDrive.h" />
     <ClInclude Include="MicroDriveXYStage.h" />
     <ClInclude Include="MicroDriveZStage.h" />
+    <ClInclude Include="MotorizedMicroMirrorTIRF.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-StaticRuntime.vcxproj">

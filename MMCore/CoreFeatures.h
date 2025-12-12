@@ -26,6 +26,7 @@ namespace features {
 
 struct Flags {
    bool strictInitializationChecks = false;
+   bool ParallelDeviceInitialization = true;
    // How to add a new Core feature: see the comment in the .cpp file.
 };
 

@@ -8,7 +8,7 @@
 #include "ASIStateDevice.h"
 
 StateDevice::StateDevice() :
-	ASIBase(this, ""), // LX-4000 Prefix Unknown
+	ASIBase(this, ""),
 	numPos_(4),
 	axis_("F"),
 	position_(0),
@@ -46,52 +46,60 @@ StateDevice::~StateDevice()
 	Shutdown();
 }
 
-void StateDevice::GetName(char* Name) const
+void StateDevice::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(Name, g_StateDeviceName);
+	CDeviceUtils::CopyLimitedString(name, g_StateDeviceName);
 }
 
-bool StateDevice::SupportsDeviceDetection(void)
+bool StateDevice::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus StateDevice::DetectDevice(void)
+MM::DeviceDetectionStatus StateDevice::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int StateDevice::Initialize()
 {
 	core_ = GetCoreCallback();
 
+   int ret = GetVersion(firmwareVersion_);
+	if (ret != DEVICE_OK)
+       return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &StateDevice::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
+	// get the firmware version data from cached value
+	version_ = Version::ParseString(firmwareVersion_);
+
+	ret = GetCompileDate(firmwareDate_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &StateDevice::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
-
-	// get the date of the firmware
-	char compile_date[MM::MaxStrLength];
-	if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-	{
-		compileDay_ = ExtractCompileDay(compile_date);
-	}
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
-	if (compileDay_ >= ConvertDay(2010, 1, 1))
-	{
+
+	// previously compared against compile date (2010, 1, 1)
+	if (version_ >= Version(8, 8, 'a')) {
+		ret = GetBuildName(firmwareBuild_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &StateDevice::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	// state
 	pAct = new CPropertyAction(this, &StateDevice::OnState);
-	int ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
+	ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -150,32 +158,14 @@ bool StateDevice::Busy()
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "/";
 	std::string answer;
-
-	// query command
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("/", answer);
 	if (ret != DEVICE_OK)
 	{
 		return false;
 	}
 
-	if (answer.length() >= 1)
-	{
-		if (answer.substr(0, 1) == "B")
-		{
-			return true;
-		}
-		else if (answer.substr(0, 1) == "N")
-		{
-			return false;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	return false;
+	return !answer.empty() && answer.front() == 'B';
 }
 
 int StateDevice::UpdateCurrentPosition()
@@ -192,13 +182,13 @@ int StateDevice::UpdateCurrentPosition()
 		return ret;
 	}
 
-	if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+	else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 	{
 		int errNo = atoi(answer.substr(2, 4).c_str());
 		return ERR_OFFSET + errNo;
 	}
 
-	if (answer.substr(0, 2) == ":A")
+	if (answer.compare(0, 2, ":A") == 0)
 	{
 		position_ = (long)atoi(answer.substr(3, 2).c_str()) - 1;
 	}
@@ -210,9 +200,7 @@ int StateDevice::UpdateCurrentPosition()
 	return DEVICE_OK;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int StateDevice::OnNumPositions(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -281,13 +269,13 @@ int StateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 			return ret;
 		}
 
-		if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+		else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
 		{
 			int errNo = atoi(answer.substr(2, 4).c_str());
 			return ERR_OFFSET + errNo;
 		}
 
-		if (answer.substr(0, 2) == ":A")
+		if (answer.compare(0, 2, ":A") == 0)
 		{
 			position_ = position;
 		}

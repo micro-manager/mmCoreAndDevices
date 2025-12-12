@@ -1,10 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          JAI.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Adapter for JAI eBus compatible cameras
-//                
 // AUTHOR:        Nenad Amodaj, 2018
 // COPYRIGHT:     JAI
 //
@@ -284,6 +281,69 @@ int JAICamera::Initialize()
 	SetPropertyLimits(MM::g_Keyword_Exposure, expMinUs / 1000, expMaxUs / 1000);
 	assert(ret == DEVICE_OK);
 
+	// Individual RGB exposures (if supported)
+	PvGenEnum *expSel = genParams->GetEnum("ExposureTimeSelector");
+	if (expSel != nullptr)
+	{
+		int64_t ct{};
+		if (expSel->GetEntriesCount(ct).IsOK() && ct > 1)
+		{
+			// First, look for the "Common" selector; otherwise we don't know what to do.
+			for (int64_t i = 0; i < ct; i++)
+			{
+				const PvGenEnumEntry *entry = nullptr;
+				expSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					if (std::string(name.GetAscii()) == "Common")
+					{
+						commonExposureSelector_ = "Common";
+						break;
+					}
+				}
+			}
+
+			if (!commonExposureSelector_.empty())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnExposureIsIndividual);
+				ret = CreateProperty("ExposureIsIndividual", "Off", MM::String, false, pAct);
+				AddAllowedValue("ExposureIsIndividual", "Off");
+				AddAllowedValue("ExposureIsIndividual", "On");
+
+				// Create properties for all selectors except "Common"
+				for (int64_t i = 0; i < ct; i++)
+				{
+					const PvGenEnumEntry *entry = nullptr;
+					expSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+					if (entry != nullptr && entry->IsAvailable())
+					{
+						PvString name;
+						entry->GetName(name);
+						std::string selectorName = name.GetAscii();
+
+						if (selectorName == commonExposureSelector_)
+							continue;  // Skip the common selector
+
+						auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+							return OnSelectorExposure(selectorName, pProp, eAct);
+						});
+						const std::string propName = "Exposure_" + selectorName;
+						double eMs{};
+						GetSelectorExposure(selectorName, eMs);
+						double eMinMs{}, eMaxMs{};
+						GetSelectorExposureMinMax(selectorName, eMinMs, eMaxMs);
+						CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(eMs),
+							MM::Float, false, action);
+						SetPropertyLimits(propName.c_str(), eMinMs, eMaxMs);
+					}
+				}
+			}
+		}
+	}
+
 	// BINNING
 	pAct = new CPropertyAction(this, &JAICamera::OnBinning);
 	ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);
@@ -348,6 +408,69 @@ int JAICamera::Initialize()
 	SetPropertyLimits(g_Gain, gainMin, gainMax);
 	assert(ret == DEVICE_OK);
 
+	// Individual gains (if supported)
+	PvGenEnum *gainSel = genParams->GetEnum("GainSelector");
+	if (gainSel != nullptr)
+	{
+		int64_t ct{};
+		if (gainSel->GetEntriesCount(ct).IsOK() && ct > 1)
+		{
+			// First, look for the "AnalogAll" selector; otherwise we don't know what to do
+			for (int64_t i = 0; i < ct; i++)
+			{
+				const PvGenEnumEntry *entry = nullptr;
+				gainSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					if (std::string(name.GetAscii()) == "AnalogAll")
+					{
+						commonGainSelector_ = "AnalogAll";
+						break;
+					}
+				}
+			}
+
+			if (!commonGainSelector_.empty())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnGainIsIndividual);
+				ret = CreateProperty("GainIsIndividual", "Off", MM::String, false, pAct);
+				AddAllowedValue("GainIsIndividual", "Off");
+				AddAllowedValue("GainIsIndividual", "On");
+
+				// Create properties for all selectors except "AnalogAll"
+				for (int64_t i = 0; i < ct; i++)
+				{
+					const PvGenEnumEntry *entry = nullptr;
+					gainSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+					if (entry != nullptr && entry->IsAvailable())
+					{
+						PvString name;
+						entry->GetName(name);
+						std::string selectorName = name.GetAscii();
+
+						if (selectorName == commonGainSelector_)
+							continue;  // Skip the common selector
+
+						auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+							return OnSelectorGain(selectorName, pProp, eAct);
+						});
+						const std::string propName = "Gain_" + selectorName;
+						double g{};
+						GetSelectorGain(selectorName, g);
+						double gMin{}, gMax{};
+						GetSelectorGainMinMax(selectorName, gMin, gMax);
+						CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(g),
+							MM::Float, false, action);
+						SetPropertyLimits(propName.c_str(), gMin, gMax);
+					}
+				}
+			}
+		}
+	}
+
 	// GAMMA
 	double gamma, gammaMin, gammaMax;
 	pvr = genParams->GetFloatValue("Gamma", gamma);
@@ -362,6 +485,58 @@ int JAICamera::Initialize()
 	ret = CreateProperty(g_Gamma, CDeviceUtils::ConvertToString(gamma), MM::Float, false, pAct);
 	SetPropertyLimits(g_Gamma, gammaMin, gammaMax);
 	assert(ret == DEVICE_OK);
+
+	// BLACK LEVEL (per selector, or single if no selector)
+	// Always suffix property name with selector name when selector exists
+	PvGenEnum *blackLevelSel = genParams->GetEnum("BlackLevelSelector");
+	if (blackLevelSel != nullptr)
+	{
+		int64_t ct{};
+		if (blackLevelSel->GetEntriesCount(ct).IsOK() && ct >= 1)
+		{
+			for (int64_t i = 0; i < ct; i++)
+			{
+				const PvGenEnumEntry *entry = nullptr;
+				blackLevelSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					std::string selectorName = name.GetAscii();
+
+					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+						return OnSelectorBlackLevel(selectorName, pProp, eAct);
+					});
+					const std::string propName = "BlackLevel_" + selectorName;
+					double bl{};
+					GetSelectorBlackLevel(selectorName, bl);
+					double blMin{}, blMax{};
+					GetSelectorBlackLevelMinMax(selectorName, blMin, blMax);
+					CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(bl),
+						MM::Float, false, action);
+					SetPropertyLimits(propName.c_str(), blMin, blMax);
+				}
+			}
+		}
+	}
+	else
+	{
+		// No selector - check if BlackLevel feature exists directly
+		double bl{}, blMin{}, blMax{};
+		pvr = genParams->GetFloatValue("BlackLevel", bl);
+		if (pvr.IsOK())
+		{
+			pvr = genParams->GetFloatRange("BlackLevel", blMin, blMax);
+			if (pvr.IsOK())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnBlackLevel);
+				CreateProperty("BlackLevel", CDeviceUtils::ConvertToString(bl),
+					MM::Float, false, pAct);
+				SetPropertyLimits("BlackLevel", blMin, blMax);
+			}
+		}
+	}
 
 	// TEST PATTERN
 	// list test pattern optiopns
@@ -749,26 +924,18 @@ int JAICamera::ClearROI()
 	return ResizeImageBuffer();
 }
 
-int JAICamera::PrepareSequenceAcqusition()
-{
-   if (IsCapturing())
-   {
-      return DEVICE_CAMERA_BUSY_ACQUIRING;
-   }
-
-   int ret = GetCoreCallback()->PrepareForAcq(this);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   return DEVICE_OK;
-}
-
 int JAICamera::StartSequenceAcquisition(long numImages, double /*interval_ms*/, bool stopOnOvl)
 {
    if (IsCapturing())
    {
       return DEVICE_CAMERA_BUSY_ACQUIRING;
    }
+
+	int ret = GetCoreCallback()->PrepareForAcq(this);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 
    // the camera ignores interval, running at the rate dictated by the exposure
    stopOnOverflow = stopOnOvl;
@@ -782,6 +949,12 @@ int JAICamera::StartSequenceAcquisition(double /*interval_ms*/)
 {
    if (IsCapturing())
       return DEVICE_CAMERA_BUSY_ACQUIRING;
+
+	int ret = GetCoreCallback()->PrepareForAcq(this);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 
    // the camera ignores interval, running at the rate dictated by the exposure
    stopOnOverflow = false;
@@ -816,28 +989,6 @@ int JAICamera::ResizeImageBuffer()
 	assert(pvr.IsOK());
 
 	img.Resize((unsigned)width, (unsigned)height, pixelSize);
-	return DEVICE_OK;
-}
-
-int JAICamera::PushImage(unsigned char* imgBuf)
-{
-	int retCode = GetCoreCallback()->InsertImage(this,
-		imgBuf,
-		img.Width(),
-		img.Height(),
-		img.Depth());
-
-	if (!stopOnOverflow && retCode == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		retCode = GetCoreCallback()->InsertImage(this,
-			imgBuf,
-			img.Width(),
-			img.Height(),
-			img.Depth());
-	}
-
 	return DEVICE_OK;
 }
 
@@ -978,30 +1129,11 @@ void JAICamera::ClearPvBuffers()
 
 int JAICamera::InsertImage()
 {
-   int retCode = GetCoreCallback()->InsertImage(this,
+   return GetCoreCallback()->InsertImage(this,
          img.GetPixels(),
          img.Width(),
          img.Height(),
          img.Depth());
-
-   if (!stopOnOverflow)
-   {
-      if (retCode == DEVICE_BUFFER_OVERFLOW)
-      {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         retCode = GetCoreCallback()->InsertImage(this,
-            img.GetPixels(),
-            img.Width(),
-            img.Height(),
-            img.Depth());
-         return DEVICE_OK;
-      }
-      else
-         return retCode;
-   }
-
-   return retCode;
 }
 
 /**
@@ -1141,6 +1273,7 @@ int AcqSequenceThread::svc (void)
 			}
 
 			// transfer pv image to camera buffer
+			// TODO Handle RGBA64 case correctly
 			uint8_t* pSrcImg = pvImg->GetDataPointer();
 			moduleInstance->img.Resize(width, height, 4); // RGBA format
 			uint8_t* pDestImg = moduleInstance->img.GetPixelsRW();
@@ -1195,15 +1328,11 @@ int AcqSequenceThread::svc (void)
 		return processPvError(pvr, camStream);
 	}
 
-	if (pvr.IsFailure())
-	{
-		return processPvError(pvr, camStream);
-	}
-
 	camStream->Close();
 	moduleInstance->ClearPvBuffers();
+	int ret = moduleInstance->GetCoreCallback()->AcqFinished(moduleInstance, DEVICE_OK);
 	InterlockedExchange(&moduleInstance->acquiring, 0);
-   return 0;
+   return ret;
 }
 
 void AcqSequenceThread::Stop()

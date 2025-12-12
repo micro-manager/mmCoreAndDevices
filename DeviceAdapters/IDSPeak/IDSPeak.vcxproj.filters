@@ -15,18 +15,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="IDSPeak.h">
+    <ClInclude Include="IDSPeakCamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IDSPeakHub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="IDSPeak.cpp">
+    <ClCompile Include="IDSPeakCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="ids_peak_comfort_c.lib">
-      <Filter>Resource Files</Filter>
-    </Library>
+    <ClCompile Include="IDSPeakHub.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

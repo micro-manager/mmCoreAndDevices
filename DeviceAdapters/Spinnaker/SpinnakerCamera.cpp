@@ -123,7 +123,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 SpinnakerCamera::SpinnakerCamera(GENICAM::gcstring name)
-   : CCameraBase<SpinnakerCamera>(),
+   :
    m_system(nullptr),
    m_cam(nullptr),
    m_imageBuff(nullptr),
@@ -891,7 +891,8 @@ const unsigned char* SpinnakerCamera::GetImageBuffer()
 
          if (m_imageBuff)
          {
-            if (m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8) {
+            if (m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8 
+                     || m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed) {
                size_t theirSizeD3 = m_imagePtr->GetBufferSize() / 3;
                size_t ourSizeD4 = this->GetImageBufferSize() / 4;
                size_t minSize = theirSizeD3 > ourSizeD4 ? ourSizeD4 : theirSizeD3;
@@ -961,6 +962,8 @@ unsigned SpinnakerCamera::GetImageBytesPerPixel() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8)
       return 4;
+   if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
+      return 4;
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
       return 4;
 
@@ -996,6 +999,8 @@ unsigned SpinnakerCamera::GetNumberOfComponents() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8)
       return 4;
+   if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
+      return 4;
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
       return 4;
 
@@ -1005,7 +1010,8 @@ unsigned SpinnakerCamera::GetNumberOfComponents() const
 unsigned SpinnakerCamera::GetBitDepth() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8 ||
-      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
+      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8 ||
+      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
    {
       return 8;
    }
@@ -1623,7 +1629,8 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
 
          if (ip->GetPixelFormat() == SPKR::PixelFormat_Mono12p ||
             ip->GetPixelFormat() == SPKR::PixelFormat_Mono12Packed ||
-            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8)
+            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8 ||
+            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed)
          {
             if (m_imageBuff == NULL)
             {
@@ -1631,7 +1638,7 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
                if (ret != DEVICE_OK) return ret;
             }
 
-            if (ip->GetPixelFormat() == SPKR::PixelFormat_RGB8) 
+            if (ip->GetPixelFormat() == SPKR::PixelFormat_RGB8 || ip->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed) 
             {
                size_t theirSizeD3 = ip->GetBufferSize() / 3;
                size_t ourSizeD4 = this->GetImageBufferSize() / 4;
@@ -1654,20 +1661,10 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          unsigned int b = GetImageBytesPerPixel();
 
          int ret = GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize().c_str());
-         if (!m_stopOnOverflow && ret == DEVICE_BUFFER_OVERFLOW)
-         {
-            // do not stop on overflow - just reset the buffer
-            GetCoreCallback()->ClearImageBuffer(this);
-            // don't process this same image again...
-            return GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize().c_str(), false);
-         }
-         else
-         {
-            if (ip != nullptr)
-               ip->Release();
+         if (ip != nullptr)
+            ip->Release();
 
-            return ret;
-         }
+         return ret;
       }
       else
       {
@@ -1792,7 +1789,10 @@ int SpinnakerAcquisitionThread::svc(void) throw()
    m_actualDuration = m_spkrCam->GetCurrentMMTime() - m_startTime;
    m_spkrCam->m_cam->EndAcquisition();
    m_spkrCam->m_cam->AcquisitionMode.SetValue(SPKR::AcquisitionMode_SingleFrame);
-   m_spkrCam->OnThreadExiting();
+   auto* core = m_spkrCam->GetCoreCallback();
+   if (core != nullptr) {
+      core->AcqFinished(m_spkrCam, 0);
+   }
    return DEVICE_OK;
 }
 

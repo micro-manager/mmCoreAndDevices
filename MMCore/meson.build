@@ -4,7 +4,7 @@
 project(
     'MMCore',
     'cpp',
-    meson_version: '>=1.2.0',
+    meson_version: '>=1.8.0',
     default_options: [
         'cpp_std=c++14',
         'warning_level=3',
@@ -17,25 +17,15 @@ if cxx.get_id() in ['msvc', 'clang-cl']
     add_project_arguments('-DNOMINMAX', language: 'cpp')
 endif
 
-# MMDevice must be copied into subprojects/ for this experimental build to work
-# (unless MMCore is itself being used as a subproject).
-if get_option('tests').enabled()
-    tests_option = 'enabled'
-elif get_option('tests').disabled()
-    tests_option = 'disabled'
-else
-    tests_option = 'auto'
-endif
+# mmdevice is provided via a .wrap, but it should be manually copied into
+# subprojects in order to control the version that gets fetched.
 mmdevice_proj = subproject(
-    'MMDevice',
+    'mmdevice',
     default_options: {
-        'client_interface': true,
-        # Propagate value of 'tests' option ('yield: true' in MMDeivce's
-        # 'tests' option did not seem to work; Meson 1.3.1).
-        'tests': tests_option,
+        'client_interface': true,  # Build for use by mmcore
     },
 )
-mmdevice_dep = mmdevice_proj.get_variable('mmdevice')
+mmdevice_dep = mmdevice_proj.get_variable('mmdevice_dep')
 
 mmcore_sources = files(
     'CircularBuffer.cpp',
@@ -51,18 +41,22 @@ mmcore_sources = files(
     'Devices/HubInstance.cpp',
     'Devices/ImageProcessorInstance.cpp',
     'Devices/MagnifierInstance.cpp',
+    'Devices/PressurePumpInstance.cpp',
     'Devices/SerialInstance.cpp',
     'Devices/ShutterInstance.cpp',
     'Devices/SignalIOInstance.cpp',
     'Devices/SLMInstance.cpp',
     'Devices/StageInstance.cpp',
     'Devices/StateInstance.cpp',
+    'Devices/VolumetricPumpInstance.cpp',
     'Devices/XYStageInstance.cpp',
     'Error.cpp',
     'FrameBuffer.cpp',
     'LibraryInfo/LibraryPathsUnix.cpp',
     'LibraryInfo/LibraryPathsWindows.cpp',
     'LoadableModules/LoadedDeviceAdapter.cpp',
+    'LoadableModules/LoadedDeviceAdapterImplMock.cpp',
+    'LoadableModules/LoadedDeviceAdapterImplRegular.cpp',
     'LoadableModules/LoadedModule.cpp',
     'LoadableModules/LoadedModuleImpl.cpp',
     'LoadableModules/LoadedModuleImplUnix.cpp',
@@ -90,6 +84,7 @@ mmcore_public_headers = files(
     'Logging/GenericMetadata.h',
     'MMCore.h',
     'MMEventCallback.h',
+    'MockDeviceAdapter.h',
 )
 # Note that the MMDevice headers are also needed; which of those are part of
 # MMCore's public interface is poorly defined at the moment.
@@ -104,6 +99,7 @@ mmcore_lib = static_library(
         mmdevice_dep,
         dependency('threads'),
     ],
+    gnu_symbol_visibility: 'inlineshidden',
     cpp_args: [
         '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
     ],
@@ -111,11 +107,12 @@ mmcore_lib = static_library(
 
 subdir('unittest')
 
-mmcore = declare_dependency(
+mmcore_dep = declare_dependency(
     include_directories: mmcore_include_dir,
     link_with: mmcore_lib,
     dependencies: mmdevice_dep,
 )
+meson.override_dependency('mmcore', mmcore_dep)
 
 # For providing include dir to SWIG when using this project as a subproject
 swig_include_dirs = mmdevice_proj.get_variable('swig_include_dirs') + [

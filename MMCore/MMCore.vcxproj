@@ -20,13 +20,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -55,6 +55,7 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <AdditionalIncludeDirectories>..\MMDevice;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)MMCore.lib</OutputFile>
@@ -69,6 +70,7 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <AdditionalIncludeDirectories>..\MMDevice;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)MMCore.lib</OutputFile>
@@ -88,17 +90,21 @@
     <ClCompile Include="Devices\HubInstance.cpp" />
     <ClCompile Include="Devices\ImageProcessorInstance.cpp" />
     <ClCompile Include="Devices\MagnifierInstance.cpp" />
+    <ClCompile Include="Devices\PressurePumpInstance.cpp" />
     <ClCompile Include="Devices\SerialInstance.cpp" />
     <ClCompile Include="Devices\ShutterInstance.cpp" />
     <ClCompile Include="Devices\SignalIOInstance.cpp" />
     <ClCompile Include="Devices\SLMInstance.cpp" />
     <ClCompile Include="Devices\StageInstance.cpp" />
     <ClCompile Include="Devices\StateInstance.cpp" />
+    <ClCompile Include="Devices\VolumetricPumpInstance.cpp" />
     <ClCompile Include="Devices\XYStageInstance.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
     <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp" />
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplMock.cpp" />
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplRegular.cpp" />
     <ClCompile Include="LoadableModules\LoadedModule.cpp" />
     <ClCompile Include="LoadableModules\LoadedModuleImpl.cpp" />
     <ClCompile Include="LoadableModules\LoadedModuleImplWindows.cpp" />
@@ -131,17 +137,22 @@
     <ClInclude Include="Devices\HubInstance.h" />
     <ClInclude Include="Devices\ImageProcessorInstance.h" />
     <ClInclude Include="Devices\MagnifierInstance.h" />
+    <ClInclude Include="Devices\PressurePumpInstance.h" />
     <ClInclude Include="Devices\SerialInstance.h" />
     <ClInclude Include="Devices\ShutterInstance.h" />
     <ClInclude Include="Devices\SignalIOInstance.h" />
     <ClInclude Include="Devices\SLMInstance.h" />
     <ClInclude Include="Devices\StageInstance.h" />
     <ClInclude Include="Devices\StateInstance.h" />
+    <ClInclude Include="Devices\VolumetricPumpInstance.h" />
     <ClInclude Include="Devices\XYStageInstance.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="FrameBuffer.h" />
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h" />
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImpl.h" />
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplMock.h" />
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplRegular.h" />
     <ClInclude Include="LoadableModules\LoadedModule.h" />
     <ClInclude Include="LoadableModules\LoadedModuleImpl.h" />
     <ClInclude Include="LoadableModules\LoadedModuleImplWindows.h" />
@@ -161,6 +172,7 @@
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="MMCore.h" />
     <ClInclude Include="MMEventCallback.h" />
+    <ClInclude Include="MockDeviceAdapter.h" />
     <ClInclude Include="PluginManager.h" />
     <ClInclude Include="Semaphore.h" />
     <ClInclude Include="Task.h" />

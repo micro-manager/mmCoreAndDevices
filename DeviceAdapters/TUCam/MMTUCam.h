@@ -212,6 +212,8 @@ public:
 
     void GetName(char* name) const;      
 
+    bool Busy() { return false; }
+
     // MMCamera API
     // ------------
     int SnapImage();
@@ -235,9 +237,6 @@ public:
     int RunSequenceOnThread(MM::MMTime startTime);
     bool IsCapturing();
     void OnThreadExiting() throw(); 
-    double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-    // GetPixelSizeUm() is final in base class, so we don't override it
-    bool Busy() override { return busy_; }
     int GetBinning() const;
     int SetBinning(int bS);
 
@@ -386,8 +385,6 @@ private:
 	bool IsSupport201DNew()     { return DHYANA_201D     == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupport400BSIV3New() { return DHYANA_400BSIV3 == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupportAries16()     { return 0xE424 == m_nPID || 0xE425 == m_nPID; }
-
-    static const double nominalPixelSizeUm_;
 
     double exposureMaximum_;
     double exposureMinimum_;

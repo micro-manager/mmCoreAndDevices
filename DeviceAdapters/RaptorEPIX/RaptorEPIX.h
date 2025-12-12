@@ -27,7 +27,6 @@
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "DeviceThreads.h"
-//#include "Debayer.h"
 
 //#define PLEORA
 
@@ -171,6 +170,8 @@ public:
    int Shutdown();
   
    void GetName(char* name) const;      
+
+   bool Busy() { return false; }
    
    // MMCamera API
    // ------------
@@ -199,8 +200,6 @@ public:
    int ThreadRun();
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    int GetBinning() const;
    int SetBinning(int bS);
    int GetBinningX() const;
@@ -424,8 +423,6 @@ private:
            
 
    //int serialWriteReadCmd(int unit, unsigned char* bufin, int insize, unsigned char* bufout, int outsize );
-
-   static const double nominalPixelSizeUm_;
 
    int cameraType_;
    double dPhase_;

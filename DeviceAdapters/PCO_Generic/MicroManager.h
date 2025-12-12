@@ -6,7 +6,7 @@
 // DESCRIPTION:   pco.camera generic camera module
 //                
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 06/08/2005
-//                Franz Reitner, pco ag, 13.12.2013
+//                Franz Reitner, excelitas pco, 13.12.2013
 // COPYRIGHT:     University of California, San Francisco, 2006
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -95,6 +95,7 @@ public:
   int ClearROI();
   int PrepareSequenceAcqusition();
   int StartSequenceAcquisition(long numImages, double /*interval_ms*/, bool stopOnOverflow);
+  int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
   int StopSequenceAcquisition();
   int StoppedByThread();
   bool IsCapturing();
@@ -113,6 +114,7 @@ public:
   int OnCCDType(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnAcquireMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnAcquireModeNumImages(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFpsMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnNoiseFilterMode(MM::PropertyBase* pProp, MM::ActionType eAct);

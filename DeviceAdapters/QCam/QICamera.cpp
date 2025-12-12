@@ -568,8 +568,7 @@ QIDriver::Access::~Access()
 * perform most of the initialization in the Initialize() method.
 */
 QICamera::QICamera()
-:CCameraBase<QICamera> ()
-,m_isInitialized(false)
+:m_isInitialized(false)
 ,m_softwareTrigger(false)
 ,m_rgbColor(false)
 ,m_dExposure(0)
@@ -4314,7 +4313,7 @@ int QICamera::StartSequenceAcquisition(long numImages, double interval_ms, bool 
 
    // start the acquisition thread
    m_sthd->SetLength(numImages);
-   setStopOnOverflow(stopOnOverflow);
+   m_stopWhenCBOverflows = stopOnOverflow;
    m_sthd->Start();
 
    return DEVICE_OK;
@@ -4325,7 +4324,7 @@ int QICamera::StartSequenceAcquisition(long numImages, double interval_ms, bool 
 */
 int QICamera::RestartSequenceAcquisition()
 {
-   return StartSequenceAcquisition(m_sthd->GetRemaining(), m_interval, isStopOnOverflow());
+   return StartSequenceAcquisition(m_sthd->GetRemaining(), m_interval, m_stopWhenCBOverflows);
 }
 
 
@@ -4507,25 +4506,10 @@ int QICamera::InsertImage(int iFrameBuff)
 
       ret = GetCoreCallback()->InsertImage(this, (unsigned char*) m_colorBuffer.GetPixelsRW(), 
          m_colorBuffer.Width(), m_colorBuffer.Height(), m_colorBuffer.Depth());
-
-      if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW) {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         ret = GetCoreCallback()->InsertImage(this, (unsigned char*) m_colorBuffer.GetPixelsRW(), 
-            m_colorBuffer.Width(), m_colorBuffer.Height(), m_colorBuffer.Depth());
-      }
-
    } else {
       int bytes = (pFrame->bits > 8) ? 2 : 1;
       ret = GetCoreCallback()->InsertImage(this, (unsigned char*) pFrame->pBuffer, 
          pFrame->width, pFrame->height, bytes);
-
-      if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW) {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         ret = GetCoreCallback()->InsertImage(this, (unsigned char*) pFrame->pBuffer, 
-            pFrame->width, pFrame->height, bytes);
-      }
    }
    return ret;
 }

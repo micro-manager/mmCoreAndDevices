@@ -28,7 +28,6 @@ const char* g_StepSizeProp = "Step Size";
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 RAMPSXYStage::RAMPSXYStage() :
-    CXYStageBase<RAMPSXYStage>(),
     stepSize_um_(0.025),
     posX_um_(0.0),
     posY_um_(0.0),

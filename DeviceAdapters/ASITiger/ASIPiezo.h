@@ -22,8 +22,8 @@
 // BASED ON:      ASIStage.h and others
 //
 
-#ifndef _ASIPiezo_H_
-#define _ASIPiezo_H_
+#ifndef ASIPIEZO_H
+#define ASIPIEZO_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -36,12 +36,10 @@ public:
    ~CPiezo() { }
   
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // Piezo API
-   // -----------
    int Stop();
    int Home();
 
@@ -69,7 +67,6 @@ public:
    int SendStageSequence();
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLowerLim             (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -119,7 +116,7 @@ public:
 private:
    double unitMult_;
    double stepSizeUm_;
-   string axisLetter_;
+   std::string axisLetter_;
    bool ring_buffer_supported_;
    long ring_buffer_capacity_;
    bool ttl_trigger_supported_;
@@ -127,8 +124,7 @@ private:
    bool runningFastSequence_;
    std::vector<double> sequence_;
 
-   // private helper functions
    int OnSaveJoystickSettings();
 };
 
-#endif //_ASIPiezo_H_
+#endif // ASIPIEZO_H

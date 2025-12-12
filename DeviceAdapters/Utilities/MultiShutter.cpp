@@ -33,7 +33,6 @@
 
 #include "Utilities.h"
 
-#include <boost/lexical_cast.hpp>
 #include <algorithm>
 
 extern const char* g_DeviceNameMultiShutter;
@@ -156,6 +155,7 @@ int MultiShutter::SetOpen(bool open)
       }
    }
    open_ = open;
+   GetCoreCallback()->OnShutterOpenChanged(this, open);
    return DEVICE_OK;
 }
 

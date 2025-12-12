@@ -10,12 +10,22 @@
 CRISP::CRISP() :
 	ASIBase(this, ""),
 	axis_("Z"),
+	focusState_(""),
 	waitAfterLock_(1000),
-	answerTimeoutMs_(1000)
+	answerTimeoutMs_(1000),
+	// init cached properties
+	gainMultiplier_(0),
+	ledIntensity_(0),
+	numAverages_(0),
+	numSkips_(0),
+	calibrationRange_(0),
+	inFocusRange_(0),
+	lockRange_(0),
+	objectiveNA_(0)
 {
 	InitializeDefaultErrorMessages();
 
-	SetErrorText(ERR_NOT_CALIBRATED, "CRISP is not calibrated.  Try focusing close to a coverslip and selecting 'Calibrate'");
+	SetErrorText(ERR_NOT_CALIBRATED, "CRISP is not calibrated. Try focusing close to a coverslip and selecting 'Calibrate'");
 	SetErrorText(ERR_UNRECOGNIZED_ANSWER, "The ASI controller said something incomprehensible");
 	SetErrorText(ERR_NOT_LOCKED, "The CRISP failed to lock");
 
@@ -45,19 +55,19 @@ CRISP::~CRISP()
 	initialized_ = false;
 }
 
-void CRISP::GetName(char* pszName) const
+void CRISP::GetName(char* name) const
 {
-	CDeviceUtils::CopyLimitedString(pszName, g_CRISPDeviceName);
+	CDeviceUtils::CopyLimitedString(name, g_CRISPDeviceName);
 }
 
-bool CRISP::SupportsDeviceDetection(void)
+bool CRISP::SupportsDeviceDetection()
 {
 	return true;
 }
 
-MM::DeviceDetectionStatus CRISP::DetectDevice(void)
+MM::DeviceDetectionStatus CRISP::DetectDevice()
 {
-	return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int CRISP::Initialize()
@@ -79,35 +89,36 @@ int CRISP::Initialize()
 	// Read-only "AxisLetter" property, axis_ is set using a pre-init property named "Axis".
 	CreateProperty("AxisLetter", axis_.c_str(), MM::String, true);
 	
+	ret = GetVersion(firmwareVersion_);
+	if (ret != DEVICE_OK)
+		return ret;
 	CPropertyAction* pAct = new CPropertyAction(this, &CRISP::OnVersion);
-	CreateProperty("Version", "", MM::String, true, pAct);
+	CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
+	// get the firmware version data from cached value
+	version_ = Version::ParseString(firmwareVersion_);
+
+	ret = GetCompileDate(firmwareDate_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnCompileDate);
 	CreateProperty("CompileDate", "", MM::String, true, pAct);
-	UpdateProperty("CompileDate");
-
-	// get the date of the firmware
-	char compile_date[MM::MaxStrLength];
-	if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-	{
-		compileDay_ = ExtractCompileDay(compile_date);
-	}
-
-	// get the firmware version data
-	char version[MM::MaxStrLength];
-	if (GetProperty("Version", version) == DEVICE_OK)
-	{
-		versionData_ = ExtractVersionData(std::string(version));
-	}
 
 	// if really old firmware then don't get build name
 	// build name is really just for diagnostic purposes anyway
 	// I think it was present before 2010 but this is easy way
-	if (compileDay_ >= ConvertDay(2010, 1, 1))
-	{
+
+	// previously compared against compile date (2010, 1, 1)
+	if (version_ >= Version(8, 8, 'a')) {
+		ret = GetBuildName(firmwareBuild_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &CRISP::OnBuildName);
 		CreateProperty("BuildName", "", MM::String, true, pAct);
-		UpdateProperty("BuildName");
 	}
 
 	pAct = new CPropertyAction(this, &CRISP::OnFocus);
@@ -132,47 +143,85 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnWaitAfterLock);
 	CreateProperty("Wait ms after Lock", "1000", MM::Integer, false, pAct);
 
+	ret = GetObjectiveNA(objectiveNA_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnNA);
-	CreateProperty("Objective NA", "0.8", MM::Float, false, pAct);
+	CreateProperty("Objective NA", std::to_string(objectiveNA_).c_str(), MM::Float, false, pAct);
 	SetPropertyLimits("Objective NA", 0, 1.65);
 
+	ret = GetLockRange(lockRange_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnLockRange);
-	CreateProperty("Max Lock Range(mm)", "0.05", MM::Float, false, pAct);
+	CreateProperty("Max Lock Range(mm)", std::to_string(lockRange_).c_str(), MM::Float, false, pAct);
 
 	pAct = new CPropertyAction(this, &CRISP::OnCalGain);
-	CreateProperty("Calibration Gain", "0.05", MM::Integer, false, pAct);
+	CreateProperty("Calibration Gain", "0", MM::Integer, false, pAct);
 
+	ret = GetCalRange(calibrationRange_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	pAct = new CPropertyAction(this, &CRISP::OnCalRange);
+	CreateProperty("Calibration Range(um)", std::to_string(calibrationRange_).c_str(), MM::Float, false, pAct);
+
+	ret = GetLEDIntensity(ledIntensity_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnLEDIntensity);
-	CreateProperty("LED Intensity", "50", MM::Integer, false, pAct);
+	CreateProperty("LED Intensity", std::to_string(ledIntensity_).c_str(), MM::Integer, false, pAct);
 	SetPropertyLimits("LED Intensity", 0, 100);
 
+	ret = GetGainMultiplier(gainMultiplier_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnGainMultiplier);
-	CreateProperty("GainMultiplier", "10", MM::Integer, false, pAct);
+	CreateProperty("GainMultiplier", std::to_string(gainMultiplier_).c_str(), MM::Integer, false, pAct);
 	SetPropertyLimits("GainMultiplier", 1, 100);
 
+	ret = GetNumAverages(numAverages_);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 	pAct = new CPropertyAction(this, &CRISP::OnNumAvg);
-	CreateProperty("Number of Averages", "1", MM::Integer, false, pAct);
+	CreateProperty("Number of Averages", std::to_string(numAverages_).c_str(), MM::Integer, false, pAct);
 	SetPropertyLimits("Number of Averages", 0, 8);
 
 	pAct = new CPropertyAction(this, &CRISP::OnOffset);
 	CreateProperty(g_CRISPOffsetPropertyName, "", MM::Integer, true, pAct);
-	UpdateProperty(g_CRISPOffsetPropertyName);
 
 	pAct = new CPropertyAction(this, &CRISP::OnState);
 	CreateProperty(g_CRISPStatePropertyName, "", MM::String, true, pAct);
-	UpdateProperty(g_CRISPStatePropertyName);
 
-	// not sure exactly when Gary made these firmware changes, but they were there by start of 2015
-	if (compileDay_ >= ConvertDay(2015, 1, 1))
-	{
+	// previously compared against compile date (2015, 1, 1)
+	if (version_ >= Version(9, 2, 'h')) {
+		ret = GetNumSkips(numSkips_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &CRISP::OnNumSkips);
-		CreateProperty("Number of Skips", "0", MM::Integer, false, pAct);
+		CreateProperty("Number of Skips", std::to_string(numSkips_).c_str(), MM::Integer, false, pAct);
 		SetPropertyLimits("Number of Skips", 0, 100);
-		UpdateProperty("Number of Skips");
 
+		ret = GetInFocusRange(inFocusRange_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
 		pAct = new CPropertyAction(this, &CRISP::OnInFocusRange);
-		CreateProperty("In Focus Range(um)", "0.1", MM::Float, false, pAct);
-		UpdateProperty("In Focus Range(um)");
+		CreateProperty("In Focus Range(um)", std::to_string(inFocusRange_).c_str(), MM::Float, false, pAct);
 	}
 
 	const char* fc = "Obtain Focus Curve";
@@ -195,28 +244,20 @@ int CRISP::Initialize()
 	pAct = new CPropertyAction(this, &CRISP::OnLogAmpAGC);
 	CreateProperty("LogAmpAGC", "", MM::Integer, true, pAct);
 
-	// use faster serial commands with new versions of the firmware
-	if (versionData_.isVersionAtLeast(9, 2, 'o'))
-	{
-		// These commands use LK T? and LK Y? => ":A 0 \r\n"
-		pAct = new CPropertyAction(this, &CRISP::OnDitherError);
-		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
-		UpdateProperty(g_CRISPDitherErrorPropertyName);
+	// Read-only Properties
 
-		pAct = new CPropertyAction(this, &CRISP::OnSum);
-		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-		UpdateProperty(g_CRISPSumPropertyName);
-	}
-	else
-	{
-		// These commands use EXTRA X? => "I    9    0 \r\n"
-		pAct = new CPropertyAction(this, &CRISP::OnDitherErrorLegacy);
-		CreateProperty(g_CRISPDitherErrorPropertyName, "", MM::Integer, true, pAct);
-		UpdateProperty(g_CRISPDitherErrorPropertyName);
+	// Always read, not cached
+	CreateSumProperty();
+	CreateDitherErrorProperty();
 
-		pAct = new CPropertyAction(this, &CRISP::OnSumLegacy);
-		CreateProperty(g_CRISPSumPropertyName, "", MM::Integer, true, pAct);
-		UpdateProperty(g_CRISPSumPropertyName);
+	// LK M requires firmware version 9.2n or higher.
+	// Enable these properties as a group to modify calibration settings.
+	if (version_ >= Version(9, 2, 'n')) {
+		pAct = new CPropertyAction(this, &CRISP::OnSetLogAmpAGC);
+		CreateProperty("Set LogAmpAGC (Advanced Users Only)", "0", MM::Integer, false, pAct);
+
+		pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
+		CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
 	}
 
 	return DEVICE_OK;
@@ -239,7 +280,7 @@ bool CRISP::Busy()
  */
 int CRISP::GetOffset(double& offset)
 {
-	float val;
+	double val{};
 	int ret = GetValue("LK Z?", val);
 	if (ret != DEVICE_OK)
 	{
@@ -267,10 +308,9 @@ int CRISP::GetFocusState(std::string& focusState)
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
-	const char* command = "LK X?"; // Requests single char lock state description
+	// Requests single char lock state description
 	std::string answer;
-	// query command
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("LK X?", answer);
 	if (ret != DEVICE_OK)
 	{
 		return ERR_UNRECOGNIZED_ANSWER;
@@ -315,7 +355,7 @@ int CRISP::GetFocusState(std::string& focusState)
 	return DEVICE_OK;
 }
 
-int CRISP::SetFocusState(std::string focusState)
+int CRISP::SetFocusState(const std::string& focusState)
 {
 	std::string currentState;
 	int ret = GetFocusState(currentState);
@@ -332,7 +372,7 @@ int CRISP::SetFocusState(std::string focusState)
 	return ForceSetFocusState(focusState);
 }
 
-int CRISP::ForceSetFocusState(std::string focusState)
+int CRISP::ForceSetFocusState(const std::string& focusState)
 {
 	std::string currentState;
 	int ret = GetFocusState(currentState);
@@ -349,50 +389,41 @@ int CRISP::ForceSetFocusState(std::string focusState)
 	if (focusState == g_CRISP_I)
 	{
 		// Idle (switch off LED)
-		const char* command = "LK F=79";
-		return SetCommand(command);
+		return SetCommand("LK F=79");
 	}
 	else if (focusState == g_CRISP_R)
 	{
 		// Unlock
-		const char* command = "LK F=85";
-		return SetCommand(command);
+		return SetCommand("LK F=85");
 	}
 	else if (focusState == g_CRISP_K)
 	{
 		// Lock
-		const char* command = "LK F=83";
-		return SetCommand(command);
+		return SetCommand("LK F=83");
 	}
 	else if (focusState == g_CRISP_G)
 	{
-		// Log-Amp Calibration
-		const char* command = "LK F=72";
-		return SetCommand(command);
+		// Log-Amp Calibration;
+		return SetCommand("LK F=72");
 	}
 	else if (focusState == g_CRISP_SG)
 	{
 		// gain_Cal Calibration
-		const char* command = "LK F=67";
-		return SetCommand(command);
+		return SetCommand("LK F=67");
 	}
 	else if (focusState == g_CRISP_f)
 	{
 		// Dither
-		const char* command = "LK F=102";
-		return SetCommand(command);
+		return SetCommand("LK F=102");
 	}
 	else if (focusState == g_CRISP_RFO)
 	{
 		// Reset focus offset
-		const char* command = "LK F=111";
-		return SetCommand(command);
+		return SetCommand("LK F=111");
 	}
 	else if (focusState == g_CRISP_SSZ)
 	{
-		// Reset focus offset
-		const char* command = "SS Z";
-		return SetCommand(command);
+		return SetCommand("SS Z");
 	}
 
 	return DEVICE_OK;
@@ -406,7 +437,7 @@ bool CRISP::IsContinuousFocusLocked()
 	{
 		return false;
 	}
-	return (focusState == g_CRISP_K);
+	return focusState == g_CRISP_F;
 }
 
 int CRISP::SetContinuousFocusing(bool state)
@@ -495,10 +526,9 @@ int CRISP::GetLastFocusScore(double& score)
 	ClearPort();
 
 	score = 0;
-	const char* command = "LK Y?"; // Requests present value of the focus error as shown on LCD panel
+	// Get current value of the focus error as shown on LCD panel
 	std::string answer;
-	// query command
-	int ret = QueryCommand(command, answer);
+	int ret = QueryCommand("LK Y?", answer);
 	if (ret != DEVICE_OK)
 	{
 		return ret;
@@ -518,69 +548,50 @@ int CRISP::GetCurrentFocusScore(double& score)
 	return GetLastFocusScore(score);
 }
 
-int CRISP::GetValue(std::string cmd, float& val)
-{
+int CRISP::GetValue(const std::string& command, double& value) {
 	std::string answer;
-	// query command
-	int ret = QueryCommand(cmd.c_str(), answer);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
+	const int result = QueryCommand(command.c_str(), answer);
+	if (result != DEVICE_OK) {
+		return result;
 	}
 
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
-	{
-		int errNo = atoi(answer.substr(2).c_str());
-		return ERR_OFFSET + errNo;
-	}
-	else if (answer.length() > 0)
-	{
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0) {
+		const int errorNum = atoi(answer.substr(2).c_str());
+		return ERR_OFFSET + errorNum;
+	} else if (answer.length() > 0) {
 		size_t index = 0;
-		while (!isdigit(answer[index]) && (index < answer.length()))
-		{
+		while (!isdigit(answer[index]) && index < answer.length()) {
 			index++;
 		}
 
-		if (index >= answer.length())
-		{
+		if (index >= answer.length()) {
 			return ERR_UNRECOGNIZED_ANSWER;
 		}
 
-		val = (float)atof((answer.substr(index)).c_str());
-
+		value = atof((answer.substr(index)).c_str());
 		return DEVICE_OK;
 	}
 
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
-int CRISP::SetCommand(std::string cmd)
-{
+int CRISP::SetCommand(const std::string& command) {
 	std::string answer;
-	// query command
-	int ret = QueryCommand(cmd.c_str(), answer);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
+	const int result = QueryCommand(command.c_str(), answer);
+	if (result != DEVICE_OK) {
+		return result;
 	}
-
-	if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
-	{
+	if (answer.compare(0, 2, ":A") == 0) {
+		return DEVICE_OK;
+	}
+	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0) {
 		int errNo = atoi(answer.substr(2).c_str());
 		return ERR_OFFSET + errNo;
 	}
-
-	if (answer.substr(0, 2) == ":A")
-	{
-		return DEVICE_OK;
-	}
-
 	return ERR_UNRECOGNIZED_ANSWER;
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-//// Action handlers
-/////////////////////////////////////////////////////////////////////////////////
+// Action handlers
 
 int CRISP::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -637,17 +648,23 @@ int CRISP::OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int CRISP::GetObjectiveNA(double& objNA)
+{
+	double na{};
+	int ret = GetValue("LR Y?", na);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	objNA = na;
+	return DEVICE_OK;
+}
+
 int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float na;
-		int ret = GetValue("LR Y?", na);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(na);
+		pProp->Set(objectiveNA_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -655,17 +672,33 @@ int CRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(na);
 		std::ostringstream command;
 		command << std::fixed << "LR Y=" << na;
-
-		return SetCommand(command.str());
+		objectiveNA_ = na;
+		// send "Objective NA" command
+		int ret = SetCommand(command.str());
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
+		// also update the "Calibration Range(um)" property
+		ret = GetCalRange(calibrationRange_);
+		if (ret != DEVICE_OK)
+		{
+			return ret;
+		}
+		// also update "In Focus Range(um)" property
+		return GetInFocusRange(inFocusRange_);
 	}
 	return DEVICE_OK;
 }
 
+// Note: this value cannot be cached because it changes during calibration,
+// and if you want to save calibrations this value needs to be current.
+// The "ASITiger" device adapter avoids always updating with "RefreshPropertyValues".
 int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float calGain;
+		double calGain{};
 		int ret = GetValue("LR X?", calGain);
 		if (ret != DEVICE_OK)
 		{
@@ -679,10 +712,50 @@ int CRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(lr);
 		std::ostringstream command;
 		command << std::fixed << "LR X=" << (int)lr;
-
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
 
+int CRISP::GetCalRange(double& calRange)
+{
+	double calibRange{};
+	int ret = GetValue("LR F?", calibRange);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	calRange = calibRange * 1000.0; // convert to microns
+	return DEVICE_OK;
+}
+
+int CRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(calibrationRange_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		double lr;
+		pProp->Get(lr);
+		std::ostringstream command;
+		command << std::fixed << "LR F=" << lr / 1000.0; // convert to millimeters
+		calibrationRange_ = lr;
+		return SetCommand(command.str());
+	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetLockRange(double& lockRange)
+{
+	double lr{};
+	int ret = GetValue("LR Z?", lr);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	lockRange = lr;
 	return DEVICE_OK;
 }
 
@@ -690,13 +763,7 @@ int CRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float lockRange;
-		int ret = GetValue("LR Z?", lockRange);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(lockRange);
+		pProp->Set(lockRange_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -704,9 +771,21 @@ int CRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(lr);
 		std::ostringstream command;
 		command << std::fixed << "LR Z=" << lr;
-
+		lockRange_ = lr;
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetNumAverages(long& numAverages)
+{
+	double numAvg{};
+	int ret = GetValue("RT F?", numAvg);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	numAverages = (long)numAvg;
 	return DEVICE_OK;
 }
 
@@ -714,13 +793,7 @@ int CRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float numAvg;
-		int ret = GetValue("RT F?", numAvg);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(numAvg);
+		pProp->Set(numAverages_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -728,9 +801,21 @@ int CRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(nr);
 		std::ostringstream command;
 		command << std::fixed << "RT F=" << nr;
-
+		numAverages_ = nr;
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetGainMultiplier(long& gainMult)
+{
+	double gain{};
+	int ret = GetValue("LR T?", gain);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	gainMult = (long)gain;
 	return DEVICE_OK;
 }
 
@@ -738,14 +823,7 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float gainMultiplier;
-		std::string command = "LR T?";
-		int ret = GetValue(command.c_str(), gainMultiplier);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(gainMultiplier);
+		pProp->Set(gainMultiplier_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -753,9 +831,21 @@ int CRISP::OnGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(nr);
 		std::ostringstream command;
 		command << std::fixed << "LR T=" << nr;
-
+		gainMultiplier_ = nr;
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetLEDIntensity(long& ledIntensity)
+{
+	double ledInt{};
+	int ret = GetValue("UL X?", ledInt);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	ledIntensity = (long)ledInt;
 	return DEVICE_OK;
 }
 
@@ -763,13 +853,7 @@ int CRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float ledIntensity;
-		int ret = GetValue("UL X?", ledIntensity);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(ledIntensity);
+		pProp->Set(ledIntensity_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -777,7 +861,7 @@ int CRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(ledIntensity);
 		std::ostringstream command;
 		command << std::fixed << "UL X=" << ledIntensity;
-
+		ledIntensity_ = ledIntensity;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -865,9 +949,8 @@ int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float snr;
-		std::string command = "EXTRA Y?";
-		int ret = GetValue(command.c_str(), snr);
+		double snr{};
+		int ret = GetValue("EXTRA Y?", snr);
 		if (ret != DEVICE_OK)
 		{
 			return ret;
@@ -877,35 +960,11 @@ int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::OnDitherError(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		float sum;
-		int ret = GetValue("LK Y?", sum);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(sum);
-	}
-	else if (eAct == MM::AfterSet)
-	{
-		long nr;
-		pProp->Get(nr);
-		std::ostringstream command;
-		command << std::fixed << "LK Y = " << nr;
-
-		return SetCommand(command.str());
-	}
-	return DEVICE_OK;
-}
-
 int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float val;
+		double val{};
 		int ret = GetValue("AL X?", val);
 		if (ret != DEVICE_OK)
 		{
@@ -916,17 +975,23 @@ int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int CRISP::GetNumSkips(long& updateRate)
+{
+	double numSkips{};
+	int ret = GetValue("UL Y?", numSkips);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	updateRate = (long)numSkips;
+	return DEVICE_OK;
+}
+
 int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float numSkips;
-		int ret = GetValue("UL Y?", numSkips);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(numSkips);
+		pProp->Set(numSkips_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
@@ -934,9 +999,21 @@ int CRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(nr);
 		std::ostringstream command;
 		command << std::fixed << "UL Y=" << nr;
-
+		numSkips_ = nr;
 		return SetCommand(command.str());
 	}
+	return DEVICE_OK;
+}
+
+int CRISP::GetInFocusRange(double& inFocusRange)
+{
+	double focusRange{};
+	int ret = GetValue("AL Z?", focusRange);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
+	inFocusRange = focusRange * 1000.0;
 	return DEVICE_OK;
 }
 
@@ -944,45 +1021,15 @@ int CRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		float focusRange;
-		int ret = GetValue("AL Z?", focusRange);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(focusRange * 1000);
+		pProp->Set(inFocusRange_);
 	}
 	else if (eAct == MM::AfterSet)
 	{
 		double lr;
 		pProp->Get(lr);
 		std::ostringstream command;
-		command << std::fixed << "AL Z=" << lr / 1000;
-
-		return SetCommand(command.str());
-	}
-	return DEVICE_OK;
-}
-
-int CRISP::OnSum(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		float sum;
-		int ret = GetValue("LK T?", sum);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(sum);
-	}
-	else if (eAct == MM::AfterSet)
-	{
-		long nr;
-		pProp->Get(nr);
-		std::ostringstream command;
-		command << std::fixed << "LK T=" << nr;
-
+		command << std::fixed << "AL Z=" << lr / 1000.0;
+		inFocusRange_ = lr;
 		return SetCommand(command.str());
 	}
 	return DEVICE_OK;
@@ -1027,53 +1074,161 @@ int CRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-// Provide support for MS2000 firmware < 9.2o
-int CRISP::OnDitherErrorLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
+// Read-only Properties
+
+// Always read, not cached
+void CRISP::CreateSumProperty() {
+	const std::string propertyName = "Sum";
+
+	// Check if we can use the faster serial command
+	if (version_ >= Version(9, 2, 'o')) {
+		// The LOCK command can query the value directly
+		// The command responds with => ":A 0 \r\n"
+		LogMessage("CRISP: firmware >= 9.2o; use LK T? for the "
+			+ propertyName + " property.", true);
+
+		CreateIntegerProperty(
+			propertyName.c_str(), 0, true,
+			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					double sum{};
+					const int result = GetValue("LK T?", sum);
+					if (result != DEVICE_OK) {
+						return result;
+					}
+					pProp->Set(sum);
+				}
+				return DEVICE_OK;
+			}
+		));
+
+	} else { // Firmware < 9.2o
+
+		// The old version uses the EXTRA command and requires extra parsing
+		// The command responds with => "I    0    0 \r\n"
+		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
+			+ propertyName + " property.", true);
+
+		CreateIntegerProperty(
+			propertyName.c_str(), 0, true,
+			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					std::string answer;
+					const int result = QueryCommand("EXTRA X?", answer);
+					if (result != DEVICE_OK) {
+						return result;
+					}
+					// Parse and discard first token, second is the sum
+					std::istringstream is(answer);
+					std::string token;
+					for (int i = 0; i < 2; ++i) {
+						is >> token;
+					}
+					if (!pProp->Set(token.c_str())) {
+						return DEVICE_INVALID_PROPERTY_VALUE;
+					}
+				}
+				return DEVICE_OK;
+			}
+		));
+	}
+}
+
+// Always read, not cached
+void CRISP::CreateDitherErrorProperty() {
+	const std::string propertyName = "Dither Error";
+
+	// Check if we can use the faster serial command
+	if (version_ >= Version(9, 2, 'o')) {
+		// The LOCK command can query the value directly
+		// The command responds with => ":A 0 \r\n"
+		LogMessage("CRISP: firmware >= 9.2o; use LK Y? for the "
+			+ propertyName + " property.", true);
+
+		CreateIntegerProperty(
+			propertyName.c_str(), 0, true,
+			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					double ditherError{};
+					const int result = GetValue("LK Y?", ditherError);
+					if (result != DEVICE_OK) {
+						return result;
+					}
+					pProp->Set(ditherError);
+				}
+				return DEVICE_OK;
+			}
+		));
+
+	} else { // Firmware < 9.2o
+
+		// The old version uses the EXTRA command and requires extra parsing
+		// The command responds with => "I    0    0 \r\n"
+		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
+			+ propertyName + " property.", true);
+
+		CreateIntegerProperty(
+			propertyName.c_str(), 0, true,
+			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+				if (eAct == MM::BeforeGet) {
+					std::string answer;
+					const int result = QueryCommand("EXTRA X?", answer);
+					if (result != DEVICE_OK) {
+						return result;
+					}
+					// Parse and discard first two tokens, third is the dither error
+					std::istringstream is(answer);
+					std::string token;
+					for (int i = 0; i < 3; ++i) {
+						is >> token;
+					}
+					if (!pProp->Set(token.c_str())) {
+						return DEVICE_INVALID_PROPERTY_VALUE;
+					}
+				}
+				return DEVICE_OK;
+			}
+		));
+	}
+}
+
+// Advanced Properties
+
+int CRISP::OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		std::string answer;
-		int ret = QueryCommand("EXTRA X?", answer);
-		if (ret != DEVICE_OK)
+		pProp->Set("0");
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		double logAmpAGC;
+		pProp->Get(logAmpAGC);
+		if (logAmpAGC != 0.0)
 		{
-			return ret;
-		}
-
-		std::istringstream is(answer);
-		std::string ditherError;
-		for (int i = 0; i < 3; i++)
-		{
-			is >> ditherError; // 3rd "is" is error
-		}
-
-		if (!pProp->Set(ditherError.c_str())) {
-			return DEVICE_INVALID_PROPERTY_VALUE;
+			std::ostringstream command;
+			command << std::fixed << "LK M=" << logAmpAGC;
+			return SetCommand(command.str());
 		}
 	}
 	return DEVICE_OK;
 }
 
-// Provide support for MS2000 firmware < 9.2o
-int CRISP::OnSumLegacy(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CRISP::OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		std::string answer;
-		int ret = QueryCommand("EXTRA X?", answer);
-		if (ret != DEVICE_OK)
+		pProp->Set("0");
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		double offset;
+		pProp->Get(offset);
+		if (offset != 0.0)
 		{
-			return ret;
-		}
-
-		std::istringstream is(answer);
-		std::string sum;
-		for (int i = 0; i < 2; i++)
-		{
-			is >> sum; // 2nd "is" is sum
-		}
-
-		if (!pProp->Set(sum.c_str())) {
-			return DEVICE_INVALID_PROPERTY_VALUE;
+			std::ostringstream command;
+			command << std::fixed << "LK Z=" << offset;
+			return SetCommand(command.str());
 		}
 	}
 	return DEVICE_OK;

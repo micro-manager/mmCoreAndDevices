@@ -42,9 +42,6 @@ using namespace std;
 CvCapture* capture_;
 IplImage* frame_; // do not modify, do not release!
 
-const double COpenCVgrabber::nominalPixelSizeUm_ = 1.0;
-
-
 // External names used used by the rest of the system
 // to load particular device from the "DemoCamera.dll" library
 const char* g_CameraDeviceName = "OpenCVgrabber";
@@ -138,7 +135,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 COpenCVgrabber::COpenCVgrabber() :
-   CCameraBase<COpenCVgrabber> (),
    cameraID_(0),
    initialized_(false),
    readoutUs_(0.0),
@@ -162,17 +158,23 @@ COpenCVgrabber::COpenCVgrabber() :
    SetErrorText(CAMERA_NOT_INITIALIZED, "Camera was not initialized");
 
 #ifdef WIN32
-   CPropertyAction* pAct = new CPropertyAction(this, &COpenCVgrabber::OnCameraID);
-   CreateProperty(cIDName, "Undefined", MM::String, false, pAct, true);
-
    DeviceEnumerator de;
-   // Video Devices
    map<int, OpenCVDevice> devices = de.getVideoDevicesMap();
-
-   for (int i = 0; i++; devices.size())
-   {
-       AddAllowedValue(cIDName, devices.at(i).deviceName.c_str(), long(i));
+   CPropertyAction* pAct = new CPropertyAction(this, &COpenCVgrabber::OnCameraID);
+   size_t nrDevices = devices.size();
+   std::string firstChoise = nrDevices > 0 ? devices.at(0).deviceName : "Undefined";
+   CreateProperty(cIDName, firstChoise.c_str(), MM::String, false, pAct, true);
+   std::ostringstream os;
+   os << "Devices map size " << devices.size();
+   LogMessage(os.str().c_str(), false);
+   if (nrDevices > 0) {
+      for (int i = 0; i < nrDevices; i++)
+      {
+         AddAllowedValue(cIDName, devices.at(i).deviceName.c_str());
+      }
    }
+   // when no devices are found and for backward compatibility, allow the Undefined value
+   AddAllowedValue(cIDName, "Undefined");
 #else
    String cIDNameReally = "Camera Number";
    CPropertyAction* pAct = new CPropertyAction(this, &COpenCVgrabber::OnCameraID);
@@ -829,16 +831,7 @@ int COpenCVgrabber::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-   if (!stopOnOverFlow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-	  return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-	  //return GetCoreCallback()->InsertImage(this, pI, w, h, b);
-   } else
-      return ret;
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
 }
 
 /*
@@ -1067,11 +1060,30 @@ int COpenCVgrabber::OnFlipY(MM::PropertyBase* pProp, MM::ActionType eAct)
 int COpenCVgrabber::OnCameraID(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 #ifdef WIN32
+   DeviceEnumerator de;
+   map<int, OpenCVDevice> devices = de.getVideoDevicesMap();
    if (eAct == MM::AfterSet)
    {
       string srcName;
       pProp->Get(srcName);
-      GetPropertyData(cIDName, srcName.c_str(), cameraID_);
+      for (std::pair<int, OpenCVDevice> device : devices) {
+         if (device.second.deviceName == srcName) {
+            cameraID_ = device.second.id;
+            return DEVICE_OK;
+         }
+      }
+      // fallback, to not throw a fit with old config files
+      cameraID_ = 0;
+      return DEVICE_OK;
+   }
+   else if (eAct == MM::BeforeGet) {
+      for (std::pair<int, OpenCVDevice> device : devices) {
+         if (device.second.id == cameraID_) {
+            pProp->Set(device.second.deviceName.c_str());
+            return DEVICE_OK;
+         }
+      }
+      pProp->Set("Undefined");
    }
 #else
    if (eAct == MM::AfterSet)

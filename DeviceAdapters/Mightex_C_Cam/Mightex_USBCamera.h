@@ -69,6 +69,8 @@ public:
    int Shutdown();
   
    void GetName(char* name) const;      
+
+   bool Busy() { return false; }
    
    // MMCamera API
    // ------------
@@ -95,8 +97,6 @@ public:
    int ThreadRun(MM::MMTime startTime);
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    int GetBinning() const;
    int SetBinning(int bS);
 
@@ -151,8 +151,6 @@ private:
    void TestResourceLocking(const bool);
    void GenerateEmptyImage(ImgBuffer& img);
    int ResizeImageBuffer();
-
-   static const double nominalPixelSizeUm_;
 
    double dPhase_;
    ImgBuffer img_;

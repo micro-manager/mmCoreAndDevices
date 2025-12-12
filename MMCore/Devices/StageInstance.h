@@ -36,7 +36,9 @@ public:
          const std::string& label,
          mm::logging::Logger deviceLogger,
          mm::logging::Logger coreLogger) :
-      DeviceInstanceBase<MM::Stage>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
+      DeviceInstanceBase<MM::Stage>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger),
+      focusDirection_(MM::FocusDirectionUnknown),
+      focusDirectionHasBeenSet_(false)
    {}
 
    int SetPositionUm(double pos);

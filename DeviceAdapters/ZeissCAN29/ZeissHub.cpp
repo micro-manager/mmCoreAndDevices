@@ -53,10 +53,10 @@ std::string ZeissHub::tubeLensList_[5];
 std::string ZeissHub::sidePortList_[3];
 std::string ZeissHub::condenserList_[8];
 
-ZeissDeviceInfo ZeissHub::deviceInfo_[MAXNUMBERDEVICES];
+ZeissDeviceInfo ZeissHub::deviceInfo_[MAXNUMBERDEVICES + 1];
 DefiniteFocusModel ZeissHub::definiteFocusModel_;
 ColibriModel ZeissHub::colibriModel_;
-ZeissUByte ZeissHub::commandGroup_[MAXNUMBERDEVICES];
+ZeissUByte ZeissHub::commandGroup_[MAXNUMBERDEVICES + 1];
 
 
 ZeissHub::ZeissHub() :
@@ -64,7 +64,9 @@ ZeissHub::ZeissHub() :
    targetDevice_ (AXIOOBSERVER),
    monitoringThread_(0),
    timeOutTime_(250000),
-   scopeInitialized_ (false)
+   scopeInitialized_ (false),
+   hasDefiniteFocus_(false),
+   hasColibri_(false)
 {
    // initialize deviceinfo
    for (int i=0; i< MAXNUMBERDEVICES; i++) {
@@ -108,7 +110,9 @@ void ZeissHub::ClearRcvBuf()
 }
 
 /*
- * Reads version number, available devices, device properties and some labels from the microscope and then starts a thread that keeps on reading data from the scope.  Data are stored in the array deviceInfo from which they can be retrieved by the device adapters
+ * Reads version number, available devices, device properties and some labels from the
+ * microscope and then starts a thread that keeps on reading data from the scope.  
+ * Data are stored in the array deviceInfo from which they can be retrieved by the device adapters.
  */
 int ZeissHub::Initialize(MM::Device& device, MM::Core& core)
 {
@@ -193,6 +197,7 @@ int ZeissHub::Initialize(MM::Device& device, MM::Core& core)
    // Get Definite Focus status info
    std::vector<ZeissByte>::iterator it = find(canNodes_.begin(), canNodes_.end(), DEFINITEFOCUS);
    if (it != canNodes_.end()) {
+      hasDefiniteFocus_ = true;
       GetDefiniteFocusInfo(device, core);
       std::string info;
       GetBiosInfo(device, core, DEFINITEFOCUS, 5, info);
@@ -204,6 +209,7 @@ int ZeissHub::Initialize(MM::Device& device, MM::Core& core)
    // Get info about Colibri
    it = find(canNodes_.begin(), canNodes_.end(), COLIBRI);
    if (it != canNodes_.end()) {
+      hasColibri_ = true;
       GetColibriInfo(device, core);
       std::string info;
       GetBiosInfo(device, core, COLIBRI, 5, info);
@@ -1796,6 +1802,9 @@ bool ZeissHub::signatureFound(unsigned char* answer, unsigned char* signature, u
 int ZeissHub::SetModelPosition(ZeissUByte devId, ZeissLong position) {
    MMThreadGuard guard(mutex_);
    deviceInfo_[devId].currentPos = position;
+   if (usedDevices_.find(devId) != usedDevices_.end()) {
+      usedDevices_.at(devId)->ReportNewPosition(devId, position);
+   }
    return DEVICE_OK;
 }
 

@@ -306,14 +306,6 @@ else
    AC_MSG_RESULT([not found])
 fi
 
-# Aravis (v0.10).
-AC_MSG_CHECKING(for Aravis_Linux)
-AM_CONDITIONAL([BUILD_ARAVIS_LINUX],[test -f "/usr/local/include/aravis-0.10/arv.h"])
-if test -f "/usr/local/include/aravis-0.10/arv.h"; then
-   AC_MSG_RESULT([found])
-else 
-   AC_MSG_RESULT([not found])
-fi
 
 # BaslerPylon
 AC_MSG_CHECKING(for Basler_Linux)
@@ -362,6 +354,23 @@ else
 fi
 
 AC_SUBST(LIBITC18)
+
+
+# Aravis SDK
+MM_ARG_WITH_OPTIONAL_LIB([Aravis], [aravis], [ARAVIS])
+AS_IF([test "x$want_aravis" != xno],
+[
+   MM_LIB_ARAVIS([$ARAVIS_PREFIX],
+                  [use_aravis=yes],
+                  [
+                     use_aravis=no
+                     AS_IF([test "x$want_aravis" = xyes],
+                           [MM_MSG_OPTIONAL_LIB_FAILURE([aravis], [Aravis])])
+                  ])
+],
+[use_aravis=no])
+
+AM_CONDITIONAL([BUILD_ARAVIS_LINUX], [test "x$use_aravis" = xyes])
 
 
 # MessagePack
@@ -430,25 +439,28 @@ AS_IF([test "x$want_vimba_x" != xno],
 
 AM_CONDITIONAL([BUILD_ALLIED_VISION_CAMERA], [test "x$use_vimba_x" = xyes])
 
+
 # Zaber Motion Library (hack: only support 3rdpartypublic copy currently)
+zml_version="7.14.0"
+zml_so_version="7.14"
 AC_MSG_CHECKING([for Zaber Motion Library in 3rdpartypublic])
-zml_header_to_check="${thirdpartypublic}/Zaber/zaber-motion/include/zaber/motion/library.h"
+zml_header_to_check="${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/include/zaber/motion/library.h"
 AM_CONDITIONAL([BUILD_ZABER], [test -f $zml_header_to_check])
 if test -f "$zml_header_to_check"; then
    AC_MSG_RESULT([found])
-   ZML_CPPFLAGS="-I${thirdpartypublic}/Zaber/zaber-motion/include"
-   ZML_LIBS="-lzml"
+   ZML_CPPFLAGS="-I${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/include"
+   ZML_LIBS="-lzaber-motion"
    case $host in
       *linux*)
          # Linux builds by users should install ZML libs
-         zml_linux_libdir="${thirdpartypublic}/Zaber/zaber-motion/linux-amd64/lib"
+         zml_linux_libdir="${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/lib/linux_x64"
          ZML_LDFLAGS="-L${zml_linux_libdir} -Wl,-rpath,"'\$$ORIGIN'
-         ZML_LIBS_TO_COPY="${zml_linux_libdir}/libzml.so.3.4 ${zml_linux_libdir}/libzaber-motion-lib-linux-amd64.so.3.4.3"
+         ZML_LIBS_TO_COPY="${zml_linux_libdir}/libzaber-motion.so.${zml_so_version} ${zml_linux_libdir}/libzaber-motion-core.so.${zml_version}"
          ;;
 
       *apple-darwin*)
          # macOS build for packaging does not ship ZML
-         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion/darwin/lib"
+         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/lib/darwin_x64"
          ZML_LIBS_TO_COPY=""
          ;;
    esac
@@ -557,6 +569,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    CNCMicroscope/ArduinoNeoPixelShutter
    CNCMicroscope/RAMPSStage
    CSUW1
+   Cephla
    ChuoSeiki_MD5000
    ChuoSeiki_QT
    Cobolt
@@ -611,6 +624,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    OVP_ECS2
    Omicron
    OpenCVgrabber
+   OpenUC2
    Oxxius
    OxxiusCombiner
    PI

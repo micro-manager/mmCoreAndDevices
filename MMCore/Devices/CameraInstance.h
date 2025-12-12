@@ -49,7 +49,6 @@ public:
    unsigned GetImageHeight() const;
    unsigned GetImageBytesPerPixel() const;
    unsigned GetBitDepth() const;
-   double GetPixelSizeUm() const;
    int GetBinning() const;
    int SetBinning(int binSize);
    void SetExposure(double exp_ms);

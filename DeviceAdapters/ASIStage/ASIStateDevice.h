@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASISTATEDEVICE_H_
-#define _ASISTATEDEVICE_H_
+#ifndef ASISTATEDEVICE_H
+#define ASISTATEDEVICE_H
 
 #include "ASIBase.h"
 
@@ -18,13 +18,13 @@ public:
 
 	// MMDevice API
 	bool Busy();
-	void GetName(char* pszName) const;
+	void GetName(char* name) const;
 	unsigned long GetNumberOfPositions() const { return numPos_; }
 
 	int Initialize();
 	int Shutdown();
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -32,12 +32,12 @@ public:
 	int OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+	int UpdateCurrentPosition();
+
 	long numPos_;
 	std::string axis_;
 	long position_;
 	double answerTimeoutMs_;
-
-	int UpdateCurrentPosition();
 };
 
-#endif // _ASISTATEDEVICE_H_
+#endif // ASISTATEDEVICE_H

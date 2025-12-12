@@ -6,6 +6,7 @@ License:	Distributed under the BSD license.
 
 #include "MicroDriveZStage.h"
 #include "MicroDriveXYStage.h"
+#include "MotorizedMicroMirrorTIRF.h"
 #include "MadTweezer.h"
 #include "ModuleInterface.h"
 #include "handle_list_if.h"
@@ -42,6 +43,7 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_XYStageDeviceName, MM::XYStageDevice, "XY positioning");
    RegisterDevice(g_StageDeviceName, MM::StageDevice, "Z positioning");
    RegisterDevice(g_DeviceMadTweezerName, MM::GenericDevice, "Rotational Axis");
+   RegisterDevice(g_DeviceMMMTIRFName, MM::GenericDevice, "Motorized Mirco-Mirror TIRF");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -57,6 +59,9 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
 
    if (strcmp(deviceName, g_DeviceMadTweezerName) == 0)
 	   return new MadTweezer();
+
+   if (strcmp(deviceName, g_DeviceMMMTIRFName) == 0)
+	   return new MotorizedMicroMirrorTIRF();
    
    // ...supplied name not recognized
    return 0;

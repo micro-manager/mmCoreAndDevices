@@ -977,15 +977,7 @@ int mvIMPACT_Acquire_Device::InsertImage( void )
    const unsigned int w = GetImageWidth();
    const unsigned int h = GetImageHeight();
    const unsigned int b = GetImageBytesPerPixel();
-   int result = GetCoreCallback()->InsertImage( this, pI, w, h, b, md.Serialize().c_str(), false );
-   if( !stopOnOverflow_ && ( result == DEVICE_BUFFER_OVERFLOW ) )
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer( this );
-      // don't process this same image again...
-      result = GetCoreCallback()->InsertImage( this, pI, w, h, b, md.Serialize().c_str(), false );
-   }
-   return result;
+   return GetCoreCallback()->InsertImage( this, pI, w, h, b, md.Serialize().c_str(), false );
 }
 
 //-----------------------------------------------------------------------------
@@ -1273,6 +1265,9 @@ int MySequenceThread::svc( void ) throw()
    }
    stop_ = true;
    actualDuration_ = pmvIMPACT_Acquire_Device_->GetCurrentMMTime() - startTime_;
-   pmvIMPACT_Acquire_Device_->OnThreadExiting();
+   auto *core = pmvIMPACT_Acquire_Device_->GetCoreCallback();
+   if (core != nullptr) {
+      core->AcqFinished(pmvIMPACT_Acquire_Device_, 0);
+   }
    return result;
 }

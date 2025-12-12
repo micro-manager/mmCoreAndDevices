@@ -35,6 +35,7 @@
 #include "ConnectionManager.h"
 
 namespace zmlbase = zaber::motion;
+namespace zmlexc = zaber::motion::exceptions;
 namespace zml = zaber::motion::ascii;
 namespace zmlmi = zaber::motion::microscopy;
 
@@ -44,6 +45,7 @@ namespace zmlmi = zaber::motion::microscopy;
 
 #define ERR_PORT_CHANGE_FORBIDDEN    10002
 #define ERR_DRIVER_DISABLED          10004
+#define ERR_INVALID_OPERATION        10008
 #define ERR_MOVEMENT_FAILED          10016
 #define ERR_COMMAND_REJECTED         10032
 #define	ERR_NO_REFERENCE_POS         10064
@@ -70,7 +72,7 @@ protected:
 	template<typename TReturn> int GetSetting(long device, long axis, std::string setting, TReturn& data);
 	int GetSettings(long device, long axis, std::string setting, std::vector<double>& data);
 	int SetSetting(long device, long axis, std::string setting, double data, int decimalPlaces = -1);
-	bool IsBusy(long device);
+	bool IsBusy(long device, long axis = 0);
 	int Stop(long device, long lockstepGroup = 0);
 	int GetLimits(long device, long axis, long& min, long& max);
 	int SendMoveCommand(long device, long axis, std::string type, long data, bool lockstep = false);

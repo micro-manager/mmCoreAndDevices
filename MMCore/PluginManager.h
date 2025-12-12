@@ -22,7 +22,9 @@
 
 #pragma once
 
-#include "../MMDevice/DeviceThreads.h"
+#include "MockDeviceAdapter.h"
+
+#include "DeviceThreads.h"
 
 #include <map>
 #include <memory>
@@ -54,6 +56,8 @@ public:
    GetDeviceAdapter(const std::string& moduleName);
    std::shared_ptr<LoadedDeviceAdapter>
    GetDeviceAdapter(const char* moduleName);
+
+   void LoadMockAdapter(const std::string& name, MockDeviceAdapter* impl);
 
 private:
    static std::vector<std::string> GetDefaultSearchPaths();

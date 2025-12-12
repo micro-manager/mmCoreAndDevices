@@ -22,6 +22,8 @@
 
 #include "ModuleInterface.h"
 
+const int NO_INPUT_LINE = -1;
+
 
 DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    ErrorTranslator(21000, 21999, &DigitalOutputPort::SetErrorText),
@@ -30,6 +32,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    sequenceRunning_(false),
    blanking_(false),
    blankOnLow_(true),
+   open_(true),
    pos_(0),
    numPos_(0),
    portWidth_(0),
@@ -44,6 +47,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    SetErrorText(ERR_SEQUENCE_TOO_LONG, "Sequence is too long. Try increasing sequence length in the Hub device.");
    SetErrorText(ERR_SEQUENCE_ZERO_LENGTH, "Sequence has length zero.");
    SetErrorText(ERR_UNKNOWN_PINS_PER_PORT, "Only 8, 16 and 32 pin ports are supported.");
+   SetErrorText(ERR_SEQUENCE_INVALID_NUMBER, "Invalid number encountered in sequence.");
 
    CPropertyAction* pAct = new CPropertyAction(this, &DigitalOutputPort::OnSequenceable);
    CreateStringProperty("Sequencing", g_UseHubSetting, false, pAct, true);
@@ -69,7 +73,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnInputLine);
    inputLine_ = portWidth_ - 1;
    CreateIntegerProperty("Input Line", inputLine_, false, pAct, true);
-   SetPropertyLimits("Input Line", 0, inputLine_);
+   SetPropertyLimits("Input Line", NO_INPUT_LINE, inputLine_);
 }
 
 
@@ -92,11 +96,31 @@ int DigitalOutputPort::Initialize()
       return TranslateNIError(nierr);
    }
 
-   std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(inputLine_);
-   std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(inputLine_ - 1);
-   if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
-      supportsBlankingAndSequencing_ = true;
-   GetHub()->StopDOBlankingAndSequence(portWidth_);
+   // NO_INPUT_LINE -1 is a magic number: do not use input
+   if (inputLine_ > NO_INPUT_LINE)
+   {
+      std::string tmpTriggerTerminal = niPort_ + "/line" + std::to_string(inputLine_);
+      std::string tmpNiPort = niPort_ + "/line" + "0:" + std::to_string(inputLine_ - 1);
+      if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
+         supportsBlankingAndSequencing_ = true;
+      GetHub()->StopDOBlankingAndSequence(portWidth_);
+      // Some cards lie about their portwidth, if blanking does not work, try 32 bits
+      // Workaround for possible DAQmx bug on USB-6341; see
+      // https://forums.ni.com/t5/Multifunction-DAQ/problem-with-correlated-DIO-on-USB-6341/td-p/3344066
+      if (!supportsBlankingAndSequencing_)
+      {
+         uInt32 oldPortWidth = portWidth_;
+         portWidth_ = 32;
+         if (GetHub()->StartDOBlankingAndOrSequence(tmpNiPort, portWidth_, true, false, 0, false, tmpTriggerTerminal) == DEVICE_OK)
+            supportsBlankingAndSequencing_ = true;
+         GetHub()->StopDOBlankingAndSequence(portWidth_);
+         if (!supportsBlankingAndSequencing_)
+         {
+            portWidth_ = oldPortWidth;
+         }
+      }
+   }
+
 
    CPropertyAction* pAct;
    if (supportsBlankingAndSequencing_)
@@ -132,17 +156,20 @@ int DigitalOutputPort::Initialize()
    CreateProperty(MM::g_Keyword_Closed_Position, "0", MM::Integer, false);
    GetGateOpen(open_);
 
-   if (supportsBlankingAndSequencing_ && nrOfStateSliders_ >= portWidth_) {
+   if (supportsBlankingAndSequencing_ && (uint32_t) nrOfStateSliders_ >= portWidth_) {
       nrOfStateSliders_ = portWidth_ - 1;
    }
 
    // Sanity check of input.  It would be nicer to give feedback in HCW, but these values are interrelated,
    // and HCW does not change ranges upon input of a value.
-   if (firstStateSlider_ >= inputLine_) {
-       firstStateSlider_ = inputLine_ - nrOfStateSliders_;
-   }
-   if (nrOfStateSliders_ + firstStateSlider_ > inputLine_) {
-       nrOfStateSliders_ = inputLine_ - firstStateSlider_;
+   if (inputLine_ > NO_INPUT_LINE)
+   {
+      if (firstStateSlider_ >= inputLine_) {
+         firstStateSlider_ = inputLine_ - nrOfStateSliders_;
+      }
+      if (nrOfStateSliders_ + firstStateSlider_ > inputLine_) {
+         nrOfStateSliders_ = inputLine_ - firstStateSlider_;
+      }
    }
    for (long line = firstStateSlider_; line < nrOfStateSliders_ + firstStateSlider_; line++)
    {     
@@ -268,9 +295,15 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          sequence8_.clear();
          for (unsigned int i = 0; i < sequence.size(); i++)
          {
-            std::istringstream os(sequence[i]);
-            uInt8 val;
-            os >> val;
+            size_t pos;
+            unsigned long num = std::stoul(sequence[i], &pos, 0);
+
+            // Check if the entire string was used for conversion and if the number fits within uint8_t range
+            if (pos != sequence[i].size() || num > 255) {
+                // "Value out of range for uint8_t"
+                return ERR_SEQUENCE_INVALID_NUMBER;
+            }
+            uint8_t val = static_cast<uint8_t>(num);
             sequence8_.push_back(val);
          }
          GetHub()->getDOHub8()->RemoveDOPortFromSequencing(niPort_);
@@ -281,9 +314,15 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          sequence16_.clear();
          for (unsigned int i = 0; i < sequence.size(); i++)
          {
-            std::istringstream os(sequence[i]);
-            uInt16 val;
-            os >> val;
+            size_t pos;
+            unsigned long num = std::stoul(sequence[i], &pos, 0);
+
+            // Check if the entire string was used for conversion and if the number fits within uint16_t range
+            if (pos != sequence[i].size() || num > 65535) {
+                // "Value out of range for uint16_t"
+                return ERR_SEQUENCE_INVALID_NUMBER;
+            }
+            uint16_t val = static_cast<uint16_t>(num);
             sequence16_.push_back(val);
          }
          GetHub()->getDOHub16()->RemoveDOPortFromSequencing(niPort_);
@@ -294,9 +333,14 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          sequence32_.clear();
          for (unsigned int i = 0; i < sequence.size(); i++)
          {
-            std::istringstream os(sequence[i]);
-            uInt32 val;
-            os >> val;
+            size_t pos;
+            unsigned long num = std::stoul(sequence[i], &pos, 0);
+
+            // Check if the entire string was used for conversion
+            if (pos != sequence[i].size()) {
+                return ERR_SEQUENCE_INVALID_NUMBER;
+            }
+            uint32_t val = static_cast<uint32_t>(num);
             sequence32_.push_back(val);
          }
          GetHub()->getDOHub32()->RemoveDOPortFromSequencing(niPort_);

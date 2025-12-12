@@ -4,7 +4,7 @@
 project(
     'MMDevice',
     'cpp',
-    meson_version: '>=1.1.0', # May relax
+    meson_version: '>=1.8.0',
     default_options: [
         'cpp_std=c++14',
         'warning_level=3',
@@ -41,6 +41,7 @@ mmdevice_public_headers = files(
     'MMDeviceConstants.h',
     'ModuleInterface.h',
     'Property.h',
+    'RegisteredDeviceCollection.h',
 )
 # TODO Support installing public headers
 
@@ -55,15 +56,32 @@ mmdevice_lib = static_library(
     dependencies: [
         dependency('threads'),
     ],
+    gnu_symbol_visibility: 'inlineshidden',
 )
 
-subdir('unittest')
+# Special handling for 'tests' option. We want to:
+# - Enable tests by default when built as a stand-alone project ('auto' but
+#   will be enabled unless wrap fallback disabled).
+# - Disable by default when built as subproject of a device adapter, because
+#   we might be building many at once. But allow to enable if wanted.
+# - Follow the parent project when built as subproject of mmcore ('yield: true'
+#   in the option definition).
+build_tests = get_option('tests').allowed()
+if meson.is_subproject() and not get_option('client_interface')
+    if get_option('tests').auto()
+        build_tests = false
+    endif
+endif
+if build_tests
+    subdir('unittest')
+endif
 
-mmdevice = declare_dependency(
+mmdevice_dep = declare_dependency(
     compile_args: build_mode_args,
     include_directories: mmdevice_include_dir,
     link_with: mmdevice_lib,
 )
+meson.override_dependency('mmdevice', mmdevice_dep)
 
 # For providing include dir to SWIG when using this project as a subproject
 swig_include_dirs = [meson.current_source_dir()]

@@ -17,12 +17,13 @@
 
 #pragma once
 
-#include "../MMDevice/MMDevice.h"
-#include "../MMDevice/DeviceThreads.h"
 #include "CoreUtils.h"
 #include "Devices/DeviceInstance.h"
 #include "Error.h"
 #include "Logging/Logger.h"
+
+#include "MMDevice.h"
+#include "DeviceThreads.h"
 
 #include <map>
 #include <memory>

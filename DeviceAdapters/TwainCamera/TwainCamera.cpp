@@ -33,7 +33,6 @@
 using namespace std;
 int TwainCamera::imageSizeW_ = 512;
 int TwainCamera::imageSizeH_ = 512;
-const double TwainCamera::nominalPixelSizeUm_ = 1.0;
 
 const char* g_CameraDeviceName = "TwainCam";
 #define ThisCameraType TwainCamera
@@ -147,7 +146,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 TwainCamera::TwainCamera() : 
-CCameraBase<TwainCamera> (),
 initialized_(false),
 busy_(false),
 readoutUs_(0),
@@ -1268,19 +1266,11 @@ int TwainCamera::PushImage()
    GetImageBuffer(); // this effectively copies images to rawBuffer_
 
    // insert all three channels at once
-   int ret = GetCoreCallback()->InsertMultiChannel(this, rawBuffer_, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // repeat the insert
-      return GetCoreCallback()->InsertMultiChannel(this, rawBuffer_, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-   } else
-      return ret;
+   return GetCoreCallback()->InsertImage(this, rawBuffer_, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
 }
 int TwainCamera::StopSequenceAcquisition()
 {
-	int nRet = this->CCameraBase<TwainCamera>::StopSequenceAcquisition();
+	int nRet = this->CLegacyCameraBase<TwainCamera>::StopSequenceAcquisition();
 
 	return nRet;
 }
@@ -1302,16 +1292,5 @@ int TwainCamera::ThreadRun()
 		return DEVICE_ERR;
 
 	// insert all three channels at once
-   ret = GetCoreCallback()->InsertMultiChannel(this, rawBuffer_, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // repeat the insert
-      return GetCoreCallback()->InsertMultiChannel(this, rawBuffer_, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-   } else
-      return ret;
-
-
-
+   return GetCoreCallback()->InsertImage(this, rawBuffer_, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
 }

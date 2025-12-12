@@ -91,7 +91,6 @@
 #undef DOLIVEPAIR
 
 using namespace std;
-const double CRaptorEPIX::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 bool bEagle4210 = false;
 
@@ -912,7 +911,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CRaptorEPIX::CRaptorEPIX(int nCameraType) :
-   CCameraBase<CRaptorEPIX> (),
    cameraType_(0),
    dPhase_(0),
    exposure_(0),
@@ -5955,20 +5953,7 @@ int CRaptorEPIX::InsertImage()
    //int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b) ;//, &md);
    //int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-   	  if(fidSerial[UNITSOPENMAP] && gUseSerialLog[UNITSOPENMAP])
-			fprintf(fidSerial[UNITSOPENMAP],"*** Insert Image Buffer Overflow - Resetting ***\n");
-
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-      return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-   } else
-      return ret;
-
-
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
 }
 
 /*

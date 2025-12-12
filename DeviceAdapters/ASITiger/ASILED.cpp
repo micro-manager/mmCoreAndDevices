@@ -36,8 +36,6 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // CLED
@@ -88,8 +86,7 @@ int CLED::Initialize()
    RETURN_ON_MM_ERROR( PeripheralInitialize() );
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-   ostringstream command;
-   command.str("");
+   std::ostringstream command;
    command << g_LEDDeviceDescription << " HexAddr=" << addressString_;
    if (channel_ > 0)
    {
@@ -102,7 +99,7 @@ int CLED::Initialize()
    // detect Stabilight or not based on build name
    char buildName[MM::MaxStrLength];
    GetProperty(g_FirmwareBuildPropertyName, buildName);
-   string s = buildName;
+   std::string s = buildName;
    stablight_ = (s.length() > 5) && 
        ((s.substr(0, 6).compare("TGLED_S") == 0) || (s.substr(0, 6).compare("TGLEDS") == 0));
 
@@ -149,10 +146,9 @@ int CLED::Initialize()
    return DEVICE_OK;
 }
 
-
 int CLED::SetOpen(bool open)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (open)
       command << addressChar_ << "LED " << channelAxisChar_ << "="<< intensity_;
    else
@@ -162,20 +158,20 @@ int CLED::SetOpen(bool open)
    return DEVICE_OK;
 }
 
-int CLED::GetOpen(bool& open)
 // returns the cached value instead of querying controller itself
+int CLED::GetOpen(bool& open)
 {
    open = open_;
    return DEVICE_OK;
 }
 
-int CLED::UpdateOpenIntensity()
 // updates open_ and intensity_ via the controller
 // controller says intensity is 0 if LED is turned off =>
 //   we don't update intensity_ if controller reports 0, only set open_ to false
+int CLED::UpdateOpenIntensity()
 {
-   ostringstream command; command.str("");
-   ostringstream replyprefix; replyprefix.str("");
+   std::ostringstream command;
+   std::ostringstream replyprefix;
    long tmp = 0;
    command << addressChar_ << "LED " << channelAxisChar_ << "?";
    replyprefix << channelAxisChar_ << "=";
@@ -187,29 +183,26 @@ int CLED::UpdateOpenIntensity()
    return DEVICE_OK;
 }
 
-
-
-////////////////
 // action handlers
 
 int CLED::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   ostringstream command; command.str("");
+   std::string tmpstr;
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'Y';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A", (long)200) );  // note 200ms delay added
       pProp->Set(g_SaveSettingsDone);
@@ -221,20 +214,18 @@ int CLED::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CLED::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmpstr;
+        pProp->Get(tmpstr);
+        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+    }
+    return DEVICE_OK;
 }
 
 int CLED::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
 
    long tmp = 0;
    if (eAct == MM::BeforeGet)
@@ -253,8 +244,6 @@ int CLED::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
          RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A") );
       }
       intensity_ = tmp;
-
-
    }
    return DEVICE_OK;
 }
@@ -270,20 +259,17 @@ int CLED::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      RETURN_ON_MM_ERROR( SetOpen(tmpstr.compare(g_OpenState) == 0) );
+      RETURN_ON_MM_ERROR(SetOpen(tmpstr == g_OpenState));
    }
-
    return DEVICE_OK;
 }
-
 
 int CLED::OnCurrentLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    //sets the LED current limit, which can be used to control brightness but is a card-wide setting
-   ostringstream command; command.str("");
-
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -306,7 +292,6 @@ int CLED::OnCurrentLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
       command.str(""); command << tmp;
       RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), command.str()) );
    }
-
    return DEVICE_OK;
 }
 

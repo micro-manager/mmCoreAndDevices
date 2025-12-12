@@ -1,8 +1,10 @@
 /packagecache/
 
+# Legacy
 /MMDevice/
 
 # Subprojects installed by meson wrap
+/mmdevice/
 /*-*/
 
 # Ignore *.wrap by default (may be auto-installed transitive dependencies)
@@ -10,3 +12,4 @@
 
 # Do not ignore wraps we provide
 !/catch2.wrap
+!/mmdevice.wrap

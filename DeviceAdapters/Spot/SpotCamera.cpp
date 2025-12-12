@@ -83,8 +83,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // SpotCamera device adapter
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-//const double SpotCamera::fNominalPixelSizeUm = 1.0;
-
 /**
  * SpotCamera constructor.
  * Setup default all variables and create device properties required to exist
@@ -95,7 +93,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
  * the constructor. We should do as little as possible in the constructor and
  * perform most of the initialization in the Initialize() method.
  */
-SpotCamera::SpotCamera(const char* /*szDeviceName*/) : CCameraBase<SpotCamera>(),
+SpotCamera::SpotCamera(const char* /*szDeviceName*/) :
    initialized( false ),   
    numberOfChannels_( 4 ), // EF - changed to 4 for valid number for MMImageWindow, line 125ff, byteDepth = 4
 	pImplementation_(NULL),

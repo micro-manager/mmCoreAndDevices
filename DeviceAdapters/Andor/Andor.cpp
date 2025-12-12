@@ -2199,20 +2199,6 @@ int AndorCamera::GetListOfAvailableCameras()
       return DEVICE_OK;
    }
 
-
-   double AndorCamera::GetPixelSizeUm() const
-   {
-      DriverGuard dg(this);
-      float x, y;
-      unsigned ret = ::GetPixelSize(&x, &y);
-      if (ret == DRV_SUCCESS)
-      {
-         return (double)x;
-      }
-
-      return GetBinning();
-   }
-
    ///////////////////////////////////////////////////////////////////////////////
    // Action handlers
    // ~~~~~~~~~~~~~~~
@@ -5229,31 +5215,17 @@ int AndorCamera::GetCameraAcquisitionProgress(at_32* series)
    {
      MMThreadGuard g(imgPixelsLock_);
 
-     int retCode;
      Metadata md;
      AddMetadataInfo(md);
 
      imageCounter_++;
 
      // This method inserts new image in the circular buffer (residing in MMCore)
-     retCode = GetCoreCallback()->InsertImage(this, imagePtr,
+     return GetCoreCallback()->InsertImage(this, imagePtr,
        width,
        height,
        bytesPerPixel,
        md.Serialize().c_str());
-
-     if (!stopOnOverflow_ && DEVICE_BUFFER_OVERFLOW == retCode)
-     {
-       // do not stop on overflow - just reset the buffer
-       GetCoreCallback()->ClearImageBuffer(this);
-       GetCoreCallback()->InsertImage(this, (unsigned char*)imagePtr,
-         width,
-         height,
-         bytesPerPixel,
-         md.Serialize().c_str(),
-         false);
-     }
-     return retCode;
    }
 
 
@@ -5332,21 +5304,6 @@ int AndorCamera::GetCameraAcquisitionProgress(at_32* series)
             if (DEVICE_OK != corecallbackInsertImageReturn)
             {
                return corecallbackInsertImageReturn;
-            }
-
-            if (!stopOnOverflow_ && DEVICE_BUFFER_OVERFLOW == corecallbackInsertImageReturn)
-            {
-               // do not stop on overflow - just reset the buffer
-               //Log("[PushImageWithSRRF] Circular Buffer overflowed. Clearing and sending up image again...");
-               GetCoreCallback()->ClearImageBuffer(this);
-               GetCoreCallback()->InsertImage(
-                  this,
-                  SRRFImage_->GetPixels(),
-                  SRRFImage_->Width(),
-                  SRRFImage_->Height(),
-                  SRRFImage_->Depth(),
-                  md.Serialize().c_str(),
-                  false);
             }
          }
 

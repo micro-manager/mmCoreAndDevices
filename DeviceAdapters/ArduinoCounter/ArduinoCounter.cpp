@@ -26,7 +26,7 @@ const char* g_DeviceNameArduinoCounterCamera = "ArduinoCounterCamera";
 
 // Global info about the state of the Arduino.  
 const double g_Min_MMVersion = 2.0;
-const double g_Max_MMVersion = 2.0;
+const double g_Max_MMVersion = 3.0;
 const char* g_versionProp = "Version";
 const char* g_Undefined = "Undefined";
 const char* g_Logic = "Output Logic";
@@ -65,7 +65,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 
 ArduinoCounterCamera::ArduinoCounterCamera() :
-   imageBuffer_(0),
    nrCamerasInUse_(0),
    initialized_(false),
    invert_(false)
@@ -101,7 +100,6 @@ ArduinoCounterCamera::~ArduinoCounterCamera()
 
 int ArduinoCounterCamera::Shutdown()
 {
-   delete imageBuffer_;
    // Rely on the cameras to shut themselves down
    return DEVICE_OK;
 }
@@ -524,13 +522,6 @@ int ArduinoCounterCamera::StartSequenceAcquisition(double interval)
       MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
       if (camera != 0)
       {
-         std::ostringstream os;
-         os << i;
-         camera->AddTag(MM::g_Keyword_CameraChannelName, usedCameras_[i].c_str(),
-            usedCameras_[i].c_str());
-         camera->AddTag(MM::g_Keyword_CameraChannelIndex, usedCameras_[i].c_str(),
-            os.str().c_str());
-
          int ret = camera->StartSequenceAcquisition(interval);
          if (ret != DEVICE_OK)
             return ret;
@@ -575,13 +566,6 @@ int ArduinoCounterCamera::StopSequenceAcquisition()
             return ret;
          if (ret2 != DEVICE_OK)
             return ret2;
-
-         std::ostringstream os;
-         os << i;
-         camera->AddTag(MM::g_Keyword_CameraChannelName, usedCameras_[i].c_str(),
-            "");
-         camera->AddTag(MM::g_Keyword_CameraChannelIndex, usedCameras_[i].c_str(),
-            os.str().c_str());
       }
    }
    return DEVICE_OK;
