@@ -8,9 +8,9 @@
 //                microscope devices and enables testing of the rest of the
 //                system without the need to connect to the actual hardware. 
 //                
-// AUTHOR:        fandayu, fandayu@tucsen.com 2024
+// AUTHOR:        dingzhipeng, dingzhipeng@tucsen.com 2024
 //
-// COPYRIGHT:     Tucsen Photonics Co., Ltd., 2024
+// COPYRIGHT:     Tucsen Photonics Co., Ltd., 2025
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
 //
@@ -32,11 +32,13 @@
 #include "WriteCompactTiffRGB.h"
 #include <iostream>
 #include <process.h>
+#include <future>
 
 #include <shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 
 using namespace std;
+const double CMMTUCam::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 
 // External names used used by the rest of the system
@@ -104,6 +106,7 @@ const char* g_PropNameBrightness = "Targeting Level"; //"Brightness";
 const char* g_PropNamePixelRatio = "Metering Level";  //"Pixel Ratio";
 const char* g_PropNameImgMetadata= "Image Metadata";  
 const char* g_PropNameATExpMode  = "ATExposure Mode";
+const char* g_PropNameATExpMax = "ATExposure Max";
 
 const char* g_PropNameBinningSum = "Binning Sum";
 
@@ -250,6 +253,7 @@ int CMMTUCam::s_nCntCam  = 0;
 * perform most of the initialization in the Initialize() method.
 */
 CMMTUCam::CMMTUCam() :
+    CCameraBase<CMMTUCam> (),
     exposureMaximum_(10000.0),     
     exposureMinimum_(0.0),
     dPhase_(0),
@@ -499,7 +503,9 @@ int CMMTUCam::Initialize()
 		m_bTriEn = false;
 	}
 
-    if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID || PID_FL_20BW == m_nPID || DHYANA_4040V2 == m_nPID || DHYANA_4040BSI == m_nPID || DHYANA_XF4040BSI == m_nPID)
+    if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID || PID_FL_20BW == m_nPID \
+		|| PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID \
+		|| DHYANA_4040V2 == m_nPID || DHYANA_4040BSI == m_nPID || DHYANA_XF4040BSI == m_nPID)
 	{
 		m_bOffsetEn = true;
 	}
@@ -541,7 +547,7 @@ int CMMTUCam::Initialize()
     if (nRet != DEVICE_OK)
         return nRet;
 
-    if (PID_FL_26BW == m_nPID)
+	if (PID_FL_26BW == m_nPID || PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
     {
         // binning sum
         pAct = new CPropertyAction(this, &CMMTUCam::OnBinningSum);
@@ -655,7 +661,9 @@ int CMMTUCam::Initialize()
         }
         else
         {
-			if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID || IsSupportAries16())
+			if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID \
+				|| PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID \
+				|| IsSupportAries16())
             {
                 int nCnt = (int)(propAttr.dbValMax - propAttr.dbValMin + 1);
 
@@ -739,6 +747,17 @@ int CMMTUCam::Initialize()
 		assert(nRet == DEVICE_OK);
 
 		SetPropertyLimits(g_PropNameATExpMode, capaAttr.nValMin, capaAttr.nValMax);
+	}
+
+	// Auto Exposure Max
+	propAttr.idProp = TUIDP_EXPOSUREMAX;
+	if (TUCAMRET_SUCCESS == TUCAM_Prop_GetAttr(m_opCam.hIdxTUCam, &propAttr))
+	{
+		pAct = new CPropertyAction(this, &CMMTUCam::OnATExposureMax);
+		nRet = CreateProperty(g_PropNameATExpMax, "0", MM::Integer, false, pAct);
+		assert(nRet == DEVICE_OK);
+
+		SetPropertyLimits(g_PropNameATExpMax, propAttr.dbValMin, propAttr.dbValMax);
 	}
 
     // Auto Exposure
@@ -1243,6 +1262,9 @@ int CMMTUCam::Initialize()
             case PID_FL_9BW_LT:
             case PID_FL_26BW:
 			case PID_FL_20BW:
+			case PID_LIBRA_16:
+			case PID_LIBRA_22:
+			case PID_LIBRA_25:
 			case DHYANA_401D:
 			case DHYANA_201D:
 			case DHYANA_4040V2:
@@ -1325,7 +1347,8 @@ int CMMTUCam::Initialize()
 				SetPropertyLimits(g_PropNameFilter, 0, 1000000);
 			}
 
-            if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID)
+            if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID \
+				|| PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
             {
                 // Trigger total frames
                 pAct = new CPropertyAction(this, &CMMTUCam::OnTriggerTotalFrames);
@@ -2857,7 +2880,8 @@ int CMMTUCam::InsertImage()
 
     // Important:  metadata about the image are generated here:
     Metadata md;
-    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+    md.put("Camera", label);
+    ///md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
     md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
     md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
     md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
@@ -2881,7 +2905,16 @@ int CMMTUCam::InsertImage()
     unsigned int h = GetImageHeight();
     unsigned int b = GetImageBytesPerPixel();
 
-    return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
+    int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
+    
+    // Note: According to the updated MM::Core API, InsertImage() no longer returns
+    // DEVICE_BUFFER_OVERFLOW when stopOnOverflow_ == false. The API comment states:
+    // "InsertImage() no longer ever returns that particular error when stopOnOverflow == false.
+    // So cameras should always just stop the acquisition if InsertImage() returns any error."
+    // Therefore, we no longer need to handle DEVICE_BUFFER_OVERFLOW specially or call
+    // the deprecated ClearImageBuffer() method.
+    
+    return ret;
 }
 
 /*
@@ -3102,7 +3135,8 @@ int CMMTUCam::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
                         if (0 == val.compare(valText.pText))
                         {
                             TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_RESOLUTION, i);
-                            if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || m_nPID == PID_FL_20BW || m_nPID == PID_FL_26BW)
+                            if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || m_nPID == PID_FL_20BW || m_nPID == PID_FL_26BW \
+								|| PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
 							{
 								UpdateExpRange();
 							}
@@ -3152,7 +3186,8 @@ int CMMTUCam::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
                         }
                     }
                     
-                    if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID)
+                    if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID \
+						|| PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
                     {
                         UpdateLevelsRange();
                     }
@@ -5149,7 +5184,8 @@ int CMMTUCam::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
     if (NULL == m_opCam.hIdxTUCam)
         return DEVICE_NOT_CONNECTED;
 
-    if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID)
+    if (PID_FL_9BW == m_nPID || PID_FL_9BW_LT == m_nPID || PID_FL_26BW == m_nPID \
+		|| PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
         return DEVICE_OK;
 
     int ret = DEVICE_ERR;
@@ -5193,7 +5229,8 @@ int CMMTUCam::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
 						m_frame.ucElemBytes = 1;
                     }
 
-                    if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || m_nPID == PID_FL_20BW || m_nPID == PID_FL_26BW)
+                    if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || m_nPID == PID_FL_20BW || m_nPID == PID_FL_26BW \
+						|| PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
 					{
 						UpdateExpRange();
 					}
@@ -5933,6 +5970,44 @@ int CMMTUCam::OnATExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
 
     return ret;
+}
+
+/**
+* Handles "OnATExposureMax" property.
+*/
+int CMMTUCam::OnATExposureMax(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (NULL == m_opCam.hIdxTUCam)
+		return DEVICE_NOT_CONNECTED;
+
+	int ret = DEVICE_ERR;
+	switch (eAct)
+	{
+	case MM::AfterSet:
+	{
+		long lVal = 0;
+		pProp->Get(lVal);
+
+		TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSUREMAX, lVal);
+
+		ret = DEVICE_OK;
+	}
+	break;
+	case  MM::BeforeGet:
+	{
+		double dblVal = 0.0f;
+		TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSUREMAX, &dblVal);
+
+		pProp->Set((long)(dblVal));
+
+		ret = DEVICE_OK;
+	}
+	break;
+	default:
+		break;
+	}
+
+	return ret;
 }
 
 /**
@@ -7750,10 +7825,14 @@ int CMMTUCam::ResizeImageBuffer()
     {
         ResizeBinImageBufferFL9BW(valWidth.nValue, valHeight.nValue);
     }
-    else if (PID_FL_26BW == m_nPID)
+	else if (PID_FL_26BW == m_nPID)
     {
         ResizeBinImageBufferFL26BW(valWidth.nValue, valHeight.nValue);
     }
+	else if (PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
+	{
+		ResizeBinImageBufferLibra22(valWidth.nValue, valHeight.nValue);
+	}
 
     char sz[256] = {0};
 	sprintf(sz, "[ResizeImageBuffer]:Width:%d, Height:%d, BytesPerPixel:%d, %d\n", valWidth.nValue, valHeight.nValue, byteDepth, m_frame.ucElemBytes * nChnnels);
@@ -7823,6 +7902,26 @@ void CMMTUCam::ResizeBinImageBufferFL26BW(int &width, int &height)
         width = (nMaxWid >> 2) << 2;
         height = (nMaxHei >> 2) << 2;
     }
+}
+
+void CMMTUCam::ResizeBinImageBufferLibra22(int &width, int &height)
+{
+	int bin = 0;
+	TUCAM_Capa_GetValue(m_opCam.hIdxTUCam, TUIDC_BINNING_SUM, &bin);
+
+	if (2 == bin)
+		bin = 4;
+	else
+		bin += 1;
+
+	if (!m_bROI)
+	{
+		int nMaxWid = width / bin;
+		int nMaxHei = height / bin;
+
+		width = (nMaxWid >> 2) << 2;
+		height = (nMaxHei >> 2) << 2;
+	}
 }
 
 void CMMTUCam::GenerateEmptyImage(ImgBuffer& img)
@@ -8603,7 +8702,8 @@ bool CMMTUCam::isSupportFanCool()
 {
 	bool bSupport = false;
 	bSupport = isSupportFanWaterCool();
-    if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || PID_FL_20BW == m_nPID || m_nPID == PID_FL_26BW)
+    if (m_nPID == PID_FL_9BW || PID_FL_9BW_LT == m_nPID || PID_FL_20BW == m_nPID || m_nPID == PID_FL_26BW \
+		|| PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
 	{
 		return true;
 	}
@@ -8687,6 +8787,11 @@ void CMMTUCam::UpdateExpRange()
 		exposureMaximum_ = 3600000;
 	}
 
+	if (PID_LIBRA_16 == m_nPID || PID_LIBRA_22 == m_nPID || PID_LIBRA_25 == m_nPID)
+	{
+		exposureMaximum_ = 60000;
+	}
+
 	if (DHYANA_400BSIV3 == m_nPID || DHYANA_400BSIV2 == m_nPID || DHYANA_D95_V2 == m_nPID)
 	{
 		exposureMaximum_ = 10000;
@@ -8715,3 +8820,29 @@ void CMMTUCam::UpdateLevelsRange()
         SetProperty(g_PropNameRLev, CDeviceUtils::ConvertToString((int)propAttr.dbValMax));
     }
 }
+
+/*
+void CMMTUCam::LoadProfile()
+{
+    char cam[16];
+    char value[64];
+
+    sprintf(cam, "0x%x", m_nPID);
+    
+    GetPrivateProfileString(cam, "Temperature", "-100.0", value, 64, ".//tuconfiguration.ini");
+
+    string temp = value;
+    m_fValTemp = (float)atof(temp.c_str());
+}
+
+void CMMTUCam::SaveProfile()
+{
+    char cam[16];
+    sprintf(cam, "0x%x", m_nPID);
+
+    char value[64];
+    sprintf(value, "%.2f", m_fValTemp);
+
+    WritePrivateProfileString(cam, "Temperature", value, ".//tuconfiguration.ini");
+}
+*/

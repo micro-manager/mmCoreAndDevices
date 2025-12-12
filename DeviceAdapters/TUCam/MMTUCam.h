@@ -8,12 +8,12 @@
 //                microscope devices and enables testing of the rest of the
 //                system without the need to connect to the actual hardware. 
 //                
-// AUTHOR:        fandayu, fandayu@tucsen.com 2024
+// AUTHOR:        dingzhipeng, dingzhipeng@tucsen.com 2024
 //                
 //                Karl Hoover (stuff such as programmable CCD size  & the various image processors)
 //                Arther Edelstein ( equipment error simulation)
 //
-// COPYRIGHT:     Tucsen Photonics Co., Ltd., 2024
+// COPYRIGHT:     Tucsen Photonics Co., Ltd., 2025
 //               
 //
 // LICENSE:       This file is distributed under the BSD license.
@@ -95,6 +95,9 @@ const int SEVEN_SEGMENT_Y_OFFSET[] = {0, 0, 0, 1, 1, 1, 2};
 #define PID_FL_9BW          0xE422
 #define PID_FL_9BW_LT       0xE426
 #define PID_FL_26BW         0xE423
+#define PID_LIBRA_16        0xE435
+#define PID_LIBRA_22        0xE436
+#define PID_LIBRA_25        0xE437
 
 #define PID_ARIES16LT       0xE424
 #define PID_ARIES16         0xE425
@@ -104,7 +107,6 @@ const int SEVEN_SEGMENT_Y_OFFSET[] = {0, 0, 0, 1, 1, 1, 2};
 #define MODE_12BIT    0x00
 #define MODE_CMS      0x01
 #define MODE_11BIT    0x02
-#define MODE_GLRESET  0x03
 
 typedef enum
 {
@@ -210,8 +212,6 @@ public:
 
     void GetName(char* name) const;      
 
-    bool Busy() { return false; }
-
     // MMCamera API
     // ------------
     int SnapImage();
@@ -235,6 +235,9 @@ public:
     int RunSequenceOnThread(MM::MMTime startTime);
     bool IsCapturing();
     void OnThreadExiting() throw(); 
+    double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
+    // GetPixelSizeUm() is final in base class, so we don't override it
+    bool Busy() override { return busy_; }
     int GetBinning() const;
     int SetBinning(int bS);
 
@@ -299,6 +302,7 @@ public:
     int OnBlueGain(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnATExpMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnATExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnATExposureMax(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTimeStamp(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnFan(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -375,12 +379,15 @@ private:
 
     void ResizeBinImageBufferFL9BW(int &width, int &height);
     void ResizeBinImageBufferFL26BW(int &width, int &height);
+	void ResizeBinImageBufferLibra22(int &width, int &height);
 
 	bool IsSupport95V2New()     { return DHYANA_D95_V2   == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupport401DNew()     { return DHYANA_401D     == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupport201DNew()     { return DHYANA_201D     == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupport400BSIV3New() { return DHYANA_400BSIV3 == m_nPID && m_nBCD >= 0x2000; }
 	bool IsSupportAries16()     { return 0xE424 == m_nPID || 0xE425 == m_nPID; }
+
+    static const double nominalPixelSizeUm_;
 
     double exposureMaximum_;
     double exposureMinimum_;
