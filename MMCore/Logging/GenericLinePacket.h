@@ -19,12 +19,10 @@
 #include <cstddef>
 
 
-namespace mm
-{
-namespace logging
-{
-namespace internal
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
+namespace internal {
 
 
 enum PacketState
@@ -77,4 +75,5 @@ public:
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

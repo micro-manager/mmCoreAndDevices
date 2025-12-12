@@ -28,6 +28,8 @@
 
 #include <string>
 
+namespace mmcore {
+namespace internal {
 
 static void __declspec(noreturn)
 ThrowLastError()
@@ -36,9 +38,9 @@ ThrowLastError()
 
    DWORD err = GetLastError();
    LPSTR pMsgBuf(0);
-   if (FormatMessageA( 
-         FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-         FORMAT_MESSAGE_FROM_SYSTEM | 
+   if (FormatMessageA(
+         FORMAT_MESSAGE_ALLOCATE_BUFFER |
+         FORMAT_MESSAGE_FROM_SYSTEM |
          FORMAT_MESSAGE_IGNORE_INSERTS,
          NULL,
          err,
@@ -106,5 +108,8 @@ LoadedModuleImplWindows::GetFunction(const char* funcName)
       ThrowLastError();
    return proc;
 }
+
+} // namespace internal
+} // namespace mmcore
 
 #endif // _WIN32

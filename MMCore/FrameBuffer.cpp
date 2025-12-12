@@ -21,7 +21,8 @@
 #include <cmath>
 #include <cstring>
 
-namespace mm {
+namespace mmcore {
+namespace internal {
 
 ImgBuffer::ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
    pixels_(0), width_(xSize), height_(ySize), pixDepth_(pixDepth)
@@ -129,4 +130,5 @@ ImgBuffer* FrameBuffer::FindImage(unsigned channel) const
    return buffer_.get();
 }
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

@@ -31,6 +31,9 @@
 #include <string>
 #include <vector>
 
+namespace mmcore {
+namespace internal {
+
 class LoadedDeviceAdapter;
 
 
@@ -68,3 +71,6 @@ private:
 
    std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> > moduleMap_;
 };
+
+} // namespace internal
+} // namespace mmcore

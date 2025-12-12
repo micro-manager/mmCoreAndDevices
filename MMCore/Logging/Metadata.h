@@ -29,13 +29,11 @@
 #include <string>
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
-namespace internal
-{
+namespace internal {
 
 inline std::chrono::time_point<std::chrono::system_clock>
 Now()
@@ -124,4 +122,5 @@ typedef internal::GenericMetadata<LoggerData, EntryData, StampData> Metadata;
 
 
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

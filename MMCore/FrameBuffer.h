@@ -22,7 +22,8 @@
 
 #include <memory>
 
-namespace mm {
+namespace mmcore {
+namespace internal {
 
 class ImgBuffer
 {
@@ -76,4 +77,5 @@ public:
    unsigned Depth() const {return depth_;}
 };
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

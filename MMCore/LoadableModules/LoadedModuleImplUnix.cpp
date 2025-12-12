@@ -28,6 +28,8 @@
 
 #include <dlfcn.h>
 
+namespace mmcore {
+namespace internal {
 
 static void __attribute__((noreturn))
 ThrowDlError()
@@ -79,5 +81,8 @@ LoadedModuleImplUnix::GetFunction(const char* funcName)
       ThrowDlError();
    return proc;
 }
+
+} // namespace internal
+} // namespace mmcore
 
 #endif // !defined(_WIN32)

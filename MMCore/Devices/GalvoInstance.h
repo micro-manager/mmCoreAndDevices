@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class GalvoInstance : public DeviceInstanceBase<MM::Galvo>
 {
 public:
@@ -31,8 +34,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Galvo>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 
@@ -54,3 +57,6 @@ public:
    int StopSequence();
    std::string GetChannel();
 };
+
+} // namespace internal
+} // namespace mmcore

@@ -36,6 +36,9 @@
 class CMMCore;
 class MMEventCallback;
 
+namespace mmcore {
+namespace internal {
+
 class CoreProperty
 {
 public:
@@ -88,3 +91,6 @@ private:
    CMMCore* core_;
    std::map<std::string, CoreProperty> properties_;
 };
+
+} // namespace internal
+} // namespace mmcore

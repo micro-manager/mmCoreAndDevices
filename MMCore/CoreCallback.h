@@ -31,10 +31,10 @@
 
 #include "DeviceUtils.h"
 
-namespace mm
-{
-   class DeviceManager;
-}
+namespace mmcore {
+namespace internal {
+
+class DeviceManager;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -123,3 +123,6 @@ private:
    int OnPixelSizeChanged(double newPixelSizeUm);
    int OnPixelSizeAffineChanged(std::vector<double> newPixelSizeAffine);
 };
+
+} // namespace internal
+} // namespace mmcore

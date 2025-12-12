@@ -62,6 +62,9 @@ const char* const LIB_NAME_SUFFIX = ".so.0";
 const char* const LIB_NAME_SUFFIX = "";
 #endif
 
+namespace mmcore {
+namespace internal {
+
 ///////////////////////////////////////////////////////////////////////////////
 // CPluginManager class
 // --------------------
@@ -209,7 +212,7 @@ CPluginManager::UnloadPluginLibrary(const char* moduleName)
 
 // TODO Use std::filesystem instead of this.
 // This stop-gap implementation makes the assumption that the argument is in
-// the format that could be returned from MMCorePrivate::GetPathOfThisModule()
+// the format that could be returned from mmcore::internal::GetPathOfThisModule()
 // (e.g. no trailing slashes; real filename present).
 static std::string
 GetDirName(const std::string& path)
@@ -241,7 +244,7 @@ CPluginManager::GetDefaultSearchPaths()
    {
       try
       {
-         std::string coreModulePath = MMCorePrivate::GetPathOfThisModule();
+         std::string coreModulePath = GetPathOfThisModule();
          std::string coreModuleDir = GetDirName(coreModulePath);
          paths.push_back(coreModuleDir);
       }
@@ -334,3 +337,6 @@ CPluginManager::GetAvailableDeviceAdapters()
 
    return modules;
 }
+
+} // namespace internal
+} // namespace mmcore

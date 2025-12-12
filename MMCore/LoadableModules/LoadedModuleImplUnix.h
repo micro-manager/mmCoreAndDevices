@@ -26,6 +26,9 @@
 
 #include "LoadedModuleImpl.h"
 
+namespace mmcore {
+namespace internal {
+
 class LoadedModuleImplUnix : public LoadedModuleImpl
 {
 public:
@@ -37,5 +40,8 @@ public:
 private:
    void* handle_;
 };
+
+} // namespace internal
+} // namespace mmcore
 
 #endif // !defined(_WIN32)

@@ -78,13 +78,15 @@ static std::string GetPathOfModule(HMODULE hModule)
 }
 
 
-namespace MMCorePrivate {
+namespace mmcore {
+namespace internal {
 
 std::string GetPathOfThisModule()
 {
    return GetPathOfModule(GetHandleOfThisModule());
 }
 
-} // namespace MMCorePrivate
+} // namespace internal
+} // namespace mmcore
 
 #endif // _WIN32

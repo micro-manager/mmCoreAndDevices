@@ -8,7 +8,8 @@
 #include <thread>
 #include <vector>
 
-namespace mm {
+namespace mmcore {
+namespace internal {
 namespace logging {
 
 TEST_CASE("synchronous logger basics", "[Logger]")
@@ -120,4 +121,5 @@ TEST_CASE("async logger on thread", "[Logger]")
 }
 
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

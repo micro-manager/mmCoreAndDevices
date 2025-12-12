@@ -34,6 +34,9 @@
 #include <cassert>
 #include <cstdlib>
 
+namespace mmcore {
+namespace internal {
+
 std::vector<std::string> CoreProperty::GetAllowedValues() const
 {
    std::vector<std::string> allowedVals;
@@ -294,4 +297,5 @@ void CorePropertyCollection::AddAllowedValue(const char* propName, const char* v
    it->second.AddAllowedValue(value);
 }
 
-
+} // namespace internal
+} // namespace mmcore

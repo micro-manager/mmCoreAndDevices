@@ -20,16 +20,16 @@
 #include "Metadata.h"
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
 typedef internal::GenericLogger<EntryData> Logger;
 typedef internal::GenericLogStream<Logger> LogStream;
 
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore
 
 
 // Shorthands for LogStream
@@ -50,13 +50,13 @@ typedef internal::GenericLogStream<Logger> LogStream;
 // a trick.
 
 #define LOG_WITH_LEVEL(logger, level) \
-   for (::mm::logging::LogStream strm((logger), (level)); \
+   for (::mmcore::internal::logging::LogStream strm((logger), (level)); \
          !strm.Used(); strm.MarkUsed()) \
       strm
 
-#define LOG_TRACE(logger) LOG_WITH_LEVEL((logger), ::mm::logging::LogLevelTrace)
-#define LOG_DEBUG(logger) LOG_WITH_LEVEL((logger), ::mm::logging::LogLevelDebug)
-#define LOG_INFO(logger) LOG_WITH_LEVEL((logger), ::mm::logging::LogLevelInfo)
-#define LOG_WARNING(logger) LOG_WITH_LEVEL((logger), ::mm::logging::LogLevelWarning)
-#define LOG_ERROR(logger) LOG_WITH_LEVEL((logger), ::mm::logging::LogLevelError)
-#define LOG_FATAL(logger) LOG_WITH_LEVEL((logger), ::mm::logging::LogLevelFatal)
+#define LOG_TRACE(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelTrace)
+#define LOG_DEBUG(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelDebug)
+#define LOG_INFO(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelInfo)
+#define LOG_WARNING(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelWarning)
+#define LOG_ERROR(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelError)
+#define LOG_FATAL(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelFatal)

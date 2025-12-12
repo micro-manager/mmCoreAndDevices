@@ -22,6 +22,9 @@
 #include "StageInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int StageInstance::SetPositionUm(double pos) { RequireInitialized(__func__); return GetImpl()->SetPositionUm(pos); }
 int StageInstance::SetRelativePositionUm(double d) { RequireInitialized(__func__); return GetImpl()->SetRelativePositionUm(d); }
 int StageInstance::Move(double velocity) { RequireInitialized(__func__); return GetImpl()->Move(velocity); }
@@ -68,3 +71,6 @@ int StageInstance::AddToStageSequence(double position) { RequireInitialized(__fu
 int StageInstance::SendStageSequence() { RequireInitialized(__func__); return GetImpl()->SendStageSequence(); }
 int StageInstance::SetStageLinearSequence(double dZ_um, long nSlices)
 { RequireInitialized(__func__); return GetImpl()->SetStageLinearSequence(dZ_um, nSlices); }
+
+} // namespace internal
+} // namespace mmcore
