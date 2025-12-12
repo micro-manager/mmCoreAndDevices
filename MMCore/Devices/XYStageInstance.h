@@ -31,8 +31,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger) :
+         mmcore::internal::logging::Logger deviceLogger,
+         mmcore::internal::logging::Logger coreLogger) :
       DeviceInstanceBase<MM::XYStage>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 

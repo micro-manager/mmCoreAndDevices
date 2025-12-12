@@ -117,7 +117,7 @@ const int MMCore_versionMajor = 11, MMCore_versionMinor = 11, MMCore_versionPatc
  * devices at this point.
  */
 CMMCore::CMMCore() :
-   logManager_(new mm::LogManager()),
+   logManager_(new mmcore::internal::LogManager()),
    appLogger_(logManager_->NewLogger("App")),
    coreLogger_(logManager_->NewLogger("Core")),
    everSnapped_(false),
@@ -131,7 +131,7 @@ CMMCore::CMMCore() :
    pixelSizeGroup_(0),
    cbuf_(0),
    pluginManager_(new CPluginManager()),
-   deviceManager_(new mm::DeviceManager())
+   deviceManager_(new mmcore::internal::DeviceManager())
 {
    configGroups_ = new ConfigGroupCollection();
    pixelSizeGroup_ = new PixelSizeConfigGroup();
@@ -223,7 +223,7 @@ void CMMCore::enableFeature(const char* name, bool enable) MMCORE_LEGACY_THROW(C
 {
     if (name == nullptr)
         throw CMMError("Null feature name", MMERR_NullPointerException);
-    mm::features::enableFeature(name, enable);
+    mmcore::internal::features::enableFeature(name, enable);
 }
 
 /**
@@ -240,7 +240,7 @@ bool CMMCore::isFeatureEnabled(const char* name) MMCORE_LEGACY_THROW(CMMError)
 {
     if (name == nullptr)
         throw CMMError("Null feature name", MMERR_NullPointerException);
-    return mm::features::isFeatureEnabled(name);
+    return mmcore::internal::features::isFeatureEnabled(name);
 }
 
 /**
@@ -272,7 +272,7 @@ std::string CMMCore::getPrimaryLogFile() const
  */
 void CMMCore::logMessage(const char* msg)
 {
-   appLogger_(mm::logging::LogLevelInfo, msg);
+   appLogger_(mmcore::internal::logging::LogLevelInfo, msg);
 }
 
 
@@ -281,8 +281,8 @@ void CMMCore::logMessage(const char* msg)
  */
 void CMMCore::logMessage(const char* msg, bool debugOnly)
 {
-   appLogger_(debugOnly ? mm::logging::LogLevelDebug :
-         mm::logging::LogLevelInfo, msg);
+   appLogger_(debugOnly ? mmcore::internal::logging::LogLevelDebug :
+         mmcore::internal::logging::LogLevelInfo, msg);
 }
 
 
@@ -292,8 +292,8 @@ void CMMCore::logMessage(const char* msg, bool debugOnly)
  */
 void CMMCore::enableDebugLog(bool enable)
 {
-   logManager_->SetPrimaryLogLevel(enable ? mm::logging::LogLevelTrace :
-         mm::logging::LogLevelInfo);
+   logManager_->SetPrimaryLogLevel(enable ? mmcore::internal::logging::LogLevelTrace :
+         mmcore::internal::logging::LogLevelInfo);
 }
 
 /**
@@ -301,7 +301,7 @@ void CMMCore::enableDebugLog(bool enable)
  */
 bool CMMCore::debugLogEnabled()
 {
-   return (logManager_->GetPrimaryLogLevel() < mm::logging::LogLevelInfo);
+   return (logManager_->GetPrimaryLogLevel() < mmcore::internal::logging::LogLevelInfo);
 }
 
 /**
@@ -341,8 +341,8 @@ int CMMCore::startSecondaryLogFile(const char* filename, bool enableDebug,
    if (!filename)
       throw CMMError("Filename is null");
 
-   using namespace mm::logging;
-   typedef mm::LogManager::LogFileHandle LogFileHandle;
+   using namespace mmcore::internal::logging;
+   typedef mmcore::internal::LogManager::LogFileHandle LogFileHandle;
 
    LogFileHandle handle = logManager_->AddSecondaryLogFile(
             (enableDebug ? LogLevelTrace : LogLevelInfo),
@@ -359,7 +359,7 @@ int CMMCore::startSecondaryLogFile(const char* filename, bool enableDebug,
  */
 void CMMCore::stopSecondaryLogFile(int handle) MMCORE_LEGACY_THROW(CMMError)
 {
-   typedef mm::LogManager::LogFileHandle LogFileHandle;
+   typedef mmcore::internal::LogManager::LogFileHandle LogFileHandle;
    LogFileHandle h = static_cast<LogFileHandle>(handle);
    logManager_->RemoveSecondaryLogFile(h);
 }
@@ -470,7 +470,7 @@ Configuration CMMCore::getSystemState()
    for (std::vector<std::string>::const_iterator i = devices.begin(), dend = devices.end(); i != dend; ++i)
    {
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*i);
-      mm::DeviceModuleLockGuard guard(pDev);
+      mmcore::internal::DeviceModuleLockGuard guard(pDev);
       std::vector<std::string> propertyNames = pDev->GetPropertyNames();
       for (std::vector<std::string>::const_iterator it = propertyNames.begin(), end = propertyNames.end();
             it != end; ++it)
@@ -695,10 +695,10 @@ void CMMCore::loadDevice(const char* label, const char* moduleName, const char* 
       throw CMMError("Null device name");
 
    // Logger for logging from device adapter code
-   mm::logging::Logger deviceLogger =
+   mmcore::internal::logging::Logger deviceLogger =
       logManager_->NewLogger("dev:" + std::string(label));
    // Logger for logging related to the device, by us the Core
-   mm::logging::Logger coreLogger =
+   mmcore::internal::logging::Logger coreLogger =
       logManager_->NewLogger("Core:dev:" + std::string(label));
 
    LOG_DEBUG(coreLogger_) << "Will load device " << deviceName <<
@@ -720,7 +720,7 @@ void CMMCore::assignDefaultRole(std::shared_ptr<DeviceInstance> pDevice)
    // default special roles for particular devices
    // The roles which are assigned at the load time will make sense for a simple
    // configuration. More complicated configurations will typically override default settings.
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    const std::string label(pDevice->GetLabel());
 
    switch(pDevice->GetType())
@@ -815,7 +815,7 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
    try {
       removeDeviceRole(pDevice);
 
-      mm::DeviceModuleLockGuard guard(pDevice);
+      mmcore::internal::DeviceModuleLockGuard guard(pDevice);
       LOG_DEBUG(coreLogger_) << "Will unload device " << label;
       deviceManager_->UnloadDevice(pDevice);
       LOG_DEBUG(coreLogger_) << "Did unload device " << label;
@@ -950,7 +950,7 @@ void CMMCore::initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError)
          logError(devices[i].c_str(), err.getMsg().c_str());
          throw;
       }
-      mm::DeviceModuleLockGuard guard(pDevice);
+      mmcore::internal::DeviceModuleLockGuard guard(pDevice);
       LOG_INFO(coreLogger_) << "Will initialize device " << devices[i];
       pDevice->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << devices[i];
@@ -1013,7 +1013,7 @@ void CMMCore::initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError)
    // Initialize ports first.  This should be fast, so no need to go parallel (also could not hurt really)
    for (std::shared_ptr<DeviceInstance> pPort : ports)
    {
-      mm::DeviceModuleLockGuard guard(pPort);
+      mmcore::internal::DeviceModuleLockGuard guard(pPort);
       LOG_INFO(coreLogger_) << "Will initialize device " << pPort->GetLabel();
       pPort->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << pPort->GetLabel();
@@ -1066,7 +1066,7 @@ void CMMCore::initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError)
  */
 int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string>> devicesLabels) {
    for (auto& deviceLabel : devicesLabels) {
-      mm::DeviceModuleLockGuard guard(deviceLabel.first);
+      mmcore::internal::DeviceModuleLockGuard guard(deviceLabel.first);
       LOG_INFO(coreLogger_) << "Will initialize device " << deviceLabel.second;
       deviceLabel.first->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << deviceLabel.second;
@@ -1116,7 +1116,7 @@ void CMMCore::initializeDevice(const char* label ///< the device to initialize
 {
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
 
    LOG_INFO(coreLogger_) << "Will initialize device " << label;
    pDevice->Initialize();
@@ -1136,7 +1136,7 @@ CMMCore::getDeviceInitializationState(const char* label) const MMCORE_LEGACY_THR
 {
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    if (pDevice->IsInitialized())
    {
       return DeviceInitializationState::InitializedSuccessfully;
@@ -1187,7 +1187,7 @@ std::string CMMCore::getDeviceLibrary(const char* label) MMCORE_LEGACY_THROW(CMM
 
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetAdapterModule()->GetName();
 }
 
@@ -1205,7 +1205,7 @@ void CMMCore::unloadLibrary(const char* moduleName) MMCORE_LEGACY_THROW(CMMError
       for (it=devices.rbegin(); it != devices.rend(); it++)
       {
          std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*it);
-         mm::DeviceModuleLockGuard guard(pDev);
+         mmcore::internal::DeviceModuleLockGuard guard(pDev);
 
          if (pDev->GetAdapterModule()->GetName() == moduleName)
          {
@@ -1234,7 +1234,7 @@ std::string CMMCore::getDeviceName(const char* label) MMCORE_LEGACY_THROW(CMMErr
       return "Core";
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetName();
 }
 
@@ -1247,7 +1247,7 @@ std::string CMMCore::getParentLabel(const char* label) MMCORE_LEGACY_THROW(CMMEr
       // XXX Should be a throw
       return "";
    std::shared_ptr<DeviceInstance> device = deviceManager_->GetDevice(label);
-   mm::DeviceModuleLockGuard guard(device);
+   mmcore::internal::DeviceModuleLockGuard guard(device);
    return device->GetParentID();
 }
 
@@ -1269,7 +1269,7 @@ void CMMCore::setParentLabel(const char* label, const char* parentLabel) MMCORE_
       CheckDeviceLabel(parentLabel);
    }
 
-   mm::DeviceModuleLockGuard guard(pDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pDev);
    pDev->SetParentID(parentLabel);
 }
 
@@ -1284,7 +1284,7 @@ std::string CMMCore::getDeviceDescription(const char* label) MMCORE_LEGACY_THROW
       return "Core device";
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetDescription();
 }
 
@@ -1306,7 +1306,7 @@ double CMMCore::getDeviceDelayMs(const char* label) MMCORE_LEGACY_THROW(CMMError
       return 0.0;
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetDelayMs();
 }
 
@@ -1324,7 +1324,7 @@ void CMMCore::setDeviceDelayMs(const char* label, double delayMs) MMCORE_LEGACY_
       return; // ignore
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    pDevice->SetDelayMs(delayMs);
 }
 
@@ -1340,7 +1340,7 @@ bool CMMCore::usesDeviceDelay(const char* label) MMCORE_LEGACY_THROW(CMMError)
       return false;
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->UsesDelay();
 }
 
@@ -1355,7 +1355,7 @@ bool CMMCore::deviceBusy(const char* label) MMCORE_LEGACY_THROW(CMMError)
       return false;
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->Busy();
 }
 
@@ -1400,7 +1400,7 @@ void CMMCore::waitForDevice(std::shared_ptr<DeviceInstance> pDev) MMCORE_LEGACY_
    while (true)
    {
       {
-         mm::DeviceModuleLockGuard guard(pDev);
+         mmcore::internal::DeviceModuleLockGuard guard(pDev);
          if (!pDev->Busy())
          {
             break;
@@ -1458,7 +1458,7 @@ bool CMMCore::deviceTypeBusy(MM::DeviceType devType) MMCORE_LEGACY_THROW(CMMErro
       try {
          std::shared_ptr<DeviceInstance> pDevice =
             deviceManager_->GetDevice(devices[i]);
-         mm::DeviceModuleLockGuard guard(pDevice);
+         mmcore::internal::DeviceModuleLockGuard guard(pDevice);
          if (pDevice->Busy())
             return true;
       }
@@ -1516,7 +1516,7 @@ void CMMCore::setPosition(const char* label, double position) MMCORE_LEGACY_THRO
       " to position " << std::fixed << std::setprecision(5) << position <<
       " um";
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
    int ret = pStage->SetPositionUm(position);
    if (ret != DEVICE_OK)
    {
@@ -1547,7 +1547,7 @@ void CMMCore::setRelativePosition(const char* label, double d) MMCORE_LEGACY_THR
    LOG_DEBUG(coreLogger_) << "Will start relative move of " << label <<
       " by offset " << std::fixed << std::setprecision(5) << d << " um";
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    int ret = pStage->SetRelativePositionUm(d);
    if (ret != DEVICE_OK)
@@ -1577,7 +1577,7 @@ double CMMCore::getPosition(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
    double pos;
    int ret = pStage->GetPositionUm(pos);
    if (ret != DEVICE_OK)
@@ -1613,7 +1613,7 @@ void CMMCore::setXYPosition(const char* label, double x, double y) MMCORE_LEGACY
       " to position (" << std::fixed << std::setprecision(3) << x << ", " <<
       y << ") um";
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    int ret = pXYStage->SetPositionUm(x, y);
    if (ret != DEVICE_OK)
    {
@@ -1648,7 +1648,7 @@ void CMMCore::setRelativeXYPosition(const char* label, double dx, double dy) MMC
       " by (" << std::fixed << std::setprecision(3) << dx << ", " << dy <<
       ") um";
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    int ret = pXYStage->SetRelativePositionUm(dx, dy);
    if (ret != DEVICE_OK)
    {
@@ -1678,7 +1678,7 @@ void CMMCore::getXYPosition(const char* label, double& x, double& y) MMCORE_LEGA
    std::shared_ptr<XYStageInstance> pXYStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    int ret = pXYStage->GetPositionUm(x, y);
    if (ret != DEVICE_OK)
    {
@@ -1708,7 +1708,7 @@ double CMMCore::getXPosition(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<XYStageInstance> pXYStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    double x, y;
    int ret = pXYStage->GetPositionUm(x, y);
    if (ret != DEVICE_OK)
@@ -1740,7 +1740,7 @@ double CMMCore::getYPosition(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<XYStageInstance> pXYStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    double x, y;
    int ret = pXYStage->GetPositionUm(x, y);
    if (ret != DEVICE_OK)
@@ -1780,7 +1780,7 @@ void CMMCore::stop(const char* label) MMCORE_LEGACY_THROW(CMMError)
    {
       LOG_DEBUG(coreLogger_) << "Will stop stage " << label;
 
-      mm::DeviceModuleLockGuard guard(zStage);
+      mmcore::internal::DeviceModuleLockGuard guard(zStage);
       int ret = zStage->Stop();
       if (ret != DEVICE_OK)
       {
@@ -1798,7 +1798,7 @@ void CMMCore::stop(const char* label) MMCORE_LEGACY_THROW(CMMError)
    {
       LOG_DEBUG(coreLogger_) << "Will stop xy stage " << label;
 
-      mm::DeviceModuleLockGuard guard(xyStage);
+      mmcore::internal::DeviceModuleLockGuard guard(xyStage);
       int ret = xyStage->Stop();
       if (ret != DEVICE_OK)
       {
@@ -1834,7 +1834,7 @@ void CMMCore::home(const char* label) MMCORE_LEGACY_THROW(CMMError)
    {
       LOG_DEBUG(coreLogger_) << "Will home stage " << label;
 
-      mm::DeviceModuleLockGuard guard(zStage);
+      mmcore::internal::DeviceModuleLockGuard guard(zStage);
       int ret = zStage->Home();
       if (ret != DEVICE_OK)
       {
@@ -1852,7 +1852,7 @@ void CMMCore::home(const char* label) MMCORE_LEGACY_THROW(CMMError)
    {
       LOG_DEBUG(coreLogger_) << "Will home xy stage " << label;
 
-      mm::DeviceModuleLockGuard guard(xyStage);
+      mmcore::internal::DeviceModuleLockGuard guard(xyStage);
       int ret = xyStage->Home();
       if (ret != DEVICE_OK)
       {
@@ -1881,7 +1881,7 @@ void CMMCore::setOriginXY(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<XYStageInstance> pXYStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    int ret = pXYStage->SetOrigin();
    if (ret != DEVICE_OK)
    {
@@ -1915,7 +1915,7 @@ void CMMCore::setOriginX(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<XYStageInstance> pXYStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    int ret = pXYStage->SetXOrigin();
    if (ret != DEVICE_OK)
    {
@@ -1949,7 +1949,7 @@ void CMMCore::setOriginY(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<XYStageInstance> pXYStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    int ret = pXYStage->SetYOrigin();
    if (ret != DEVICE_OK)
    {
@@ -1984,7 +1984,7 @@ void CMMCore::setOrigin(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
    int ret = pStage->SetOrigin();
    if (ret != DEVICE_OK)
    {
@@ -2021,7 +2021,7 @@ void CMMCore::setAdapterOrigin(const char* label, double newZUm) MMCORE_LEGACY_T
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
    int ret = pStage->SetAdapterOriginUm(newZUm);
    if (ret != DEVICE_OK)
    {
@@ -2064,7 +2064,7 @@ void CMMCore::setAdapterOriginXY(const char* label,
    std::shared_ptr<XYStageInstance> pXYStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pXYStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pXYStage);
    int ret = pXYStage->SetAdapterOriginUm(newXUm, newYUm);
    if (ret != DEVICE_OK)
    {
@@ -2111,7 +2111,7 @@ int CMMCore::getFocusDirection(const char* stageLabel) MMCORE_LEGACY_THROW(CMMEr
    std::shared_ptr<StageInstance> stage =
       deviceManager_->GetDeviceOfType<StageInstance>(stageLabel);
 
-   mm::DeviceModuleLockGuard guard(stage);
+   mmcore::internal::DeviceModuleLockGuard guard(stage);
    return static_cast<int>(stage->GetFocusDirection());
 }
 
@@ -2142,7 +2142,7 @@ void CMMCore::setFocusDirection(const char* stageLabel, int sign)
       std::shared_ptr<StageInstance> stage =
          deviceManager_->GetDeviceOfType<StageInstance>(stageLabel);
 
-      mm::DeviceModuleLockGuard guard(stage);
+      mmcore::internal::DeviceModuleLockGuard guard(stage);
       stage->SetFocusDirection(direction);
    }
    catch (const CMMError&)
@@ -2161,7 +2161,7 @@ bool CMMCore::isExposureSequenceable(const char* cameraLabel) MMCORE_LEGACY_THRO
    std::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
 
-   mm::DeviceModuleLockGuard guard(pCamera);
+   mmcore::internal::DeviceModuleLockGuard guard(pCamera);
 
    bool isSequenceable;
    int ret = pCamera->IsExposureSequenceable(isSequenceable);
@@ -2182,7 +2182,7 @@ void CMMCore::startExposureSequence(const char* cameraLabel) MMCORE_LEGACY_THROW
    std::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
 
-   mm::DeviceModuleLockGuard guard(pCamera);
+   mmcore::internal::DeviceModuleLockGuard guard(pCamera);
 
    int ret = pCamera->StartExposureSequence();
    if (ret != DEVICE_OK)
@@ -2199,7 +2199,7 @@ void CMMCore::stopExposureSequence(const char* cameraLabel) MMCORE_LEGACY_THROW(
    std::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
 
-   mm::DeviceModuleLockGuard guard(pCamera);
+   mmcore::internal::DeviceModuleLockGuard guard(pCamera);
 
    int ret = pCamera->StopExposureSequence();
    if (ret != DEVICE_OK)
@@ -2216,7 +2216,7 @@ long CMMCore::getExposureSequenceMaxLength(const char* cameraLabel) MMCORE_LEGAC
    std::shared_ptr<CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<CameraInstance>(cameraLabel);
 
-   mm::DeviceModuleLockGuard guard(pCamera);
+   mmcore::internal::DeviceModuleLockGuard guard(pCamera);
    long length;
    int ret = pCamera->GetExposureSequenceMaxLength(length);
    if (ret != DEVICE_OK)
@@ -2243,7 +2243,7 @@ void CMMCore::loadExposureSequence(const char* cameraLabel, std::vector<double> 
             ") by the camera " + ToQuotedString(cameraLabel));
    }
 
-   mm::DeviceModuleLockGuard guard(pCamera);
+   mmcore::internal::DeviceModuleLockGuard guard(pCamera);
 
    int ret;
    ret = pCamera->ClearExposureSequence();
@@ -2274,7 +2274,7 @@ bool CMMCore::isStageSequenceable(const char* label) MMCORE_LEGACY_THROW(CMMErro
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    bool isSequenceable;
    int ret = pStage->IsStageSequenceable(isSequenceable);
@@ -2295,7 +2295,7 @@ bool CMMCore::isStageLinearSequenceable(const char* label) MMCORE_LEGACY_THROW(C
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    bool isSequenceable;
    int ret = pStage->IsStageLinearSequenceable(isSequenceable);
@@ -2315,7 +2315,7 @@ void CMMCore::startStageSequence(const char* label) MMCORE_LEGACY_THROW(CMMError
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    int ret = pStage->StartStageSequence();
    if (ret != DEVICE_OK)
@@ -2332,7 +2332,7 @@ void CMMCore::stopStageSequence(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    int ret = pStage->StopStageSequence();
    if (ret != DEVICE_OK)
@@ -2350,7 +2350,7 @@ long CMMCore::getStageSequenceMaxLength(const char* label) MMCORE_LEGACY_THROW(C
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
    long length;
    int ret = pStage->GetStageSequenceMaxLength(length);
    if (ret != DEVICE_OK)
@@ -2370,7 +2370,7 @@ void CMMCore::loadStageSequence(const char* label, std::vector<double> positionS
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    int ret;
    ret = pStage->ClearStageSequence();
@@ -2407,7 +2407,7 @@ void CMMCore::setStageLinearSequence(const char* label, double dZ_um, int nSlice
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    int ret;
    ret = pStage->SetStageLinearSequence(dZ_um, nSlices);
@@ -2424,7 +2424,7 @@ bool CMMCore::isXYStageSequenceable(const char* label) MMCORE_LEGACY_THROW(CMMEr
    std::shared_ptr<XYStageInstance> pStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    bool isSequenceable;
    int ret = pStage->IsXYStageSequenceable(isSequenceable);
@@ -2446,7 +2446,7 @@ void CMMCore::startXYStageSequence(const char* label) MMCORE_LEGACY_THROW(CMMErr
    std::shared_ptr<XYStageInstance> pStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    int ret = pStage->StartXYStageSequence();
    if (ret != DEVICE_OK)
@@ -2463,7 +2463,7 @@ void CMMCore::stopXYStageSequence(const char* label) MMCORE_LEGACY_THROW(CMMErro
    std::shared_ptr<XYStageInstance> pStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    int ret = pStage->StopXYStageSequence();
    if (ret != DEVICE_OK)
@@ -2481,7 +2481,7 @@ long CMMCore::getXYStageSequenceMaxLength(const char* label) MMCORE_LEGACY_THROW
    std::shared_ptr<XYStageInstance> pStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
    long length;
    int ret = pStage->GetXYStageSequenceMaxLength(length);
    if (ret != DEVICE_OK)
@@ -2505,7 +2505,7 @@ void CMMCore::loadXYStageSequence(const char* label,
    std::shared_ptr<XYStageInstance> pStage =
       deviceManager_->GetDeviceOfType<XYStageInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
 
    int ret;
    ret = pStage->ClearXYStageSequence();
@@ -2543,7 +2543,7 @@ void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
             ,MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-      mm::DeviceModuleLockGuard guard(camera);
+      mmcore::internal::DeviceModuleLockGuard guard(camera);
 
       int ret = DEVICE_OK;
       try {
@@ -2644,7 +2644,7 @@ void CMMCore::setShutterOpen(const char* shutterLabel, bool state) MMCORE_LEGACY
       deviceManager_->GetDeviceOfType<ShutterInstance>(shutterLabel);
    if (pShutter)
    {
-      mm::DeviceModuleLockGuard guard(pShutter);
+      mmcore::internal::DeviceModuleLockGuard guard(pShutter);
       int ret = pShutter->SetOpen(state);
       if (ret != DEVICE_OK)
       {
@@ -2684,7 +2684,7 @@ bool CMMCore::getShutterOpen(const char* shutterLabel) MMCORE_LEGACY_THROW(CMMEr
    bool state = true; // default open
    if (pShutter)
    {
-      mm::DeviceModuleLockGuard guard(pShutter);
+      mmcore::internal::DeviceModuleLockGuard guard(pShutter);
       int ret = pShutter->GetOpen(state);
       if (ret != DEVICE_OK)
       {
@@ -2741,7 +2741,7 @@ void* CMMCore::getImage() MMCORE_LEGACY_THROW(CMMError)
 
       void* pBuf(0);
       try {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          pBuf = const_cast<unsigned char*> (camera->GetImageBuffer());
 
          std::shared_ptr<ImageProcessorInstance> imageProcessor =
@@ -2788,7 +2788,7 @@ void* CMMCore::getImage(unsigned channelNr) MMCORE_LEGACY_THROW(CMMError)
    {
       void* pBuf(0);
       try {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          pBuf = const_cast<unsigned char*> (camera->GetImageBuffer(channelNr));
 
          std::shared_ptr<ImageProcessorInstance> imageProcessor =
@@ -2825,7 +2825,7 @@ long CMMCore::getImageBufferSize()
    if (camera) {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->GetImageBufferSize();
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -2865,7 +2865,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
 			}
 			cbuf_->Clear();
          cbuf_->SetOverwriteData(!stopOnOverflow);
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
 
          LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
 			int nRet = camera->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
@@ -2899,7 +2899,7 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
    std::shared_ptr<CameraInstance> pCam =
       deviceManager_->GetDeviceOfType<CameraInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pCam);
+   mmcore::internal::DeviceModuleLockGuard guard(pCam);
    if(pCam->IsCapturing())
       throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
                      MMERR_NotAllowedDuringSequenceAcquisition);
@@ -2931,7 +2931,7 @@ void CMMCore::prepareSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(
    std::shared_ptr<CameraInstance> pCam =
       deviceManager_->GetDeviceOfType<CameraInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pCam);
+   mmcore::internal::DeviceModuleLockGuard guard(pCam);
    if(pCam->IsCapturing())
       throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
                      MMERR_NotAllowedDuringSequenceAcquisition);
@@ -2955,7 +2955,7 @@ void CMMCore::initializeCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
-      mm::DeviceModuleLockGuard guard(camera);
+      mmcore::internal::DeviceModuleLockGuard guard(camera);
       if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
       {
          logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
@@ -2979,7 +2979,7 @@ void CMMCore::stopSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(CMM
    std::shared_ptr<CameraInstance> pCam =
       deviceManager_->GetDeviceOfType<CameraInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pCam);
+   mmcore::internal::DeviceModuleLockGuard guard(pCam);
    LOG_DEBUG(coreLogger_) << "Will stop sequence acquisition from camera " << label;
    int nRet = pCam->StopSequenceAcquisition();
    if (nRet != DEVICE_OK)
@@ -3001,7 +3001,7 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGAC
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
-      mm::DeviceModuleLockGuard guard(camera);
+      mmcore::internal::DeviceModuleLockGuard guard(camera);
       if(camera->IsCapturing())
       {
          throw CMMError(getCoreErrorText(
@@ -3038,7 +3038,7 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
-      mm::DeviceModuleLockGuard guard(camera);
+      mmcore::internal::DeviceModuleLockGuard guard(camera);
       LOG_DEBUG(coreLogger_) << "Will stop sequence acquisition from current camera";
       int nRet = camera->StopSequenceAcquisition();
       if (nRet != DEVICE_OK)
@@ -3068,7 +3068,7 @@ bool CMMCore::isSequenceRunning() MMCORE_NOEXCEPT
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->IsCapturing();
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -3088,7 +3088,7 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<CameraInstance> pCam =
       deviceManager_->GetDeviceOfType<CameraInstance>(label);
 
-   mm::DeviceModuleLockGuard guard(pCam);
+   mmcore::internal::DeviceModuleLockGuard guard(pCam);
    return pCam->IsCapturing();
 };
 
@@ -3116,7 +3116,7 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   const mm::ImgBuffer* pBuf = cbuf_->GetTopImageBuffer(channel);
+   const mmcore::internal::ImgBuffer* pBuf = cbuf_->GetTopImageBuffer(channel);
    if (pBuf != 0)
    {
       md = pBuf->GetMetadata();
@@ -3157,7 +3157,7 @@ void* CMMCore::getLastImageMD(Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
  */
 void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
 {
-   const mm::ImgBuffer* pBuf = cbuf_->GetNthFromTopImageBuffer(n);
+   const mmcore::internal::ImgBuffer* pBuf = cbuf_->GetNthFromTopImageBuffer(n);
    if (pBuf != 0)
    {
       md = pBuf->GetMetadata();
@@ -3202,7 +3202,7 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) MM
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   const mm::ImgBuffer* pBuf = cbuf_->GetNextImageBuffer(channel);
+   const mmcore::internal::ImgBuffer* pBuf = cbuf_->GetNextImageBuffer(channel);
    if (pBuf != 0)
    {
       md = pBuf->GetMetadata();
@@ -3261,7 +3261,7 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
       std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
       if (camera)
 		{
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
 		}
@@ -3736,7 +3736,7 @@ std::vector<std::string> CMMCore::getDevicePropertyNames(const char* label) MMCO
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
    {
-      mm::DeviceModuleLockGuard guard(pDevice);
+      mmcore::internal::DeviceModuleLockGuard guard(pDevice);
       return pDevice->GetPropertyNames();
    }
 }
@@ -3789,7 +3789,7 @@ std::vector<std::string> CMMCore::getAllowedPropertyValues(const char* label, co
    std::vector<std::string> valueList;
 
    {
-      mm::DeviceModuleLockGuard guard(pDevice);
+      mmcore::internal::DeviceModuleLockGuard guard(pDevice);
       unsigned nrValues = pDevice->GetNumberOfPropertyValues(propName);
       valueList.reserve(nrValues);
       for (unsigned i = 0; i < nrValues; ++i)
@@ -3815,7 +3815,7 @@ std::string CMMCore::getProperty(const char* label, const char* propName) MMCORE
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    std::string value = pDevice->GetProperty(propName);
 
    // use the opportunity to update the cache
@@ -3886,7 +3886,7 @@ void CMMCore::setProperty(const char* label, const char* propName,
    {
       std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-      mm::DeviceModuleLockGuard guard(pDevice);
+      mmcore::internal::DeviceModuleLockGuard guard(pDevice);
 
       pDevice->SetProperty(propName, propValue);
 
@@ -3961,7 +3961,7 @@ bool CMMCore::hasProperty(const char* label, const char* propName) MMCORE_LEGACY
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->HasProperty(propName);
 }
 
@@ -3979,7 +3979,7 @@ bool CMMCore::isPropertyReadOnly(const char* label, const char* propName) MMCORE
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetPropertyReadOnly(propName);
 }
 
@@ -3997,7 +3997,7 @@ bool CMMCore::isPropertyPreInit(const char* label, const char* propName) MMCORE_
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetPropertyInitStatus(propName);
 }
 
@@ -4011,7 +4011,7 @@ double CMMCore::getPropertyLowerLimit(const char* label, const char* propName) M
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetPropertyLowerLimit(propName);
 }
 
@@ -4025,7 +4025,7 @@ double CMMCore::getPropertyUpperLimit(const char* label, const char* propName) M
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetPropertyUpperLimit(propName);
 }
 
@@ -4041,7 +4041,7 @@ bool CMMCore::hasPropertyLimits(const char* label, const char* propName) MMCORE_
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->HasPropertyLimits(propName);
 }
 
@@ -4057,7 +4057,7 @@ bool CMMCore::isPropertySequenceable(const char* label, const char* propName) MM
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->IsPropertySequenceable(propName);
 }
 
@@ -4074,7 +4074,7 @@ long CMMCore::getPropertySequenceMaxLength(const char* label, const char* propNa
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetPropertySequenceMaxLength(propName);
 }
 
@@ -4093,7 +4093,7 @@ void CMMCore::startPropertySequence(const char* label, const char* propName) MMC
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    pDevice->StartPropertySequence(propName);
 }
 
@@ -4111,7 +4111,7 @@ void CMMCore::stopPropertySequence(const char* label, const char* propName) MMCO
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    pDevice->StopPropertySequence(propName);
 }
 
@@ -4130,7 +4130,7 @@ void CMMCore::loadPropertySequence(const char* label, const char* propName, std:
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    pDevice->ClearPropertySequence(propName);
 
    for (std::vector<std::string>::const_iterator it = eventSequence.begin(),
@@ -4156,7 +4156,7 @@ MM::PropertyType CMMCore::getPropertyType(const char* label, const char* propNam
    std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
-   mm::DeviceModuleLockGuard guard(pDevice);
+   mmcore::internal::DeviceModuleLockGuard guard(pDevice);
    return pDevice->GetPropertyType(propName);
 }
 
@@ -4172,7 +4172,7 @@ unsigned CMMCore::getImageWidth()
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->GetImageWidth();
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -4194,7 +4194,7 @@ unsigned CMMCore::getImageHeight()
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->GetImageHeight();
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -4217,7 +4217,7 @@ unsigned CMMCore::getBytesPerPixel()
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->GetImageBytesPerPixel();
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -4242,7 +4242,7 @@ unsigned CMMCore::getImageBitDepth()
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->GetBitDepth();
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -4264,7 +4264,7 @@ unsigned CMMCore::getNumberOfComponents()
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->GetNumberOfComponents();
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -4285,7 +4285,7 @@ unsigned CMMCore::getNumberOfCameraChannels()
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->GetNumberOfChannels();
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -4306,7 +4306,7 @@ std::string CMMCore::getCameraChannelName(unsigned int channelNr)
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          return camera->GetChannelName(channelNr);
       }
       catch (const CMMError&) // Possibly uninitialized camera
@@ -4332,7 +4332,7 @@ void CMMCore::setExposure(double dExp) MMCORE_LEGACY_THROW(CMMError)
    {
       std::string cameraName;
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          cameraName = camera->GetLabel();
       }
       setExposure(cameraName.c_str(), dExp);
@@ -4350,7 +4350,7 @@ void CMMCore::setExposure(const char* label, double dExp) MMCORE_LEGACY_THROW(CM
       deviceManager_->GetDeviceOfType<CameraInstance>(label);
 
    {
-      mm::DeviceModuleLockGuard guard(pCamera);
+      mmcore::internal::DeviceModuleLockGuard guard(pCamera);
       LOG_DEBUG(coreLogger_) << "Will set camera " << label <<
          " exposure to " << std::fixed << std::setprecision(3) <<
          dExp << " ms";
@@ -4379,7 +4379,7 @@ double CMMCore::getExposure() MMCORE_LEGACY_THROW(CMMError)
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
-      mm::DeviceModuleLockGuard guard(camera);
+      mmcore::internal::DeviceModuleLockGuard guard(camera);
       return camera->GetExposure();
    }
    else
@@ -4398,7 +4398,7 @@ double CMMCore::getExposure(const char* label) MMCORE_LEGACY_THROW(CMMError)
         deviceManager_->GetDeviceOfType<CameraInstance>(label);
   if (pCamera)
   {
-     mm::DeviceModuleLockGuard guard(pCamera);
+     mmcore::internal::DeviceModuleLockGuard guard(pCamera);
      return pCamera->GetExposure();
   }
   else
@@ -4427,7 +4427,7 @@ void CMMCore::setROI(int x, int y, int xSize, int ySize) MMCORE_LEGACY_THROW(CMM
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
-      mm::DeviceModuleLockGuard guard(camera);
+      mmcore::internal::DeviceModuleLockGuard guard(camera);
       LOG_DEBUG(coreLogger_) << "Will set ROI of current camera to ("
          "left = " << x << ", top = " << y <<
          ", width = " << xSize << ", height = " << ySize << ")";
@@ -4468,7 +4468,7 @@ void CMMCore::getROI(int& x, int& y, int& xSize, int& ySize) MMCORE_LEGACY_THROW
    std::shared_ptr<CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
-      mm::DeviceModuleLockGuard guard(camera);
+      mmcore::internal::DeviceModuleLockGuard guard(camera);
       int nRet = camera->GetROI(uX, uY, uXSize, uYSize);
       if (nRet != DEVICE_OK)
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
@@ -4506,7 +4506,7 @@ void CMMCore::setROI(const char* label, int x, int y, int xSize, int ySize) MMCO
   std::shared_ptr<CameraInstance> camera = deviceManager_->GetDeviceOfType<CameraInstance>(label);
   if (camera)
   {
-     mm::DeviceModuleLockGuard guard(camera);
+     mmcore::internal::DeviceModuleLockGuard guard(camera);
      LOG_DEBUG(coreLogger_) << "Will set ROI of camera " << label <<
         " to (left = " << x << ", top = " << y <<
         ", width = " << xSize << ", height = " << ySize << ")";
@@ -4545,7 +4545,7 @@ void CMMCore::getROI(const char* label, int& x, int& y, int& xSize, int& ySize) 
       deviceManager_->GetDeviceOfType<CameraInstance>(label);
 
    unsigned uX(0), uY(0), uXSize(0), uYSize(0);
-   mm::DeviceModuleLockGuard guard(pCam);
+   mmcore::internal::DeviceModuleLockGuard guard(pCam);
    int nRet = pCam->GetROI(uX, uY, uXSize, uYSize);
    if (nRet != DEVICE_OK)
       throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
@@ -4568,7 +4568,7 @@ void CMMCore::clearROI() MMCORE_LEGACY_THROW(CMMError)
    if (camera)
    {
       // effectively clears the current ROI setting
-      mm::DeviceModuleLockGuard guard(camera);
+      mmcore::internal::DeviceModuleLockGuard guard(camera);
       int nRet = camera->ClearROI();
       if (nRet != DEVICE_OK)
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
@@ -4591,7 +4591,7 @@ bool CMMCore::isMultiROISupported() MMCORE_LEGACY_THROW(CMMError)
    {
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
-   mm::DeviceModuleLockGuard guard(camera);
+   mmcore::internal::DeviceModuleLockGuard guard(camera);
    return camera->SupportsMultiROI();
 }
 
@@ -4605,7 +4605,7 @@ bool CMMCore::isMultiROIEnabled() MMCORE_LEGACY_THROW(CMMError)
    {
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
-   mm::DeviceModuleLockGuard guard(camera);
+   mmcore::internal::DeviceModuleLockGuard guard(camera);
    return camera->IsMultiROISet();
 }
 
@@ -4634,7 +4634,7 @@ void CMMCore::setMultiROI(std::vector<unsigned> xs, std::vector<unsigned> ys,
    {
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
-   mm::DeviceModuleLockGuard guard(camera);
+   mmcore::internal::DeviceModuleLockGuard guard(camera);
    const unsigned numROI = (unsigned) xs.size();
    int nRet = camera->SetMultiROI(xs.data(), ys.data(),
                                   widths.data(), heights.data(),
@@ -4663,7 +4663,7 @@ void CMMCore::getMultiROI(std::vector<unsigned>& xs, std::vector<unsigned>& ys,
    {
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
-   mm::DeviceModuleLockGuard guard(camera);
+   mmcore::internal::DeviceModuleLockGuard guard(camera);
    unsigned numROI;
    int nRet = camera->GetMultiROICount(numROI);
    if (nRet != DEVICE_OK)
@@ -4706,7 +4706,7 @@ void CMMCore::setState(const char* deviceLabel, long state) MMCORE_LEGACY_THROW(
 {
    std::shared_ptr<StateInstance> pStateDev =
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
-   mm::DeviceModuleLockGuard guard(pStateDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pStateDev);
 
    LOG_DEBUG(coreLogger_) << "Will set " << deviceLabel << " to state " << state;
    int nRet = pStateDev->SetPosition(state);
@@ -4744,7 +4744,7 @@ long CMMCore::getState(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<StateInstance> pStateDev =
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
-   mm::DeviceModuleLockGuard guard(pStateDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pStateDev);
 
    long state;
    int nRet = pStateDev->GetPosition(state);
@@ -4766,7 +4766,7 @@ long CMMCore::getNumberOfStates(const char* deviceLabel)
    {
       std::shared_ptr<StateInstance> pStateDev =
          deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
-      mm::DeviceModuleLockGuard guard(pStateDev);
+      mmcore::internal::DeviceModuleLockGuard guard(pStateDev);
       return pStateDev->GetNumberOfPositions();
    }
    catch (const CMMError&)
@@ -4787,7 +4787,7 @@ void CMMCore::setStateLabel(const char* deviceLabel, const char* stateLabel) MMC
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
    CheckStateLabel(stateLabel);
 
-   mm::DeviceModuleLockGuard guard(pStateDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pStateDev);
    LOG_DEBUG(coreLogger_) << "Will set " << deviceLabel << " to label " << stateLabel;
    int nRet = pStateDev->SetPosition(stateLabel);
    if (nRet != DEVICE_OK)
@@ -4823,7 +4823,7 @@ std::string CMMCore::getStateLabel(const char* deviceLabel) MMCORE_LEGACY_THROW(
    std::shared_ptr<StateInstance> pStateDev =
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pStateDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pStateDev);
    return pStateDev->GetPositionLabel();
 }
 
@@ -4840,7 +4840,7 @@ void CMMCore::defineStateLabel(const char* deviceLabel, long state, const char* 
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
    CheckStateLabel(label);
 
-   mm::DeviceModuleLockGuard guard(pStateDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pStateDev);
    // Remember old label so that we can update configurations that use it
    std::string oldLabel;
    try
@@ -4900,7 +4900,7 @@ std::vector<std::string> CMMCore::getStateLabels(const char* deviceLabel) MMCORE
    std::shared_ptr<StateInstance> pStateDev =
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pStateDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pStateDev);
    std::vector<std::string> stateLabels;
    for (unsigned i=0; i<pStateDev->GetNumberOfPositions(); i++)
    {
@@ -4922,7 +4922,7 @@ long CMMCore::getStateFromLabel(const char* deviceLabel, const char* stateLabel)
       deviceManager_->GetDeviceOfType<StateInstance>(deviceLabel);
    CheckStateLabel(stateLabel);
 
-   mm::DeviceModuleLockGuard guard(pStateDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pStateDev);
    long state;
    int nRet = pStateDev->GetLabelPosition(stateLabel, state);
    if (nRet != DEVICE_OK)
@@ -5670,7 +5670,7 @@ double CMMCore::getPixelSizeUm(bool cached)
       {
          try
          {
-            mm::DeviceModuleLockGuard guard(camera);
+            mmcore::internal::DeviceModuleLockGuard guard(camera);
             pixSize *= camera->GetBinning();
          }
          catch (const CMMError&) // Possibly uninitialized camera
@@ -5730,7 +5730,7 @@ std::vector<double> CMMCore::getPixelSizeAffine(bool cached) MMCORE_LEGACY_THROW
       int binning = 1;
       if (camera)
       {
-         mm::DeviceModuleLockGuard guard(camera);
+         mmcore::internal::DeviceModuleLockGuard guard(camera);
          binning = camera->GetBinning();
       }
 
@@ -5786,7 +5786,7 @@ double CMMCore::getMagnificationFactor() const
 
       try
       {
-         mm::DeviceModuleLockGuard guard(magnifier);
+         mmcore::internal::DeviceModuleLockGuard guard(magnifier);
          magnification *= magnifier->GetMagnification();
       }
       catch (const CMMError&)
@@ -6142,7 +6142,7 @@ void CMMCore::setSLMImage(const char* deviceLabel, unsigned char* pixels) MMCORE
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
    if (!pixels)
       throw CMMError("Null image");
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->SetImage(pixels);
    if (ret != DEVICE_OK)
    {
@@ -6160,7 +6160,7 @@ void CMMCore::setSLMImage(const char* deviceLabel, imgRGB32 pixels) MMCORE_LEGAC
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
    if (!pixels)
       throw CMMError("Null image");
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->SetImage((unsigned int *) pixels);
    if (ret != DEVICE_OK)
    {
@@ -6177,7 +6177,7 @@ void CMMCore::setSLMPixelsTo(const char* deviceLabel, unsigned char intensity) M
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->SetPixelsTo(intensity);
    if (ret != DEVICE_OK)
    {
@@ -6194,7 +6194,7 @@ void CMMCore::setSLMPixelsTo(const char* deviceLabel, unsigned char red, unsigne
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->SetPixelsTo(red, green, blue);
    if (ret != DEVICE_OK)
    {
@@ -6211,7 +6211,7 @@ void CMMCore::displaySLMImage(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMEr
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->DisplayImage();
    if (ret != DEVICE_OK)
    {
@@ -6229,7 +6229,7 @@ void CMMCore::setSLMExposure(const char* deviceLabel, double exposure_ms) MMCORE
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->SetExposure(exposure_ms);
    if (ret != DEVICE_OK)
    {
@@ -6246,7 +6246,7 @@ double CMMCore::getSLMExposure(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    return pSLM->GetExposure();
 }
 
@@ -6261,7 +6261,7 @@ unsigned CMMCore::getSLMWidth(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMEr
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    return pSLM->GetWidth();
 }
 
@@ -6276,7 +6276,7 @@ unsigned CMMCore::getSLMHeight(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    return pSLM->GetHeight();
 }
 
@@ -6291,7 +6291,7 @@ unsigned CMMCore::getSLMNumberOfComponents(const char* deviceLabel) MMCORE_LEGAC
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    return pSLM->GetNumberOfComponents();
 }
 
@@ -6305,7 +6305,7 @@ unsigned CMMCore::getSLMBytesPerPixel(const char* deviceLabel) MMCORE_LEGACY_THR
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    return pSLM->GetBytesPerPixel();
 }
 
@@ -6320,7 +6320,7 @@ long CMMCore::getSLMSequenceMaxLength(const char* deviceLabel) MMCORE_LEGACY_THR
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    long numEvents;
    int ret = pSLM->GetSLMSequenceMaxLength(numEvents);
    if (ret != DEVICE_OK)
@@ -6338,7 +6338,7 @@ void CMMCore::startSLMSequence(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->StartSLMSequence();
    if (ret != DEVICE_OK)
       throw CMMError(getDeviceErrorText(ret, pSLM));
@@ -6354,7 +6354,7 @@ void CMMCore::stopSLMSequence(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMEr
    std::shared_ptr<SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->StopSLMSequence();
    if (ret != DEVICE_OK)
       throw CMMError(getDeviceErrorText(ret, pSLM));
@@ -6372,7 +6372,7 @@ void CMMCore::loadSLMSequence(const char* deviceLabel, std::vector<unsigned char
       deviceManager_->GetDeviceOfType<SLMInstance>(deviceLabel);
 
 
-   mm::DeviceModuleLockGuard guard(pSLM);
+   mmcore::internal::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->ClearSLMSequence();
    if (ret != DEVICE_OK)
       throw CMMError(getDeviceErrorText(ret, pSLM));
@@ -6401,7 +6401,7 @@ void CMMCore::pointGalvoAndFire(const char* deviceLabel, double x, double y, dou
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret = pGalvo->PointAndFire(x,y,pulseTime_us);
 
@@ -6417,7 +6417,7 @@ void CMMCore::setGalvoSpotInterval(const char* deviceLabel, double pulseTime_us)
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret = pGalvo->SetSpotInterval(pulseTime_us);
 
@@ -6437,7 +6437,7 @@ void CMMCore::setGalvoPosition(const char* deviceLabel, double x, double y) MMCO
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret = pGalvo->SetPosition(x, y);
 
@@ -6456,7 +6456,7 @@ void CMMCore::getGalvoPosition(const char* deviceLabel, double &x, double &y) MM
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret = pGalvo->GetPosition(x, y);
 
@@ -6475,7 +6475,7 @@ void CMMCore::setGalvoIlluminationState(const char* deviceLabel, bool on) MMCORE
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret = pGalvo->SetIlluminationState(on);
 
@@ -6496,7 +6496,7 @@ double CMMCore::getGalvoXRange(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
    return pGalvo->GetXRange();
 }
 
@@ -6508,7 +6508,7 @@ double CMMCore::getGalvoXMinimum(const char* deviceLabel) MMCORE_LEGACY_THROW(CM
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
    return pGalvo->GetXMinimum();
 }
 
@@ -6520,7 +6520,7 @@ double CMMCore::getGalvoYRange(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
    return pGalvo->GetYRange();
 }
 
@@ -6532,7 +6532,7 @@ double CMMCore::getGalvoYMinimum(const char* deviceLabel) MMCORE_LEGACY_THROW(CM
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
    return pGalvo->GetYMinimum();
 }
 
@@ -6544,7 +6544,7 @@ void CMMCore::addGalvoPolygonVertex(const char* deviceLabel, int polygonIndex, d
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret =  pGalvo->AddPolygonVertex(polygonIndex, x, y);
 
@@ -6563,7 +6563,7 @@ void CMMCore::deleteGalvoPolygons(const char* deviceLabel) MMCORE_LEGACY_THROW(C
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret = pGalvo->DeletePolygons();
 
@@ -6583,7 +6583,7 @@ void CMMCore::loadGalvoPolygons(const char* deviceLabel) MMCORE_LEGACY_THROW(CMM
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret =  pGalvo->LoadPolygons();
 
@@ -6602,7 +6602,7 @@ void CMMCore::setGalvoPolygonRepetitions(const char* deviceLabel, int repetition
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret =  pGalvo->SetPolygonRepetitions(repetitions);
 
@@ -6622,7 +6622,7 @@ void CMMCore::runGalvoPolygons(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret =  pGalvo->RunPolygons();
 
@@ -6641,7 +6641,7 @@ void CMMCore::runGalvoSequence(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
 
    int ret =  pGalvo->RunSequence();
 
@@ -6660,7 +6660,7 @@ std::string CMMCore::getGalvoChannel(const char* deviceLabel) MMCORE_LEGACY_THRO
    std::shared_ptr<GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<GalvoInstance>(deviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pGalvo);
+   mmcore::internal::DeviceModuleLockGuard guard(pGalvo);
    return pGalvo->GetChannel();
 }
 
@@ -6676,7 +6676,7 @@ void CMMCore::pressurePumpStop(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
 {
     std::shared_ptr<PressurePumpInstance> pPump =
         deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->Stop();
 
@@ -6694,7 +6694,7 @@ void CMMCore::pressurePumpCalibrate(const char* deviceLabel) MMCORE_LEGACY_THROW
 {
     std::shared_ptr<PressurePumpInstance> pPump =
         deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->Calibrate();
 
@@ -6712,7 +6712,7 @@ bool CMMCore::pressurePumpRequiresCalibration(const char* deviceLabel) MMCORE_LE
 {
     std::shared_ptr<PressurePumpInstance> pPump =
         deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     return pPump->RequiresCalibration();
 }
@@ -6724,7 +6724,7 @@ double CMMCore::getPumpPressureKPa(const char* deviceLabel) MMCORE_LEGACY_THROW(
 {
     std::shared_ptr<PressurePumpInstance> pPump =
         deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     double pressurekPa = 0;
     int ret = pPump->GetPressureKPa(pressurekPa);
@@ -6744,7 +6744,7 @@ void CMMCore::setPumpPressureKPa(const char* deviceLabel, double pressurekPa) MM
 {
     std::shared_ptr<PressurePumpInstance> pPump =
         deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->SetPressureKPa(pressurekPa);
 
@@ -6762,7 +6762,7 @@ void CMMCore::volumetricPumpStop(const char* deviceLabel) MMCORE_LEGACY_THROW(CM
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->Stop();
 
@@ -6780,7 +6780,7 @@ void CMMCore::volumetricPumpHome(const char* deviceLabel) MMCORE_LEGACY_THROW(CM
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->Home();
 
@@ -6795,7 +6795,7 @@ bool CMMCore::volumetricPumpRequiresHoming(const char* deviceLabel) MMCORE_LEGAC
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     return pPump->RequiresHoming();
 }
@@ -6807,7 +6807,7 @@ void CMMCore::invertPumpDirection(const char* deviceLabel, bool invert) MMCORE_L
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->InvertDirection(invert);
 
@@ -6825,7 +6825,7 @@ bool CMMCore::isPumpDirectionInverted(const char* deviceLabel) MMCORE_LEGACY_THR
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     bool invert = false;
     int ret = pPump->IsDirectionInverted(invert);
@@ -6846,7 +6846,7 @@ void CMMCore::setPumpVolume(const char* deviceLabel, double volUl) MMCORE_LEGACY
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->SetVolumeUl(volUl);
 
@@ -6864,7 +6864,7 @@ double CMMCore::getPumpVolume(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMEr
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     double volUl = 0;
     int ret = pPump->GetVolumeUl(volUl);
@@ -6884,7 +6884,7 @@ void CMMCore::setPumpMaxVolume(const char* deviceLabel, double volUl) MMCORE_LEG
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->SetMaxVolumeUl(volUl);
 
@@ -6902,7 +6902,7 @@ double CMMCore::getPumpMaxVolume(const char* deviceLabel) MMCORE_LEGACY_THROW(CM
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     double volUl = 0;
     int ret = pPump->GetMaxVolumeUl(volUl);
@@ -6922,7 +6922,7 @@ void CMMCore::setPumpFlowrate(const char* deviceLabel, double UlperSec) MMCORE_L
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->SetFlowrateUlPerSecond(UlperSec);
 
@@ -6940,7 +6940,7 @@ double CMMCore::getPumpFlowrate(const char* deviceLabel) MMCORE_LEGACY_THROW(CMM
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     double UlperSec = 0;
     int ret = pPump->GetFlowrateUlPerSecond(UlperSec);
@@ -6961,7 +6961,7 @@ void CMMCore::pumpStart(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMError)
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->Start();
 
@@ -6979,7 +6979,7 @@ void CMMCore::pumpDispenseDurationSeconds(const char* deviceLabel, double second
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->DispenseDurationSeconds(seconds);
 
@@ -6997,7 +6997,7 @@ void CMMCore::pumpDispenseVolumeUl(const char* deviceLabel, double microLiter) M
 {
     std::shared_ptr<VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
+    mmcore::internal::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->DispenseVolumeUl(microLiter);
 
@@ -7148,7 +7148,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
    for (it=devices.begin(); it != devices.end(); it++)
    {
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*it);
-      mm::DeviceModuleLockGuard guard(pDev);
+      mmcore::internal::DeviceModuleLockGuard guard(pDev);
       os << MM::g_CFGCommand_Device << "," << *it << "," << pDev->GetAdapterModule()->GetName() << "," << pDev->GetName() << '\n';
    }
 
@@ -7165,7 +7165,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
       std::shared_ptr<DeviceInstance> pDevice = deviceManager_->GetDevice(s.getDeviceLabel());
       if (pDevice)
       {
-         mm::DeviceModuleLockGuard guard(pDevice);
+         mmcore::internal::DeviceModuleLockGuard guard(pDevice);
          bool isPreInit = pDevice->GetPropertyInitStatus(s.getPropertyName().c_str());
          if (isPreInit)
          {
@@ -7180,7 +7180,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
    for (it=devices.begin(); it != devices.end(); it++)
    {
       std::shared_ptr<DeviceInstance> device = deviceManager_->GetDevice(*it);
-      mm::DeviceModuleLockGuard guard(device);
+      mmcore::internal::DeviceModuleLockGuard guard(device);
       std::string parentID = device->GetParentID();
       if (!parentID.empty())
       {
@@ -7197,7 +7197,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
    for (it=devices.begin(); it != devices.end(); it++)
    {
       std::shared_ptr<DeviceInstance> pDev = deviceManager_->GetDevice(*it);
-      mm::DeviceModuleLockGuard guard(pDev);
+      mmcore::internal::DeviceModuleLockGuard guard(pDev);
       if (pDev->GetDelayMs() > 0.0)
          os << MM::g_CFGCommand_Delay << "," << *it << "," << pDev->GetDelayMs() << '\n';
    }
@@ -7211,7 +7211,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
    {
       std::shared_ptr<StageInstance> stage =
          deviceManager_->GetDeviceOfType<StageInstance>(*stageIt);
-      mm::DeviceModuleLockGuard guard(stage);
+      mmcore::internal::DeviceModuleLockGuard guard(stage);
       int direction = getFocusDirection(stageIt->c_str());
       os << MM::g_CFGCommand_FocusDirection << ','
          << *stageIt << ',' << direction << '\n';
@@ -7224,7 +7224,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
    {
       std::shared_ptr<StateInstance> pSD =
          deviceManager_->GetDeviceOfType<StateInstance>(deviceLabels[i]);
-      mm::DeviceModuleLockGuard guard(pSD);
+      mmcore::internal::DeviceModuleLockGuard guard(pSD);
       unsigned numPos = pSD->GetNumberOfPositions();
       for (unsigned long j=0; j<numPos; j++)
       {
@@ -7670,7 +7670,7 @@ double CMMCore::getLastFocusScore()
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(autofocus);
+         mmcore::internal::DeviceModuleLockGuard guard(autofocus);
          double score;
          int ret = autofocus->GetLastFocusScore(score);
          if (ret == DEVICE_OK)
@@ -7698,7 +7698,7 @@ double CMMCore::getCurrentFocusScore()
    {
       try
       {
-         mm::DeviceModuleLockGuard guard(autofocus);
+         mmcore::internal::DeviceModuleLockGuard guard(autofocus);
          double score;
          int ret = autofocus->GetCurrentFocusScore(score);
          if (ret == DEVICE_OK)
@@ -7722,7 +7722,7 @@ void CMMCore::enableContinuousFocus(bool enable) MMCORE_LEGACY_THROW(CMMError)
       currentAutofocusDevice_.lock();
    if (autofocus)
    {
-      mm::DeviceModuleLockGuard guard(autofocus);
+      mmcore::internal::DeviceModuleLockGuard guard(autofocus);
 	  int ret = autofocus->SetContinuousFocusing(enable);
       if (ret != DEVICE_OK)
       {
@@ -7752,7 +7752,7 @@ bool CMMCore::isContinuousFocusEnabled() MMCORE_LEGACY_THROW(CMMError)
       currentAutofocusDevice_.lock();
    if (autofocus)
    {
-      mm::DeviceModuleLockGuard guard(autofocus);
+      mmcore::internal::DeviceModuleLockGuard guard(autofocus);
       bool state;
       int ret = autofocus->GetContinuousFocusing(state);
       if (ret != DEVICE_OK)
@@ -7775,7 +7775,7 @@ bool CMMCore::isContinuousFocusLocked() MMCORE_LEGACY_THROW(CMMError)
       currentAutofocusDevice_.lock();
    if (autofocus)
 	{
-      mm::DeviceModuleLockGuard guard(autofocus);
+      mmcore::internal::DeviceModuleLockGuard guard(autofocus);
       return autofocus->IsContinuousFocusLocked();
 	}
 	else
@@ -7792,7 +7792,7 @@ bool CMMCore::isContinuousFocusDrive(const char* stageLabel) MMCORE_LEGACY_THROW
    std::shared_ptr<StageInstance> pStage =
       deviceManager_->GetDeviceOfType<StageInstance>(stageLabel);
 
-   mm::DeviceModuleLockGuard guard(pStage);
+   mmcore::internal::DeviceModuleLockGuard guard(pStage);
    return pStage->IsContinuousFocusDrive();
 }
 
@@ -7806,7 +7806,7 @@ void CMMCore::fullFocus() MMCORE_LEGACY_THROW(CMMError)
       currentAutofocusDevice_.lock();
    if (autofocus)
    {
-      mm::DeviceModuleLockGuard guard(autofocus);
+      mmcore::internal::DeviceModuleLockGuard guard(autofocus);
       int ret = autofocus->FullFocus();
       if (ret != DEVICE_OK)
       {
@@ -7829,7 +7829,7 @@ void CMMCore::incrementalFocus() MMCORE_LEGACY_THROW(CMMError)
       currentAutofocusDevice_.lock();
    if (autofocus)
    {
-      mm::DeviceModuleLockGuard guard(autofocus);
+      mmcore::internal::DeviceModuleLockGuard guard(autofocus);
       int ret = autofocus->IncrementalFocus();
       if (ret != DEVICE_OK)
       {
@@ -7853,7 +7853,7 @@ void CMMCore::setAutoFocusOffset(double offset) MMCORE_LEGACY_THROW(CMMError)
       currentAutofocusDevice_.lock();
    if (autofocus)
    {
-      mm::DeviceModuleLockGuard guard(autofocus);
+      mmcore::internal::DeviceModuleLockGuard guard(autofocus);
       int ret = autofocus->SetOffset(offset);
       if (ret != DEVICE_OK)
       {
@@ -7876,7 +7876,7 @@ double CMMCore::getAutoFocusOffset() MMCORE_LEGACY_THROW(CMMError)
       currentAutofocusDevice_.lock();
    if (autofocus)
    {
-      mm::DeviceModuleLockGuard guard(autofocus);
+      mmcore::internal::DeviceModuleLockGuard guard(autofocus);
       double offset;
       int ret = autofocus->GetOffset(offset);
       if (ret != DEVICE_OK)
@@ -8119,7 +8119,7 @@ void CMMCore::applyConfiguration(const Configuration& config) MMCORE_LEGACY_THRO
          // normal processing
          std::shared_ptr<DeviceInstance> pDevice =
             deviceManager_->GetDevice(setting.getDeviceLabel());
-         mm::DeviceModuleLockGuard guard(pDevice);
+         mmcore::internal::DeviceModuleLockGuard guard(pDevice);
          try
          {
             pDevice->SetProperty(setting.getPropertyName(),
@@ -8166,7 +8166,7 @@ int CMMCore::applyProperties(std::vector<PropertySetting>& props, std::string& l
       // normal processing
       std::shared_ptr<DeviceInstance> pDevice =
          deviceManager_->GetDevice(props[i].getDeviceLabel());
-      mm::DeviceModuleLockGuard guard(pDevice);
+      mmcore::internal::DeviceModuleLockGuard guard(pDevice);
       try
       {
          pDevice->SetProperty(props[i].getPropertyName(),
@@ -8199,7 +8199,7 @@ std::string CMMCore::getDeviceErrorText(int deviceCode, std::shared_ptr<DeviceIn
       return "Cannot get error message for null device";
    }
 
-   mm::DeviceModuleLockGuard guard(device);
+   mmcore::internal::DeviceModuleLockGuard guard(device);
    return "Error in device " + ToQuotedString(device->GetLabel()) + ": " +
       device->GetErrorText(deviceCode) + " (" + ToString(deviceCode) + ")";
 }
@@ -8227,7 +8227,7 @@ void CMMCore::logError(const char* device, const char* msg)
 
 std::string CMMCore::getDeviceName(std::shared_ptr<DeviceInstance> pDev)
 {
-   mm::DeviceModuleLockGuard guard(pDev);
+   mmcore::internal::DeviceModuleLockGuard guard(pDev);
    return pDev->GetName();
 }
 
@@ -8261,7 +8261,7 @@ bool CMMCore::supportsDeviceDetection(const char* label)
    {
       std::shared_ptr<DeviceInstance> pDevice =
          deviceManager_->GetDevice(label);
-      mm::DeviceModuleLockGuard guard(pDevice);
+      mmcore::internal::DeviceModuleLockGuard guard(pDevice);
       return pDevice->SupportsDeviceDetection();
    }
    catch (const CMMError&)
@@ -8301,7 +8301,7 @@ MM::DeviceDetectionStatus CMMCore::detectDevice(const char* label)
       std::shared_ptr<DeviceInstance> pDevice =
          deviceManager_->GetDevice(label);
 
-      mm::DeviceModuleLockGuard guard(pDevice);
+      mmcore::internal::DeviceModuleLockGuard guard(pDevice);
       try
       {
          port = pDevice->GetProperty(MM::g_Keyword_Port);
@@ -8397,7 +8397,7 @@ std::vector<std::string> CMMCore::getInstalledDevices(const char* hubDeviceLabel
    std::shared_ptr<HubInstance> pHub =
       deviceManager_->GetDeviceOfType<HubInstance>(hubDeviceLabel);
 
-   mm::DeviceModuleLockGuard guard(pHub);
+   mmcore::internal::DeviceModuleLockGuard guard(pHub);
    return pHub->GetInstalledPeripheralNames();
 }
 
@@ -8415,7 +8415,7 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
 
    std::string description;
    {
-      mm::DeviceModuleLockGuard guard(pHub);
+      mmcore::internal::DeviceModuleLockGuard guard(pHub);
       description = pHub->GetInstalledPeripheralDescription(deviceLabel);
    }
    return description.empty() ? "N/A" : description;

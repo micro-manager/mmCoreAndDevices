@@ -6,8 +6,8 @@
 #include <mutex>
 #include <string>
 
-namespace mm
-{
+namespace mmcore {
+namespace internal {
 
 /**
  * Facade to the logging subsystem.
@@ -73,4 +73,5 @@ public:
    logging::Logger NewLogger(const std::string& label);
 };
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

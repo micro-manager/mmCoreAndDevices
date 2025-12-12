@@ -70,8 +70,8 @@ private:
    const std::string label_;
    std::string description_;
    DeleteDeviceFunction deleteFunction_;
-   mm::logging::Logger deviceLogger_;
-   mm::logging::Logger coreLogger_;
+   mmcore::internal::logging::Logger deviceLogger_;
+   mmcore::internal::logging::Logger coreLogger_;
    bool initializeCalled_ = false;
    bool initialized_ = false;
 
@@ -103,14 +103,14 @@ protected:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger);
+         mmcore::internal::logging::Logger deviceLogger,
+         mmcore::internal::logging::Logger coreLogger);
 
    virtual ~DeviceInstance();
 
    CMMCore* GetCore() const /* final */ { return core_; }
 
-   const mm::logging::Logger& Logger() const
+   const mmcore::internal::logging::Logger& Logger() const
    { return coreLogger_; }
 
    CMMError MakeException() const;

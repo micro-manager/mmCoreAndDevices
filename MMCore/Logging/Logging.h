@@ -26,10 +26,9 @@
 #include "MetadataFormatter.h"
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
 
 typedef internal::GenericLoggingCore<Metadata> LoggingCore;
@@ -56,4 +55,5 @@ public:
 
 
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

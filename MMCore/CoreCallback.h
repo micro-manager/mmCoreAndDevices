@@ -31,10 +31,11 @@
 
 #include "DeviceUtils.h"
 
-namespace mm
-{
+namespace mmcore {
+namespace internal {
    class DeviceManager;
-}
+} // namespace internal
+} // namespace mmcore
 
 
 ///////////////////////////////////////////////////////////////////////////////

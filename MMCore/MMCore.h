@@ -99,10 +99,12 @@ class VolumetricPumpInstance;
 
 class CMMCore;
 
-namespace mm {
+namespace mmcore {
+namespace internal {
    class DeviceManager;
    class LogManager;
-} // namespace mm
+} // namespace internal
+} // namespace mmcore
 
 typedef unsigned int* imgRGB32;
 
@@ -690,9 +692,9 @@ private:
 private:
    // LogManager should be the first data member, so that it is available for
    // as long as possible during construction and (especially) destruction.
-   std::shared_ptr<mm::LogManager> logManager_;
-   mm::logging::Logger appLogger_;
-   mm::logging::Logger coreLogger_;
+   std::shared_ptr<mmcore::internal::LogManager> logManager_;
+   mmcore::internal::logging::Logger appLogger_;
+   mmcore::internal::logging::Logger coreLogger_;
 
    bool everSnapped_;
 
@@ -718,7 +720,7 @@ private:
    CircularBuffer* cbuf_;
 
    std::shared_ptr<CPluginManager> pluginManager_;
-   std::shared_ptr<mm::DeviceManager> deviceManager_;
+   std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
 
    // Must be unlocked when calling MMEventCallback or calling device methods

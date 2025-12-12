@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
-namespace mm
-{
+namespace mmcore {
+namespace internal {
 
 namespace
 {
@@ -277,4 +277,5 @@ LogManager::NewLogger(const std::string& label)
    return loggingCore_->NewLogger(label);
 }
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

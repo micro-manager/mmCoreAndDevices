@@ -21,7 +21,8 @@
 
 #include <string>
 
-namespace mm {
+namespace mmcore {
+namespace internal {
 namespace features {
 
 struct Flags {
@@ -42,4 +43,5 @@ void enableFeature(const std::string& name, bool enable);
 bool isFeatureEnabled(const std::string& name);
 
 } // namespace features
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

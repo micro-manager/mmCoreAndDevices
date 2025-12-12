@@ -340,7 +340,7 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
          {
             // If the shutter is in a different device adapter, it is safe to
             // lock that adapter.
-            mm::DeviceModuleLockGuard g(shutter);
+            mmcore::internal::DeviceModuleLockGuard g(shutter);
             shutter->SetOpen(false);
 
             // We could wait for the shutter to close here, but the
@@ -370,7 +370,7 @@ int CoreCallback::PrepareForAcq(const MM::Device* caller)
       if (shutter)
       {
          {
-            mm::DeviceModuleLockGuard g(shutter);
+            mmcore::internal::DeviceModuleLockGuard g(shutter);
             shutter->SetOpen(true);
          }
          core_->waitForDevice(shutter);

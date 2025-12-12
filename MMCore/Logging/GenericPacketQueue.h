@@ -23,12 +23,10 @@
 #include <thread>
 
 
-namespace mm
-{
-namespace logging
-{
-namespace internal
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
+namespace internal {
 
 template <typename TMetadata>
 class GenericPacketQueue
@@ -185,4 +183,5 @@ private:
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

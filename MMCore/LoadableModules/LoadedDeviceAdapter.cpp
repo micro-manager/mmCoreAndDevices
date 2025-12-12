@@ -101,8 +101,8 @@ LoadedDeviceAdapter::GetAdvertisedDeviceType(const std::string& deviceName) cons
 std::shared_ptr<DeviceInstance>
 LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
       const std::string& label,
-      mm::logging::Logger deviceLogger,
-      mm::logging::Logger coreLogger)
+      mmcore::internal::logging::Logger deviceLogger,
+      mmcore::internal::logging::Logger coreLogger)
 {
    MM::Device* pDevice = impl_->CreateDevice(name.c_str());
    if (!pDevice)

@@ -62,8 +62,8 @@ public:
 
    std::shared_ptr<DeviceInstance> LoadDevice(CMMCore* core,
          const std::string& name, const std::string& label,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger);
+         mmcore::internal::logging::Logger deviceLogger,
+         mmcore::internal::logging::Logger coreLogger);
 
 private:
    /**

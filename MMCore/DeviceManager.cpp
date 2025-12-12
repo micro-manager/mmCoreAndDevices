@@ -25,8 +25,8 @@
 
 #include <algorithm>
 
-namespace mm
-{
+namespace mmcore {
+namespace internal {
 
 
 DeviceManager::~DeviceManager()
@@ -38,8 +38,8 @@ DeviceManager::~DeviceManager()
 std::shared_ptr<DeviceInstance>
 DeviceManager::LoadDevice(std::shared_ptr<LoadedDeviceAdapter> module,
       const std::string& deviceName, const std::string& label, CMMCore* core,
-      mm::logging::Logger deviceLogger,
-      mm::logging::Logger coreLogger)
+      mmcore::internal::logging::Logger deviceLogger,
+      mmcore::internal::logging::Logger coreLogger)
 {
    // For now, "Core" (which always exists) is not a real-enough device to be
    // in 'devices_'; check as a special case.
@@ -298,4 +298,5 @@ DeviceModuleLockGuard::DeviceModuleLockGuard(std::shared_ptr<DeviceInstance> dev
 {}
 
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

@@ -35,8 +35,8 @@ class HubInstance;
 class LoadedDeviceAdapter;
 
 
-namespace mm
-{
+namespace mmcore {
+namespace internal {
 
 class DeviceManager /* final */
 {
@@ -62,8 +62,8 @@ public:
    std::shared_ptr<DeviceInstance>
    LoadDevice(std::shared_ptr<LoadedDeviceAdapter> module,
          const std::string& deviceName, const std::string& label, CMMCore* core,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger);
+         mmcore::internal::logging::Logger deviceLogger,
+         mmcore::internal::logging::Logger coreLogger);
 
    /**
     * \brief Unload a device.
@@ -141,4 +141,5 @@ public:
    explicit DeviceModuleLockGuard(std::shared_ptr<DeviceInstance> device);
 };
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

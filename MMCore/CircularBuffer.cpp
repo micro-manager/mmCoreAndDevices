@@ -203,7 +203,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 {
     MMThreadGuard insertGuard(g_insertLock);
  
-    mm::ImgBuffer* pImg;
+    mmcore::internal::ImgBuffer* pImg;
     unsigned long singleChannelSize = (unsigned long)width * height * byteDepth;
  
     {
@@ -308,23 +308,23 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 
 const unsigned char* CircularBuffer::GetTopImage() const
 {
-   const mm::ImgBuffer* img = GetNthFromTopImageBuffer(0, 0);
+   const mmcore::internal::ImgBuffer* img = GetNthFromTopImageBuffer(0, 0);
    if (!img)
       return 0;
    return img->GetPixels();
 }
 
-const mm::ImgBuffer* CircularBuffer::GetTopImageBuffer(unsigned channel) const
+const mmcore::internal::ImgBuffer* CircularBuffer::GetTopImageBuffer(unsigned channel) const
 {
    return GetNthFromTopImageBuffer(0, channel);
 }
 
-const mm::ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
+const mmcore::internal::ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
 {
    return GetNthFromTopImageBuffer(static_cast<long>(n), 0);
 }
 
-const mm::ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
+const mmcore::internal::ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
       unsigned channel) const
 {
    MMThreadGuard guard(g_bufferLock);
@@ -343,13 +343,13 @@ const mm::ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
 
 const unsigned char* CircularBuffer::GetNextImage()
 {
-   const mm::ImgBuffer* img = GetNextImageBuffer(0);
+   const mmcore::internal::ImgBuffer* img = GetNextImageBuffer(0);
    if (!img)
       return 0;
    return img->GetPixels();
 }
 
-const mm::ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
+const mmcore::internal::ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
 {
    MMThreadGuard guard(g_bufferLock);
 
