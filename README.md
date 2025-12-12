@@ -1,6 +1,6 @@
 # mmCoreAndDevices
 
-The c++ code at the core of the Micro-Manager project.
+The C++ code at the core of the Micro-Manager project.
 
 ## API Docs
 
@@ -11,19 +11,7 @@ then you are likely looking for the [CMMCore API](https://micro-manager.org/apid
 
 ### Building on Windows
 
-The windows project uses the following properties which may be overridden in the MSBuild command line using the `/property:name=value` switch:
-
-    MM_3RDPARTYPUBLIC: The file path of the publically available repository of 3rd party dependencies
-    MM_3RDPARTYPRIVATE: The file path of the repository of 3rd party dependencies which cannot be made publically available
-    MM_BOOST_INCLUDEDIR: The include directory for Boost.
-    MM_BOOST_LIBDIR:  The lib directory for Boost.
-    MM_SWIG:  The location of `swig.exe`
-    MM_PROTOBUF_INCLUDEDIR: The include directory for Google's `protobuf`
-    MM_PROTOBUF_LIBDIR: The lib directory for Google's `protobuf`
-    MM_PROTOC: The location of `protoc.exe` for Googles `protobuf`
-    MM_BUILDDIR: The directory that build artifacts will be stored in.
-
-To see the default values of each property please view `MMCommon.props`
+See https://micro-manager.org/Building_MM_on_Windows.
 
 ### Building on Mac and  Linux
 
@@ -42,7 +30,7 @@ If you want to make changes to this repo then you need to update the submodule t
 From the top level of the `micro-manager` folder
 
 ```bash
-git clone git@github.com:micro-manager/micro-manager.git
+git clone https://github.com/micro-manager/micro-manager.git
 cd micro-manager
 git submodule set-url mmCoreAndDevices <git url of your fork>
 git submodule update --init --recursive
@@ -50,8 +38,10 @@ git submodule update --init --recursive
 
 ### Using the justfile
 
-This repo contains a justfile that runs common tasks (currently for developers)
-using [just](https://github.com/casey/just).
+This repo contains a justfile that runs a few tasks (currently for MMCore and
+MMDevice developers, and only using the upcoming Meson build system) using
+[just](https://github.com/casey/just). This can be useful for checking code
+changes to those modules.
 
 To use it, you will need `just`, `meson`, and `ninja` installed.  You can
 install these however you like, including with homebrew, winget, or, using uv:
@@ -62,17 +52,7 @@ uv tool install meson
 uv tool install rust-just
 ```
 
-Then run `just <COMMAND>`.  Or simply `just` to see the available commands... which include:
-
-|Command|Description|
-|-------|-----------|
-| build-mmdevice | Build MMDevice |
-| build-mmcore   | Build MMCore (depends on build-mmdevice) |
-| clean          | Clean build artifacts |
-| test-mmcore    | Test MMCore (depends on build-mmcore) |
-| test-mmdevice  | Test MMDevice (depends on build-mmdevice) |
-| test           | Run all tests |
-
+Then run `just <COMMAND>`.  Or simply `just` to see the available commands.
 
 Alternatively, for a one-line command that just builds and runs tests
 with nothing but uv installed:
