@@ -23,28 +23,26 @@
 
 #ifdef MMDEVICE_CLIENT_BUILD
 // Hide deprecation warnings when building MMCore
-#   define MM_DEPRECATED(prototype) prototype
+#   define MMDEVICE_DEPRECATED
 #else
-#   ifdef _MSC_VER
-#      define MM_DEPRECATED(prototype) __declspec(deprecated) prototype
-#   elif defined(__GNUC__)
-#      define MM_DEPRECATED(prototype) prototype __attribute__((deprecated))
-#   else
-#      define MM_DEPRECATED(prototype) prototype
-#   endif
+#   define MMDEVICE_DEPRECATED [[deprecated]]
 #endif
 
-///////////////////////////////////////////////////////////////////////////////
-// Global error codes
-//
-#define MM_CODE_OK 0       // command succeeded
-#define MM_CODE_ERR 1      // undefined error occurred
+// Obsolete, redundant with DEVICE_OK, DEVICE_ERR.
+// We can't cleanly deprecate a #define macro, so use const int. But to
+// avoid changing the SWIG-generated APIs, keep the macros for SWIG only.
+#ifdef SWIG
+#define MM_CODE_OK 0
+#define MM_CODE_ERR 1
+#else
+MMDEVICE_DEPRECATED const int MM_CODE_OK = 0;
+MMDEVICE_DEPRECATED const int MM_CODE_ERR = 1;
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // Global constants
 //
 // common device error codes
-// TODO: revise values - the range might clash with the native driver codes
 
 #define DEVICE_OK                      0
 #define DEVICE_ERR                     1 // generic, undefined error
@@ -176,7 +174,7 @@ namespace MM {
    const char* const g_Keyword_Metadata_Height      = "Height";
    const char* const g_Keyword_Metadata_CameraLabel = "Camera";
    const char* const g_Keyword_Metadata_Exposure    = "Exposure-ms";
-   MM_DEPRECATED(const char* const g_Keyword_Meatdata_Exposure) = "Exposure-ms"; // Typo
+   MMDEVICE_DEPRECATED const char* const g_Keyword_Meatdata_Exposure = "Exposure-ms"; // Typo
    const char* const g_Keyword_Metadata_Score       = "Score";
    const char* const g_Keyword_Metadata_ImageNumber = "ImageNumber";
    // Removed: g_Keyword_Metadata_StartTime         = "StartTime-ms";
@@ -209,27 +207,27 @@ namespace MM {
    const char* const g_CFGGroup_System_Shutdown = "Shutdown";
    const char* const g_CFGGroup_PixelSizeUm = "PixelSize_um";
 
-   // serial port constants
-   const int _DATABITS_5 = 5;
-   const int _DATABITS_6 = 6;
-   const int _DATABITS_7 = 7;
-   const int _DATABITS_8 = 8;
+   // Obsolete serial port constants
+   MMDEVICE_DEPRECATED const int _DATABITS_5 = 5;
+   MMDEVICE_DEPRECATED const int _DATABITS_6 = 6;
+   MMDEVICE_DEPRECATED const int _DATABITS_7 = 7;
+   MMDEVICE_DEPRECATED const int _DATABITS_8 = 8;
 
-   const int _FLOWCONTROL_NONE = 0;
-   const int _FLOWCONTROL_RTSCTS_IN = 1;
-   const int _FLOWCONTROL_RTSCTS_OUT = 2;
-   const int _FLOWCONTROL_XONXOFF_IN = 4;
-   const int _FLOWCONTROL_XONXOFF_OUT = 8;
+   MMDEVICE_DEPRECATED const int _FLOWCONTROL_NONE = 0;
+   MMDEVICE_DEPRECATED const int _FLOWCONTROL_RTSCTS_IN = 1;
+   MMDEVICE_DEPRECATED const int _FLOWCONTROL_RTSCTS_OUT = 2;
+   MMDEVICE_DEPRECATED const int _FLOWCONTROL_XONXOFF_IN = 4;
+   MMDEVICE_DEPRECATED const int _FLOWCONTROL_XONXOFF_OUT = 8;
 
-   const int _PARITY_EVEN = 2;
-   const int _PARITY_MARK = 3;
-   const int _PARITY_NONE = 0;
-   const int _PARITY_ODD = 1;
-   const int _PARITY_SPACE = 4;
+   MMDEVICE_DEPRECATED const int _PARITY_EVEN = 2;
+   MMDEVICE_DEPRECATED const int _PARITY_MARK = 3;
+   MMDEVICE_DEPRECATED const int _PARITY_NONE = 0;
+   MMDEVICE_DEPRECATED const int _PARITY_ODD = 1;
+   MMDEVICE_DEPRECATED const int _PARITY_SPACE = 4;
 
-   const int _STOPBITS_1 = 1;
-   const int _STOPBITS_1_5 = 3;
-   const int _STOPBITS_2 = 2;
+   MMDEVICE_DEPRECATED const int _STOPBITS_1 = 1;
+   MMDEVICE_DEPRECATED const int _STOPBITS_1_5 = 3;
+   MMDEVICE_DEPRECATED const int _STOPBITS_2 = 2;
 
 
    //////////////////////////////////////////////////////////////////////////////
@@ -287,10 +285,8 @@ namespace MM {
       FocusDirectionAwayFromSample = -1,
    };
 
-   //////////////////////////////////////////////////////////////////////////////
-   // Notification constants
-   //
-   enum DeviceNotification {
+   // Long unused
+   enum MMDEVICE_DEPRECATED DeviceNotification {
       Attention,
       Done,
       StatusChanged

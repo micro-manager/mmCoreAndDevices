@@ -173,7 +173,7 @@ int LambdaVF5::onWavelength(MM::PropertyBase* pProp, MM::ActionType eAct) {
 		}
 		return hub_->SetCommand(cmd);
 	}
-   return MM_CODE_ERR;
+   return DEVICE_ERR;
 }
 
 int LambdaVF5::onTiltSpeed(MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -260,7 +260,7 @@ int LambdaVF5::onTTLOut(MM::PropertyBase* pProp, MM::ActionType eAct) {
 		}
 		return configureTTL(ttlOutRisingEdge_, ttlOutEnabled_, true, 1);
 	}
-   return MM_CODE_ERR;
+   return DEVICE_ERR;
 }
 
 int LambdaVF5::onTTLIn(MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -288,7 +288,7 @@ int LambdaVF5::onTTLIn(MM::PropertyBase* pProp, MM::ActionType eAct) {
 		}
 		return configureTTL(ttlInRisingEdge_, ttlInEnabled_, false, 1);
 	}
-   return MM_CODE_ERR;
+   return DEVICE_ERR;
 }
 
 int LambdaVF5::onTTLInPolarity(MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -316,7 +316,7 @@ int LambdaVF5::onTTLInPolarity(MM::PropertyBase* pProp, MM::ActionType eAct) {
 		}
 		return configureTTL(ttlInRisingEdge_, ttlInEnabled_, false, 1);
 	}
-   return MM_CODE_ERR;
+   return DEVICE_ERR;
 }
 
 int LambdaVF5::onTTLOutPolarity(MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -344,7 +344,7 @@ int LambdaVF5::onTTLOutPolarity(MM::PropertyBase* pProp, MM::ActionType eAct) {
 		}
 		return configureTTL(ttlOutRisingEdge_, ttlOutEnabled_, true, 1);
 	}
-   return MM_CODE_ERR;
+   return DEVICE_ERR;
 }
 
 
@@ -373,7 +373,7 @@ int LambdaVF5::onSequenceType(MM::PropertyBase* pProp, MM::ActionType eAct) {
 		}
 		return DEVICE_OK;
 	}
-   return MM_CODE_ERR;
+   return DEVICE_ERR;
 }
 
 int LambdaVF5::resetSequenceIndex(unsigned char channel) {

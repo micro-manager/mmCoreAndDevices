@@ -20,13 +20,12 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 06/07/2005
-// 
-// CVS:           $Id: MMCoreJ.i 16466 2017-08-23 21:46:52Z nico $
-//
 
 #if SWIG_VERSION < 0x020000 || SWIG_VERSION >= 0x040000
 #error SWIG 2.x or 3.x is currently required to build MMCoreJ
 #endif
+
+#define MMDEVICE_CLIENT_BUILD
 
 %module (directors="1") MMCoreJ
 %feature("director") MMEventCallback;
