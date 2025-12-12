@@ -198,7 +198,7 @@ public:
    /**
    * Obtains the value of the property.
    * @param name - property identifier (name)
-   * @param value - the value of the property
+   * @param val - the value of the property
    */
    int GetProperty(const char* name, double& val)
    {
@@ -212,7 +212,7 @@ public:
    /**
    * Obtains the value of the property.
    * @param name - property identifier (name)
-   * @param value - the value of the property
+   * @param val - the value of the property
    */
    int GetProperty(const char* name, long& val)
    {
@@ -227,7 +227,7 @@ public:
     * Check if the property value is equal to a specific string
     * @return true only if property exists and is equal to, false otherwise
     * @param name - property identifier (name)
-    * @param value - the value to compare to
+    * @param val - the value to compare to
     */
    bool IsPropertyEqualTo(const char* name, const char* val) const
    {
@@ -259,9 +259,9 @@ public:
    }
 
    /**
-   * Checks whether the property is read-only.
+   * Checks whether the property is pre-init.
    * @param name - property identifier (name)
-   * @param readOnly - read-only or not
+   * @param preInit - true if property is pre-init
    */
    virtual int GetPropertyInitStatus(const char* name, bool& preInit) const
    {
@@ -441,6 +441,7 @@ public:
    /**
     * This function is used by the Core to communicate a sequence to the device
     * @param name - name of the sequenceable property
+    * @param value - value to append to sequence
     */
    virtual int AddToPropertySequence(const char* name, const char* value)
    {

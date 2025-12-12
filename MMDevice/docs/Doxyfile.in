@@ -1,0 +1,22 @@
+PROJECT_NAME           = "MMDevice"
+
+INPUT                  = @DOXYGEN_INPUT@
+OUTPUT_DIRECTORY       = @DOXYGEN_OUTPUT@
+STRIP_FROM_PATH        = @DOXYGEN_STRIP_PATH@
+EXCLUDE                = @DOXYGEN_EXCLUDE@
+EXCLUDE_PATTERNS       = */unittest/* */builddir/*
+
+WARN_AS_ERROR          = @DOXYGEN_WERROR@
+WARN_IF_UNDOCUMENTED   = NO
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+
+EXCLUDE_SYMBOLS        = internal std
+EXTRACT_ALL            = YES
+RECURSIVE              = YES
+
+CLASS_GRAPH            = TEXT
+COLLABORATION_GRAPH    = NO
+GROUP_GRAPHS           = NO
+HAVE_DOT               = NO
