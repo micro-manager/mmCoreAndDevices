@@ -76,6 +76,18 @@ if build_tests
     subdir('unittest')
 endif
 
+# Similar for 'docs' option: we don't need Doxygen docs when building a device
+# adapter.
+build_docs = get_option('docs').allowed()
+if meson.is_subproject() and not get_option('client_interface')
+    if get_option('docs').auto()
+        build_tests = false
+    endif
+endif
+if build_docs
+    subdir('docs')
+endif
+
 mmdevice_dep = declare_dependency(
     compile_args: build_mode_args,
     include_directories: mmdevice_include_dir,

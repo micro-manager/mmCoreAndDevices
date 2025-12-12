@@ -107,6 +107,8 @@ mmcore_lib = static_library(
 
 subdir('unittest')
 
+subdir('docs')
+
 mmcore_dep = declare_dependency(
     include_directories: mmcore_include_dir,
     link_with: mmcore_lib,

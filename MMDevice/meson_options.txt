@@ -4,3 +4,9 @@ option('client_interface', type: 'boolean', value: false,
 option('tests', type: 'feature', value: 'auto', yield: true,
     description: 'Build unit tests',
 )
+option('docs', type: 'feature', value: 'auto', yield: true,
+    description: 'Build API documentation',
+)
+option('docs_werror', type: 'boolean', value: false,
+    description: 'Treat Doxygen warnings as errors',
+)
