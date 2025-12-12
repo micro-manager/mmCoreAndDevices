@@ -69,6 +69,28 @@
 #include <thread>
 #include <vector>
 
+using mmcore::internal::AutoFocusInstance;
+using mmcore::internal::CameraInstance;
+using mmcore::internal::CircularBuffer;
+using mmcore::internal::CoreCallback;
+using mmcore::internal::CPluginManager;
+using mmcore::internal::DeviceInstance;
+using mmcore::internal::GalvoInstance;
+using mmcore::internal::HubInstance;
+using mmcore::internal::ImageProcessorInstance;
+using mmcore::internal::MagnifierInstance;
+using mmcore::internal::PressurePumpInstance;
+using mmcore::internal::SerialInstance;
+using mmcore::internal::ShutterInstance;
+using mmcore::internal::SignalIOInstance;
+using mmcore::internal::SLMInstance;
+using mmcore::internal::StageInstance;
+using mmcore::internal::StateInstance;
+using mmcore::internal::VolumetricPumpInstance;
+using mmcore::internal::XYStageInstance;
+
+using mmcore::internal::LoadedDeviceAdapter;
+
 /*
  * Important! Read this before changing this file:
  *

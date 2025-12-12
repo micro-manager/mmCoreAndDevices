@@ -29,6 +29,9 @@
 #include <memory>
 
 
+namespace mmcore {
+namespace internal {
+
 LoadedDeviceAdapter::LoadedDeviceAdapter(const std::string& name,
    std::unique_ptr<LoadedDeviceAdapterImpl>&& impl) :
    name_(name),
@@ -101,8 +104,8 @@ LoadedDeviceAdapter::GetAdvertisedDeviceType(const std::string& deviceName) cons
 std::shared_ptr<DeviceInstance>
 LoadedDeviceAdapter::LoadDevice(CMMCore* core, const std::string& name,
       const std::string& label,
-      mmcore::internal::logging::Logger deviceLogger,
-      mmcore::internal::logging::Logger coreLogger)
+      logging::Logger deviceLogger,
+      logging::Logger coreLogger)
 {
    MM::Device* pDevice = impl_->CreateDevice(name.c_str());
    if (!pDevice)
@@ -205,3 +208,6 @@ LoadedDeviceAdapter::CheckInterfaceVersion() const
             ToString(DEVICE_INTERFACE_VERSION) +
             "; device adapter has " + ToString(deviceInterfaceVersion) + ")");
 }
+
+} // namespace internal
+} // namespace mmcore

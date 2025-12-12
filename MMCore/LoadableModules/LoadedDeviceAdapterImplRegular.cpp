@@ -20,6 +20,9 @@
 #include "LoadedDeviceAdapterImplRegular.h"
 
 
+namespace mmcore {
+namespace internal {
+
 LoadedDeviceAdapterImplRegular::LoadedDeviceAdapterImplRegular(const std::string& filename)
    : module_(std::make_unique<LoadedModule>(filename)),
      InitializeModuleData_(reinterpret_cast<fnInitializeModuleData>(module_->GetFunction("InitializeModuleData"))),
@@ -94,3 +97,6 @@ void LoadedDeviceAdapterImplRegular::DeleteDevice(MM::Device* device)
 {
    DeleteDevice_(device);
 }
+
+} // namespace internal
+} // namespace mmcore

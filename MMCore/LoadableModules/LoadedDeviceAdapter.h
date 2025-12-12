@@ -33,8 +33,10 @@
 class CMMCore;
 
 
-class DeviceInstance;
+namespace mmcore {
+namespace internal {
 
+class DeviceInstance;
 
 class LoadedDeviceAdapter /* final */ :
 	public std::enable_shared_from_this<LoadedDeviceAdapter>
@@ -62,8 +64,8 @@ public:
 
    std::shared_ptr<DeviceInstance> LoadDevice(CMMCore* core,
          const std::string& name, const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger);
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger);
 
 private:
    /**
@@ -101,3 +103,6 @@ private:
    MMThreadLock lock_;
    std::unique_ptr<LoadedDeviceAdapterImpl> impl_;
 };
+
+} // namespace internal
+} // namespace mmcore

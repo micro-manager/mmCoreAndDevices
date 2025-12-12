@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class ImageProcessorInstance : public DeviceInstanceBase<MM::ImageProcessor>
 {
 public:
@@ -31,10 +34,13 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::ImageProcessor>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 
    int Process(unsigned char* buffer, unsigned width, unsigned height, unsigned byteDepth);
 };
+
+} // namespace internal
+} // namespace mmcore

@@ -35,8 +35,12 @@
 #include <memory>
 #include <vector>
 
+namespace mmcore {
+namespace internal {
+
 class ThreadPool;
 class TaskSet_CopyMemory;
+
 
 class CircularBuffer
 {
@@ -61,10 +65,10 @@ public:
    bool InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError);
    const unsigned char* GetTopImage() const;
    const unsigned char* GetNextImage();
-   const mmcore::internal::ImgBuffer* GetTopImageBuffer(unsigned channel) const;
-   const mmcore::internal::ImgBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
-   const mmcore::internal::ImgBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
-   const mmcore::internal::ImgBuffer* GetNextImageBuffer(unsigned channel);
+   const ImgBuffer* GetTopImageBuffer(unsigned channel) const;
+   const ImgBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
+   const ImgBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
+   const ImgBuffer* GetNextImageBuffer(unsigned channel);
    void Clear(); 
 
    bool Overflow() {MMThreadGuard guard(g_bufferLock); return overflow_;}
@@ -89,8 +93,11 @@ private:
    unsigned long memorySizeMB_;
    bool overflow_;
    bool overwriteData_;
-   std::vector<mmcore::internal::FrameBuffer> frameArray_;
+   std::vector<FrameBuffer> frameArray_;
 
    std::shared_ptr<ThreadPool> threadPool_;
    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };
+
+} // namespace internal
+} // namespace mmcore

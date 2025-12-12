@@ -33,9 +33,8 @@
 
 namespace mmcore {
 namespace internal {
-   class DeviceManager;
-} // namespace internal
-} // namespace mmcore
+
+class DeviceManager;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -124,3 +123,6 @@ private:
    int OnPixelSizeChanged(double newPixelSizeUm);
    int OnPixelSizeAffineChanged(std::vector<double> newPixelSizeAffine);
 };
+
+} // namespace internal
+} // namespace mmcore

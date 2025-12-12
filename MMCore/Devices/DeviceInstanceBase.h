@@ -26,6 +26,9 @@
 #include "../LoadableModules/LoadedDeviceAdapter.h"
 
 
+namespace mmcore {
+namespace internal {
+
 // Common member function implementations for concrete DeviceInstance
 // subclasses.
 template <typename TMMDevice>
@@ -45,8 +48,8 @@ protected:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstance(core, adapter, name, pDevice, deleteFunction,
             label, deviceLogger, coreLogger)
    {
@@ -61,3 +64,6 @@ protected:
 protected:
    RawDeviceClass* GetImpl() const /* final */ { return static_cast<RawDeviceClass*>(pImpl_); }
 };
+
+} // namespace internal
+} // namespace mmcore

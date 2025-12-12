@@ -31,6 +31,9 @@
 #include <mutex>
 #include <thread>
 
+namespace mmcore {
+namespace internal {
+
 ThreadPool::ThreadPool()
 {
     const size_t hwThreadCount = std::max<size_t>(1, std::thread::hardware_concurrency());
@@ -104,3 +107,6 @@ void ThreadPool::ThreadFunc()
         task->Done();
     }
 }
+
+} // namespace internal
+} // namespace mmcore

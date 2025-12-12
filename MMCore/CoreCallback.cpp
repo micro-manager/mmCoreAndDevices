@@ -39,6 +39,9 @@
 #include <vector>
 #include <algorithm>
 
+namespace mmcore {
+namespace internal {
+
 
 CoreCallback::CoreCallback(CMMCore* c) :
    core_(c),
@@ -340,7 +343,7 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
          {
             // If the shutter is in a different device adapter, it is safe to
             // lock that adapter.
-            mmcore::internal::DeviceModuleLockGuard g(shutter);
+            DeviceModuleLockGuard g(shutter);
             shutter->SetOpen(false);
 
             // We could wait for the shutter to close here, but the
@@ -370,7 +373,7 @@ int CoreCallback::PrepareForAcq(const MM::Device* caller)
       if (shutter)
       {
          {
-            mmcore::internal::DeviceModuleLockGuard g(shutter);
+            DeviceModuleLockGuard g(shutter);
             shutter->SetOpen(true);
          }
          core_->waitForDevice(shutter);
@@ -815,3 +818,6 @@ MM::MMTime CoreCallback::GetCurrentMMTime()
 {
    return MM::MMTime::fromUs(SteadyMicroseconds());
 }
+
+} // namespace internal
+} // namespace mmcore

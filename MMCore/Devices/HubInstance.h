@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class HubInstance : public DeviceInstanceBase<MM::Hub>
 {
    bool hasDetectedInstalledDevices_;
@@ -34,8 +37,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Hub>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger),
       hasDetectedInstalledDevices_(false)
    {}
@@ -56,3 +59,6 @@ private:
    unsigned GetNumberOfInstalledDevices();
    MM::Device* GetInstalledDevice(int devIdx);
 };
+
+} // namespace internal
+} // namespace mmcore

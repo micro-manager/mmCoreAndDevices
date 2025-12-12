@@ -26,6 +26,9 @@
 #include "RegisteredDeviceCollection.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class LoadedDeviceAdapterImplMock : public LoadedDeviceAdapterImpl
 {
 public:
@@ -49,3 +52,6 @@ private:
    MockDeviceAdapter* impl_;
    MM::internal::RegisteredDeviceCollection registeredDevices_;
 };
+
+} // namespace internal
+} // namespace mmcore

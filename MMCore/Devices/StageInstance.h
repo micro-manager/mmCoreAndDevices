@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class StageInstance : public DeviceInstanceBase<MM::Stage>
 {
    MM::FocusDirection focusDirection_;
@@ -34,8 +37,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Stage>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger),
       focusDirection_(MM::FocusDirectionUnknown),
       focusDirectionHasBeenSet_(false)
@@ -65,3 +68,6 @@ public:
    int SendStageSequence();
    int SetStageLinearSequence(double dZ_um, long nSlices);
 };
+
+} // namespace internal
+} // namespace mmcore

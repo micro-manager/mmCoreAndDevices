@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class StateInstance : public DeviceInstanceBase<MM::State>
 {
 public:
@@ -31,8 +34,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::State>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 
@@ -47,3 +50,6 @@ public:
    int SetGateOpen(bool open = true);
    int GetGateOpen(bool& open);
 };
+
+} // namespace internal
+} // namespace mmcore

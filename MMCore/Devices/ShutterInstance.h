@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class ShutterInstance : public DeviceInstanceBase<MM::Shutter>
 {
 public:
@@ -31,8 +34,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Shutter>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 
@@ -40,3 +43,6 @@ public:
    int GetOpen(bool& open);
    int Fire(double deltaT);
 };
+
+} // namespace internal
+} // namespace mmcore

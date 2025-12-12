@@ -21,6 +21,10 @@
 
 #include <string>
 
-namespace MMCorePrivate {
+namespace mmcore {
+namespace internal {
+
 std::string GetPathOfThisModule();
-}
+
+} // namespace internal
+} // namespace mmcore

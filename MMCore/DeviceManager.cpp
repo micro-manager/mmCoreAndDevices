@@ -38,8 +38,8 @@ DeviceManager::~DeviceManager()
 std::shared_ptr<DeviceInstance>
 DeviceManager::LoadDevice(std::shared_ptr<LoadedDeviceAdapter> module,
       const std::string& deviceName, const std::string& label, CMMCore* core,
-      mmcore::internal::logging::Logger deviceLogger,
-      mmcore::internal::logging::Logger coreLogger)
+      logging::Logger deviceLogger,
+      logging::Logger coreLogger)
 {
    // For now, "Core" (which always exists) is not a real-enough device to be
    // in 'devices_'; check as a special case.

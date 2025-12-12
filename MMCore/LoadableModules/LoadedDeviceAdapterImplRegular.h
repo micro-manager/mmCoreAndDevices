@@ -29,6 +29,9 @@
 #include <string>
 
 
+namespace mmcore {
+namespace internal {
+
 class LoadedDeviceAdapterImplRegular : public LoadedDeviceAdapterImpl
 {
 public:
@@ -60,3 +63,6 @@ private:
    fnGetDeviceType GetDeviceType_;
    fnGetDeviceDescription GetDeviceDescription_;
 };
+
+} // namespace internal
+} // namespace mmcore

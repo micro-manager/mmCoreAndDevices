@@ -31,11 +31,18 @@
 #include "MMDevice.h"
 
 
+namespace mmcore {
+namespace internal {
+
+using mmcore::internal::logging::Logger;
+using mmcore::internal::logging::LogLevelDebug;
+using mmcore::internal::logging::LogLevelInfo;
+
 int
 DeviceInstance::LogMessage(const char* msg, bool debugOnly)
 {
-   deviceLogger_(debugOnly ? mmcore::internal::logging::LogLevelDebug :
-         mmcore::internal::logging::LogLevelInfo, msg);
+   deviceLogger_(debugOnly ? LogLevelDebug :
+         LogLevelInfo, msg);
    return DEVICE_OK;
 }
 
@@ -46,8 +53,8 @@ DeviceInstance::DeviceInstance(CMMCore* core,
       MM::Device* pDevice,
       DeleteDeviceFunction deleteFunction,
       const std::string& label,
-      mmcore::internal::logging::Logger deviceLogger,
-      mmcore::internal::logging::Logger coreLogger) :
+      logging::Logger deviceLogger,
+      logging::Logger coreLogger) :
    pImpl_(pDevice),
    core_(core),
    adapter_(adapter),
@@ -128,7 +135,7 @@ DeviceInstance::RequireInitialized(const char* operation) const
 {
    if (!initialized_)
    {
-      if (mmcore::internal::features::flags().strictInitializationChecks)
+      if (features::flags().strictInitializationChecks)
       {
          std::ostringstream stream;
          stream << "Operation (" << operation <<
@@ -185,7 +192,7 @@ DeviceInstance::SetProperty(const std::string& name,
       // Note: Some features (port scanning) may depend on setting serial port
       // properties post-init. We may want to exclude SerialManager from this
       // check (regardless of whether strictInitializationChecks is enabled).
-      if (mmcore::internal::features::flags().strictInitializationChecks)
+      if (features::flags().strictInitializationChecks)
       {
          ThrowError("Cannot set pre-init property after initialization");
       }
@@ -426,3 +433,6 @@ DeviceInstance::GetParentID() const
    pImpl_->GetParentID(nameBuf.GetBuffer());
    return nameBuf.Get();
 }
+
+} // namespace internal
+} // namespace mmcore

@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class SerialInstance : public DeviceInstanceBase<MM::Serial>
 {
 public:
@@ -31,8 +34,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Serial>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 
@@ -43,3 +46,6 @@ public:
    int Read(unsigned char* buf, unsigned long bufLen, unsigned long& charsRead);
    int Purge();
 };
+
+} // namespace internal
+} // namespace mmcore

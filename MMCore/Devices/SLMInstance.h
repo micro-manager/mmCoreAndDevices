@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class SLMInstance : public DeviceInstanceBase<MM::SLM>
 {
 public:
@@ -31,8 +34,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mmcore::internal::logging::Logger deviceLogger,
-         mmcore::internal::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::SLM>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 
@@ -56,3 +59,6 @@ public:
    int AddToSLMSequence(const unsigned int * pixels);
    int SendSLMSequence();
 };
+
+} // namespace internal
+} // namespace mmcore
