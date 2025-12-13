@@ -193,7 +193,7 @@ private:
 
 
 	HINSTANCE HDll;
-	char camNames[64];
+	char camNames[66];
 	int deviceType;
 	int deviceColorType;
 	int MAX_RESOLUTION;

@@ -265,7 +265,7 @@ int MDHIDDevice::Open(const char* /*portName*/)
       return ERR_INTERNAL_ERROR;
 
    wchar_t wstr[255];
-   char str[255];
+   char str[1024];
    wstr[0] = 0x0000;
    int res = hid_get_manufacturer_string(handle_, wstr, 255);
    if (res < 0) 

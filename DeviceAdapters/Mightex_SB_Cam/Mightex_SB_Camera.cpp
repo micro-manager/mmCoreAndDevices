@@ -294,7 +294,7 @@ int CMightex_SB_Camera::InitCamera()
 		char *s_ModuleNo = strchr(ModuleNo, ' ');
 		if(s_ModuleNo)
 			*s_ModuleNo = '\0';
-		snprintf(camNames, sizeof(camNames), "%s:%s\0", ModuleNo, SerialNo);
+		snprintf(camNames, sizeof(camNames), "%s:%s", ModuleNo, SerialNo);
 	}
 
 		SSBufferUSB_AddDeviceToWorkingSet(1);

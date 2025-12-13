@@ -445,7 +445,7 @@ int CMightex_BUF_USBCCDCamera::InitCamera()
 		char *s_ModuleNo = strchr(ModuleNo, ' ');
 		if(s_ModuleNo)
 			*s_ModuleNo = '\0';
-		snprintf(camNames, sizeof(camNames), "%s:%s\0", ModuleNo, SerialNo);
+		snprintf(camNames, sizeof(camNames), "%s:%s", ModuleNo, SerialNo);
 	}
 
 		BUFCCDUSB_AddDeviceToWorkingSet(1);
