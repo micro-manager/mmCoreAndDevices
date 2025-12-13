@@ -48,7 +48,13 @@ AutoFocus::AutoFocus() :
    roiHeight_(0),
    binning_(1),
    deviceSettings_(0),
-   spotSelection_("Auto")
+   deviceSettingsDescription_(""),
+   spotSelection_("Top"),
+   precision_(0.1),
+   maxZ_(10000.0),
+   continuousFocusLocked_(false),
+   stopThread_(false),
+   status_("Off")
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_NO_PHYSICAL_CAMERA, "No physical camera found.  Please select a valid camera in the Camera property.");
@@ -72,6 +78,19 @@ int AutoFocus::Shutdown()
 {
    if (!initialized_)
       return DEVICE_OK;
+
+   // Signal thread to stop
+   stopThread_ = true;
+
+   // Wake up thread if waiting
+   continuousFocusCV_.notify_one();
+
+   // Wait for thread to finish
+   if (continuousFocusThread_.joinable())
+   {
+      continuousFocusThread_.join();
+   }
+
    initialized_ = false;
    return DEVICE_OK;
 }
@@ -182,9 +201,31 @@ int AutoFocus::Initialize()
    AddAllowedValue("SpotSelection", "Top");
    AddAllowedValue("SpotSelection", "Bottom");
 
+   // Create Precision property
+   pAct = new CPropertyAction(this, &AutoFocus::OnPrecision);
+   CreateFloatProperty("Precision", precision_, false, pAct);
+   SetPropertyLimits("Precision", 0.0, 100.0);
+
+   // Create MaxZ property
+   pAct = new CPropertyAction(this, &AutoFocus::OnMaxZ);
+   CreateFloatProperty("MaxZ", maxZ_, false, pAct);
+   SetPropertyLimits("MaxZ", 0.0, 100000.0);
+
+   // Create Status property (read-only)
+   pAct = new CPropertyAction(this, &AutoFocus::OnStatus);
+   CreateStringProperty("Status", status_.c_str(), true, pAct);
+   AddAllowedValue("Status", "Off");
+   AddAllowedValue("Status", "Out of Range");
+   AddAllowedValue("Status", "Focusing");
+   AddAllowedValue("Status", "Locked");
+
    // Create DeviceSettings property
    pAct = new CPropertyAction(this, &AutoFocus::OnDeviceSettings);
    CreateIntegerProperty("DeviceSettings", deviceSettings_, false, pAct);
+
+   // Create DeviceSettingsDescription property
+   pAct = new CPropertyAction(this, &AutoFocus::OnDeviceSettingsDescription);
+   CreateStringProperty("DeviceSettingsDescription", deviceSettingsDescription_.c_str(), false, pAct);
 
    // Create Calibrate action property
    pAct = new CPropertyAction(this, &AutoFocus::OnCalibrate);
@@ -194,6 +235,31 @@ int AutoFocus::Initialize()
 
    // Load calibration data from file
    LoadCalibrationData();
+
+   // Load properties for current device setting if it exists
+   if (calibrationMap_.find(deviceSettings_) != calibrationMap_.end())
+   {
+      CalibrationData& cal = calibrationMap_[deviceSettings_];
+      deviceSettingsDescription_ = cal.description;
+      spotSelection_ = cal.spotSelection;
+      precision_ = cal.precision;
+      maxZ_ = cal.maxZ;
+
+      // Apply ROI and binning settings
+      roiX_ = cal.roiX;
+      roiY_ = cal.roiY;
+      roiWidth_ = cal.roiWidth;
+      roiHeight_ = cal.roiHeight;
+      SetCameraROI();
+
+      binning_ = cal.binning;
+      SetCameraBinning();
+   }
+
+   // Start continuous focusing thread
+   stopThread_ = false;
+   continuousFocusLocked_ = false;
+   continuousFocusThread_ = std::thread(&AutoFocus::ContinuousFocusThread, this);
 
    initialized_ = true;
    return DEVICE_OK;
@@ -346,6 +412,50 @@ int AutoFocus::OnDeviceSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(deviceSettings_);
+
+      // Load all properties for this device setting if it exists in calibration map
+      if (calibrationMap_.find(deviceSettings_) != calibrationMap_.end())
+      {
+         CalibrationData& cal = calibrationMap_[deviceSettings_];
+
+         // Update description
+         deviceSettingsDescription_ = cal.description;
+         GetCoreCallback()->OnPropertyChanged(this, "DeviceSettingsDescription", deviceSettingsDescription_.c_str());
+
+         // Update spot selection
+         spotSelection_ = cal.spotSelection;
+         GetCoreCallback()->OnPropertyChanged(this, "SpotSelection", spotSelection_.c_str());
+
+         // Update precision
+         precision_ = cal.precision;
+         GetCoreCallback()->OnPropertyChanged(this, "Precision", CDeviceUtils::ConvertToString(precision_));
+
+         // Update maxZ
+         maxZ_ = cal.maxZ;
+         GetCoreCallback()->OnPropertyChanged(this, "MaxZ", CDeviceUtils::ConvertToString(maxZ_));
+
+         // Update and apply ROI settings
+         roiX_ = cal.roiX;
+         roiY_ = cal.roiY;
+         roiWidth_ = cal.roiWidth;
+         roiHeight_ = cal.roiHeight;
+         SetCameraROI();
+         GetCoreCallback()->OnPropertyChanged(this, "ROI-X", CDeviceUtils::ConvertToString((long)roiX_));
+         GetCoreCallback()->OnPropertyChanged(this, "ROI-Y", CDeviceUtils::ConvertToString((long)roiY_));
+         GetCoreCallback()->OnPropertyChanged(this, "ROI-Width", CDeviceUtils::ConvertToString((long)roiWidth_));
+         GetCoreCallback()->OnPropertyChanged(this, "ROI-Height", CDeviceUtils::ConvertToString((long)roiHeight_));
+
+         // Update and apply binning
+         binning_ = cal.binning;
+         SetCameraBinning();
+         GetCoreCallback()->OnPropertyChanged(this, "Binning", CDeviceUtils::ConvertToString(binning_));
+      }
+      else
+      {
+         // No calibration data for this setting - clear description but leave other properties
+         deviceSettingsDescription_ = "";
+         GetCoreCallback()->OnPropertyChanged(this, "DeviceSettingsDescription", deviceSettingsDescription_.c_str());
+      }
    }
    return DEVICE_OK;
 }
@@ -359,6 +469,54 @@ int AutoFocus::OnSpotSelection(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(spotSelection_);
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnPrecision(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(precision_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(precision_);
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnMaxZ(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(maxZ_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(maxZ_);
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnStatus(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(status_.c_str());
+   }
+   return DEVICE_OK;
+}
+
+int AutoFocus::OnDeviceSettingsDescription(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(deviceSettingsDescription_.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(deviceSettingsDescription_);
    }
    return DEVICE_OK;
 }
@@ -382,6 +540,7 @@ int AutoFocus::OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct)
          }
          // Reset the property to Idle
          pProp->Set("Idle");
+         GetCoreCallback()->OnPropertyChanged(this, "Calibrate", "Idle");
          return ret;
       }
    }
@@ -395,7 +554,24 @@ bool AutoFocus::Busy()
 
 int AutoFocus::SetContinuousFocusing(bool on)
 {
-   continuousFocusing_ = on;
+   {
+      std::lock_guard<std::mutex> lock(continuousFocusMutex_);
+      continuousFocusing_ = on;
+   }
+
+   if (on)
+   {
+      // Starting continuous focus - wake up thread
+      continuousFocusLocked_ = false;
+      continuousFocusCV_.notify_one();
+   }
+   else
+   {
+      // Stopping continuous focus - clear locked status
+      continuousFocusLocked_ = false;
+      UpdateStatus("Off");
+   }
+
    return DEVICE_OK;
 }
 
@@ -407,7 +583,7 @@ int AutoFocus::GetContinuousFocusing(bool& on)
 
 bool AutoFocus::IsContinuousFocusLocked()
 {
-   return false;
+   return continuousFocusLocked_;
 }
 
 int AutoFocus::SetOffset(double offset)
@@ -448,37 +624,197 @@ int AutoFocus::FullFocus()
 
    CalibrationData cal = calibrationMap_[deviceSettings_];
 
-   // Step 4: Calculate target Z position using helper function
-   double diffZ = CalculateTargetZDiff(cal, lastSpotX_, lastSpotY_);
+   // Iterative focusing loop to achieve desired precision
+   const int maxIterations = 10;  // Prevent infinite loops
+   int iteration = 0;
 
-   // Step 5: Apply user-defined offset
-   diffZ += offset_;
-
-   // Step 6: Validate Z position against stage limits
-   ret = ValidateZPosition(currentZ + diffZ);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   // Step 7: Get focus stage and move to target position
-   if (focusStage_ == "" || focusStage_ == "Undefined")
-      return ERR_NO_PHYSICAL_STAGE;
-
-   ret = pStage->SetPositionUm(currentZ + diffZ);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   // Step 8: Wait for stage to settle
-   while (pStage->Busy())
+   while (iteration < maxIterations)
    {
-      CDeviceUtils::SleepMs(10);
+      // Step 4: Calculate target Z position using helper function
+      double diffZ = CalculateTargetZDiff(cal, lastSpotX_, lastSpotY_);
+
+      // Step 5: Apply user-defined offset
+      diffZ += offset_;
+
+      // Step 6: Check if we've achieved the desired precision
+      if (fabs(diffZ) <= cal.precision)
+      {
+         // Within precision, we're done
+         return DEVICE_OK;
+      }
+
+      // Step 7: Validate Z position against stage limits and maxZ
+      double targetZ = currentZ + diffZ;
+      if (targetZ > maxZ_)
+         return DEVICE_ERR;  // Would exceed maximum Z limit
+
+      ret = ValidateZPosition(targetZ);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      // Step 8: Get focus stage and move to target position
+      if (focusStage_ == "" || focusStage_ == "Undefined")
+         return ERR_NO_PHYSICAL_STAGE;
+
+      ret = pStage->SetPositionUm(targetZ);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      // Step 9: Wait for stage to settle
+      while (pStage->Busy())
+      {
+         CDeviceUtils::SleepMs(10);
+      }
+
+      // Step 10: Update current Z position
+      ret = pStage->GetPositionUm(currentZ);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      // Step 11: Capture new image and analyze spot position
+      ret = SnapAndAnalyze();
+      if (ret != DEVICE_OK)
+         return ret;
+
+      // Check if spot is still detected
+      if (lastSpotScore_ <= 0.0)
+         return DEVICE_ERR;  // Lost the spot
+
+      iteration++;
    }
 
+   // If we reached max iterations without achieving precision, still return OK
+   // (we tried our best)
    return DEVICE_OK;
 }
 
 int AutoFocus::IncrementalFocus()
 {
    return SnapAndAnalyze();
+}
+
+void AutoFocus::ContinuousFocusThread()
+{
+   while (!stopThread_)
+   {
+      // Check if continuous focusing is enabled
+      bool shouldFocus = false;
+      {
+         std::lock_guard<std::mutex> lock(continuousFocusMutex_);
+         shouldFocus = continuousFocusing_;
+      }
+
+      if (!shouldFocus)
+      {
+         // Wait for signal to start continuous focusing
+         std::unique_lock<std::mutex> lock(continuousFocusMutex_);
+         continuousFocusCV_.wait_for(lock, std::chrono::milliseconds(100));
+         continue;
+      }
+
+      // Perform one continuous focus iteration
+      try
+      {
+         // Step 1: Capture and analyze
+         int ret = SnapAndAnalyze();
+         if (ret != DEVICE_OK || lastSpotScore_ <= 0.0)
+         {
+            continuousFocusLocked_ = false;
+            UpdateStatus("Out of Range");
+            CDeviceUtils::SleepMs(50);
+            continue;
+         }
+
+         // Step 2: Check if we have calibration
+         CalibrationData cal;
+         {
+            std::lock_guard<std::mutex> lock(continuousFocusMutex_);
+            if (calibrationMap_.find(deviceSettings_) == calibrationMap_.end())
+            {
+               continuousFocusLocked_ = false;
+               UpdateStatus("Out of Range");
+               CDeviceUtils::SleepMs(50);
+               continue;
+            }
+            cal = calibrationMap_[deviceSettings_];
+         }
+
+         // Step 3: Calculate Z correction
+         double diffZ = CalculateTargetZDiff(cal, lastSpotX_, lastSpotY_);
+         diffZ += offset_;
+
+         // Step 4: Check if locked (within precision)
+         if (fabs(diffZ) <= cal.precision)
+         {
+            continuousFocusLocked_ = true;
+            UpdateStatus("Locked");
+            CDeviceUtils::SleepMs(50);  // Locked, check less frequently
+            continue;
+         }
+
+         // Step 5: Not locked, need to adjust
+         continuousFocusLocked_ = false;
+         UpdateStatus("Focusing");
+
+         // Step 6: Get stage and move
+         MM::Stage* pStage = static_cast<MM::Stage*>(GetDevice(focusStage_.c_str()));
+         if (pStage == nullptr)
+         {
+            CDeviceUtils::SleepMs(50);
+            continue;
+         }
+
+         double currentZ;
+         ret = pStage->GetPositionUm(currentZ);
+         if (ret != DEVICE_OK)
+         {
+            CDeviceUtils::SleepMs(50);
+            continue;
+         }
+
+         double targetZ = currentZ + diffZ;
+
+         // Check against maxZ limit
+         if (targetZ > maxZ_)
+         {
+            CDeviceUtils::SleepMs(50);
+            continue;
+         }
+
+         ret = ValidateZPosition(targetZ);
+         if (ret != DEVICE_OK)
+         {
+            CDeviceUtils::SleepMs(50);
+            continue;
+         }
+
+         ret = pStage->SetPositionUm(targetZ);
+         if (ret == DEVICE_OK)
+         {
+            // Wait for stage to settle
+            while (pStage->Busy())
+            {
+               CDeviceUtils::SleepMs(10);
+            }
+         }
+
+         CDeviceUtils::SleepMs(20);  // Brief pause before next iteration
+      }
+      catch (...)
+      {
+         continuousFocusLocked_ = false;
+         CDeviceUtils::SleepMs(100);
+      }
+   }
+}
+
+void AutoFocus::UpdateStatus(const std::string& newStatus)
+{
+   if (status_ != newStatus)
+   {
+      status_ = newStatus;
+      OnPropertyChanged("Status", status_.c_str());
+   }
 }
 
 int AutoFocus::GetLastFocusScore(double& score)
@@ -544,12 +880,12 @@ int AutoFocus::SnapAndAnalyze()
       if (cal.spotSelection == "Top")
       {
          // Use top surface spot
-         useSpot1 = !(cal.topIsHigher ^ spot1IsHigher); // I believe this to be correct....
+         useSpot1 = cal.slope1Dominant > 0 ? spot1IsHigher : !spot1IsHigher;
       }
       else if (cal.spotSelection == "Bottom")
       {
          // Use bottom surface spot
-         useSpot1 = (cal.topIsHigher ^ spot1IsHigher);
+         useSpot1 = cal.slope1Dominant <= 0 ? spot1IsHigher : !spot1IsHigher;
       }
    }
 
@@ -1155,7 +1491,6 @@ int AutoFocus::PerformCalibration()
       cal.dominantAxis = 'X';
       cal.slope1Dominant = cal.slopeX;
       cal.slope2Dominant = slope2X;
-      cal.topIsHigher = avgSlopeX > 0 ? spotXPositions[0] > spot2XPositions[0] : spotXPositions[0] < spot2XPositions[0];
    }
    else
    {
@@ -1163,7 +1498,6 @@ int AutoFocus::PerformCalibration()
       cal.dominantAxis = 'Y';
       cal.slope1Dominant = cal.slopeY;
       cal.slope2Dominant = slope2Y;
-      cal.topIsHigher = avgSlopeY > 0 ? spotYPositions[0] > spot2YPositions[0] : spotYPositions[0] < spot2YPositions[0];
    }
 
    // Store reference Z position (where calibration started - in focus)
@@ -1176,6 +1510,22 @@ int AutoFocus::PerformCalibration()
 
    // Store the spot selection that was used during this calibration
    cal.spotSelection = spotSelection_;
+
+   // Store the precision that was set during this calibration
+   cal.precision = precision_;
+
+   // Store the description that was set for this device setting
+   cal.description = deviceSettingsDescription_;
+
+   // Store the maximum Z position
+   cal.maxZ = maxZ_;
+
+   // Store the camera settings (ROI and binning) used during calibration
+   cal.roiX = roiX_;
+   cal.roiY = roiY_;
+   cal.roiWidth = roiWidth_;
+   cal.roiHeight = roiHeight_;
+   cal.binning = binning_;
 
    // Store calibration for current device setting
    calibrationMap_[deviceSettings_] = cal;
@@ -1256,10 +1606,28 @@ int AutoFocus::SaveCalibrationData()
       file << "      \"refSpotY\": " << it->second.refSpotY << ",\n";
       file << "      \"refZ\": " << it->second.refZ << ",\n";
       file << "      \"dominantAxis\": \"" << it->second.dominantAxis << "\",\n";
-      file << "      \"topIsHigher\": " << (it->second.topIsHigher ? "true" : "false") << ",\n";
       file << "      \"slope1Dominant\": " << it->second.slope1Dominant << ",\n";
       file << "      \"slope2Dominant\": " << it->second.slope2Dominant << ",\n";
-      file << "      \"spotSelection\": \"" << it->second.spotSelection << "\"\n";
+      file << "      \"spotSelection\": \"" << it->second.spotSelection << "\",\n";
+      file << "      \"precision\": " << it->second.precision << ",\n";
+
+      // Escape quotes in description for JSON
+      std::string escapedDesc = it->second.description;
+      size_t pos = 0;
+      while ((pos = escapedDesc.find("\"", pos)) != std::string::npos)
+      {
+         escapedDesc.replace(pos, 1, "\\\"");
+         pos += 2;
+      }
+      file << "      \"description\": \"" << escapedDesc << "\",\n";
+      file << "      \"maxZ\": " << it->second.maxZ << ",\n";
+
+      // Save camera settings
+      file << "      \"roiX\": " << it->second.roiX << ",\n";
+      file << "      \"roiY\": " << it->second.roiY << ",\n";
+      file << "      \"roiWidth\": " << it->second.roiWidth << ",\n";
+      file << "      \"roiHeight\": " << it->second.roiHeight << ",\n";
+      file << "      \"binning\": " << it->second.binning << "\n";
       file << "    }";
    }
 
@@ -1281,14 +1649,10 @@ int AutoFocus::LoadCalibrationData()
 
    calibrationMap_.clear();
 
-   // Simple JSON parsing - look for numeric values after known keys
+   // Simple JSON parsing - look for closing bracket to know when object is complete
    std::string line;
    long currentDeviceSetting = -1;
    CalibrationData currentCal;
-   bool hasOffsetX = false, hasOffsetY = false, hasSlopeX = false, hasSlopeY = false;
-   bool hasRefSpotX = false, hasRefSpotY = false, hasRefZ = false;
-   bool hasDominantAxis = false, hasSpot1IsTop = false, hasSlope1Dominant = false, hasSlope2Dominant = false;
-   bool hasSpotSelection = false;
 
    while (std::getline(file, line))
    {
@@ -1301,10 +1665,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentDeviceSetting = std::atol(line.substr(colonPos + 1).c_str());
-            hasOffsetX = hasOffsetY = hasSlopeX = hasSlopeY = false;
-            hasRefSpotX = hasRefSpotY = hasRefZ = false;
-            hasDominantAxis = hasSpot1IsTop = hasSlope1Dominant = hasSlope2Dominant = false;
-            hasSpotSelection = false;
          }
       }
       // Look for offsetX
@@ -1314,7 +1674,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.offsetX = std::atof(line.substr(colonPos + 1).c_str());
-            hasOffsetX = true;
          }
       }
       // Look for offsetY
@@ -1324,7 +1683,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.offsetY = std::atof(line.substr(colonPos + 1).c_str());
-            hasOffsetY = true;
          }
       }
       // Look for slopeX
@@ -1334,7 +1692,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.slopeX = std::atof(line.substr(colonPos + 1).c_str());
-            hasSlopeX = true;
          }
       }
       // Look for slopeY
@@ -1344,7 +1701,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.slopeY = std::atof(line.substr(colonPos + 1).c_str());
-            hasSlopeY = true;
          }
       }
       // Look for refSpotX
@@ -1354,7 +1710,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.refSpotX = std::atof(line.substr(colonPos + 1).c_str());
-            hasRefSpotX = true;
          }
       }
       // Look for refSpotY
@@ -1364,7 +1719,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.refSpotY = std::atof(line.substr(colonPos + 1).c_str());
-            hasRefSpotY = true;
          }
       }
       // Look for refZ
@@ -1374,7 +1728,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.refZ = std::atof(line.substr(colonPos + 1).c_str());
-            hasRefZ = true;
          }
       }
       // Look for dominantAxis
@@ -1387,18 +1740,7 @@ int AutoFocus::LoadCalibrationData()
             if (quotePos != std::string::npos)
             {
                currentCal.dominantAxis = line[quotePos + 1];
-               hasDominantAxis = true;
             }
-         }
-      }
-      // Look for spot1IsTop
-      else if ((pos = line.find("\"topIsHigher\"")) != std::string::npos)
-      {
-         size_t colonPos = line.find(":", pos);
-         if (colonPos != std::string::npos)
-         {
-            currentCal.topIsHigher = (line.find("true", colonPos) != std::string::npos);
-            hasSpot1IsTop = true;
          }
       }
       // Look for slope1Dominant
@@ -1408,7 +1750,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.slope1Dominant = std::atof(line.substr(colonPos + 1).c_str());
-            hasSlope1Dominant = true;
          }
       }
       // Look for slope2Dominant
@@ -1418,7 +1759,6 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.slope2Dominant = std::atof(line.substr(colonPos + 1).c_str());
-            hasSlope2Dominant = true;
          }
       }
       // Look for spotSelection
@@ -1434,23 +1774,96 @@ int AutoFocus::LoadCalibrationData()
                if (quotePos2 != std::string::npos)
                {
                   currentCal.spotSelection = line.substr(quotePos1 + 1, quotePos2 - quotePos1 - 1);
-                  hasSpotSelection = true;
                }
             }
          }
       }
-
-      // If we have all data, save it
-      if (currentDeviceSetting >= 0 && hasOffsetX && hasOffsetY && hasSlopeX && hasSlopeY &&
-          hasRefSpotX && hasRefSpotY && hasRefZ &&
-          hasDominantAxis && hasSpot1IsTop && hasSlope1Dominant && hasSlope2Dominant && hasSpotSelection)
+      // Look for precision
+      else if ((pos = line.find("\"precision\"")) != std::string::npos)
       {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            currentCal.precision = std::atof(line.substr(colonPos + 1).c_str());
+         }
+      }
+      // Look for description
+      else if ((pos = line.find("\"description\"")) != std::string::npos)
+      {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            size_t quotePos1 = line.find("\"", colonPos + 1);
+            if (quotePos1 != std::string::npos)
+            {
+               size_t quotePos2 = line.find("\"", quotePos1 + 1);
+               if (quotePos2 != std::string::npos)
+               {
+                  currentCal.description = line.substr(quotePos1 + 1, quotePos2 - quotePos1 - 1);
+               }
+            }
+         }
+      }
+      // Look for maxZ
+      else if ((pos = line.find("\"maxZ\"")) != std::string::npos)
+      {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            currentCal.maxZ = std::atof(line.substr(colonPos + 1).c_str());
+         }
+      }
+      // Look for roiX
+      else if ((pos = line.find("\"roiX\"")) != std::string::npos)
+      {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            currentCal.roiX = std::atoi(line.substr(colonPos + 1).c_str());
+         }
+      }
+      // Look for roiY
+      else if ((pos = line.find("\"roiY\"")) != std::string::npos)
+      {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            currentCal.roiY = std::atoi(line.substr(colonPos + 1).c_str());
+         }
+      }
+      // Look for roiWidth
+      else if ((pos = line.find("\"roiWidth\"")) != std::string::npos)
+      {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            currentCal.roiWidth = std::atoi(line.substr(colonPos + 1).c_str());
+         }
+      }
+      // Look for roiHeight
+      else if ((pos = line.find("\"roiHeight\"")) != std::string::npos)
+      {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            currentCal.roiHeight = std::atoi(line.substr(colonPos + 1).c_str());
+         }
+      }
+      // Look for binning
+      else if ((pos = line.find("\"binning\"")) != std::string::npos)
+      {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            currentCal.binning = std::atol(line.substr(colonPos + 1).c_str());
+         }
+      }
+      // Look for closing bracket - this marks end of calibration object
+      else if (line.find("}") != std::string::npos && currentDeviceSetting >= 0)
+      {
+         // Save the complete calibration data
          calibrationMap_[currentDeviceSetting] = currentCal;
          currentDeviceSetting = -1;
-         hasOffsetX = hasOffsetY = hasSlopeX = hasSlopeY = false;
-         hasRefSpotX = hasRefSpotY = hasRefZ = false;
-         hasDominantAxis = hasSpot1IsTop = hasSlope1Dominant = hasSlope2Dominant = false;
-         hasSpotSelection = false;
       }
    }
 

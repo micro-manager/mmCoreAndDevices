@@ -30,6 +30,10 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 #include <opencv2/opencv.hpp>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -962,6 +966,10 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
       int OnDeviceSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnSpotSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnPrecision(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnDeviceSettingsDescription(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnMaxZ(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
       struct CalibrationData {
@@ -975,10 +983,19 @@ private:
 
          // Spot identification data
          char dominantAxis;     // 'X' or 'Y' - which axis has larger movement
-         bool topIsHigher;       // true if spot 1 is top surface, false if bottom
          double slope1Dominant; // slope of spot 1 on dominant axis
          double slope2Dominant; // slope of spot 2 on dominant axis
          std::string spotSelection; // Spot selection used during calibration ("Top" or "Bottom")
+         double precision;      // Precision in microns for iterative focusing
+         std::string description;   // User description for these device settings
+         double maxZ;           // Maximum Z position allowed
+
+         // Camera settings
+         unsigned roiX;
+         unsigned roiY;
+         unsigned roiWidth;
+         unsigned roiHeight;
+         long binning;
       };
 
       int SnapAndAnalyze();
@@ -991,6 +1008,8 @@ private:
       int LoadCalibrationData();
       double CalculateTargetZDiff(const CalibrationData& cal, double spotX, double spotY);
       int ValidateZPosition(double targetZ);
+      void ContinuousFocusThread();
+      void UpdateStatus(const std::string& newStatus);
 
       std::vector<std::string> availableShutters_;
       std::string shutter_;
@@ -1015,8 +1034,19 @@ private:
       double lastSpotScore_;
       // Device settings and calibration
       long deviceSettings_;
+      std::string deviceSettingsDescription_;
       std::string spotSelection_;
+      double precision_;
+      double maxZ_;
       std::map<long, CalibrationData> calibrationMap_;
+
+      // Continuous focusing thread infrastructure
+      std::thread continuousFocusThread_;
+      std::mutex continuousFocusMutex_;
+      std::condition_variable continuousFocusCV_;
+      std::atomic<bool> continuousFocusLocked_;
+      std::atomic<bool> stopThread_;
+      std::string status_;
 };
 
 
