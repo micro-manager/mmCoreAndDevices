@@ -6302,7 +6302,7 @@ int CMMTUCam::OnImageFormat(MM::PropertyBase* pProp, MM::ActionType eAct)
 
                 SYSTEMTIME sysTm;
                 GetLocalTime(&sysTm);
-                sprintf(m_szImgPath, ("%s\\MM_%02d%02d%02d%02d%03d"), szPath, sysTm.wDay, sysTm.wHour, sysTm.wMinute, sysTm.wSecond, sysTm.wMilliseconds);
+                snprintf(m_szImgPath, sizeof(m_szImgPath), "%s\\MM_%02d%02d%02d%02d%03d", szPath, sysTm.wDay, sysTm.wHour, sysTm.wMinute, sysTm.wSecond, sysTm.wMilliseconds);
 
                 m_bSaving = true;
 
