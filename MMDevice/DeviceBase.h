@@ -181,8 +181,8 @@ public:
 
    /**
    * Obtains the value of the property.
-   * @param name - property identifier (name)
-   * @param value - the value of the property
+   * @param name property identifier (name)
+   * @param value the value of the property
    */
    virtual int GetProperty(const char* name, char* value) const
    {
@@ -197,8 +197,8 @@ public:
 
    /**
    * Obtains the value of the property.
-   * @param name - property identifier (name)
-   * @param val - the value of the property
+   * @param name property identifier (name)
+   * @param val the value of the property
    */
    int GetProperty(const char* name, double& val)
    {
@@ -211,8 +211,8 @@ public:
 
    /**
    * Obtains the value of the property.
-   * @param name - property identifier (name)
-   * @param val - the value of the property
+   * @param name property identifier (name)
+   * @param val the value of the property
    */
    int GetProperty(const char* name, long& val)
    {
@@ -226,8 +226,8 @@ public:
    /**
     * Check if the property value is equal to a specific string
     * @return true only if property exists and is equal to, false otherwise
-    * @param name - property identifier (name)
-    * @param val - the value to compare to
+    * @param name property identifier (name)
+    * @param val the value to compare to
     */
    bool IsPropertyEqualTo(const char* name, const char* val) const
    {
@@ -241,8 +241,8 @@ public:
 
    /**
    * Checks whether the property is read-only.
-   * @param name - property identifier (name)
-   * @param readOnly - read-only or not
+   * @param name property identifier (name)
+   * @param readOnly read-only or not
    */
    virtual int GetPropertyReadOnly(const char* name, bool& readOnly) const
    {
@@ -260,8 +260,8 @@ public:
 
    /**
    * Checks whether the property is pre-init.
-   * @param name - property identifier (name)
-   * @param preInit - true if property is pre-init
+   * @param name property identifier (name)
+   * @param preInit true if property is pre-init
    */
    virtual int GetPropertyInitStatus(const char* name, bool& preInit) const
    {
@@ -292,8 +292,8 @@ public:
 
    /**
     * Provides lower limit for a property that has property limits
-    * @param name - property identifier (name)
-    * @param lowLimit - returns lower limit
+    * @param name property identifier (name)
+    * @param lowLimit returns lower limit
     */
    virtual int GetPropertyLowerLimit(const char* name, double& lowLimit) const
    {
@@ -310,8 +310,8 @@ public:
 
    /**
     * Provides upper limit for a property that has property limits
-    * @param name - property identifier (name)
-    * @param hiLimit - returns upper limit
+    * @param name property identifier (name)
+    * @param hiLimit returns upper limit
     */
    virtual int GetPropertyUpperLimit(const char* name, double& hiLimit) const
    {
@@ -328,8 +328,8 @@ public:
 
    /**
    * Checks whether the property can be run in a sequence
-   * @param name - property identifier (name)
-   * @param sequenceable - sequenceable or not
+   * @param name property identifier (name)
+   * @param sequenceable sequenceable or not
    */
    virtual int IsPropertySequenceable(const char* name, bool& sequenceable) const
    {
@@ -347,8 +347,8 @@ public:
 
    /**
    * Provides the maximum number of events that can be executed by this sequenceable property
-   * @param name - property identifier (name)
-   * @param nrEvents - maximum number of events that can be handles by the device
+   * @param name property identifier (name)
+   * @param nrEvents maximum number of events that can be handles by the device
    */
    virtual int GetPropertySequenceMaxLength(const char* name, long& nrEvents) const
    {
@@ -376,7 +376,7 @@ public:
    /**
     * Starts a (TTL-triggered) sequence for the given property
     * Should be overridden by the device adapter (when a sequence is implemented)
-    * @param  name - property for which the sequence should be started
+    * @param  name property for which the sequence should be started
     */
    virtual int StartPropertySequence(const char* name)
    {
@@ -402,7 +402,7 @@ public:
    /**
     * Stops a (TTL-triggered) sequence for the given property
     * Should be overridden by the device adapter (when a sequence is implemented)
-    * @param  name - property for which the sequence should be started
+    * @param  name property for which the sequence should be started
     */
    virtual int StopPropertySequence(const char* name)
    {
@@ -426,7 +426,7 @@ public:
 
    /**
     * This function is used by the Core to communicate a sequence to the device
-    * @param name - name of the sequenceable property
+    * @param name name of the sequenceable property
     */
    virtual int ClearPropertySequence(const char* name)
    {
@@ -440,8 +440,8 @@ public:
 
    /**
     * This function is used by the Core to communicate a sequence to the device
-    * @param name - name of the sequenceable property
-    * @param value - value to append to sequence
+    * @param name name of the sequenceable property
+    * @param value value to append to sequence
     */
    virtual int AddToPropertySequence(const char* name, const char* value)
    {
@@ -456,7 +456,7 @@ public:
    /**
     * This function is used by the Core to communicate a sequence to the device
     * Sends the sequence to the device by calling the properties functor
-    * @param name - name of the sequenceable property
+    * @param name name of the sequenceable property
     */
    virtual int SendPropertySequence(const char* name)
    {
@@ -471,8 +471,8 @@ public:
    /**
    * Obtains the property name given the index.
    * Can be used for enumerating properties.
-   * @param uIdx - property index
-   * @param name - property name
+   * @param uIdx property index
+   * @param name property name
    */
    virtual bool GetPropertyName(unsigned uIdx, char* name) const
    {
@@ -499,8 +499,8 @@ public:
 
    /**
    * Sets the property value.
-   * @param name - property name
-   * @param value - property value
+   * @param name property name
+   * @param value property value
    */
    virtual int SetProperty(const char* name, const char* value)
    {
@@ -563,12 +563,12 @@ public:
 
    /**
    * Creates a new property for the device.
-   * @param name - property name
-   * @param value - initial value
-   * @param eType - property type (string, integer or float)
-   * @param readOnly - is the property read-only or not
-   * @param pAct - function object called on the property actions
-   * @param isPreInitProperty - whether to create a "pre-init" property, whose
+   * @param name property name
+   * @param value initial value
+   * @param eType property type (string, integer or float)
+   * @param readOnly is the property read-only or not
+   * @param pAct function object called on the property actions
+   * @param isPreInitProperty whether to create a "pre-init" property, whose
    * value will be available before Initialize() is called
    */
    int CreateProperty(const char* name, const char* value, MM::PropertyType eType, bool readOnly, MM::ActionFunctor* pAct=0, bool isPreInitProperty=false)
@@ -578,12 +578,12 @@ public:
 
    /**
    * Creates a new property for the device.
-   * @param name - property name
-   * @param value - initial value
-   * @param eType - property type (string, integer or float)
-   * @param readOnly - is the property read-only or not
-   * @param memberFunction - Function pointer to the device object "OnProperty" member function, e.g. &MyDevice::OnState
-   * @param isPreInitProperty - whether to create a "pre-init" property, whose
+   * @param name property name
+   * @param value initial value
+   * @param eType property type (string, integer or float)
+   * @param readOnly is the property read-only or not
+   * @param memberFunction Function pointer to the device object "OnProperty" member function, e.g. &MyDevice::OnState
+   * @param isPreInitProperty whether to create a "pre-init" property, whose
    * value will be available before Initialize() is called
    */
    int CreatePropertyWithHandler(const char* name, const char* value, MM::PropertyType eType, bool readOnly,
@@ -827,8 +827,8 @@ protected:
 
    /**
    * Output the specified text message to the log stream.
-   * @param msg - message text
-   * @param debugOnly - if true the message will be sent only in the log-debug mode
+   * @param msg message text
+   * @param debugOnly if true the message will be sent only in the log-debug mode
    */
    int LogMessage(const char* msg, bool debugOnly = false) const
    {
@@ -839,8 +839,8 @@ protected:
 
    /**
    * Output the specified text message to the log stream.
-   * @param msg - message text
-   * @param debugOnly - if true the message will be sent only in the log-debug mode
+   * @param msg message text
+   * @param debugOnly if true the message will be sent only in the log-debug mode
    */
    int LogMessage(const std::string& msg, bool debugOnly = false) const
    {
@@ -851,8 +851,8 @@ protected:
 
    /**
    * Output the  text message of specified code to the log stream.
-   * @param errorCode - error code
-   * @param debugOnly - if true the message will be sent only in the log-debug mode
+   * @param errorCode error code
+   * @param debugOnly if true the message will be sent only in the log-debug mode
    */
    int LogMessageCode(const int errorCode, bool debugOnly = false) const
    {
@@ -869,10 +869,10 @@ protected:
    /**
    * Outputs time difference between two time stamps.
    * Handy for hardware profiling
-   * @param start - Time stamp for start of Process
-   * @param end - Time stamp for end of Process
-   * @param message - message that will be displayed in output
-   * @param debugOnly - if true the message will be sent only in the log-debug mode
+   * @param start Time stamp for start of Process
+   * @param end Time stamp for end of Process
+   * @param message message that will be displayed in output
+   * @param debugOnly if true the message will be sent only in the log-debug mode
    */
    int LogTimeDiff(MM::MMTime start, MM::MMTime end, const std::string& message, bool debugOnly = false) const
    {
@@ -887,9 +887,9 @@ protected:
    /**
    * Outputs time difference between two time stamps.
    * Handy for hardware profiling
-   * @param start - Time stamp for start of Process
-   * @param end - Time stamp for end of Process
-   * @param debugOnly - if true the message will be sent only in the log-debug mode
+   * @param start Time stamp for start of Process
+   * @param end Time stamp for end of Process
+   * @param debugOnly if true the message will be sent only in the log-debug mode
    */
    int LogTimeDiff(MM::MMTime start, MM::MMTime end, bool debugOnly = false) const
    {
@@ -985,8 +985,8 @@ protected:
    /**
    * Sends an ASCII string withe the specified terminating characters to the serial port.
    * @param portName
-   * @param command - command string
-   * @param term - terminating string, e.g. CR or CR,LF, or something else
+   * @param command command string
+   * @param term terminating string, e.g. CR or CR,LF, or something else
    */
    int SendSerialCommand(const char* portName, const char* command, const char* term)
    {
@@ -1000,8 +1000,8 @@ protected:
    * Gets the received string from the serial port, waiting for the
    * terminating character sequence.
    * @param portName
-   * @param term - terminating string, e.g. CR or CR,LF, or something else
-   * @param ans - answer string without the terminating characters
+   * @param term terminating string, e.g. CR or CR,LF, or something else
+   * @param ans answer string without the terminating characters
    */
    int GetSerialAnswer (const char* portName, const char* term, std::string& ans)
    {
@@ -1218,9 +1218,9 @@ private:
 
    /**
     * Finds a property by name and determines whether it is a sequenceable property
-    * @param pProp - pointer to pointer used to return the property if found
-    * @param name - name of the property we are looking for
-    * @return - DEVICE_OK, DEVICE_INVALID_PROPERTY (if not found),
+    * @param pProp pointer to pointer used to return the property if found
+    * @param name name of the property we are looking for
+    * @return DEVICE_OK, DEVICE_INVALID_PROPERTY (if not found),
     *             or DEVICE_PROPERTY_NOT_SEQUENCEABLE
     */
    int GetSequenceableProperty(MM::Property** pProp, const char* name) const

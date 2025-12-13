@@ -436,10 +436,10 @@ namespace MM {
        * exact dimensions requested - but should try do as close as possible.
        * If the hardware does not have this capability the software should simulate the ROI by
        * appropriately cropping each frame.
-       * @param x - top-left corner coordinate
-       * @param y - top-left corner coordinate
-       * @param xSize - width
-       * @param ySize - height
+       * @param x top-left corner coordinate
+       * @param y top-left corner coordinate
+       * @param xSize width
+       * @param ySize height
        */
       virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
       /**
@@ -1508,10 +1508,10 @@ namespace MM {
        * If deviceIterator exceeds or is equal to the number of currently
        * loaded devices of type devType, an empty string is returned.
        *
-       * @param caller - the calling device
-       * @param devType - the device type
-       * @param pDeviceName - buffer in which device name will be returned
-       * @param deviceIterator - index of device (within the given type)
+       * @param caller the calling device
+       * @param devType the device type
+       * @param pDeviceName buffer in which device name will be returned
+       * @param deviceIterator index of device (within the given type)
        */
       virtual void GetLoadedDeviceOfType(const Device* caller, MM::DeviceType devType, char* pDeviceName, const unsigned int deviceIterator) = 0;
 
