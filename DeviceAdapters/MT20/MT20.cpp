@@ -780,7 +780,7 @@ int MT20Attenuator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(pos);
 		if(pos >= (long) numPos_ || pos < 0)
 		{
-			snprintf(ret_msg, sizeof(ret_msg), "Invalid state %l requested of MT20-Attenuator in MT20Attenuator::OnState() after set\n", pos);
+			snprintf(ret_msg, sizeof(ret_msg), "Invalid state %ld requested of MT20-Attenuator in MT20Attenuator::OnState() after set\n", pos);
 			LogMessage(ret_msg, false);
 			pProp->Set(position_);
 			return ERR_INVALID_STATE;
@@ -810,7 +810,7 @@ int MT20Attenuator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		
 		if(position_ != pos)
 		{
-			snprintf(ret_msg, sizeof(ret_msg), "Failed to successfully set MT20-Attenuator state to %l in MT20Attenuator::OnState(); current state is %l", pos, position_);
+			snprintf(ret_msg, sizeof(ret_msg), "Failed to successfully set MT20-Attenuator state to %ld in MT20Attenuator::OnState(); current state is %ld", pos, position_);
 			LogMessage(ret_msg, false);
 			pProp->Set(position_);
 			return ERR_SET_FAILED;
