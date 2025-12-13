@@ -720,7 +720,7 @@ int AndorCamera::GetListOfAvailableCameras()
          int depth;
          ::GetBitDepth(i, &depth);
          char * buffer = new char[MAX_CHARS_PER_DESCRIPTION];
-         sprintf(buffer, "%d. %dbit",(i+1), depth);
+         snprintf(buffer, MAX_CHARS_PER_DESCRIPTION, "%d. %dbit",(i+1), depth);
          std::string temp(buffer);
          vChannels.push_back(temp);
          delete [] buffer;
@@ -4018,7 +4018,7 @@ int AndorCamera::GetListOfAvailableCameras()
         char * buffer = new char[MAX_CHARS_PER_DESCRIPTION];
         int depth;
         ::GetBitDepth(i, &depth);
-        sprintf(buffer, "%d. %dbit",(i+1), depth);
+        snprintf(buffer, MAX_CHARS_PER_DESCRIPTION, "%d. %dbit",(i+1), depth);
 
         char speedBuf[MAX_CHARS_PER_DESCRIPTION];
         int numSpeeds;
@@ -5785,7 +5785,7 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
          else
          {
             char * buffer = new char[MAX_CHARS_PER_DESCRIPTION];
-            sprintf(buffer, "%.2f", temp);
+            snprintf(buffer, MAX_CHARS_PER_DESCRIPTION, "%.2f", temp);
 
             MetadataSingleTag mstTemperature("CurrentTemperature", label, true);
             mstTemperature.SetValue(buffer);
