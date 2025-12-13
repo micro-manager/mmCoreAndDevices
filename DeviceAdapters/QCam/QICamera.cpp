@@ -117,8 +117,8 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // Helper Functions (global scope)
 /////////////////////////////////////////////////////////////////////////////
 
-void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString)
-{	
+void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString, size_t outStringSize)
+{
    float readoutSpeed;
 
    switch(inSpeed) {
@@ -163,7 +163,7 @@ void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString)
        break;
    }
 
-   sprintf(outString, "%4.1f MHz", readoutSpeed);
+   snprintf(outString, outStringSize, "%4.1f MHz", readoutSpeed);
 }
 
 bool dequals(const double a, const double b, const double eps)
@@ -1491,7 +1491,7 @@ int QICamera::SetupReadoutSpeed()
 
       // go through each readout speed and add the string version to the vector
       for (counter = 0; counter < readoutTableSize; counter ++) {
-         ConvertReadoutSpeedToString((QCam_qcReadoutSpeed)readoutTable[counter], tempStr);
+         ConvertReadoutSpeedToString((QCam_qcReadoutSpeed)readoutTable[counter], tempStr, sizeof(tempStr));
          // only add it if it does not exist
          bFound = false;
          for (readoutItr = readoutValues.begin(); readoutItr != readoutValues.end(); ++readoutItr) {
@@ -1527,7 +1527,7 @@ int QICamera::SetupReadoutSpeed()
       return DEVICE_ERR;
    }
 
-   ConvertReadoutSpeedToString((QCam_qcReadoutSpeed)defaultSpeedEnum, defaultSpeedStr);
+   ConvertReadoutSpeedToString((QCam_qcReadoutSpeed)defaultSpeedEnum, defaultSpeedStr, sizeof(defaultSpeedStr));
 
    // SetupReadoutSpeed() can be called more than once to update the allowed values
    // Only create the property if it does not exist yet
@@ -3186,7 +3186,7 @@ int QICamera::OnReadoutSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_ERR;
       }
 
-      ConvertReadoutSpeedToString(readoutSpeedEnum, readoutSpeedChars);
+      ConvertReadoutSpeedToString(readoutSpeedEnum, readoutSpeedChars, sizeof(readoutSpeedChars));
 
       pProp->Set(readoutSpeedChars);
    }

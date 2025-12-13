@@ -144,7 +144,7 @@ public:
   int GetChannel(int& channel);
   int SetChannel(int channel);
   int GetAxis(int& id);
-  int GetActuatorName(char* id);
+  int GetActuatorName(char* id, size_t idSize);
   int GetKtemp(double& ktemp);
   int GetRohm(int& rohm);
   int GetRgver(int& rgver);
@@ -406,7 +406,7 @@ public:
 	MM::DeviceDetectionStatus DetectDevice(void);
 	int GetStatus(int& stat);
 	int GetVersion(std::string& version);
-	int GetActuatorName(char* id);
+	int GetActuatorName(char* id, size_t idSize);
 	int GetRgver(int& rgver);
    // action interface
    // ----------------

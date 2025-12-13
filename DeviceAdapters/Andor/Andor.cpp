@@ -2142,7 +2142,7 @@ int AndorCamera::GetListOfAvailableCameras()
       if(roiPosition !=-1)
       {
          char buffer[MAX_CHARS_PER_DESCRIPTION];
-         GetROIPropertyName(roiPosition, customROI_.xSize, customROI_.ySize, buffer,cropModeSwitch_ );
+         GetROIPropertyName(roiPosition, customROI_.xSize, customROI_.ySize, buffer, sizeof(buffer), cropModeSwitch_);
          ret = SetProperty(g_ROIProperty, buffer);
       }
       else
@@ -4182,7 +4182,7 @@ int AndorCamera::GetListOfAvailableCameras()
 		      if(roiPosition !=-1)
             {
                char buffer[MAX_CHARS_PER_DESCRIPTION];
-               GetROIPropertyName(roiPosition, roi_.xSize, roi_.ySize, buffer,cropModeSwitch_);
+               GetROIPropertyName(roiPosition, roi_.xSize, roi_.ySize, buffer, sizeof(buffer), cropModeSwitch_);
                pProp->Set(buffer);
             }
             else
@@ -5630,7 +5630,7 @@ unsigned int AndorCamera::PopulateROIDropdown()
          roiList.push_back(roi);
 
          char buffer[MAX_CHARS_PER_DESCRIPTION];
-         GetROIPropertyName(uiROICount, roi.xSize, roi.ySize, buffer,cropModeSwitch_);
+         GetROIPropertyName(uiROICount, roi.xSize, roi.ySize, buffer, sizeof(buffer), cropModeSwitch_);
          AddAllowedValue(g_ROIProperty, buffer,uiROICount);
 
          uiROICount++;
@@ -5652,7 +5652,7 @@ unsigned int AndorCamera::PopulateROIDropdown()
          ROI roi = UltraCropROIs[i];
          roiList.push_back(roi);
          char buffer[MAX_CHARS_PER_DESCRIPTION];
-         GetROIPropertyName(uiROICount, roi.xSize, roi.ySize, buffer,cropModeSwitch_);
+         GetROIPropertyName(uiROICount, roi.xSize, roi.ySize, buffer, sizeof(buffer), cropModeSwitch_);
          AddAllowedValue(g_ROIProperty, buffer,uiROICount);
          uiROICount++;
       }
@@ -6091,28 +6091,28 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
       return s;
    }
 
-   void AndorCamera::GetROIPropertyName(int position, int hSize, int vSize, char * buffer, int mode)
+   void AndorCamera::GetROIPropertyName(int position, int hSize, int vSize, char * buffer, size_t bufferSize, int mode)
    {
       if(position==0) //full frame
       {
-         sprintf(buffer, "%s",g_ROIFullImage);
+         snprintf(buffer, bufferSize, "%s",g_ROIFullImage);
       }
       else
       {
-        
-         int offset = sprintf(buffer, "%d. %d x %d",position, hSize, vSize);
+
+         int offset = snprintf(buffer, bufferSize, "%d. %d x %d",position, hSize, vSize);
 
          if(OFF==mode)
          {
-            sprintf(buffer+offset," (centered)");
+            snprintf(buffer+offset, bufferSize - offset," (centered)");
          }
          else if(BOTTOM==mode)
          {
-           sprintf(buffer+offset," (bottom corner)");
+           snprintf(buffer+offset, bufferSize - offset," (bottom corner)");
          }
          else
          {
-           sprintf(buffer+offset," (centered - ROI optimised for performance)");
+           snprintf(buffer+offset, bufferSize - offset," (centered - ROI optimised for performance)");
          }
 
       }

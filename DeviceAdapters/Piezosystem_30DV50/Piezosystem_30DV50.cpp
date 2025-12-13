@@ -427,7 +427,7 @@ int Stage::Initialize()
 	SetPropertyLimits(g_Voltage, min_V_, max_V_);
 	
 	char n[20];
-	ret = GetActuatorName(n);
+	ret = GetActuatorName(n, sizeof(n));
 	if (ret != DEVICE_OK)
       return ret;
 	ac_name_=n;
@@ -892,16 +892,16 @@ int Stage::GetAxis(int& id){
 	id = atoi(dest[2]);
 	return DEVICE_OK;
 }
-int Stage::GetActuatorName(char* id){
+int Stage::GetActuatorName(char* id, size_t idSize){
 	LogMessage ("GetActuatorName");
 	std::string result;
-	char s[20]="acdescr";	
+	char s[20]="acdescr";
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);
 	LogMessage(result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(id,"%s", dest[1]);	
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(id, idSize, "%s", dest[1]);
 	LogMessage(id);
 	return DEVICE_OK;
 }
@@ -2623,7 +2623,7 @@ int Shutter::Initialize()
 	AddAllowedValue(g_ShutterState, g_Close);
 
 	char n[20];
-	ret = GetActuatorName(n);
+	ret = GetActuatorName(n, sizeof(n));
 	if (ret != DEVICE_OK)
       return ret;
 	ac_name_=n;
@@ -2834,22 +2834,22 @@ int Shutter::GetVersion(std::string& version)
    }   
    return returnStatus;
 }
-int Shutter::GetActuatorName(char* id){
+int Shutter::GetActuatorName(char* id, size_t idSize){
 	LogMessage ("GetActuatorName");
 	std::string result;
-	char s[20]="acdescr";	
-	const char* cmd = s;	
+	char s[20]="acdescr";
+	const char* cmd = s;
 	int ret = SendSerialCommand(port_.c_str(), cmdsmon, g_Mesg_Send_term);
-	if (ret != DEVICE_OK) 
-      return ret;		
-	ret = SendCommand(cmd, result);		
+	if (ret != DEVICE_OK)
+      return ret;
+	ret = SendCommand(cmd, result);
 	ret = SendSerialCommand(port_.c_str(), cmdsmoff, g_Mesg_Send_term);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
       return ret;
 	LogMessage(result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(id,"%s", dest[1]);	
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(id, idSize, "%s", dest[1]);
 	LogMessage(id);
 	return DEVICE_OK;
 }

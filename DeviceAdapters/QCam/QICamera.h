@@ -117,7 +117,7 @@
 void QCAMAPI FrameDoneCallback(void* userPtr, unsigned long userData, QCam_Err errcode, unsigned long flags);
 
 // Helper Functions
-void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString);
+void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString, size_t outStringSize);
 void ConvertReadoutSpeedToEnum(const char *inSpeed, QCam_qcReadoutSpeed *outSpeed);
 void ConvertReadoutPortToString(QCam_qcReadoutPort inPort, char *outString);
 void ConvertReadoutPortToEnum(const char *inSpeed, QCam_qcReadoutPort *outPort);

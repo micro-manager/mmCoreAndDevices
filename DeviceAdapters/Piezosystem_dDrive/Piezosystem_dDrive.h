@@ -222,7 +222,7 @@ protected:
     int SetCommandValue(const char* c,int ch,int fkt);
 	int GetStatus(int& stat, EVD* ch);
     int GetLimitsValues(EVD* struc);
-	int GetActuatorName(char* id,int ch);
+	int GetActuatorName(char* id, size_t idSize, int ch);
 	int GetPos(double& pos, EVD* struc);
 	int SetPos(double pos, EVD* struc);
     int GetLoop(bool& loop,int ch);
@@ -255,8 +255,8 @@ class Hub :  public HubBase<Hub>  //public CGenericBase<Hub>
       void GetName(char* pszName) const;
       bool Busy();
 	  int DetectInstalledDevices();
-	  int GetActuatorName(int ch, char* id);
-	  int GetSerialNumberActuator(int ch,char* sn);
+	  int GetActuatorName(int ch, char* id, size_t idSize);
+	  int GetSerialNumberActuator(int ch, char* sn, size_t snSize);
 	  int GetBright(int& b);
 	  int SetBright(int b);
 	  std::vector<int> GetDeviceAddresses(); 
@@ -322,9 +322,9 @@ public:
   int GetChannel(int& channel);
   int SetChannel(int channel);
   int GetAxis(int& id);
-  int GetActuatorName(char* id);
-  int GetSerialNumberActuator(char* sn);
-  int GetSerialNumberDevice(char* sn);
+  int GetActuatorName(char* id, size_t idSize);
+  int GetSerialNumberActuator(char* sn, size_t snSize);
+  int GetSerialNumberDevice(char* sn, size_t snSize);
   int GetKtemp(double& ktemp);
   int GetRohm(int& rohm);
   int GetRgver(int& rgver);

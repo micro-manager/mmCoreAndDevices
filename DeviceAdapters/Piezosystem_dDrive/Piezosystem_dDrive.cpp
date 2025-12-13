@@ -774,17 +774,17 @@ int EVDBase::GetLimitsValues(EVD *struc){
       return ret;
 	return DEVICE_OK;
 }
-int EVDBase::GetActuatorName(char* id,int ch){
+int EVDBase::GetActuatorName(char* id, size_t idSize, int ch){
 	core_->LogMessage(device_, "GetActuatorName", true);
 	std::string result;
 	char s[20];
-	snprintf(s,sizeof(s),"acdescr,%d",ch);	
+	snprintf(s,sizeof(s),"acdescr,%d",ch);
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);
 	core_->LogMessage(device_, result.c_str(), true);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(id,"%s", dest[2]);	
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(id, idSize, "%s", dest[2]);	
 	core_->LogMessage(device_, id, true);
 	return DEVICE_OK;
 }
@@ -1097,14 +1097,14 @@ int Hub::DetectInstalledDevices(){
 		PSJdevice* dev=new PSJdevice();
 		char name[20];
 		dev->channel_.push_back(l);		
-		GetActuatorName(l,name);			
+		GetActuatorName(l, name, sizeof(name));			
 		dev->name_=name;		
 		char* dest[20];
 		splitString(name," 0123456789",dest);	
 		dev->serie_=ConvertName(dest[0]);
 		dev->comparename_=ConvertName(dev->name_);
 		//Get serial number
-		GetSerialNumberActuator(l,name);		
+		GetSerialNumberActuator(l, name, sizeof(name));		
 		dev->sn_=name;					
 		bool finddev=false;
 		//compare device with the device in list 
@@ -1245,28 +1245,28 @@ int Hub::SendServiceCommand(const char* cmd,std::string& result){
       return ret;
 	return DEVICE_OK;
 }
-int Hub::GetActuatorName(int ch,char* name){
+int Hub::GetActuatorName(int ch, char* name, size_t nameSize){
 	std::string result;
 	char s[20];
-	snprintf(s,sizeof(s),"acdescr,%d",ch);	
+	snprintf(s,sizeof(s),"acdescr,%d",ch);
 	const char* cmd = s;
-	SendServiceCommand(cmd,result);	
+	SendServiceCommand(cmd,result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(name,"%s", dest[2]);
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(name, nameSize, "%s", dest[2]);
 	LogMessage("GetActorname");
 	LogMessage(name);
 	return DEVICE_OK;
 }
-int Hub::GetSerialNumberActuator(int ch,char* sn){
+int Hub::GetSerialNumberActuator(int ch, char* sn, size_t snSize){
 	std::string result;
 	char s[20];
-	snprintf(s,sizeof(s),"rdac,%d,0",ch);	
+	snprintf(s,sizeof(s),"rdac,%d,0",ch);
 	const char* cmd = s;
-	SendServiceCommand(cmd,result);	
+	SendServiceCommand(cmd,result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(sn,"%s", dest[2]);
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(sn, snSize, "%s", dest[2]);
 	LogMessage("Serial number");
 	LogMessage(sn);
 	return DEVICE_OK;
@@ -1584,7 +1584,7 @@ int Stage::Initialize()
     CreateProperty(g_Status, "0", MM::Integer, true, pAct);
 	
 	char n[20];
-	ret = GetActuatorName(n);	
+	ret = GetActuatorName(n, sizeof(n));	
 	//CDeviceUtils::CopyLimitedString(ac_name_,(const char*) n);	
 	if (ret != DEVICE_OK)
       return ret;	
@@ -1996,40 +1996,40 @@ int Stage::GetAxis(int& id){
 	id = atoi(dest[2]);
 	return DEVICE_OK;
 }
-int Stage::GetActuatorName(char* id){
+int Stage::GetActuatorName(char* id, size_t idSize){
 	std::string result;
 	char s[20];
-	snprintf(s,sizeof(s),"acdescr,%d",chx_.channel_);	
+	snprintf(s,sizeof(s),"acdescr,%d",chx_.channel_);
 	const char* cmd = s;
-	SendServiceCommand(cmd,result);	
+	SendServiceCommand(cmd,result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(id,"%s", dest[2]);	
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(id, idSize, "%s", dest[2]);	
 	return DEVICE_OK;
 }
-int Stage::GetSerialNumberActuator(char* sn){
+int Stage::GetSerialNumberActuator(char* sn, size_t snSize){
 	LogMessage ("GetSerialNumberActuator",true);
 	std::string result;
 	char s[20];
-	snprintf(s,sizeof(s),"rdac,%d,0",chx_.channel_);	
+	snprintf(s,sizeof(s),"rdac,%d,0",chx_.channel_);
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);
 	LogMessage(result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(sn,"%s", dest[2]);	
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(sn, snSize, "%s", dest[2]);	
 	LogMessage(sn);
 	return DEVICE_OK;
 }
-int Stage::GetSerialNumberDevice(char* sn){
+int Stage::GetSerialNumberDevice(char* sn, size_t snSize){
 	std::string result;
 	char s[20];
-	snprintf(s,sizeof(s),"rdac,%d,1",chx_.channel_);	
+	snprintf(s,sizeof(s),"rdac,%d,1",chx_.channel_);
 	const char* cmd = s;
-	SendServiceCommand(cmd,result);	
+	SendServiceCommand(cmd,result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(sn,"%s", dest[2]);	
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(sn, snSize, "%s", dest[2]);	
 	return DEVICE_OK;
 }
 int Stage::GetKtemp(double& ktemp){	    

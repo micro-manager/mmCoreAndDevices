@@ -306,7 +306,7 @@ int XLedDev::Initialize()
     char sStatus[400];
     memset(sStatus, 0, 400);
 
-    GetStatusDescription(lLedStatus, sStatus);
+    GetStatusDescription(lLedStatus, sStatus, sizeof(sStatus));
 
     ret = CreateProperty(XLed::Instance()->GetXLedStr(XLed::XL_LedStatusDescLabel).c_str(), (const char*)sStatus, MM::String, false);
     
@@ -795,7 +795,7 @@ int XLedDev::GetLedParm(unsigned char* sCmd, unsigned char* sResp, char* sParm)
 //
 // Get Status Text Message
 //
-int XLedDev::GetStatusDescription(long lStatus, char* sStatus)
+int XLedDev::GetStatusDescription(long lStatus, char* sStatus, size_t sStatusSize)
 {
     const char* sStatusBitsOn[] =
     {
@@ -821,19 +821,19 @@ int XLedDev::GetStatusDescription(long lStatus, char* sStatus)
         "X"
     };
 
-    sprintf(sStatus, "%s", "[");
+    snprintf(sStatus, sStatusSize, "%s", "[");
     long lValue = 1;
     for (int nBit = 0; nBit < 8; nBit++, lValue *= 2)
     {
         long lBit = lStatus & lValue;
         if (lBit == lValue)
         {
-            sprintf(&sStatus[strlen(sStatus)], " %s,", sStatusBitsOn[nBit]);
+            snprintf(&sStatus[strlen(sStatus)], sStatusSize - strlen(sStatus), " %s,", sStatusBitsOn[nBit]);
         }
         else if (lBit == 0)
         {
             if (strlen(sStatusBitsOff[nBit]) > 1)
-                sprintf(&sStatus[strlen(sStatus)], " %s,", sStatusBitsOff[nBit]);
+                snprintf(&sStatus[strlen(sStatus)], sStatusSize - strlen(sStatus), " %s,", sStatusBitsOff[nBit]);
         }
     }
     sStatus[strlen(sStatus) - 1] = ']';
@@ -895,7 +895,7 @@ int XLedDev::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
     char sStatus[400];
     memset(sStatus, 0, 400);
 
-    GetStatusDescription(lStatus, sStatus);
+    GetStatusDescription(lStatus, sStatus, sizeof(sStatus));
 
     SetProperty(XLed::Instance()->GetXLedStr(XLed::XL_LedStatusDescLabel).c_str(), sStatus);
 

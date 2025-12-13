@@ -55,7 +55,7 @@ class XLedCtrl : public CGenericBase<XLedCtrl>
       //bool Initialized() { return m_yInitialized; };
       int ReadAllProperty();
       char* GetXLedStatus(unsigned char* sResp, char* sXLedStatus);
-      int GetStatusDescription(long lStatus, char* sStatus);
+      int GetStatusDescription(long lStatus, char* sStatus, size_t sStatusSize);
       // int GetSerialNumber(unsigned char* sResp);
 
 

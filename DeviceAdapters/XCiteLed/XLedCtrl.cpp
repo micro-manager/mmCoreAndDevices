@@ -372,7 +372,7 @@ char* XLedCtrl::GetXLedStatus(unsigned char* sResp, char* sXLedStatus)
 //
 // Get Status Text Message
 //
-int XLedCtrl::GetStatusDescription(long lStatus, char* sStatus)
+int XLedCtrl::GetStatusDescription(long lStatus, char* sStatus, size_t sStatusSize)
 {
     const char* sStatusBitsOn[] =
     {
@@ -418,19 +418,19 @@ int XLedCtrl::GetStatusDescription(long lStatus, char* sStatus)
 
     long lValue = 1;
     // memset(sStatus, 0, 800);
-    sprintf(sStatus, "%s", "[");
+    snprintf(sStatus, sStatusSize, "%s", "[");
     for (int nBit = 0; nBit < 16; nBit++, lValue *= 2)
     {
         long lBit = lStatus & lValue;
         if (lBit == lValue)
         {
             if (strcmp(sStatusBitsOn[nBit],"Reserved") != 0)
-                sprintf(&sStatus[strlen(sStatus)], " %s,", sStatusBitsOn[nBit]);
+                snprintf(&sStatus[strlen(sStatus)], sStatusSize - strlen(sStatus), " %s,", sStatusBitsOn[nBit]);
         }
         else if (lBit == 0)
         {
             if (strcmp(sStatusBitsOff[nBit],"X") != 0)
-                sprintf(&sStatus[strlen(sStatus)], " %s,", sStatusBitsOff[nBit]);
+                snprintf(&sStatus[strlen(sStatus)], sStatusSize - strlen(sStatus), " %s,", sStatusBitsOff[nBit]);
         }
     }
     sStatus[strlen(sStatus) - 1] = ']';
@@ -582,7 +582,7 @@ int XLedCtrl::Initialize()
 
     char sStatus[800];
     memset(sStatus, 0, 800);
-    GetStatusDescription(lLedStatus, sStatus);
+    GetStatusDescription(lLedStatus, sStatus, sizeof(sStatus));
 
     ret = CreateProperty(XLed::Instance()->GetXLedStr(XLed::XL_XLedStatusDescLabel).c_str(), (const char*)sStatus, MM::String, false);
     
@@ -917,7 +917,7 @@ int XLedCtrl::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         char sStatus[800];
         memset(sStatus, 0, 800);
-        GetStatusDescription(lStatus, sStatus);
+        GetStatusDescription(lStatus, sStatus, sizeof(sStatus));
 
         SetProperty(XLed::Instance()->GetXLedStr(XLed::XL_XLedStatusDescLabel).c_str(), (const char*) sStatus);
     }
