@@ -148,7 +148,7 @@ int RAMPSZStage::SetPositionSteps(long steps)
 	  LogMessage("Error sending Z move.");
 	  return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
 	  LogMessage("Failed to get ok response to Z move.");
   }
   ret = OnStagePositionChanged(posZ_um_);
@@ -185,7 +185,7 @@ int RAMPSZStage::Home() {
     LogMessage("error getting response to homing command.");
     return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
     LogMessage("Homing command: expected ok.");
     return DEVICE_ERR;
   }
@@ -212,7 +212,7 @@ int RAMPSZStage::SetAdapterOriginUm(double z) {
     LogMessage("error getting response to origin command.");
     return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
     LogMessage("origin command: expected ok.");
     return DEVICE_ERR;
   }
