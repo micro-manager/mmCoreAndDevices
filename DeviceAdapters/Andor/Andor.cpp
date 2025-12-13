@@ -6101,6 +6101,8 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
       {
 
          int offset = snprintf(buffer, bufferSize, "%d. %d x %d",position, hSize, vSize);
+         if (offset < 0 || (size_t)offset >= bufferSize)
+            return;  // Error or truncation; buffer is full
 
          if(OFF==mode)
          {
