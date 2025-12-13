@@ -1951,8 +1951,8 @@ public:
     * Alter the software coordinate translation between micrometers and steps,
     * such that the current position becomes the given coordinates.
     *
-    * \param newXUm the new coordinate to assign to the current X position
-    * \param newYUm the new coordinate to assign to the current Y position
+    * @param newXUm the new coordinate to assign to the current X position
+    * @param newYUm the new coordinate to assign to the current Y position
    */
    virtual int SetAdapterOriginUm(double newXUm, double newYUm)
    {

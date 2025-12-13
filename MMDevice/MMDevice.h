@@ -581,7 +581,7 @@ namespace MM {
       virtual int GetLimits(double& lower, double& upper) = 0;
 
       /**
-       * \brief Return the focus direction.
+       * @brief Return the focus direction.
        *
        * Indicates whether increasing position corresponds to movement in the
        * direction that brings the objective and sample closer together.
@@ -1508,10 +1508,10 @@ namespace MM {
        * If deviceIterator exceeds or is equal to the number of currently
        * loaded devices of type devType, an empty string is returned.
        *
-       * \param[in] caller - the calling device
-       * \param[in] devType - the device type
-       * \param[out] pDeviceName - buffer in which device name will be returned
-       * \param[in] deviceIterator - index of device (within the given type)
+       * @param[in] caller - the calling device
+       * @param[in] devType - the device type
+       * @param[out] pDeviceName - buffer in which device name will be returned
+       * @param[in] deviceIterator - index of device (within the given type)
        */
       virtual void GetLoadedDeviceOfType(const Device* caller, MM::DeviceType devType, char* pDeviceName, const unsigned int deviceIterator) = 0;
 

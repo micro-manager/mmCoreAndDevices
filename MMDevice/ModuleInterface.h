@@ -67,7 +67,7 @@ extern "C" {
     * idempotent (since RegisterDevice() is idempotent, nothing special has to
     * be done in most cases).
     *
-    * \see RegisterDevice()
+    * @see RegisterDevice()
     */
    MODULE_API void InitializeModuleData();
 
@@ -79,7 +79,7 @@ extern "C" {
     * The implementation of this function should create an instance of the
     * device and return a raw pointer to it.
     *
-    * \see DeleteDevice()
+    * @see DeleteDevice()
     */
    MODULE_API MM::Device* CreateDevice(const char* name);
 
@@ -92,7 +92,7 @@ extern "C" {
     * device instance (which is guaranteed to be one that was previously
     * returned by CreateDevice()).
     *
-    * \see CreateDevice()
+    * @see CreateDevice()
     */
    MODULE_API void DeleteDevice(MM::Device* pDevice);
 
@@ -136,7 +136,7 @@ extern "C" {
  * Calling this function indicates that the module provides a device with the
  * given name and type, and provides a user-visible description string.
  *
- * \see InitializeModuleData()
+ * @see InitializeModuleData()
  */
 void RegisterDevice(const char* deviceName, MM::DeviceType deviceType, const char* description);
 
