@@ -288,7 +288,7 @@ int XLedDev::Initialize()
     {
         lLedStatus = atol((const char*)sParm);
         memset(sParm, 0, XLed::XL_MaxPropSize);
-        sprintf(sParm, "%02lx", lLedStatus);
+        snprintf(sParm, sizeof(sParm), "%02lx", lLedStatus);
     }
 
     CPropertyAction* pAct = new CPropertyAction(this, &XLedDev::OnState);
