@@ -1502,8 +1502,9 @@ namespace MM {
       virtual int GetDeviceProperty(const char* deviceName, const char* propName, char* value) = 0;
       virtual int SetDeviceProperty(const char* deviceName, const char* propName, const char* value) = 0;
 
-      /// Get the names of currently loaded devices of a given type.
       /**
+       * Get the names of currently loaded devices of a given type.
+       *
        * If deviceIterator exceeds or is equal to the number of currently
        * loaded devices of type devType, an empty string is returned.
        *

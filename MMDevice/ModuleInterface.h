@@ -29,8 +29,9 @@
 
 #include "MMDevice.h"
 
-/// Module interface version.
 /**
+ * Module interface version.
+ *
  * The Core ensures that any loaded device adapter modules have a matching
  * version, to ensure ABI compatibility.
  */
@@ -53,8 +54,9 @@ extern "C" {
     * Exported module interface
     */
 
-   /// Initialize the device adapter module.
    /**
+    * Initialize the device adapter module.
+    *
     * Device adapter modules must provide an implementation of this function.
     *
     * The implementation of this function should call RegisterDevice() to
@@ -69,8 +71,9 @@ extern "C" {
     */
    MODULE_API void InitializeModuleData();
 
-   /// Instantiate the named device.
    /**
+    * Instantiate the named device.
+    *
     * Device adapter modules must provide an implementation of this function.
     *
     * The implementation of this function should create an instance of the
@@ -80,8 +83,9 @@ extern "C" {
     */
    MODULE_API MM::Device* CreateDevice(const char* name);
 
-   /// Destroy a device instance.
    /**
+    * Destroy a device instance.
+    *
     * Device adapter modules must provide an implementation of this function.
     *
     * The implementation of this function should deallocate (delete) the given
@@ -123,8 +127,9 @@ extern "C" {
  * Functions for use by the device adapter module
  */
 
-/// Register a device class provided by the device adapter library.
 /**
+ * Register a device class provided by the device adapter library.
+ *
  * To be called in the device adapter module's implementation of
  * InitializeModuleData().
  *
