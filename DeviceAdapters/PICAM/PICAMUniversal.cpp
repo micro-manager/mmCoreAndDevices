@@ -2298,7 +2298,7 @@ int Universal::ThreadRun(void)
       }
       while (!uniAcqThd_->getStop() && curImageCnt_ < numImages_ && bRunning && ret==DEVICE_OK);
 
-      sprintf( dbgBuf, "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u,  curImageCnt_: %lu, numImages_: %lu", \
+      snprintf( dbgBuf, sizeof(dbgBuf), "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u,  curImageCnt_: %lu, numImages_: %lu", \
             uniAcqThd_->getStop(), ret, curImageCnt_, numImages_);
       LogMMMessage( __LINE__, dbgBuf );
 

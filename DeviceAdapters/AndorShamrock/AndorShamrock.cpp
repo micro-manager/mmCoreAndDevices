@@ -426,7 +426,7 @@ void AndorShamrock::SetShutterProperty()
    }
 }
 
-void AndorShamrock::SetSlitProperty() 
+void AndorShamrock::SetSlitProperty()
 {
    int slitPresent(0);
    char widthBuffer[100];
@@ -440,7 +440,7 @@ void AndorShamrock::SetSlitProperty()
 
          float width;
          returnCode =ShamrockGetAutoSlitWidth(0, i, &width);
-         sprintf(widthBuffer, "%.2f", width);
+         snprintf(widthBuffer, sizeof(widthBuffer), "%.2f", width);
 
          if (returnCode == SHAMROCK_SUCCESS) {
             if (HasProperty(gsz_SlitWidth[i - 1])) {

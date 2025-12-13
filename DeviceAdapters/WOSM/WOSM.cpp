@@ -1858,7 +1858,7 @@ int CWOSMStage::MoveZ(double pos)
     LogMessage("after limits", false);
 
     char buf[50];
-    int length = sprintf(buf, "dac_out pz %3.3f\r\n", pos);
+    int length = snprintf(buf, sizeof(buf), "dac_out pz %3.3f\r\n", pos);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << pos;
@@ -2048,7 +2048,7 @@ int CWOSMXYStage::MoveX(double posUm)
     if ( posUm > upperLimitX_ ) posUm = upperLimitX_;
 
     char buf[25];
-    int length = sprintf(buf, "dac_out px %1.3f\r\n", posUm);
+    int length = snprintf(buf, sizeof(buf), "dac_out px %1.3f\r\n", posUm);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << posUm;
@@ -2098,7 +2098,7 @@ int CWOSMXYStage::MoveY(double posUm)
     if ( posUm > upperLimitY_ ) posUm = upperLimitY_;
 
     char buf[25];
-    int length = sprintf(buf, "dac_out py %1.3f\r\n", posUm);
+    int length = snprintf(buf, sizeof(buf), "dac_out py %1.3f\r\n", posUm);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << posUm;

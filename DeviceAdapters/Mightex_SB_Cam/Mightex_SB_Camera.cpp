@@ -294,7 +294,7 @@ int CMightex_SB_Camera::InitCamera()
 		char *s_ModuleNo = strchr(ModuleNo, ' ');
 		if(s_ModuleNo)
 			*s_ModuleNo = '\0';
-		sprintf(camNames, "%s:%s\0", ModuleNo, SerialNo);
+		snprintf(camNames, sizeof(camNames), "%s:%s\0", ModuleNo, SerialNo);
 	}
 
 		SSBufferUSB_AddDeviceToWorkingSet(1);
@@ -1901,7 +1901,7 @@ int CMightex_SB_Camera::OnResolution_Ry(MM::PropertyBase* pProp, MM::ActionType 
 			yStart = 0;
 
 			char s_resolution[256];
-			sprintf(s_resolution, "%d*%d", s_vidFrameSize[MAX_RESOLUTION].width, h);
+			snprintf(s_resolution, sizeof(s_resolution), "%d*%d", s_vidFrameSize[MAX_RESOLUTION].width, h);
 			vector<string> ResValues;
 			ResValues.push_back(g_Res[s_MAX_RESOLUTION]);
 			if(h < s_vidFrameSize[MAX_RESOLUTION].height)

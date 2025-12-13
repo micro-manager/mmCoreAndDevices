@@ -237,7 +237,7 @@ int CSensicam::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 		  StopSequenceAcquisition();
 	  }
       pProp->Get(m_dExposure);
-      sprintf(m_pszTimes, "0,%d,-1,-1", (int)m_dExposure); 
+      snprintf(m_pszTimes, sizeof(m_pszTimes), "0,%d,-1,-1", (int)m_dExposure); 
       nErr = SET_COC(m_nMode, m_nTrig, m_nRoiXMin, m_nRoiXMax, m_nRoiYMin, m_nRoiYMax,
                      m_nHBin, m_nVBin, m_pszTimes);
 	  if (0!=nErr)

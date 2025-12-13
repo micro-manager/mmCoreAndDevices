@@ -486,7 +486,7 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	{
 		char cBuf[MM::MaxStrLength];
 		unsigned long modelId = std::stoul(prop->getValue());
-		sprintf(cBuf, "0x%04X", modelId);
+		snprintf(cBuf, sizeof(cBuf), "0x%04X", modelId);
 
 		RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_CameraID, cBuf, MM::String, true));
 	}

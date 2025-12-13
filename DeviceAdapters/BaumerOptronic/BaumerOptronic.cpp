@@ -1010,50 +1010,50 @@ int BOImplementationThread::BOInitializationSequence()
                         fxReturn = FX_StartDataCapture(gCameraId[0], TRUE);
                         if (fxReturn != CE_SUCCESS)
                         {
-                           sprintf(fxMess,"FX_StartDataCapture error: %08x", fxReturn);
+                           snprintf(fxMess, sizeof(fxMess), "FX_StartDataCapture error: %08x", fxReturn);
                            LLogMessage(fxMess);
                         }
                      }
                      else
                      {
-                        sprintf(fxMess,"FX_AllocateResources error: %08x", fxReturn);
+                        snprintf(fxMess, sizeof(fxMess), "FX_AllocateResources error: %08x", fxReturn);
                         LLogMessage(fxMess);
                      }
                   }
                   else
                   {
-                     sprintf(fxMess,"FX_DefineImageNotificationEvent error: %08x", fxReturn);
+                     snprintf(fxMess, sizeof(fxMess), "FX_DefineImageNotificationEvent error: %08x", fxReturn);
                      LLogMessage(fxMess);
                   }
                }
                else
                {
-                  sprintf(fxMess,"FX_OpenCamera error: %08x", fxReturn);
+                  snprintf(fxMess, sizeof(fxMess), "FX_OpenCamera error: %08x", fxReturn);
                   LLogMessage(fxMess);
                }
             }
             else
             {
-               sprintf(fxMess,"FX_LabelDevice error: %08x", fxReturn);
+               snprintf(fxMess, sizeof(fxMess), "FX_LabelDevice error: %08x", fxReturn);
                LLogMessage(fxMess);
             }
          }
          else
          {
             // XXX BUG! We should be returning an error in this case, but we're not.
-            sprintf(fxMess,"# cameras must be 1, but %d cameras found \n", DevCount);
+            snprintf(fxMess, sizeof(fxMess), "# cameras must be 1, but %d cameras found \n", DevCount);
             LLogMessage(fxMess);
          }
       }
       else
       {
-         sprintf(fxMess,"FX_EnumerateDevices error: %08x", fxReturn);
+         snprintf(fxMess, sizeof(fxMess), "FX_EnumerateDevices error: %08x", fxReturn);
          LLogMessage(fxMess);
       }
    }
    else
    {
-      sprintf(fxMess,"FX_InitLibrary error: %08x", fxReturn);
+      snprintf(fxMess, sizeof(fxMess), "FX_InitLibrary error: %08x", fxReturn);
       LLogMessage(fxMess);
    }
 

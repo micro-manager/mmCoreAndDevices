@@ -957,7 +957,7 @@ int ZStage::DriveCommadProcessZ(double position)
 		{
 			double d = abs(position);
 			char pos_micro[256] = { '\0' };
-			sprintf(pos_micro, "%.*f", 2, d); //micron -> micron
+			snprintf(pos_micro, sizeof(pos_micro), "%.*f", 2, d); //micron -> micron
 			cmd = "A:" + channel_ + sign + "P" + pos_micro;
 		}
 		break;

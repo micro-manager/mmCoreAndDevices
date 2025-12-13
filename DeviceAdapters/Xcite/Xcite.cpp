@@ -343,7 +343,7 @@ int Xcite120PC::OnExposureTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     pProp->Get(exposure_time_s_);
     int exp_time = (int) (exposure_time_s_*10);
     char input[5];
-    sprintf( input, "%04d",  exp_time );
+    snprintf(input, sizeof(input), "%04d",  exp_time);
     int s = ExecuteCommand( g_XciteCmdSetExposureTime, input, 4 );
 	if (s!=DEVICE_OK)
 		return s;

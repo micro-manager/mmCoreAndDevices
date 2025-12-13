@@ -275,7 +275,7 @@ int MDHIDDevice::Open(const char* /*portName*/)
       this->LogMessage(logMsg2.str().c_str(), true);
    }
    ostringstream logMsg2;
-   sprintf(str, "%ls", wstr);
+   snprintf(str, sizeof(str), "%ls", wstr);
    logMsg2 << "Manufacturer String: " << str ; 
    this->LogMessage(logMsg2.str().c_str(), true);
 
@@ -288,7 +288,7 @@ int MDHIDDevice::Open(const char* /*portName*/)
       this->LogMessage(logMsg3.str().c_str(), true);
    }
    ostringstream logMsg3;
-   sprintf(str, "%ls", wstr);
+   snprintf(str, sizeof(str), "%ls", wstr);
    logMsg3 << "Product String: " << str ; 
    this->LogMessage(logMsg3.str().c_str(), true);
 
@@ -301,7 +301,7 @@ int MDHIDDevice::Open(const char* /*portName*/)
       this->LogMessage(logMsg4.str().c_str(), true);
    }
    ostringstream logMsg4;
-   sprintf(str, "%ls", wstr);
+   snprintf(str, sizeof(str), "%ls", wstr);
    logMsg4 << "Serial Number String: " << str ; 
    this->LogMessage(logMsg4.str().c_str(), true);
 

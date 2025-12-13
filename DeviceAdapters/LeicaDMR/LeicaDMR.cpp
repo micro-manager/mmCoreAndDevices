@@ -300,12 +300,12 @@ int RLModule::Initialize()
 
    // Get the number of filters in this RLModule
    ret = g_hub.GetRLModuleNumberOfPositions(*this, *GetCoreCallback(), numPos_);
-   if (ret != DEVICE_OK) 
-      return ret; 
+   if (ret != DEVICE_OK)
+      return ret;
    char pos[3];
-   for (int i=0; i<numPos_; i++) 
+   for (int i=0; i<numPos_; i++)
    {
-      sprintf(pos, "%d", i);
+      snprintf(pos, sizeof(pos), "%d", i);
       AddAllowedValue(MM::g_Keyword_State, pos);
       AddAllowedValue(MM::g_Keyword_Closed_Position, pos);
    }
@@ -318,9 +318,9 @@ int RLModule::Initialize()
 
    // create default positions and labels
    char state[8];
-   for (int i=0; i<numPos_; i++) 
+   for (int i=0; i<numPos_; i++)
    {
-      sprintf(state, "C%d", i + 1);
+      snprintf(state, sizeof(state), "C%d", i + 1);
       SetPositionLabel(i,state);
    }
 
@@ -1028,12 +1028,12 @@ int ObjNosepiece::Initialize()
 
    // Get the number of Objectives
    ret = g_hub.GetObjNosepieceNumberOfPositions(*this, *GetCoreCallback(), numPos_);
-   if (ret != DEVICE_OK) 
-      return ret; 
+   if (ret != DEVICE_OK)
+      return ret;
    char pos[3];
-   for (int i=0; i<numPos_; i++) 
+   for (int i=0; i<numPos_; i++)
    {
-      sprintf(pos, "%d", i);
+      snprintf(pos, sizeof(pos), "%d", i);
       AddAllowedValue(MM::g_Keyword_State, pos);
    }
 
@@ -1045,9 +1045,9 @@ int ObjNosepiece::Initialize()
 
    // create default positions and labels
    char state[8];
-   for (int i=0; i<numPos_; i++) 
+   for (int i=0; i<numPos_; i++)
    {
-      sprintf(state, "Obj-%d", i + 1);
+      snprintf(state, sizeof(state), "Obj-%d", i + 1);
       SetPositionLabel(i,state);
    }
 

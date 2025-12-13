@@ -489,7 +489,7 @@ int XLedCtrl::Initialize()
     // Name
     char sCtrlNameLabel[120];
     memset(sCtrlNameLabel, 0, 120);
-    sprintf(sCtrlNameLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardNameLabel).c_str(), MM::g_Keyword_Name);
+    snprintf(sCtrlNameLabel, sizeof(sCtrlNameLabel), "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardNameLabel).c_str(), MM::g_Keyword_Name);
     ret = CreateProperty(sCtrlNameLabel/*MM::g_Keyword_Name*/, m_DeviceName, MM::String, true);
 
     if (nDebugLog > 0)
@@ -507,7 +507,7 @@ int XLedCtrl::Initialize()
 
         char sCtrlDescLabel[120];
         memset(sCtrlDescLabel, 0, 120);
-        sprintf(sCtrlDescLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardDescLabel).c_str(), MM::g_Keyword_Description);
+        snprintf(sCtrlDescLabel, sizeof(sCtrlDescLabel), "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardDescLabel).c_str(), MM::g_Keyword_Description);
         ret = CreateProperty(sCtrlDescLabel/*MM::g_Keyword_Description*/, m_DeviceDescription, MM::String, true);
 
         if (nDebugLog > 0)
@@ -581,7 +581,7 @@ int XLedCtrl::Initialize()
     {
         lLedStatus = atol((const char*)sXLedStatus);
         memset(sXLedStatus, 0, XLed::XL_MaxPropSize);
-        sprintf(sXLedStatus, "%04lx", lLedStatus);
+        snprintf(sXLedStatus, sizeof(sXLedStatus), "%04lx", lLedStatus);
     }
 
     pAct = new CPropertyAction(this, &XLedCtrl::OnState);
@@ -641,7 +641,7 @@ int XLedCtrl::Initialize()
 
     // get All On/Off
     char sAllOnOff[8];
-    sprintf(sAllOnOff, "%ld", m_lAllOnOff);
+    snprintf(sAllOnOff, sizeof(sAllOnOff), "%ld", m_lAllOnOff);
     pAct = new CPropertyAction(this, &XLedCtrl::OnAllOnOff);
 
     // Create all on/off property

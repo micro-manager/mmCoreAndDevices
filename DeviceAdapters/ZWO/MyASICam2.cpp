@@ -76,7 +76,7 @@ inline static void OutputDbgPrint(const char* strOutPutString, ...)
 {
 #ifdef _DEBUG
 	char strBuf[128] = {0};
-	sprintf(strBuf, "<%s> ", "MM_ASI");
+	snprintf(strBuf, sizeof(strBuf), "<%s> ", "MM_ASI");
 	va_list vlArgs;
 	va_start(vlArgs, strOutPutString);
 	vsnprintf((char*)(strBuf+strlen(strBuf)), sizeof(strBuf)-strlen(strBuf), strOutPutString, vlArgs);
@@ -382,7 +382,7 @@ int CMyASICam::Initialize()
 	char cBin[2];
 	while(ASICameraInfo.SupportedBins[i] > 0)
 	{
-		sprintf(cBin, "%d", ASICameraInfo.SupportedBins[i]);
+		snprintf(cBin, sizeof(cBin), "%d", ASICameraInfo.SupportedBins[i]);
 		binningValues.push_back(cBin);
 		i++;
 	}
@@ -1839,9 +1839,9 @@ CMyEFW::CMyEFW() :
 
 	vector<string> EFWIndexValues;
 	for(int i = 0; i < iConnectedEFWNum; i++)
-	{		
+	{
 		EFWGetID(i, &EFWInfo.ID);
-		sprintf(ConnectedEFWName[i], "EFW (ID %d)", EFWInfo.ID);//保存名字		
+		snprintf(ConnectedEFWName[i], sizeof(ConnectedEFWName[i]), "EFW (ID %d)", EFWInfo.ID);//保存名字
 		EFWIndexValues.push_back(ConnectedEFWName[i]);
 	}
 

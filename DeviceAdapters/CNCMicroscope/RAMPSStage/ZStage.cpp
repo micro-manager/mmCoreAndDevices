@@ -135,7 +135,7 @@ int RAMPSZStage::SetPositionSteps(long steps)
   posZ_um_ = steps * stepSize_um_;
 
   char buff[100];
-  sprintf(buff, "G0 Z%f", posZ_um_/1000.);
+  snprintf(buff, sizeof(buff), "G0 Z%f", posZ_um_/1000.);
   std::string buffAsStdStr = buff;
   int ret = pHub->SendCommand(buffAsStdStr);
   if (ret != DEVICE_OK)

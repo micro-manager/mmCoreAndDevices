@@ -133,7 +133,7 @@ int MT20HUB::Shutdown()
 		if(ret.size() > 0)
 		{
 			char error_msg[4096];
-			sprintf(error_msg, "MT20hub::shutdown() returns error closing MT20 connection during MT20HUB::Shutdown()\n");
+			snprintf(error_msg, sizeof(error_msg), "MT20hub::shutdown() returns error closing MT20 connection during MT20HUB::Shutdown()\n");
 			ret.append(error_msg);
 			LogMessage(ret, false);
 			return ERR_EXECUTING_CMD;
@@ -299,7 +299,7 @@ int MT20Burner::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(pos);
 		if(!(pos ==0 || pos == 1))
 		{
-			sprintf(ret_msg, "Invalid state passed to MT20Burner: %l\n", pos);
+			snprintf(ret_msg, sizeof(ret_msg), "Invalid state passed to MT20Burner: %l\n", pos);
 			LogMessage(ret_msg, false);
 			pProp->Set(state_);
 			return ERR_INVALID_STATE;
@@ -336,7 +336,7 @@ int MT20Burner::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		}
 		if(state_ != pos)
 		{
-			sprintf(ret_msg, "Failed to successfully set MT20-Burner state to %l in MT20Burner::OnState(); current state is %l", pos, state_);
+			snprintf(ret_msg, sizeof(ret_msg), "Failed to successfully set MT20-Burner state to %l in MT20Burner::OnState(); current state is %l", pos, state_);
 			LogMessage(ret_msg, false);
 			pProp->Set(state_);
 			return ERR_SET_FAILED;
@@ -457,7 +457,7 @@ int MT20Shutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		busy_ = false;
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::GetShutterState() returns error during MT20Shutter::OnState before get\n");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::GetShutterState() returns error during MT20Shutter::OnState before get\n");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
@@ -472,7 +472,7 @@ int MT20Shutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(pos);
 		if(pos > 1 || pos < 0)
 		{
-			sprintf(ret_msg, "Invalid state %l requested of MT20-Shutter in MT20Shutter::OnState() after set\n", pos);
+			snprintf(ret_msg, sizeof(ret_msg), "Invalid state %l requested of MT20-Shutter in MT20Shutter::OnState() after set\n", pos);
 			LogMessage(ret_msg, false);
 			pProp->Set((long)(state_ ? 1 : 0));
 			return ERR_INVALID_STATE;
@@ -484,7 +484,7 @@ int MT20Shutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::SetShutterState() returns error during MT20Shutter::OnState() after set");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::SetShutterState() returns error during MT20Shutter::OnState() after set");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
@@ -496,7 +496,7 @@ int MT20Shutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::GetShutterState() returns error during MT20Shutter::OnState() after set");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::GetShutterState() returns error during MT20Shutter::OnState() after set");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
@@ -506,7 +506,7 @@ int MT20Shutter::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		
 		if(state != pos)
 		{
-			sprintf(ret_msg, "Failed to successfully set MT20-Shutter state to %l in MT20Burner::OnState(); current state is %l", pos, state);
+			snprintf(ret_msg, sizeof(ret_msg), "Failed to successfully set MT20-Shutter state to %l in MT20Burner::OnState(); current state is %l", pos, state);
 			LogMessage(ret_msg, false);
 			pProp->Set(state);
 			return ERR_SET_FAILED;
@@ -616,7 +616,7 @@ int MT20Filterwheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::GetFilterwheelPosition() returns error in MT20Filterwheel::OnState() before get\n");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::GetFilterwheelPosition() returns error in MT20Filterwheel::OnState() before get\n");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
@@ -629,7 +629,7 @@ int MT20Filterwheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(pos);
 		if(pos >= (long) numPos_ || pos < 0)
 		{
-			sprintf(ret_msg, "Invalid position %l requested of MT20-Filterwheel in MT20Filterwheel::OnState() after set\n", pos);
+			snprintf(ret_msg, sizeof(ret_msg), "Invalid position %l requested of MT20-Filterwheel in MT20Filterwheel::OnState() after set\n", pos);
 			LogMessage(ret_msg, false);
 			pProp->Set(position_);
 			return ERR_INVALID_POSITION;
@@ -641,7 +641,7 @@ int MT20Filterwheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::SetFilterwheelPosition() returns error in MT20Filterwheel::OnState() after set\n");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::SetFilterwheelPosition() returns error in MT20Filterwheel::OnState() after set\n");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
@@ -652,13 +652,13 @@ int MT20Filterwheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::GetFilterwheelPosition() returns error in MT20Filterwheel::OnState() after set\n");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::GetFilterwheelPosition() returns error in MT20Filterwheel::OnState() after set\n");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
 		if(position_ != pos)
 		{
-			sprintf(ret_msg, "Failed to successfully set MT20-Filterwheel position to %l in MT20Filterwheel::OnState(); current position is %l", pos, position_);
+			snprintf(ret_msg, sizeof(ret_msg), "Failed to successfully set MT20-Filterwheel position to %l in MT20Filterwheel::OnState(); current position is %l", pos, position_);
 			LogMessage(ret_msg, false);
 			pProp->Set(position_);
 			return ERR_SET_FAILED;
@@ -767,7 +767,7 @@ int MT20Attenuator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		busy_ = false;
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::GetAttenuatorState() returns error in MT20Attenuator::OnState() before get\n");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::GetAttenuatorState() returns error in MT20Attenuator::OnState() before get\n");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
@@ -780,7 +780,7 @@ int MT20Attenuator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 		pProp->Get(pos);
 		if(pos >= (long) numPos_ || pos < 0)
 		{
-			sprintf(ret_msg, "Invalid state %l requested of MT20-Attenuator in MT20Attenuator::OnState() after set\n", pos);
+			snprintf(ret_msg, sizeof(ret_msg), "Invalid state %l requested of MT20-Attenuator in MT20Attenuator::OnState() after set\n", pos);
 			LogMessage(ret_msg, false);
 			pProp->Set(position_);
 			return ERR_INVALID_STATE;
@@ -792,7 +792,7 @@ int MT20Attenuator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::SetAttenuatorState() returns error in MT20Attenuator::OnState() after set\n");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::SetAttenuatorState() returns error in MT20Attenuator::OnState() after set\n");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
@@ -803,14 +803,14 @@ int MT20Attenuator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if(ret.size() > 0)
 		{
-			sprintf(ret_msg, "MT20hub::GetAttenuatorState() returns error in MT20Attenuator::OnState() after set\n");
+			snprintf(ret_msg, sizeof(ret_msg), "MT20hub::GetAttenuatorState() returns error in MT20Attenuator::OnState() after set\n");
 			LogMessage(ret.append(std::string(ret_msg)), false);
 			return ERR_EXECUTING_CMD;
 		}
 		
 		if(position_ != pos)
 		{
-			sprintf(ret_msg, "Failed to successfully set MT20-Attenuator state to %l in MT20Attenuator::OnState(); current state is %l", pos, position_);
+			snprintf(ret_msg, sizeof(ret_msg), "Failed to successfully set MT20-Attenuator state to %l in MT20Attenuator::OnState(); current state is %l", pos, position_);
 			LogMessage(ret_msg, false);
 			pProp->Set(position_);
 			return ERR_SET_FAILED;

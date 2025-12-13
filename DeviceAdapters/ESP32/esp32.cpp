@@ -1713,7 +1713,7 @@ int CESP32Stage::MoveZ(double pos)
     if ( pos < lowerLimit_ ) pos = lowerLimit_;
 
     char buf[25];
-    int length = sprintf(buf, "Z,%3.3f\r\n", pos);
+    int length = snprintf(buf, sizeof(buf), "Z,%3.3f\r\n", pos);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << pos;
@@ -1903,7 +1903,7 @@ int CESP32XYStage::MoveX(double posUm)
     if ( posUm > upperLimitX_ ) posUm = upperLimitX_;
 
     char buf[25];
-    int length = sprintf(buf, "X,%3.3f\r\n", posUm);
+    int length = snprintf(buf, sizeof(buf), "X,%3.3f\r\n", posUm);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << posUm;
@@ -1953,7 +1953,7 @@ int CESP32XYStage::MoveY(double posUm)
     if ( posUm > upperLimitY_ ) posUm = upperLimitY_;
 
     char buf[25];
-    int length = sprintf(buf, "Y,%3.3f\r\n", posUm);
+    int length = snprintf(buf, sizeof(buf), "Y,%3.3f\r\n", posUm);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << posUm;

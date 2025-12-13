@@ -746,7 +746,7 @@ int FocusStage::Initialize()
    if (ret != DEVICE_OK)
       return ret;
    char buffer[4];
-   sprintf(buffer, "%d", stepSize_nm_);
+   snprintf(buffer, sizeof(buffer), "%d", stepSize_nm_);
    pAct = new CPropertyAction (this, &FocusStage::OnStepSize);
    ret = CreateProperty(stepSizeName, buffer, MM::String, false, pAct);
    if (ret != DEVICE_OK)

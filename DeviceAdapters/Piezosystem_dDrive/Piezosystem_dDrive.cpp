@@ -593,7 +593,7 @@ int EVDBase::GetCommandValue(const char* c,int channel,double& d){
 	core_->LogMessage(device_, "Get command value double", true);
 
 	char str[50]="";
-	sprintf(str,"%s,%d",c,channel);	
+	snprintf(str,sizeof(str),"%s,%d",c,channel);	
 	const char* cmd = str; 	
     int ret;
 	std::string result;
@@ -622,7 +622,7 @@ int EVDBase::GetCommandValue(const char* c,int channel,double& d){
 int EVDBase::GetCommandValue(const char* c,int channel,int& i){
 	core_->LogMessage(device_, "Get command value integer", true);
 	char cmd[50]="";
-	sprintf(cmd,"%s,%d",c,channel);	
+	snprintf(cmd,sizeof(cmd),"%s,%d",c,channel);	
     int ret;
 	std::string result;
 	std::string type;
@@ -649,7 +649,7 @@ int EVDBase::GetCommandValue(const char* c,int channel,int& i){
 int EVDBase::SetCommandValue(const char* c,int channel,double fkt){
 	core_->LogMessage(device_, "Set command value double", true);
 	char str[50]="";
-	sprintf(str,"%s,%d,%lf",c,channel,fkt);	
+	snprintf(str,sizeof(str),"%s,%d,%lf",c,channel,fkt);	
 	const char* cmd = str; 
 	core_->LogMessage(device_, cmd, true);
     int ret;
@@ -670,7 +670,7 @@ int EVDBase::SetCommandValue(const char* c,int channel,double fkt){
 int EVDBase::SetCommandValue(const char* c,int channel,int fkt){
 	core_->LogMessage(device_, "Set command value integer", true);
 	char str[50]="";
-	sprintf(str,"%s,%d,%d",c,channel,fkt);	
+	snprintf(str,sizeof(str),"%s,%d,%d",c,channel,fkt);	
 	const char* cmd = str; 
 	core_->LogMessage(device_, cmd, true);
     int ret;
@@ -694,7 +694,7 @@ int EVDBase::GetStatus(int& stat, EVD* struc){
 	core_->LogMessage(device_, "GetStatus", true);
 	//int stat;
 	char s[30];
-	sprintf(s,"stat,%d",struc->channel_);	
+	snprintf(s,sizeof(s),"stat,%d",struc->channel_);	
 	const char* cmd = s; 
 	core_->LogMessage(device_, cmd, true);
     int ret;
@@ -741,29 +741,29 @@ int EVDBase::GetLimitsValues(EVD *struc){
 	//min_um_
 	char s[20];
 	std::string result;
-	sprintf(s,"rdac,%d,197",struc->channel_);	
-	const char* cmd = s; 
-	ret = SendCommand(cmd, result);		
+	snprintf(s,sizeof(s),"rdac,%d,197",struc->channel_);
+	const char* cmd = s;
+	ret = SendCommand(cmd, result);
 	char* dest[20];
 	splitString((char*)result.c_str()," ,\n",dest);
 	struc->min_um_=atof(dest[2]);
 
-	//max_um_	
-	sprintf(s,"rdac,%d,198",struc->channel_);	
-	cmd = s; 	
-	ret = SendCommand(cmd, result);		
+	//max_um_
+	snprintf(s,sizeof(s),"rdac,%d,198",struc->channel_);
+	cmd = s;
+	ret = SendCommand(cmd, result);
 	splitString((char*)result.c_str()," ,\n",dest);
 	struc->max_um_=atof(dest[2]);
 
-	//min_V_	
-	sprintf(s,"rdac,%d,199",struc->channel_);	
-	cmd = s; 
-	ret = SendCommand(cmd, result);		
+	//min_V_
+	snprintf(s,sizeof(s),"rdac,%d,199",struc->channel_);
+	cmd = s;
+	ret = SendCommand(cmd, result);
 	splitString((char*)result.c_str()," ,\n",dest);
 	struc->min_V_=atof(dest[2]);
 
-	//max_V_	
-	sprintf(s,"rdac,%d,200",struc->channel_);	
+	//max_V_
+	snprintf(s,sizeof(s),"rdac,%d,200",struc->channel_);	
 	cmd = s;
 	ret = SendCommand(cmd, result);	
 	splitString((char*)result.c_str()," ,\n",dest);
@@ -778,7 +778,7 @@ int EVDBase::GetActuatorName(char* id,int ch){
 	core_->LogMessage(device_, "GetActuatorName", true);
 	std::string result;
 	char s[20];
-	sprintf(s,"acdescr,%d",ch);	
+	snprintf(s,sizeof(s),"acdescr,%d",ch);	
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);
 	core_->LogMessage(device_, result.c_str(), true);
@@ -1030,7 +1030,7 @@ int Hub::GetBright(int &b){
 }
 int Hub::SetBright(int b){
 	char str[20]="";
-	sprintf(str,"bright,%d",b);	
+	snprintf(str,sizeof(str),"bright,%d",b);	
 	const char* cmd = str;
 	int ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
 	if (ret != DEVICE_OK){	  
@@ -1248,7 +1248,7 @@ int Hub::SendServiceCommand(const char* cmd,std::string& result){
 int Hub::GetActuatorName(int ch,char* name){
 	std::string result;
 	char s[20];
-	sprintf(s,"acdescr,%d",ch);	
+	snprintf(s,sizeof(s),"acdescr,%d",ch);	
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);	
 	char* dest[30];
@@ -1258,10 +1258,10 @@ int Hub::GetActuatorName(int ch,char* name){
 	LogMessage(name);
 	return DEVICE_OK;
 }
-int Hub::GetSerialNumberActuator(int ch,char* sn){	
+int Hub::GetSerialNumberActuator(int ch,char* sn){
 	std::string result;
 	char s[20];
-	sprintf(s,"rdac,%d,0",ch);	
+	snprintf(s,sizeof(s),"rdac,%d,0",ch);	
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);	
 	char* dest[30];
@@ -1606,7 +1606,7 @@ int Stage::Initialize()
 
 	char s[20];
 	GetRgver(chx_.rgver_);
-	sprintf(s,"%i",chx_.rgver_);	
+	snprintf(s,sizeof(s),"%i",chx_.rgver_);	
 	CreateProperty(g_Rgver, s, MM::Integer, true);
 	pAct = new CPropertyAction (this, &Stage::OnTime);
 	CreateProperty(g_Rohm, "0", MM::Integer, true, pAct);
@@ -1864,7 +1864,7 @@ int Stage::SendServiceCommand(const char* cmd,std::string& result){
 }
 int Stage::GetCommandValue(const char* c,double& d){
 	char str[50]="";
-	sprintf(str,"%s,%d",c,chx_.channel_);	
+	snprintf(str,sizeof(str),"%s,%d",c,chx_.channel_);	
 	const char* cmd = str; 	
     int ret;
 	std::string result;
@@ -1888,9 +1888,9 @@ int Stage::GetCommandValue(const char* c,double& d){
 	}		
 	return DEVICE_OK;
 }
-int Stage::GetCommandValue(const char* c,int& i){	
+int Stage::GetCommandValue(const char* c,int& i){
 	char cmd[50]="";
-	sprintf(cmd,"%s,%d",c,chx_.channel_);	
+	snprintf(cmd,sizeof(cmd),"%s,%d",c,chx_.channel_);	
     int ret;
 	std::string result;
 	std::string type;
@@ -1913,9 +1913,9 @@ int Stage::GetCommandValue(const char* c,int& i){
 	}
 	return ret;
 }
-int Stage::SetCommandValue(const char* c,double fkt){	
+int Stage::SetCommandValue(const char* c,double fkt){
 	char str[50]="";
-	sprintf(str,"%s,%d,%lf",c,chx_.channel_,fkt);	
+	snprintf(str,sizeof(str),"%s,%d,%lf",c,chx_.channel_,fkt);	
 	const char* cmd = str; 	
     int ret;
     ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
@@ -1924,9 +1924,9 @@ int Stage::SetCommandValue(const char* c,double fkt){
 	}	
 	return DEVICE_OK;
 }
-int Stage::SetCommandValue(const char* c,int fkt){	
+int Stage::SetCommandValue(const char* c,int fkt){
 	char str[50]="";
-	sprintf(str,"%s,%d,%d",c,chx_.channel_,fkt);	
+	snprintf(str,sizeof(str),"%s,%d,%d",c,chx_.channel_,fkt);	
 	const char* cmd = str; 	
     int ret;
     ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
@@ -1944,29 +1944,29 @@ int Stage::GetLimitsValues(){
 	if (ret != DEVICE_OK) 
       return ret;	
 	//Send Command
-	//min_um_	
-	sprintf(s,"rdac,%d,197",chx_.channel_);	
-	const char* cmd = s; 
-	ret = SendCommand(cmd, result);		
+	//min_um_
+	snprintf(s,sizeof(s),"rdac,%d,197",chx_.channel_);
+	const char* cmd = s;
+	ret = SendCommand(cmd, result);
 	splitString((char*)result.c_str()," ,\n",dest);
 	chx_.min_um_=atof(dest[2]);
 
-	//max_um_	
-	sprintf(s,"rdac,%d,198",chx_.channel_);	
-	cmd = s; 	
-	ret = SendCommand(cmd, result);		
+	//max_um_
+	snprintf(s,sizeof(s),"rdac,%d,198",chx_.channel_);
+	cmd = s;
+	ret = SendCommand(cmd, result);
 	splitString((char*)result.c_str()," ,\n",dest);
 	chx_.max_um_=atof(dest[2]);
 
-	//min_V_	
-	sprintf(s,"rdac,%d,199",chx_.channel_);	
-	cmd = s; 
-	ret = SendCommand(cmd, result);	
+	//min_V_
+	snprintf(s,sizeof(s),"rdac,%d,199",chx_.channel_);
+	cmd = s;
+	ret = SendCommand(cmd, result);
 	splitString((char*)result.c_str()," ,\n",dest);
 	chx_.min_V_=atof(dest[2]);
 
-	//max_V_	
-	sprintf(s,"rdac,%d,200",chx_.channel_);	
+	//max_V_
+	snprintf(s,sizeof(s),"rdac,%d,200",chx_.channel_);	
 	cmd = s;
 	ret = SendCommand(cmd, result);		
 	splitString((char*)result.c_str()," ,\n",dest);
@@ -1985,10 +1985,10 @@ int Stage::SetChannel(int channel){
 	chx_.channel_ = channel;
 	return DEVICE_OK;
 }
-int Stage::GetAxis(int& id){	
+int Stage::GetAxis(int& id){
 	std::string result;
 	char s[20];
-	sprintf(s,"rdac,%d,5",chx_.channel_);	
+	snprintf(s,sizeof(s),"rdac,%d,5",chx_.channel_);	
 	const char* cmd = s; 	
 	SendServiceCommand(cmd,result);	
 	char* dest[20];
@@ -1996,10 +1996,10 @@ int Stage::GetAxis(int& id){
 	id = atoi(dest[2]);
 	return DEVICE_OK;
 }
-int Stage::GetActuatorName(char* id){	
+int Stage::GetActuatorName(char* id){
 	std::string result;
 	char s[20];
-	sprintf(s,"acdescr,%d",chx_.channel_);	
+	snprintf(s,sizeof(s),"acdescr,%d",chx_.channel_);	
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);	
 	char* dest[30];
@@ -2011,7 +2011,7 @@ int Stage::GetSerialNumberActuator(char* sn){
 	LogMessage ("GetSerialNumberActuator",true);
 	std::string result;
 	char s[20];
-	sprintf(s,"rdac,%d,0",chx_.channel_);	
+	snprintf(s,sizeof(s),"rdac,%d,0",chx_.channel_);	
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);
 	LogMessage(result);
@@ -2021,10 +2021,10 @@ int Stage::GetSerialNumberActuator(char* sn){
 	LogMessage(sn);
 	return DEVICE_OK;
 }
-int Stage::GetSerialNumberDevice(char* sn){	
+int Stage::GetSerialNumberDevice(char* sn){
 	std::string result;
 	char s[20];
-	sprintf(s,"rdac,%d,1",chx_.channel_);	
+	snprintf(s,sizeof(s),"rdac,%d,1",chx_.channel_);	
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);	
 	char* dest[30];
@@ -2606,8 +2606,8 @@ int Stage::GetSine(){
 }
 int Stage::SetPidDefault(){
 	char s[50]="";
-	sprintf(s,"sstd,%d",chx_.channel_);	
-	const char* cmd = s; //"sstd,channel_";	
+	snprintf(s,sizeof(s),"sstd,%d",chx_.channel_);
+	const char* cmd = s; //"sstd,channel_";
 	LogMessage (cmd);
     int ret;
     ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
@@ -2615,10 +2615,10 @@ int Stage::SetPidDefault(){
 		return ret;
 	}
 	std::string result;
-	ret = GetSerialAnswer(port_.c_str(), g_Mesg_Receive_term, result);  
+	ret = GetSerialAnswer(port_.c_str(), g_Mesg_Receive_term, result);
 	if (ret != DEVICE_OK){
 		char msg[50]="PID Error ";
-		sprintf(msg,"PID Error %d",ret);
+		snprintf(msg,sizeof(msg),"PID Error %d",ret);
 		LogMessage (msg);
 		return ret;
 	}
@@ -3717,11 +3717,11 @@ int XYStage::Initialize()
     core_ = GetCoreCallback();
 
    LogMessage ("Initialize",true);
-   char c[5];   
-   sprintf(c,"%d",xChannel_+1);
-   const char* ch=c;   
-   CreateProperty(g_ChannelX_, ch, MM::Integer, true);	//read-only 
-   sprintf(c,"%d",yChannel_+1);
+   char c[5];
+   snprintf(c,sizeof(c),"%d",xChannel_+1);
+   const char* ch=c;
+   CreateProperty(g_ChannelX_, ch, MM::Integer, true);	//read-only
+   snprintf(c,sizeof(c),"%d",yChannel_+1);
    ch=c;   
    CreateProperty(g_ChannelY_, ch, MM::Integer, true);  //read-only
 
@@ -3740,17 +3740,17 @@ int XYStage::Initialize()
    CreateProperty(g_StatusX, "0", MM::Integer, true, pAct);
    pAct = new CPropertyAction (this, &XYStage::OnStatY);
    CreateProperty(g_StatusY, "0", MM::Integer, true, pAct);
-   
-   char s[20];	
+
+   char s[20];
 	int ret = GetCommandValue("rgver",xChannel_,chx_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chx_.rgver_);	
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chx_.rgver_);
 	CreateProperty(g_RgverX, s, MM::Integer, true);
 	ret = GetCommandValue("rgver",yChannel_,chy_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chy_.rgver_);	
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chy_.rgver_);	
 	CreateProperty(g_RgverY, s, MM::Integer, true);
 	pAct = new CPropertyAction (this, &XYStage::OnTimeX);
 	CreateProperty(g_RohmX, "0", MM::Integer, true, pAct);
@@ -6177,21 +6177,21 @@ int Tritor::Initialize()
    CreateProperty("Limit um min z",CDeviceUtils::ConvertToString(chz_.min_um_), MM::Float, true);		
    CreateProperty("Limit um max z", CDeviceUtils::ConvertToString(chz_.max_um_), MM::Float, true);
 
-   char s[20];	
+   char s[20];
 	int ret = GetCommandValue("rgver",xChannel_,chx_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chx_.rgver_);	
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chx_.rgver_);
 	CreateProperty(g_RgverX, s, MM::Integer, true);
 	ret = GetCommandValue("rgver",yChannel_,chy_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chy_.rgver_);
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chy_.rgver_);
 	CreateProperty(g_RgverY, s, MM::Integer, true);
 	ret = GetCommandValue("rgver",zChannel_,chz_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chz_.rgver_);
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chz_.rgver_);
 	CreateProperty(g_RgverZ, s, MM::Integer, true);
 	pAct = new CPropertyAction (this, &Tritor::OnTimeX);
 	CreateProperty(g_RohmX, "0", MM::Integer, true, pAct);
@@ -9436,9 +9436,9 @@ int Shutter::Initialize()
    char s[20];
    //GetRgver(rgver_);
 	ret = GetCommandValue("rgver",chx_.channel_,chx_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chx_.rgver_);	
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chx_.rgver_);	
 	CreateProperty(g_Rgver, s, MM::Integer, true);	
 	pAct = new CPropertyAction (this, &Shutter::OnTime);
 	CreateProperty(g_Rohm, "0", MM::Integer, true, pAct);
@@ -9646,17 +9646,17 @@ int Shutter::Fire(double /*deltaT*/)
 int Shutter::OnChannel(MM::PropertyBase* pProp, MM::ActionType eAct){
 	long c;
 	if (eAct == MM::BeforeGet)
-    {	
+    {
 		char m[50];
-		sprintf(m,"Set channel %d",chx_.channel_);
+		snprintf(m,sizeof(m),"Set channel %d",chx_.channel_);
 		LogMessage (m);
-		c=chx_.channel_+1;		
-		pProp->Set(c);		
+		c=chx_.channel_+1;
+		pProp->Set(c);
 	}
     else if (eAct == MM::AfterSet)
     {
 		char m[50];
-		sprintf(m,"Get channel%d",chx_.channel_);
+		snprintf(m,sizeof(m),"Get channel%d",chx_.channel_);
 		LogMessage (m);
 		pProp->Get(c);		
 		chx_.channel_=(int)c-1;
@@ -10679,11 +10679,11 @@ int Mirror::Initialize()
    CreateProperty("Limit um min x",CDeviceUtils::ConvertToString(chx_.min_um_), MM::Float, true);		
    CreateProperty("Limit um max x", CDeviceUtils::ConvertToString(chx_.max_um_), MM::Float, true);
 
-	char s[20];	
+	char s[20];
 	int ret = GetCommandValue("rgver",xChannel_,chx_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chx_.rgver_);	
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chx_.rgver_);	
 	CreateProperty(g_RgverX, s, MM::Integer, true);
 	pAct = new CPropertyAction (this, &Mirror::OnTimeX);
 	CreateProperty(g_RohmX, "0", MM::Integer, true, pAct);
@@ -10856,9 +10856,9 @@ int Mirror::Initialize()
    CreateProperty("Limit um max y", CDeviceUtils::ConvertToString(chy_.max_um_), MM::Float, true);
 
 	ret = GetCommandValue("rgver",yChannel_,chy_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chy_.rgver_);
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chy_.rgver_);
 	CreateProperty(g_RgverY, s, MM::Integer, true);
 	pAct = new CPropertyAction (this, &Mirror::OnTimeY);
 	CreateProperty(g_RohmY, "0", MM::Integer, true, pAct);
@@ -11030,9 +11030,9 @@ int Mirror::Initialize()
 	CreateProperty("Limit um max z", CDeviceUtils::ConvertToString(chz_.max_um_), MM::Float, true);
 	
 	ret = GetCommandValue("rgver",zChannel_,chz_.rgver_);
-	if (ret != DEVICE_OK)	  
-      return ret;	
-	sprintf(s,"%i",chz_.rgver_);
+	if (ret != DEVICE_OK)
+      return ret;
+	snprintf(s,sizeof(s),"%i",chz_.rgver_);
 	CreateProperty(g_RgverZ, s, MM::Integer, true);
 	pAct = new CPropertyAction (this, &Mirror::OnTimeZ);
 	CreateProperty(g_RohmZ, "0", MM::Integer, true, pAct);
@@ -11202,17 +11202,17 @@ int Mirror::OnChannelX(MM::PropertyBase* pProp, MM::ActionType eAct){
 	LogMessage ("OnChannelX",true);
 	long c;
 	if (eAct == MM::BeforeGet)
-    {	
+    {
 		char m[50];
-		sprintf(m,"Set channel %d",xChannel_+1);
+		snprintf(m,sizeof(m),"Set channel %d",xChannel_+1);
 		LogMessage (m,true);
 		c=xChannel_+1;
-		pProp->Set(c);		
+		pProp->Set(c);
 	}
     else if (eAct == MM::AfterSet)
     {
 		char m[50];
-		sprintf(m,"Get channel%d",xChannel_+1);
+		snprintf(m,sizeof(m),"Get channel%d",xChannel_+1);
 		LogMessage (m,true);
 		pProp->Get(c);
 		xChannel_=(int)c-1;
@@ -11224,17 +11224,17 @@ int Mirror::OnChannelY(MM::PropertyBase* pProp, MM::ActionType eAct){
 	LogMessage ("OnChannelY",true);
 	double c;
 	if (eAct == MM::BeforeGet)
-    {	
+    {
 		char m[50];
-		sprintf(m,"Set channel %d",yChannel_+1);
+		snprintf(m,sizeof(m),"Set channel %d",yChannel_+1);
 		LogMessage (m,true);
 		c=yChannel_+1;
-		pProp->Set(c);		
+		pProp->Set(c);
 	}
     else if (eAct == MM::AfterSet)
     {
 		char m[50];
-		sprintf(m,"Get channel%d",yChannel_+1);
+		snprintf(m,sizeof(m),"Get channel%d",yChannel_+1);
 		LogMessage (m,true);
 		pProp->Get(c);
 		yChannel_=(int)c-1;
@@ -11246,17 +11246,17 @@ int Mirror::OnChannelZ(MM::PropertyBase* pProp, MM::ActionType eAct){
 	LogMessage ("OnChannelZ",true);
 	double c;
 	if (eAct == MM::BeforeGet)
-    {	
+    {
 		char m[50];
-		sprintf(m,"Set channel %d",zChannel_+1);
+		snprintf(m,sizeof(m),"Set channel %d",zChannel_+1);
 		LogMessage (m,true);
 		c=zChannel_+1;
-		pProp->Set(c);		
+		pProp->Set(c);
 	}
     else if (eAct == MM::AfterSet)
     {
 		char m[50];
-		sprintf(m,"Get channel%d",zChannel_+1);
+		snprintf(m,sizeof(m),"Get channel%d",zChannel_+1);
 		LogMessage (m,true);
 		pProp->Get(c);
 		zChannel_=(int)c-1;

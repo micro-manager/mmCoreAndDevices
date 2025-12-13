@@ -647,7 +647,7 @@ int CCameraAdapter::Initialize()
    RETURN_ON_PIL_ERROR( pilGetLibraryId( (LPTSTR)pszLib, 100, nMajor, nMinor, nBuild ) );
 
    char sVersion[100];
-   sprintf(sVersion, "v%d.%d.%02d", nMajor, nMinor, nBuild);
+   snprintf(sVersion, sizeof(sVersion), "v%d.%d.%02d", nMajor, nMinor, nBuild);
    RETURN_ON_MM_ERROR( CreateProperty(MM::g_Keyword_Version, sVersion, MM::String, true) );
 
    // Enable all log messages for the local group
@@ -1834,7 +1834,7 @@ INT16 CCameraAdapter::GetProperties()
    m_bExposureInSync = ( m_nFrameClocks == m_nMMFrameClocks );
 
    char sPixel[8];
-   sprintf(sPixel, "%dbit", m_nCapBits );
+   snprintf(sPixel, sizeof(sPixel), "%dbit", m_nCapBits );
    m_sPixel = sPixel;
    m_asPixelTypes.clear();
    m_asPixelTypes.push_back( m_sPixel.c_str() );

@@ -61,7 +61,7 @@ int GetDeviceODRules( int DevHandle )
 		putInShowBuffer = TRUE;
 		showBufferIndex = 0;
 		memset(showBuffer, '\0', sizeof(showBuffer));
-		sprintf(commandStr, "?GetImax %d \n\r", i);
+		snprintf(commandStr, sizeof(commandStr), "?GetImax %d \n\r", i);
 		ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 		Sleep(50);
 		deviceIntelliRules[DevHandle][i].IMax = GetParameter(2);
@@ -70,7 +70,7 @@ int GetDeviceODRules( int DevHandle )
 		putInShowBuffer = TRUE;
 		showBufferIndex = 0;
 		memset(showBuffer, '\0', sizeof(showBuffer));
-		sprintf(commandStr, "?GetODRules %d \n\r", i);
+		snprintf(commandStr, sizeof(commandStr), "?GetODRules %d \n\r", i);
 		ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 		Sleep(50);
 		deviceIntelliRules[DevHandle][i].DCMax = GetParameter(1);
@@ -239,9 +239,9 @@ int MTUSB_BLSDriverSetMode( int DevHandle, int Channel, int Mode )
 		return -1;
 
 	if(Channel == 88)
-		sprintf(commandStr, "MODE 88 %d\n\r", Mode);
+		snprintf(commandStr, sizeof(commandStr), "MODE 88 %d\n\r", Mode);
 	else
-		sprintf(commandStr, "MODE %d %d\n\r", Channel, Mode);
+		snprintf(commandStr, sizeof(commandStr), "MODE %d %d\n\r", Channel, Mode);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
 	return error;
@@ -258,7 +258,7 @@ int MTUSB_BLSDriverSetNormalCurrent( int DevHandle, int Channel, int Current)
 	if ((Channel != 88) && ((Channel <= 0)||(Channel > deviceChannels[DevHandle])))
 		return -1;
 
-    sprintf(commandStr, "CURRENT %d %d\n\r", Channel, Current);
+    snprintf(commandStr, sizeof(commandStr), "CURRENT %d %d\n\r", Channel, Current);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
 	return error;
@@ -280,7 +280,7 @@ int MTUSB_BLSDriverSetPulseProfile( int DevHandle, int Channel, int Polarity, in
 
 	devicePulses[DevHandle][Channel] = PulseCnt ;
 
-    sprintf(commandStr, "Trigger %d 100 %d %d\n\r", Channel, Polarity, ReptCnt);
+    snprintf(commandStr, sizeof(commandStr), "Trigger %d 100 %d %d\n\r", Channel, Polarity, ReptCnt);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
 	return error;
@@ -328,18 +328,18 @@ int MTUSB_BLSDriverSetPulseDetail( int DevHandle, int Channel, int PulseIndex, i
 
 	// the pulse is valid
 
-    sprintf(commandStr, "TrigP %d %d %d %d\n\r", Channel, PulseIndex * 3, Curr0, Time0);
+    snprintf(commandStr, sizeof(commandStr), "TrigP %d %d %d %d\n\r", Channel, PulseIndex * 3, Curr0, Time0);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
-   sprintf(commandStr, "TrigP %d %d %d %d\n\r", Channel, PulseIndex * 3 + 1, Curr1, Time1);
+   snprintf(commandStr, sizeof(commandStr), "TrigP %d %d %d %d\n\r", Channel, PulseIndex * 3 + 1, Curr1, Time1);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
-   sprintf(commandStr, "TrigP %d %d %d %d\n\r", Channel, PulseIndex * 3 + 2, Curr2, Time2);
+   snprintf(commandStr, sizeof(commandStr), "TrigP %d %d %d %d\n\r", Channel, PulseIndex * 3 + 2, Curr2, Time2);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
 	if (PulseIndex == devicePulses[DevHandle][Channel] - 1)
 	{
-		sprintf(commandStr, "TrigP %d %d 0 0 \n\r", Channel, (PulseIndex + 1) * 3);
+		snprintf(commandStr, sizeof(commandStr), "TrigP %d %d 0 0 \n\r", Channel, (PulseIndex + 1) * 3);
 		ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	}
 
@@ -357,13 +357,13 @@ int MTUSB_BLSDriverSetFollowModeDetail( int DevHandle, int Channel, int ION, int
 	if ((Channel != 88) && ((Channel <= 0)||(Channel > deviceChannels[DevHandle])))
 		return -1;
 
-    sprintf(commandStr, "TrigP %d 0 %d 9999\n\r", Channel, IOFF);
+    snprintf(commandStr, sizeof(commandStr), "TrigP %d 0 %d 9999\n\r", Channel, IOFF);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
-    sprintf(commandStr, "TrigP %d 1 %d 9999\n\r", Channel, ION);
+    snprintf(commandStr, sizeof(commandStr), "TrigP %d 1 %d 9999\n\r", Channel, ION);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
-    sprintf(commandStr, "TrigP %d 2 0 0 \n\r", Channel);
+    snprintf(commandStr, sizeof(commandStr), "TrigP %d 2 0 0 \n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
 	return error;
@@ -380,7 +380,7 @@ int MTUSB_BLSDriverSoftStart( int DevHandle, int Channel )
 	if ((Channel != 88) && ((Channel <= 0)||(Channel > deviceChannels[DevHandle])))
 		return -1;
 
-    sprintf(commandStr, "SoftStart %d\n\r", Channel);
+    snprintf(commandStr, sizeof(commandStr), "SoftStart %d\n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
 	return error;

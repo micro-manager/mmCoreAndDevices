@@ -960,7 +960,7 @@ int CMMTUCam::Initialize()
 			// Set default temperature
 			if (TUCAMRET_SUCCESS == TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_TEMPERATURE, 0))
 			{
-				sprintf(sz, "%d", -50);
+				snprintf(sz, sizeof(sz), "%d", -50);
 				SetProperty(g_PropNameTEMP, sz);
 			}
 			break;
@@ -971,7 +971,7 @@ int CMMTUCam::Initialize()
 		case DHYANA_4040BSI:
 		case DHYANA_XF4040BSI:
 			// Set default temperature
-			sprintf(sz, "%d", ((int)propAttr.dbValDft - m_nMidTemp));
+			snprintf(sz, sizeof(sz), "%d", ((int)propAttr.dbValDft - m_nMidTemp));
 			SetProperty(g_PropNameTEMP, sz);
 			break;
 		default:
@@ -979,14 +979,14 @@ int CMMTUCam::Initialize()
             double dblTemp;
             if (TUCAMRET_SUCCESS == TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_TEMPERATURE_TARGET, &dblTemp))
             {
-                sprintf(sz, "%.1f", (dblTemp - m_nMidTemp) / m_fScaTemp);
+                snprintf(sz, sizeof(sz), "%.1f", (dblTemp - m_nMidTemp) / m_fScaTemp);
                 SetProperty(g_PropNameTEMP, sz);
             }
             else
             {
                 if (TUCAMRET_SUCCESS == TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_TEMPERATURE, 40.0f))
                 {
-				    sprintf(sz, "%d", -10);
+				    snprintf(sz, sizeof(sz), "%d", -10);
                     SetProperty(g_PropNameTEMP, sz);
                 }
             }
@@ -1941,7 +1941,7 @@ int CMMTUCam::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
         TUCAM_Cap_GetROI(m_opCam.hIdxTUCam, &roiAttr);
 
         char sz[256] = {0};
-        sprintf(sz, "x:%d, y:%d, xsize:%d, ysize:%d, h:%d, v:%d, wid:%d, hei:%d, maxhei:%d", x, y, xSize, ySize, roiAttr.nHOffset, roiAttr.nVOffset, roiAttr.nWidth, roiAttr.nHeight, m_nMaxHeight);
+        snprintf(sz, sizeof(sz), "x:%d, y:%d, xsize:%d, ysize:%d, h:%d, v:%d, wid:%d, hei:%d, maxhei:%d", x, y, xSize, ySize, roiAttr.nHOffset, roiAttr.nVOffset, roiAttr.nWidth, roiAttr.nHeight, m_nMaxHeight);
         OutputDebugString(sz);
 
         roiX_ = x;
@@ -2869,7 +2869,7 @@ int CMMTUCam::InsertImage()
 //     md.put(MM::g_Keyword_Binning, buf);
 
     char szTemp[256] = {0};
-    sprintf(szTemp, "%.3f", m_fCurTemp);
+    snprintf(szTemp, sizeof(szTemp), "%.3f", m_fCurTemp);
     md.put("Temperature", szTemp); 
     
     MMThreadGuard g(imgPixelsLock_);
@@ -4156,7 +4156,7 @@ int CMMTUCam::OnRollinScanLITm(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		double dbVal = m_rsPara.dbLineInvalTm;
 		char sz[256] = { 0 };
-		sprintf(sz, "%0.2f us/row", dbVal);
+		snprintf(sz, sizeof(sz), "%0.2f us/row", dbVal);
 		pProp->Set(sz);
 
 		ret = DEVICE_OK;
@@ -7756,7 +7756,7 @@ int CMMTUCam::ResizeImageBuffer()
     }
 
     char sz[256] = {0};
-	sprintf(sz, "[ResizeImageBuffer]:Width:%d, Height:%d, BytesPerPixel:%d, %d\n", valWidth.nValue, valHeight.nValue, byteDepth, m_frame.ucElemBytes * nChnnels);
+	snprintf(sz, sizeof(sz), "[ResizeImageBuffer]:Width:%d, Height:%d, BytesPerPixel:%d, %d\n", valWidth.nValue, valHeight.nValue, byteDepth, m_frame.ucElemBytes * nChnnels);
     OutputDebugString(sz);
 
     if (!m_bROI)

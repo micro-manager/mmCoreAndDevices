@@ -169,11 +169,11 @@ int MTUSB_LEDDriverSetMode( int DevHandle, int Channel, int Mode )
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
 		return -1;
-	
+
 	if(Channel == 88)
-		sprintf(commandStr, "MODE 88 %d\n\r", Mode);
+		snprintf(commandStr, sizeof(commandStr), "MODE 88 %d\n\r", Mode);
 	else
-		sprintf(commandStr, "MODE %d %d\n\r", Channel, Mode);
+		snprintf(commandStr, sizeof(commandStr), "MODE %d %d\n\r", Channel, Mode);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
 	return error;
@@ -186,8 +186,8 @@ int MTUSB_LEDDriverSetNormalPara( int DevHandle, int Channel, TLedChannelData *L
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
 		return -1;
-	
-    sprintf(commandStr, "NORMAL %d %d %d\n\r", 
+
+    snprintf(commandStr, sizeof(commandStr), "NORMAL %d %d %d\n\r",
 		Channel, LedChannelDataPtr->Normal_CurrentMax, LedChannelDataPtr->Normal_CurrentSet);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
@@ -201,8 +201,8 @@ int MTUSB_LEDDriverSetNormalCurrent( int DevHandle, int Channel, int Current )
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
 		return -1;
-	
-    sprintf(commandStr, "CURRENT %d %d\n\r", Channel, Current);
+
+    snprintf(commandStr, sizeof(commandStr), "CURRENT %d %d\n\r", Channel, Current);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 
 	return error;
@@ -216,16 +216,16 @@ int MTUSB_LEDDriverSetStrobePara( int DevHandle, int Channel, TLedChannelData *L
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
 		return -1;
-	
-    sprintf(commandStr, "STROBE %d %d %d\n\r", 
+
+    snprintf(commandStr, sizeof(commandStr), "STROBE %d %d %d\n\r",
 		Channel, LedChannelDataPtr->Strobe_CurrentMax, LedChannelDataPtr->Strobe_RepeatCnt);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	//In case of 128 Pairs, we have to send line by line
 	line = 0;
 	while(line < MAX_PROFILE_ITEM)
 	{
-		
-		sprintf(commandStr, "STRP %d %d %d %d \n\r", 
+
+		snprintf(commandStr, sizeof(commandStr), "STRP %d %d %d %d \n\r",
 			Channel, line, LedChannelDataPtr->Strobe_Profile[line][0], LedChannelDataPtr->Strobe_Profile[line][1]);
 		ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 		if(LedChannelDataPtr->Strobe_Profile[line][1] == 0)
@@ -244,16 +244,16 @@ int MTUSB_LEDDriverSetTriggerPara( int DevHandle, int Channel, TLedChannelData *
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
 		return -1;
-	
-    sprintf(commandStr, "TRIGGER %d %d %d\n\r", 
+
+    snprintf(commandStr, sizeof(commandStr), "TRIGGER %d %d %d\n\r",
 		Channel, LedChannelDataPtr->Trigger_CurrentMax, LedChannelDataPtr->Trigger_Polarity);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	//In case of 128 Pairs, we have to send line by line
 	line = 0;
 	while(line < MAX_PROFILE_ITEM)
 	{
-		
-		sprintf(commandStr, "TRIGP %d %d %d %d \n\r", 
+
+		snprintf(commandStr, sizeof(commandStr), "TRIGP %d %d %d %d \n\r",
 			Channel, line, LedChannelDataPtr->Trigger_Profile[line][0], LedChannelDataPtr->Trigger_Profile[line][1]);
 		ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 		if(LedChannelDataPtr->Strobe_Profile[line][1] == 0)
@@ -316,8 +316,8 @@ int MTUSB_LEDDriverGetLoadVoltage( int DevHandle, int Channel )
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
 		return -1;
-	
-    sprintf(commandStr, "ReadBinaryV %d\n\r", Channel);
+
+    snprintf(commandStr, sizeof(commandStr), "ReadBinaryV %d\n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), FALSE, error);
 
 	packetHeadCount = 0;
@@ -364,13 +364,13 @@ int MTUSB_LEDDriverGetCurrentPara( int DevHandle, int Channel,TLedChannelData *L
 	showBufferIndex = 0;
 	memset(showBuffer, '\0', sizeof(showBuffer));
 	// 4. ?MODE, Current Mode.
-    sprintf(commandStr, "?MODE %d \n\r", Channel);
+    snprintf(commandStr, sizeof(commandStr), "?MODE %d \n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	if(error == 1)
 		return 1;
 	*Mode = GetParameter(1);
 	// 5. ?Current
-    sprintf(commandStr, "?CURRENT %d \n\r", Channel);
+    snprintf(commandStr, sizeof(commandStr), "?CURRENT %d \n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	if(error == 1)
 		return 1;
@@ -385,7 +385,7 @@ int MTUSB_LEDDriverGetCurrentPara( int DevHandle, int Channel,TLedChannelData *L
 		LedChannelDataPtr->Normal_CurrentSet = GetParameter(12);
 	}
 	// 6. ?Strobe
-    sprintf(commandStr, "?STROBE %d \n\r", Channel);
+    snprintf(commandStr, sizeof(commandStr), "?STROBE %d \n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	if(error == 1)
 		return 1;
@@ -393,7 +393,7 @@ int MTUSB_LEDDriverGetCurrentPara( int DevHandle, int Channel,TLedChannelData *L
 	LedChannelDataPtr->Strobe_RepeatCnt = GetParameter(2);
 	// 7 ?Strp
 	memset(showBuffer, '\0', sizeof(showBuffer));
-    sprintf(commandStr, "?STRP %d \n\r", Channel);
+    snprintf(commandStr, sizeof(commandStr), "?STRP %d \n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	if(error == 1)
 		return 1;
@@ -407,16 +407,16 @@ int MTUSB_LEDDriverGetCurrentPara( int DevHandle, int Channel,TLedChannelData *L
 		step++;
 	}
 	// 8. ?Trigger
- 	memset(showBuffer, '\0', sizeof(showBuffer));
-	sprintf(commandStr, "?TRIGGER %d \n\r", Channel);
+	memset(showBuffer, '\0', sizeof(showBuffer));
+	snprintf(commandStr, sizeof(commandStr), "?TRIGGER %d \n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	if(error == 1)
 		return 1;
 	LedChannelDataPtr->Trigger_CurrentMax = GetParameter(1);
 	LedChannelDataPtr->Trigger_Polarity = GetParameter(2);
 	// 9 ?Trigp
- 	memset(showBuffer, '\0', sizeof(showBuffer));
-    sprintf(commandStr, "?TRIGP %d \n\r", Channel);
+	memset(showBuffer, '\0', sizeof(showBuffer));
+    snprintf(commandStr, sizeof(commandStr), "?TRIGP %d \n\r", Channel);
 	ModuleWrite(DevHandle, commandStr, (int) strlen(commandStr), TRUE, error);
 	if(error == 1)
 		return 1;

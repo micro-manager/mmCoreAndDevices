@@ -102,7 +102,7 @@ int XLedDev::Initialize()
     // Led Device Name
     char sLedDevNameLabel[120];
     memset(sLedDevNameLabel, 0, 120);
-    sprintf(sLedDevNameLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevNameLabel).c_str(), MM::g_Keyword_Name);
+    snprintf(sLedDevNameLabel, sizeof(sLedDevNameLabel), "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevNameLabel).c_str(), MM::g_Keyword_Name);
     ret = CreateProperty(sLedDevNameLabel, XLed::Instance()->GetXLedStr(XLed::XL_WLedDevName + m_nLedDevNumber).c_str(), MM::String, true);
 
     if (nDebugLog > 0)
@@ -119,7 +119,7 @@ int XLedDev::Initialize()
     {
         char sLedDevDescLabel[120];
         memset(sLedDevDescLabel, 0, 120);
-        sprintf(sLedDevDescLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevDescLabel).c_str(), MM::g_Keyword_Description);
+        snprintf(sLedDevDescLabel, sizeof(sLedDevDescLabel), "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevDescLabel).c_str(), MM::g_Keyword_Description);
         ret = CreateProperty(sLedDevDescLabel, XLed::Instance()->GetXLedStr(XLed::XL_WLedDevName + m_nLedDevNumber).c_str(), MM::String, true);
 
         if (nDebugLog > 0)
@@ -404,7 +404,7 @@ int XLedDev::Initialize()
     {
         m_lIntensity = atol(sParm);
         double dIntensity = (double) m_lIntensity / 10.0;
-        sprintf(sIntensity, "%.1f", dIntensity);
+        snprintf(sIntensity, sizeof(sIntensity), "%.1f", dIntensity);
     }
     pAct = new CPropertyAction (this, &XLedDev::OnLedIntensity);
     ret = CreateProperty(XLed::Instance()->GetXLedStr(XLed::XL_LedIntensityLabel).c_str() , (const char*)sIntensity, MM::String, false, pAct);
@@ -463,7 +463,7 @@ int XLedDev::Initialize()
         m_lPulseMode = atol(sParm);
         if (m_lPulseMode < 0) m_lPulseMode = 0;
         if (m_lPulseMode > 3) m_lPulseMode = 3;
-        sprintf(sPulseMode, "%ld", m_lPulseMode);
+        snprintf(sPulseMode, sizeof(sPulseMode), "%ld", m_lPulseMode);
     }
     sResp = XLed::Instance()->GetParameter(XLed::XL_SigPulseMode);
     pAct = new CPropertyAction(this, &XLedDev::OnPulseMode);
@@ -496,7 +496,7 @@ int XLedDev::Initialize()
         m_lSignalDelayTime = atol(sParm);
         if (m_lSignalDelayTime < 0) m_lSignalDelayTime = 0;
         if (m_lSignalDelayTime > 1000) m_lSignalDelayTime = 1000;
-        sprintf(sSignalDelayTime, "%ld%s", m_lSignalDelayTime, sPWMUnit[m_lPWMUnit]);
+        snprintf(sSignalDelayTime, sizeof(sSignalDelayTime), "%ld%s", m_lSignalDelayTime, sPWMUnit[m_lPWMUnit]);
     }
 
     pAct = new CPropertyAction (this, &XLedDev::OnSignalDelayTime);
@@ -527,7 +527,7 @@ int XLedDev::Initialize()
         m_lSignalOnTime = atol(sParm);
         if (m_lSignalOnTime < 0) m_lSignalOnTime = 0;
         if (m_lSignalOnTime > 1000) m_lSignalOnTime = 1000;
-        sprintf(sSignalOnTime, "%ld%s", m_lSignalOnTime, sPWMUnit[m_lPWMUnit]);
+        snprintf(sSignalOnTime, sizeof(sSignalOnTime), "%ld%s", m_lSignalOnTime, sPWMUnit[m_lPWMUnit]);
     }
 
     pAct = new CPropertyAction (this, &XLedDev::OnSignalOnTime);
@@ -558,7 +558,7 @@ int XLedDev::Initialize()
         m_lSignalOffTime = atol(sParm);
         if (m_lSignalOffTime < 0) m_lSignalOffTime = 0;
         if (m_lSignalOffTime > 1000) m_lSignalOffTime = 1000;
-        sprintf(sSignalOnTime, "%ld%s", m_lSignalOffTime, sPWMUnit[m_lPWMUnit]);
+        snprintf(sSignalOnTime, sizeof(sSignalOnTime), "%ld%s", m_lSignalOffTime, sPWMUnit[m_lPWMUnit]);
     }
 
     pAct = new CPropertyAction (this, &XLedDev::OnSignalOffTime);
@@ -590,7 +590,7 @@ int XLedDev::Initialize()
         m_lTriggerDelay = atol(sParm);
         if (m_lTriggerDelay < 0) m_lTriggerDelay = 0;
         if (m_lTriggerDelay > 1000) m_lTriggerDelay = 1000;
-        sprintf(sTriggerDelayTime, "%ld%s", m_lTriggerDelay, sPWMUnit[m_lPWMUnit]);
+        snprintf(sTriggerDelayTime, sizeof(sTriggerDelayTime), "%ld%s", m_lTriggerDelay, sPWMUnit[m_lPWMUnit]);
     }
 
     pAct = new CPropertyAction (this, &XLedDev::OnTriggerDelayTime);
@@ -1260,7 +1260,7 @@ int XLedDev::OnLedIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
     dIntensity = (double) m_lIntensity / 10.0;
     char sIntensity[20];
     memset(sIntensity, 0, 20);
-    sprintf(sIntensity, "%.1f", dIntensity);
+    snprintf(sIntensity, sizeof(sIntensity), "%.1f", dIntensity);
 
     pProp->Set(sIntensity);
 
@@ -1432,7 +1432,7 @@ int XLedDev::OnSignalDelayTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     m_lSignalDelayTime= atol(sParm);
     char sSignalDelayTime[20];
     memset(sSignalDelayTime, 0, 20);
-    sprintf(sSignalDelayTime, "%ld%s", m_lSignalDelayTime, sPWMUnit[m_lPWMUnit]);
+    snprintf(sSignalDelayTime, sizeof(sSignalDelayTime), "%ld%s", m_lSignalDelayTime, sPWMUnit[m_lPWMUnit]);
     pProp->Set(sSignalDelayTime);
 
     if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1522,7 +1522,7 @@ int XLedDev::OnSignalOnTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     m_lSignalOnTime = atol(sParm);
     char sSignalOnTime[20];
     memset(sSignalOnTime, 0, 20);
-    sprintf(sSignalOnTime, "%ld%s", m_lSignalOnTime, sPWMUnit[m_lPWMUnit]);
+    snprintf(sSignalOnTime, sizeof(sSignalOnTime), "%ld%s", m_lSignalOnTime, sPWMUnit[m_lPWMUnit]);
     pProp->Set(sSignalOnTime);
 
     if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1612,7 +1612,7 @@ int XLedDev::OnSignalOffTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     m_lSignalOffTime = atol(sParm);
     char sSignalOffTime[20];
     memset(sSignalOffTime, 0, 20);
-    sprintf(sSignalOffTime, "%ld%s", m_lSignalOffTime, sPWMUnit[m_lPWMUnit]);
+    snprintf(sSignalOffTime, sizeof(sSignalOffTime), "%ld%s", m_lSignalOffTime, sPWMUnit[m_lPWMUnit]);
     pProp->Set(sSignalOffTime);
 
     if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1698,7 +1698,7 @@ int XLedDev::OnTriggerDelayTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     const char* sPWMUnit[3] = { "0uS", "mS", "S" };
     m_lTriggerDelay = atol(sParm);
     char sTriggerDelay[20];
-    sprintf(sTriggerDelay, "%ld%s", m_lTriggerDelay, sPWMUnit[m_lPWMUnit]);
+    snprintf(sTriggerDelay, sizeof(sTriggerDelay), "%ld%s", m_lTriggerDelay, sPWMUnit[m_lPWMUnit]);
     pProp->Set(sTriggerDelay);
 
     if (XLed::Instance()->GetDebugLogFlag() > 1)

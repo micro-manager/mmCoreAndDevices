@@ -512,7 +512,7 @@ int CPiezoConceptStage::MoveZ(double pos)
       pos = lowerLimit_;
    }
    char buf[25];
-   int length = sprintf(buf, "MOVEZ %1.3fu\n", pos);
+   int length = snprintf(buf, sizeof(buf), "MOVEZ %1.3fu\n", pos);
    std::stringstream ss;
    ss << "Command: "<< buf << "  Position set: "<< pos;
    LogMessage(ss.str().c_str(), true);
@@ -693,7 +693,7 @@ int CPiezoConceptXYStage::MoveX(double posUm)
    }
 
    char buf[25];
-   int length = sprintf(buf, "MOVEX %1.3fu\n", posUm);
+   int length = snprintf(buf, sizeof(buf), "MOVEX %1.3fu\n", posUm);
    std::stringstream ss;
    ss << "Command: "<< buf << "  Position set: "<< posUm;
    LogMessage(ss.str().c_str(), true);
@@ -724,7 +724,7 @@ int CPiezoConceptXYStage::MoveY(double posUm)
    }
 
    char buf[25];
-   int length = sprintf(buf, "MOVEY %1.3fu\n", posUm);
+   int length = snprintf(buf, sizeof(buf), "MOVEY %1.3fu\n", posUm);
    std::stringstream ss;
    ss << "Command: "<< buf << "  Position set: "<< posUm;
    LogMessage(ss.str().c_str(), true);

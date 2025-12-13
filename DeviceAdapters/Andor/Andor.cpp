@@ -451,7 +451,7 @@ int AndorCamera::GetListOfAvailableCameras()
                UnknownCameraIndex ++;
                id = UnknownCameraIndex;
             }
-            sprintf(chars, "%d", id);
+            snprintf(chars, sizeof(chars), "%d", id);
 
             std::string camType = getCameraType();
             vCameraType.push_back(camType);
@@ -849,10 +849,10 @@ int AndorCamera::GetListOfAvailableCameras()
       for (int i=0; i<numSpeeds; i++)
       {
          float sp;
-         ret = GetHSSpeed(0, 0, i, &sp); 
+         ret = GetHSSpeed(0, 0, i, &sp);
          if (ret != DRV_SUCCESS)
             return ret;
-         sprintf(speedBuf, "%.3f MHz", sp);
+         snprintf(speedBuf, sizeof(speedBuf), "%.3f MHz", sp);
          readoutModes_.push_back(speedBuf);
       }
       if (readoutModes_.empty())
@@ -890,7 +890,7 @@ int AndorCamera::GetListOfAvailableCameras()
             ret = GetVSSpeed(i, &vsp);
             if (ret != DRV_SUCCESS)
                return ret;
-            sprintf(VSpeedBuf, "%.2f", vsp);
+            snprintf(VSpeedBuf, sizeof(VSpeedBuf), "%.2f", vsp);
             VSpeeds_.push_back(VSpeedBuf);
          }
          if (VSpeeds_.empty())
@@ -1794,7 +1794,7 @@ int AndorCamera::GetListOfAvailableCameras()
       int status;
       char statStr[20];
       GetStatus(&status);
-      sprintf(statStr,"%d",status);
+      snprintf(statStr, sizeof(statStr), "%d", status);
       LogMessage(statStr,false);
    }
 
@@ -3988,27 +3988,27 @@ int AndorCamera::GetListOfAvailableCameras()
       int i_temp;
       float f_temp;
       char c_temp[MAX_CHARS_PER_OA_DESCRIPTION];
-      memset(c_temp, '\0', MAX_CHARS_PER_OA_DESCRIPTION);  
+      memset(c_temp, '\0', MAX_CHARS_PER_OA_DESCRIPTION);
 
       ui_retVal = ::OA_GetString(OAModeName, "mode_description", &c_temp[0], MAX_CHARS_PER_OA_DESCRIPTION);
       optAcquireDescriptionStr_ = c_temp;
-      SetProperty("OptAcquireMode Description", c_temp);  
+      SetProperty("OptAcquireMode Description", c_temp);
       ui_retVal = ::OA_GetString(OAModeName, "frame_transfer", &c_temp[0], MAX_CHARS_PER_OA_DESCRIPTION);
       if (0 == stricmp(c_temp, "ON")){
-        SetProperty("FrameTransfer", "On");  
-      } 
+        SetProperty("FrameTransfer", "On");
+      }
       else {
-        SetProperty("FrameTransfer", "Off");  
+        SetProperty("FrameTransfer", "Off");
       }
 
       ui_retVal = ::OA_GetInt(OAModeName, "electron_multiplying_gain", &i_temp);
-      sprintf(c_temp, "%d", i_temp);
+      snprintf(c_temp, sizeof(c_temp), "%d", i_temp);
 
-      SetProperty("Gain",c_temp);  
+      SetProperty("Gain",c_temp);
       ui_retVal = ::OA_GetInt(OAModeName, "readout_rate", &i_temp);
       f_temp = static_cast<float>(i_temp);
 
-      sprintf(c_temp, "%.3f MHz", f_temp);
+      snprintf(c_temp, sizeof(c_temp), "%.3f MHz", f_temp);
 
       //check if Readout rate is valid
       int numADChannels;
@@ -4027,7 +4027,7 @@ int AndorCamera::GetListOfAvailableCameras()
         {
            float sp;
            ret = GetHSSpeed(i, OutputAmplifierIndex_, j, &sp);
-           sprintf(speedBuf, "%.3f MHz", sp);
+           snprintf(speedBuf, sizeof(speedBuf), "%.3f MHz", sp);
            if(0 == stricmp(c_temp, speedBuf)){
              SetProperty("AD_Converter", buffer);
              SetProperty("ReadoutMode", speedBuf);
@@ -4045,14 +4045,14 @@ int AndorCamera::GetListOfAvailableCameras()
         SetProperty("VerticalClockVoltage", "Normal");
       }
       else {
-        sprintf(c_temp, "+%d", i_temp);
-        SetProperty("VerticalClockVoltage", c_temp);  
+        snprintf(c_temp, sizeof(c_temp), "+%d", i_temp);
+        SetProperty("VerticalClockVoltage", c_temp);
       }
       ui_retVal = ::OA_GetFloat(OAModeName, "preamplifier_gain", &f_temp);
-      sprintf(c_temp, "%.2f", f_temp);
-      SetProperty("Pre-Amp-Gain", c_temp);  
+      snprintf(c_temp, sizeof(c_temp), "%.2f", f_temp);
+      SetProperty("Pre-Amp-Gain", c_temp);
       ui_retVal = ::OA_GetFloat(OAModeName, "shift_speed", &f_temp);
-      sprintf(c_temp, "%.2f", f_temp);
+      snprintf(c_temp, sizeof(c_temp), "%.2f", f_temp);
       SetProperty(g_VerticalSpeedProperty, c_temp);
    }
 
@@ -4592,10 +4592,10 @@ int AndorCamera::GetListOfAvailableCameras()
       for (int i=0; i<numSpeeds; i++)
       {
          float sp;
-         ret = GetHSSpeed(ADChannelIndex_, OutputAmplifierIndex_, i, &sp); 
+         ret = GetHSSpeed(ADChannelIndex_, OutputAmplifierIndex_, i, &sp);
          if (ret != DRV_SUCCESS)
             return;
-         sprintf(speedBuf, "%.3f MHz", sp);
+         snprintf(speedBuf, sizeof(speedBuf), "%.3f MHz", sp);
          readoutModes_.push_back(speedBuf);
       }
       SetAllowedValues(MM::g_Keyword_ReadoutMode, readoutModes_);
