@@ -745,7 +745,7 @@ int FocusStage::Initialize()
    ret = g_hub.GetFocusStepSize(*this, *GetCoreCallback(), stepSize_nm_);
    if (ret != DEVICE_OK)
       return ret;
-   char buffer[4];
+   char buffer[12];
    snprintf(buffer, sizeof(buffer), "%d", stepSize_nm_);
    pAct = new CPropertyAction (this, &FocusStage::OnStepSize);
    ret = CreateProperty(stepSizeName, buffer, MM::String, false, pAct);

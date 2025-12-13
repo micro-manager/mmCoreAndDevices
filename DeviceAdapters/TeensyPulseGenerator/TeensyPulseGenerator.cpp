@@ -353,7 +353,7 @@ void TeensyPulseGenerator::CheckStatus()
       Sleep((long) (interval_));
    }
    GetCoreCallback()->OnPropertyChanged(this, "Status", "Idle");
-   char myString[10] = ""; // 10 chars is maximum for uint32_t
+   char myString[12] = ""; // 11 chars is maximum for uint32_t + null
    snprintf(myString, sizeof(myString), "%d", (long) nrPulsesCounted_);
    GetCoreCallback()->OnPropertyChanged(this, g_NrPulsesCounted, myString);
 }
@@ -396,7 +396,7 @@ int TeensyPulseGenerator::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
            if (ret != DEVICE_OK)
               return ret;
            running_ = false;
-           char myString[10] = ""; // 10 chars is maximum for uint32_t
+           char myString[12] = ""; // 11 chars is maximum for uint32_t + null
            snprintf(myString, sizeof(myString), "%d", (long) nrPulsesCounted_);
            GetCoreCallback()->OnPropertyChanged(this, g_NrPulsesCounted, myString);
         }

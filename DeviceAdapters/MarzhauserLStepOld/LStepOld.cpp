@@ -98,7 +98,7 @@ int LStepOld::Initialize()
    if (s!=DEVICE_OK)
       return s;
    motor_speed_ = atof( answer.c_str() ) * .1;
-   char speed[5];
+   char speed[16];
    snprintf( speed, sizeof(speed), "%2.1f",  motor_speed_ );
    CPropertyAction* pAct = new CPropertyAction(this, &LStepOld::OnSpeed );
    CreateProperty( "Motor-speed [Hz]", speed, MM::Float, false, pAct);

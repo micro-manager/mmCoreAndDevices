@@ -164,7 +164,7 @@ int MTUSB_LEDDriverDeviceModuleType( int DevHandle)
 
 int MTUSB_LEDDriverSetMode( int DevHandle, int Channel, int Mode )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -181,7 +181,7 @@ int MTUSB_LEDDriverSetMode( int DevHandle, int Channel, int Mode )
 
 int MTUSB_LEDDriverSetNormalPara( int DevHandle, int Channel, TLedChannelData *LedChannelDataPtr )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -196,7 +196,7 @@ int MTUSB_LEDDriverSetNormalPara( int DevHandle, int Channel, TLedChannelData *L
 
 int MTUSB_LEDDriverSetNormalCurrent( int DevHandle, int Channel, int Current )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -210,7 +210,7 @@ int MTUSB_LEDDriverSetNormalCurrent( int DevHandle, int Channel, int Current )
 
 int MTUSB_LEDDriverSetStrobePara( int DevHandle, int Channel, TLedChannelData *LedChannelDataPtr )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int line;
 	int error;
 
@@ -238,7 +238,7 @@ int MTUSB_LEDDriverSetStrobePara( int DevHandle, int Channel, TLedChannelData *L
 
 int MTUSB_LEDDriverSetTriggerPara( int DevHandle, int Channel, TLedChannelData *LedChannelDataPtr )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int line;
 	int error;
 
@@ -266,7 +266,7 @@ int MTUSB_LEDDriverSetTriggerPara( int DevHandle, int Channel, TLedChannelData *
 
 int MTUSB_LEDDriverResetDevice( int DevHandle )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -280,7 +280,7 @@ int MTUSB_LEDDriverResetDevice( int DevHandle )
 
 int MTUSB_LEDDriverStorePara( int DevHandle )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -294,7 +294,7 @@ int MTUSB_LEDDriverStorePara( int DevHandle )
 
 int MTUSB_LEDDriverRestoreDefault( int DevHandle )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -308,7 +308,7 @@ int MTUSB_LEDDriverRestoreDefault( int DevHandle )
 
 int MTUSB_LEDDriverGetLoadVoltage( int DevHandle, int Channel )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 	int timeoutCount = 0;
 	int voltage = -1;
@@ -343,7 +343,7 @@ int MTUSB_LEDDriverGetLoadVoltage( int DevHandle, int Channel )
 
 int MTUSB_LEDDriverGetCurrentPara( int DevHandle, int Channel,TLedChannelData *LedChannelDataPtr,int *Mode )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 	int step;
 
@@ -436,7 +436,7 @@ int MTUSB_LEDDriverGetCurrentPara( int DevHandle, int Channel,TLedChannelData *L
 
 int MTUSB_LEDDriverSendCommand( int DevHandle, char *CommandString )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))

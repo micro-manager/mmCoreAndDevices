@@ -1833,7 +1833,7 @@ INT16 CCameraAdapter::GetProperties()
 
    m_bExposureInSync = ( m_nFrameClocks == m_nMMFrameClocks );
 
-   char sPixel[8];
+   char sPixel[16];
    snprintf(sPixel, sizeof(sPixel), "%dbit", m_nCapBits );
    m_sPixel = sPixel;
    m_asPixelTypes.clear();

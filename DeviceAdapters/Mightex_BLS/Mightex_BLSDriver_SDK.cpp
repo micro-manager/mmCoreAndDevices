@@ -52,7 +52,7 @@ int round(double number)
 
 int GetDeviceODRules( int DevHandle )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error = 0;
 
 	for(int i = 1; i < MAX_CHANNEL+1; i++)
@@ -229,7 +229,7 @@ int MTUSB_BLSDriverGetModuleType( int DevHandle)
 
 int MTUSB_BLSDriverSetMode( int DevHandle, int Channel, int Mode )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -249,7 +249,7 @@ int MTUSB_BLSDriverSetMode( int DevHandle, int Channel, int Mode )
 
 int MTUSB_BLSDriverSetNormalCurrent( int DevHandle, int Channel, int Current)
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -266,7 +266,7 @@ int MTUSB_BLSDriverSetNormalCurrent( int DevHandle, int Channel, int Current)
 
 int MTUSB_BLSDriverSetPulseProfile( int DevHandle, int Channel, int Polarity, int PulseCnt, int ReptCnt)
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -288,7 +288,7 @@ int MTUSB_BLSDriverSetPulseProfile( int DevHandle, int Channel, int Polarity, in
 
 int MTUSB_BLSDriverSetPulseDetail( int DevHandle, int Channel, int PulseIndex, int Time0, int Time1, int Time2, int Curr0, int Curr1, int Curr2)
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 	int dutyRatio;
 
@@ -348,7 +348,7 @@ int MTUSB_BLSDriverSetPulseDetail( int DevHandle, int Channel, int PulseIndex, i
 
 int MTUSB_BLSDriverSetFollowModeDetail( int DevHandle, int Channel, int ION, int IOFF)
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -371,7 +371,7 @@ int MTUSB_BLSDriverSetFollowModeDetail( int DevHandle, int Channel, int ION, int
 
 int MTUSB_BLSDriverSoftStart( int DevHandle, int Channel )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -388,7 +388,7 @@ int MTUSB_BLSDriverSoftStart( int DevHandle, int Channel )
 
 int MTUSB_BLSDriverResetDevice( int DevHandle )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -402,7 +402,7 @@ int MTUSB_BLSDriverResetDevice( int DevHandle )
 
 int MTUSB_BLSDriverStorePara( int DevHandle )
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))
@@ -416,7 +416,7 @@ int MTUSB_BLSDriverStorePara( int DevHandle )
 
 int MTUSB_BLSDriverSendCommand( int DevHandle, char *Command)
 {
-	char commandStr[36];
+	char commandStr[64];
 	int error;
 
 	if ((DevHandle < 0) || ( DevHandle >(totalUSBDevices-1) ) || (deviceOpened[DevHandle] == FALSE))

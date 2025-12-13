@@ -426,14 +426,14 @@ int POACamera::Initialize()
     assert(nRet == DEVICE_OK);
 
     std::vector<std::string> binningStrVec;
-    char binStr[2];
+    char binStr[12];
     for (int i = 0; i < 8; i++) //int bins[8]; in camera property
     {
         if (camProp_.bins[i] == 0)
         {
             break;
         }
-        memset(binStr, 0, 2);
+        memset(binStr, 0, sizeof(binStr));
         snprintf(binStr, sizeof(binStr), "%d", camProp_.bins[i]);
         binningStrVec.push_back(binStr);
     }

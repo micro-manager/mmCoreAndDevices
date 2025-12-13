@@ -379,7 +379,7 @@ int CMyASICam::Initialize()
 	vector<string> binningValues;
 
 	int i = 0;
-	char cBin[2];
+	char cBin[12];
 	while(ASICameraInfo.SupportedBins[i] > 0)
 	{
 		snprintf(cBin, sizeof(cBin), "%d", ASICameraInfo.SupportedBins[i]);

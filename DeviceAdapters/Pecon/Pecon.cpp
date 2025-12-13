@@ -281,7 +281,7 @@ int TempControl::SetTemp(int channel, double temp)
 	//double to string conversion
 	std::string command_ = "N000";
 	if(channel==2) command_[0] = 'O';
-	char s[10];
+	char s[20];
 	snprintf(s, sizeof(s),"%f",temp);
 
 	int pos =0;
@@ -926,7 +926,7 @@ int CTIControl::SetCO2Nominal(double val)
 	if(!WakeUp()) return DEVICE_SERIAL_INVALID_RESPONSE;
 	//double to string conversion
 	command_ = "N000";
-	char s[10];
+	char s[20];
 	snprintf(s, sizeof(s),"%f",val);
 
 	int pos =0;
@@ -1598,7 +1598,7 @@ int CO2Control::SetCO2Nominal(double val)
 	if(!WakeUp()) return DEVICE_SERIAL_INVALID_RESPONSE;
 	//double to string conversion
 	std::string command_ = "N000";
-	char s[10];
+	char s[20];
 	snprintf(s, sizeof(s),"%f",val);
 
 	int pos =0;

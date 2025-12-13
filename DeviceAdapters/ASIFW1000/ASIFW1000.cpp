@@ -362,7 +362,7 @@ int FilterWheel::Initialize()
    ret = g_hub.GetNumberOfPositions(*this, *GetCoreCallback(), wheelNr_, numPos_);
    if (ret != DEVICE_OK)
       return ret;
-   char pos[3];
+   char pos[12];
    for (int i=0; i<numPos_; i++)
    {
       snprintf(pos, sizeof(pos), "%d", i);
@@ -380,11 +380,11 @@ int FilterWheel::Initialize()
    // Label
    pAct = new CPropertyAction (this, &CStateBase::OnLabel);
    ret = CreateProperty(MM::g_Keyword_Label, "Undefined", MM::String, false, pAct);
-   if (ret != DEVICE_OK) 
+   if (ret != DEVICE_OK)
       return ret;
 
    // create default positions and labels
-   char state[8];
+   char state[20];
    for (int i=0; i<numPos_; i++)
    {
       snprintf(state, sizeof(state), "State-%d", i);

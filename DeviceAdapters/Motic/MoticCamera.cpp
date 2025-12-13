@@ -1315,8 +1315,8 @@ void CMoticCamera::InitExposure()
   long curExp = 0;
   MIDP_GetExposureTime(&curExp);
   m_dExposurems = curExp/100.0;
-  char buf[10];
-  snprintf(buf, sizeof(buf), "%0.1f\0", m_dExposurems);
+  char buf[20];
+  snprintf(buf, sizeof(buf), "%0.1f", m_dExposurems);
   CPropertyAction *pAct = new CPropertyAction (this, &CMoticCamera::OnExposure);
    CreateProperty(MM::g_Keyword_Exposure, buf, MM::Float, false, pAct);
    SetPropertyLimits(MM::g_Keyword_Exposure, (double)m_lMinExposure/100.0, (double)m_lMaxExposure/100.0);

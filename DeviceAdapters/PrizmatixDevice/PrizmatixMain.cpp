@@ -378,7 +378,7 @@ int PrizmatixLED::Initialize()
 		  OnOffLeds[i]=0;
 		  // CPropertyAction
 			   CPropertyActionEx* pAct = new CPropertyActionEx (this, &PrizmatixLED::OnPowerLEDEx,i);
-		   char Name[20],StateName[20];
+		   char Name[20],StateName[32];
 		   Until=Mik+1;
 		   while(Until< nmWrite && NameLeds[Until] !=',') Until++;
 		   if( Mik+1 < nmWrite && Mik  <Until )

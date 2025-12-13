@@ -105,7 +105,7 @@ int StateDevice::Initialize()
 		return ret;
 	}
 
-	char pos[3];
+	char pos[12];
 	for (int i = 0; i < numPos_; i++)
 	{
 		snprintf(pos, sizeof(pos), "%d", i);
@@ -120,7 +120,7 @@ int StateDevice::Initialize()
 		return ret;
 	}
 
-	char state[11];
+	char state[20];
 	for (int i = 0; i < numPos_; i++)
 	{
 		snprintf(state, sizeof(state), "Position-%d", i);

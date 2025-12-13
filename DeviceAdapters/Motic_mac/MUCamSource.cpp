@@ -1148,7 +1148,7 @@ void MUCamSource::InitExposure()
     MUCam_getExposureRange(hCameras_[currentCam_], &exposureMin_, &exposureMax_);
     exposureMs_ = 10.0;
     MUCam_setExposure(hCameras_[currentCam_], (float)exposureMs_);
-    char buf[10];
+    char buf[20];
     snprintf(buf, sizeof(buf), "%0.1f", (float)exposureMs_);
     CPropertyAction *pAct = new CPropertyAction (this, &MUCamSource::OnExposure);
     int ret = CreateProperty(MM::g_Keyword_Exposure, buf, MM::Float, false, pAct);

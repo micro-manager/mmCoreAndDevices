@@ -1331,7 +1331,7 @@ int XLedCtrl::OnLCDScrnBrite(MM::PropertyBase* pProp, MM::ActionType pAct)
     std::ostringstream osMessage;
     int nDebugLog = XLed::Instance()->GetDebugLogFlag();
     unsigned char sCmdGet[8] = { 0x6C, 0x62, 0x3F, XLed::XL_TxTerm, 0x00, 0x00, 0x00, 0x00};
-    unsigned char sCmdSet[8] = { 0x6C, 0x62, 0x3D, 0x30, XLed::XL_TxTerm, 0x00, 0x00, 0x00 };
+    unsigned char sCmdSet[12] = { 0x6C, 0x62, 0x3D, 0x30, XLed::XL_TxTerm, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     unsigned char* sResp = XLed::Instance()->GetParameter(XLed::XL_LCDBrite);
     int ret = DEVICE_OK;
 
@@ -1400,7 +1400,7 @@ int XLedCtrl::OnLCDScrnSaver(MM::PropertyBase* pProp, MM::ActionType pAct)
     std::ostringstream osMessage;
     int nDebugLog = XLed::Instance()->GetDebugLogFlag();
     unsigned char sCmdGet[8] = { 0x73, 0x74, 0x3F, XLed::XL_TxTerm, 0x00, 0x00, 0x00, 0x00};
-    unsigned char sCmdSet[8] = { 0x73, 0x74, 0x3D, 0x00, XLed::XL_TxTerm, 0x00, 0x00, 0x00 };
+    unsigned char sCmdSet[12] = { 0x73, 0x74, 0x3D, 0x00, XLed::XL_TxTerm, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     unsigned char* sResp = XLed::Instance()->GetParameter(XLed::XL_LCDSaver);
     int ret = DEVICE_OK;
 
@@ -1519,7 +1519,7 @@ int XLedCtrl::OnSpeakerVolume(MM::PropertyBase* pProp, MM::ActionType pAct)
     std::ostringstream osMessage;
     int nDebugLog = XLed::Instance()->GetDebugLogFlag();
     unsigned char sCmdGet[8] = { 0x76, 0x6F, 0x3F, XLed::XL_TxTerm, 0x00, 0x00, 0x00, 0x00};
-    unsigned char sCmdSet[8] = { 0x76, 0x6F, 0x3D, 0x30, XLed::XL_TxTerm, 0x00, 0x00, 0x00 };
+    unsigned char sCmdSet[12] = { 0x76, 0x6F, 0x3D, 0x30, XLed::XL_TxTerm, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     unsigned char* sResp = XLed::Instance()->GetParameter(XLed::XL_SpeakVol);
     int ret = DEVICE_OK;
 
