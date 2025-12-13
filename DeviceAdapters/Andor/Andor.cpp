@@ -4741,7 +4741,7 @@ int AndorCamera::GetListOfAvailableCameras()
       {
          float pag;
          ret = GetPreAmpGain(PreAmpGainIdx, &pag); 
-         sprintf(PreAmpGainString, "%.2f", pag);
+         snprintf(PreAmpGainString, PreAmpGainStringLength, "%.2f", pag);
       }
       if (ret != DRV_SUCCESS)
          return ret;
