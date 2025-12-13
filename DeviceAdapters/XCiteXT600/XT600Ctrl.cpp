@@ -1311,7 +1311,7 @@ int XLedCtrl::OnLCDScrnNumber(MM::PropertyBase* pProp, MM::ActionType pAct)
         if (lScrnNumber > 13) lScrnNumber = 13;
         if (lScrnNumber == 7) lScrnNumber = 6;
 
-        sprintf((char*)&sCmdSet[3], "%ld", lScrnNumber);
+        snprintf((char*)&sCmdSet[3], sizeof(sCmdSet) - 3, "%ld", lScrnNumber);
         sCmdSet[strlen((char*)sCmdSet)] = (unsigned char)XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1384,7 +1384,7 @@ int XLedCtrl::OnLCDScrnBrite(MM::PropertyBase* pProp, MM::ActionType pAct)
         if (lScrnBrite < 0) lScrnBrite = 0;
         if (lScrnBrite > 255) lScrnBrite = 255;
 
-        sprintf((char*)&sCmdSet[3], "%ld", lScrnBrite);
+        snprintf((char*)&sCmdSet[3], sizeof(sCmdSet) - 3, "%ld", lScrnBrite);
         sCmdSet[strlen((char*)sCmdSet)] = (unsigned char)XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1443,7 +1443,7 @@ int XLedCtrl::OnLCDScrnSaver(MM::PropertyBase* pProp, MM::ActionType pAct)
         if (lScrnTimeout < 0) lScrnTimeout = 0;
         if (lScrnTimeout > 9999) lScrnTimeout = 9999;
 
-        sprintf((char*)&sCmdSet[3], "%ld", lScrnTimeout);
+        snprintf((char*)&sCmdSet[3], sizeof(sCmdSet) - 3, "%ld", lScrnTimeout);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1575,7 +1575,7 @@ int XLedCtrl::OnSpeakerVolume(MM::PropertyBase* pProp, MM::ActionType pAct)
         if (lSPeakerVol < 0) lSPeakerVol = 0;
         if (lSPeakerVol > 255) lSPeakerVol = 255;
 
-        sprintf((char*)&sCmdSet[3], "%ld", lSPeakerVol);
+        snprintf((char*)&sCmdSet[3], sizeof(sCmdSet) - 3, "%ld", lSPeakerVol);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);

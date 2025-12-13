@@ -1342,7 +1342,7 @@ int XLedDev::OnLedTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 
       for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
 
-      sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", m_lTriggerState);
+      snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", m_lTriggerState);
       sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
       //sCmdSet[3] += (unsigned char)m_nLedDevNumber;
 
@@ -1415,7 +1415,7 @@ int XLedDev::OnLedIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (lIntensity > 1000) lIntensity = 1000;
 
       for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-      sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", lIntensity);
+      snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", lIntensity);
       sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
       ret = XLedSerialIO(sCmdSet, sResp);
@@ -1571,7 +1571,7 @@ if (lPulseMode < 0) lPulseMode = 0;
 if (lPulseMode > 3) lPulseMode = 3;
 
 for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", lPulseMode);
+snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", lPulseMode);
 sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
 ret = XLedSerialIO(sCmdSet, sResp);
@@ -1655,7 +1655,7 @@ if (lSignalDelayTime < 0) lSignalDelayTime = 0;
 if (lSignalDelayTime > 65535) lSignalDelayTime = 65535;
 
 for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", lSignalDelayTime);
+snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", lSignalDelayTime);
 sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
 ret = XLedSerialIO(sCmdSet, sResp);
@@ -1743,7 +1743,7 @@ if (lSignalOnTime < 0) lSignalOnTime = 0;
 if (lSignalOnTime > 65535) lSignalOnTime = 65535;
 
 for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%0ld", lSignalOnTime);
+snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%0ld", lSignalOnTime);
 sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
 ret = XLedSerialIO(sCmdSet, sResp);
@@ -1833,7 +1833,7 @@ if (lSignalOffTime < 0) lSignalOffTime = 0;
 if (lSignalOffTime > 65535) lSignalOffTime = 65535;
 
 for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", lSignalOffTime);
+snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", lSignalOffTime);
 sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
 ret = XLedSerialIO(sCmdSet, sResp);
@@ -1923,7 +1923,7 @@ if (lTriggerDelay < 0) lTriggerDelay = 0;
 if (lTriggerDelay > 65535) lTriggerDelay = 65535;
 
 for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%0ld", lTriggerDelay);
+snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%0ld", lTriggerDelay);
 sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
 ret = XLedSerialIO(sCmdSet, sResp);
@@ -2017,7 +2017,7 @@ int XLedDev::OnPWMUnit(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (m_lPWMUnit > 2) m_lPWMUnit = 2;
 
       for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-      sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", m_lPWMUnit);
+      snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", m_lPWMUnit);
       sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
       ret = XLedSerialIO(sCmdSet, sResp);
