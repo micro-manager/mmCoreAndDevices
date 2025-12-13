@@ -512,14 +512,14 @@ int CPiezoConceptStage::MoveZ(double pos)
       pos = lowerLimit_;
    }
    char buf[25];
-   int length = snprintf(buf, sizeof(buf), "MOVEZ %1.3fu\n", pos);
+   snprintf(buf, sizeof(buf), "MOVEZ %1.3fu\n", pos);
    std::stringstream ss;
    ss << "Command: "<< buf << "  Position set: "<< pos;
    LogMessage(ss.str().c_str(), true);
 
    pos_um_ = pos;
 
-   int ret = hub->WriteToComPortH((unsigned char*)buf, length);
+   int ret = hub->WriteToComPortH((unsigned char*)buf, strlen(buf));
    if(ret != DEVICE_OK)
       return ret;
    return hub->CheckForError();
@@ -693,12 +693,12 @@ int CPiezoConceptXYStage::MoveX(double posUm)
    }
 
    char buf[25];
-   int length = snprintf(buf, sizeof(buf), "MOVEX %1.3fu\n", posUm);
+   snprintf(buf, sizeof(buf), "MOVEX %1.3fu\n", posUm);
    std::stringstream ss;
    ss << "Command: "<< buf << "  Position set: "<< posUm;
    LogMessage(ss.str().c_str(), true);
 
-   int ret = hub->WriteToComPortH((unsigned char*)buf, length);
+   int ret = hub->WriteToComPortH((unsigned char*)buf, strlen(buf));
    if (ret != DEVICE_OK)
       return ret;
    ret = hub->CheckForError();
@@ -724,12 +724,12 @@ int CPiezoConceptXYStage::MoveY(double posUm)
    }
 
    char buf[25];
-   int length = snprintf(buf, sizeof(buf), "MOVEY %1.3fu\n", posUm);
+   snprintf(buf, sizeof(buf), "MOVEY %1.3fu\n", posUm);
    std::stringstream ss;
    ss << "Command: "<< buf << "  Position set: "<< posUm;
    LogMessage(ss.str().c_str(), true);
 
-   int ret = hub->WriteToComPortH((unsigned char*)buf, length);
+   int ret = hub->WriteToComPortH((unsigned char*)buf, strlen(buf));
    if (ret != DEVICE_OK)
       return ret;
    ret = hub->CheckForError();
