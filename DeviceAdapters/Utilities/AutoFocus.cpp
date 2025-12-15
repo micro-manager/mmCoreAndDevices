@@ -903,14 +903,15 @@ void AutoFocus::UpdateStatus(const std::string& newStatus)
 
 int AutoFocus::GetLastFocusScore(double& score)
 {
-   //return AnalyzeImage(algorithm_ == g_Alg_Standard ? 0 : 0, score, score, score);
-   return DEVICE_ERR;
+   score = lastSpotScore_;
+   return DEVICE_OK;
 }
 
 int AutoFocus::GetCurrentFocusScore(double& score)
 {
-   //return AnalyzeImage(algorithm_ == g_Alg_Standard ? 0 : 0, score, score, score);
-   return DEVICE_ERR;
+   // is this current?
+   score = lastSpotScore_;
+   return DEVICE_OK;
 }
 
 int AutoFocus::SnapAndAnalyze()
@@ -1482,10 +1483,10 @@ int AutoFocus::PerformCalibration()
       {
          // 8-bit images
          std::vector<unsigned char> resultPixelsLoop(numPixelsLoop);
-         for (unsigned int i = 0; i < numPixelsLoop; ++i)
+         for (unsigned int j = 0; j < numPixelsLoop; ++j)
          {
-            int diff = (int)lightPixelsLoop[i] - (int)darkPixelsLoop[i];
-            resultPixelsLoop[i] = (diff > 0) ? (unsigned char)diff : 0;
+            int diff = (int)lightPixelsLoop[j] - (int)darkPixelsLoop[j];
+            resultPixelsLoop[j] = (diff > 0) ? (unsigned char)diff : 0;
          }
          resultImageLoop.SetPixels(resultPixelsLoop.data());
       }
@@ -1495,16 +1496,15 @@ int AutoFocus::PerformCalibration()
          const unsigned short* lightPixels16Loop = (const unsigned short*)lightPixelsLoop;
          const unsigned short* darkPixels16Loop = (const unsigned short*)darkPixelsLoop;
          std::vector<unsigned short> resultPixelsLoop(numPixelsLoop);
-         for (unsigned int i = 0; i < numPixelsLoop; ++i)
+         for (unsigned int j = 0; j < numPixelsLoop; ++j)
          {
-            int diff = (int)lightPixels16Loop[i] - (int)darkPixels16Loop[i];
-            resultPixelsLoop[i] = (diff > 0) ? (unsigned short)diff : 0;
+            int diff = (int)lightPixels16Loop[j] - (int)darkPixels16Loop[j];
+            resultPixelsLoop[j] = (diff > 0) ? (unsigned short)diff : 0;
          }
          resultImageLoop.SetPixels((const unsigned char*)resultPixelsLoop.data());
       }
 
       // Analyze to find spot position
-      double score1, x1, y1, score2, x2, y2;
       ret = AnalyzeImage(resultImageLoop, score1, x1, y1, score2, x2, y2);
       if (ret != DEVICE_OK)
       {
@@ -1515,7 +1515,10 @@ int AutoFocus::PerformCalibration()
       // Track spots based on spatial continuity (minimum distance)
       if (score1 > 0)
       {
-         double track1X, track1Y, track2X, track2Y;
+         double track1X = 0.0;
+         double track1Y = 0.0;
+         double track2X = 0.0;
+         double track2Y = 0.0;;
          bool haveTrack2 = false;
 
          if (hasSpot2 && score2 > 0)
