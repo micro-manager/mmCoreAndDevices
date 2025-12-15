@@ -91,6 +91,12 @@ int AutoFocus::Shutdown()
       continuousFocusThread_.join();
    }
 
+   // Clear registered stages (defensive - they should have unregistered)
+   {
+      std::lock_guard<std::mutex> lock(registrationMutex_);
+      registeredStages_.clear();
+   }
+
    initialized_ = false;
    return DEVICE_OK;
 }
@@ -232,6 +238,12 @@ int AutoFocus::Initialize()
    CreateStringProperty("Calibrate", "Idle", false, pAct);
    AddAllowedValue("Calibrate", "Idle");
    AddAllowedValue("Calibrate", "Start");
+
+   // Create MeasureOffset action property
+   pAct = new CPropertyAction(this, &AutoFocus::OnMeasureOffset);
+   CreateStringProperty("MeasureOffset", "Idle", false, pAct);
+   AddAllowedValue("MeasureOffset", "Idle");
+   AddAllowedValue("MeasureOffset", "Measure");
 
    // Load calibration data from file
    LoadCalibrationData();
@@ -547,6 +559,28 @@ int AutoFocus::OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int AutoFocus::OnMeasureOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set("Idle");
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string value;
+      pProp->Get(value);
+      if (value == "Measure")
+      {
+         int ret = PerformMeasureOffset();
+         // Reset the property to Idle
+         pProp->Set("Idle");
+         GetCoreCallback()->OnPropertyChanged(this, "MeasureOffset", "Idle");
+         return ret;
+      }
+   }
+   return DEVICE_OK;
+}
+
 bool AutoFocus::Busy()
 {
    return false;
@@ -589,6 +623,7 @@ bool AutoFocus::IsContinuousFocusLocked()
 int AutoFocus::SetOffset(double offset)
 {
    offset_ = offset;
+   NotifyRegisteredStages();
    return DEVICE_OK;
 }
 
@@ -596,6 +631,54 @@ int AutoFocus::GetOffset(double& offset)
 {
    offset = offset_;
    return DEVICE_OK;
+}
+
+void AutoFocus::RegisterStage(MM::Stage* stage)
+{
+   if (stage == nullptr)
+      return;
+
+   std::lock_guard<std::mutex> lock(registrationMutex_);
+
+   // Check if already registered
+   for (size_t i = 0; i < registeredStages_.size(); ++i)
+   {
+      if (registeredStages_[i] == stage)
+         return;  // Already registered
+   }
+
+   registeredStages_.push_back(stage);
+}
+
+void AutoFocus::UnregisterStage(MM::Stage* stage)
+{
+   if (stage == nullptr)
+      return;
+
+   std::lock_guard<std::mutex> lock(registrationMutex_);
+
+   for (size_t i = 0; i < registeredStages_.size(); ++i)
+   {
+      if (registeredStages_[i] == stage)
+      {
+         registeredStages_.erase(registeredStages_.begin() + i);
+         break;
+      }
+   }
+}
+
+void AutoFocus::NotifyRegisteredStages()
+{
+   std::lock_guard<std::mutex> lock(registrationMutex_);
+
+   for (size_t i = 0; i < registeredStages_.size(); ++i)
+   {
+      MM::Stage* pStage = registeredStages_[i];
+      if (pStage != nullptr)
+      {
+         GetCoreCallback()->OnStagePositionChanged(pStage, offset_);
+      }
+   }
 }
 
 int AutoFocus::FullFocus()
@@ -845,7 +928,6 @@ int AutoFocus::SnapAndAnalyze()
    CDeviceUtils::SleepMs(10); // wait for shutter to close
    // Snap image with shutter closed
    camera->SnapImage();
-   // TODO: take dark image only once
    ImgBuffer darkImage;
    int ret = GetImageFromBuffer(darkImage);
 
@@ -855,14 +937,42 @@ int AutoFocus::SnapAndAnalyze()
    camera->SnapImage();
    ImgBuffer lightImage;
    ret = GetImageFromBuffer(lightImage);
+   shutter->SetOpen(false);
 
+   // Subtract darkImage from lightImage
+   ImgBuffer resultImage(lightImage.Width(), lightImage.Height(), lightImage.Depth());
+   const unsigned char* lightPixels = lightImage.GetPixels();
+   const unsigned char* darkPixels = darkImage.GetPixels();
+   unsigned int numPixels = lightImage.Width() * lightImage.Height();
 
-   // Subtract image2 from image1
-   //Subtract(lightImage, darkImage, resultImage);
+   if (lightImage.Depth() == 1)
+   {
+      // 8-bit images
+      std::vector<unsigned char> resultPixels(numPixels);
+      for (unsigned int i = 0; i < numPixels; ++i)
+      {
+         int diff = (int)lightPixels[i] - (int)darkPixels[i];
+         resultPixels[i] = (diff > 0) ? (unsigned char)diff : 0;
+      }
+      resultImage.SetPixels(resultPixels.data());
+   }
+   else if (lightImage.Depth() == 2)
+   {
+      // 16-bit images
+      const unsigned short* lightPixels16 = (const unsigned short*)lightPixels;
+      const unsigned short* darkPixels16 = (const unsigned short*)darkPixels;
+      std::vector<unsigned short> resultPixels(numPixels);
+      for (unsigned int i = 0; i < numPixels; ++i)
+      {
+         int diff = (int)lightPixels16[i] - (int)darkPixels16[i];
+         resultPixels[i] = (diff > 0) ? (unsigned short)diff : 0;
+      }
+      resultImage.SetPixels((const unsigned char*)resultPixels.data());
+   }
 
    double score1, x1, y1;
    double score2, x2, y2;
-   AnalyzeImage(lightImage, score1, x1, y1, score2, x2, y2);
+   AnalyzeImage(resultImage, score1, x1, y1, score2, x2, y2);
 
    // Select which spot to use based on calibration data
    // Default to spot 1 if no calibration data
@@ -872,6 +982,7 @@ int AutoFocus::SnapAndAnalyze()
    {
       CalibrationData cal = calibrationMap_[deviceSettings_];
 
+      // we refer here to higher as higher in the image, i.e. higher x or y coordinate
       bool spot1IsHigher = (x1 > x2);
       if (cal.dominantAxis == 'Y')
          spot1IsHigher = (y1 > y2);
@@ -880,12 +991,12 @@ int AutoFocus::SnapAndAnalyze()
       if (cal.spotSelection == "Top")
       {
          // Use top surface spot
-         useSpot1 = cal.slope1Dominant > 0 ? spot1IsHigher : !spot1IsHigher;
+         useSpot1 = cal.slope1Dominant > 0 ? !spot1IsHigher : spot1IsHigher;
       }
       else if (cal.spotSelection == "Bottom")
       {
          // Use bottom surface spot
-         useSpot1 = cal.slope1Dominant <= 0 ? spot1IsHigher : !spot1IsHigher;
+         useSpot1 = cal.slope1Dominant <= 0 ? !spot1IsHigher : spot1IsHigher;
       }
    }
 
@@ -1247,9 +1358,9 @@ int AutoFocus::PerformCalibration()
    if (ret != DEVICE_OK)
       return ret;
 
-   // Calibration parameters, these should be tunable
-   const int numSteps = 10;
-   const double stepSize = 5.0; // microns
+   // Calibration parameters
+   const int numSteps = 20;
+   const double stepSize = precision_; // use precision property value
    std::vector<double> zPositions;
    std::vector<double> spotXPositions;
    std::vector<double> spotYPositions;
@@ -1266,7 +1377,14 @@ int AutoFocus::PerformCalibration()
       pStage->SetPositionUm(startPos);
       return ERR_NO_PHYSICAL_CAMERA;
    }
-   
+
+   // Close shutter and take dark image
+   shutter->SetOpen(false);
+   CDeviceUtils::SleepMs(10);
+   camera->SnapImage();
+   ImgBuffer darkImage;
+   ret = GetImageFromBuffer(darkImage);
+
    // Open shutter and take light image
    shutter->SetOpen(true);
    CDeviceUtils::SleepMs(10);
@@ -1274,9 +1392,40 @@ int AutoFocus::PerformCalibration()
    ImgBuffer lightImage;
    ret = GetImageFromBuffer(lightImage);
 
+   // Subtract darkImage from lightImage
+   ImgBuffer resultImage(lightImage.Width(), lightImage.Height(), lightImage.Depth());
+   const unsigned char* lightPixels = lightImage.GetPixels();
+   const unsigned char* darkPixels = darkImage.GetPixels();
+   unsigned int numPixels = lightImage.Width() * lightImage.Height();
+
+   if (lightImage.Depth() == 1)
+   {
+      // 8-bit images
+      std::vector<unsigned char> resultPixels(numPixels);
+      for (unsigned int i = 0; i < numPixels; ++i)
+      {
+         int diff = (int)lightPixels[i] - (int)darkPixels[i];
+         resultPixels[i] = (diff > 0) ? (unsigned char)diff : 0;
+      }
+      resultImage.SetPixels(resultPixels.data());
+   }
+   else if (lightImage.Depth() == 2)
+   {
+      // 16-bit images
+      const unsigned short* lightPixels16 = (const unsigned short*)lightPixels;
+      const unsigned short* darkPixels16 = (const unsigned short*)darkPixels;
+      std::vector<unsigned short> resultPixels(numPixels);
+      for (unsigned int i = 0; i < numPixels; ++i)
+      {
+         int diff = (int)lightPixels16[i] - (int)darkPixels16[i];
+         resultPixels[i] = (diff > 0) ? (unsigned short)diff : 0;
+      }
+      resultImage.SetPixels((const unsigned char*)resultPixels.data());
+   }
+
    // Analyze to find spot position
    double score1, x1, y1, score2, x2, y2;
-   ret = AnalyzeImage(lightImage, score1, x1, y1, score2, x2, y2);
+   ret = AnalyzeImage(resultImage, score1, x1, y1, score2, x2, y2);
 
    // Store reference spot position at the starting (in-focus) position
    double refSpotXMeasured = x1;
@@ -1308,26 +1457,54 @@ int AutoFocus::PerformCalibration()
          CDeviceUtils::SleepMs(10);
       }
 
-
       // Close shutter and take dark image
-      /*
       shutter->SetOpen(false);
       CDeviceUtils::SleepMs(10);
       camera->SnapImage();
-      ImgBuffer darkImage;
-      ret = GetImageFromBuffer(darkImage);
-      */
+      ImgBuffer darkImageLoop;
+      ret = GetImageFromBuffer(darkImageLoop);
 
       // Open shutter and take light image
       shutter->SetOpen(true);
       CDeviceUtils::SleepMs(10);
       camera->SnapImage();
-      ImgBuffer lightImage;
-      ret = GetImageFromBuffer(lightImage);
+      ImgBuffer lightImageLoop;
+      ret = GetImageFromBuffer(lightImageLoop);
+
+      // Subtract darkImage from lightImage
+      ImgBuffer resultImageLoop(lightImageLoop.Width(), lightImageLoop.Height(), lightImageLoop.Depth());
+      const unsigned char* lightPixelsLoop = lightImageLoop.GetPixels();
+      const unsigned char* darkPixelsLoop = darkImageLoop.GetPixels();
+      unsigned int numPixelsLoop = lightImageLoop.Width() * lightImageLoop.Height();
+
+      if (lightImageLoop.Depth() == 1)
+      {
+         // 8-bit images
+         std::vector<unsigned char> resultPixelsLoop(numPixelsLoop);
+         for (unsigned int i = 0; i < numPixelsLoop; ++i)
+         {
+            int diff = (int)lightPixelsLoop[i] - (int)darkPixelsLoop[i];
+            resultPixelsLoop[i] = (diff > 0) ? (unsigned char)diff : 0;
+         }
+         resultImageLoop.SetPixels(resultPixelsLoop.data());
+      }
+      else if (lightImageLoop.Depth() == 2)
+      {
+         // 16-bit images
+         const unsigned short* lightPixels16Loop = (const unsigned short*)lightPixelsLoop;
+         const unsigned short* darkPixels16Loop = (const unsigned short*)darkPixelsLoop;
+         std::vector<unsigned short> resultPixelsLoop(numPixelsLoop);
+         for (unsigned int i = 0; i < numPixelsLoop; ++i)
+         {
+            int diff = (int)lightPixels16Loop[i] - (int)darkPixels16Loop[i];
+            resultPixelsLoop[i] = (diff > 0) ? (unsigned short)diff : 0;
+         }
+         resultImageLoop.SetPixels((const unsigned char*)resultPixelsLoop.data());
+      }
 
       // Analyze to find spot position
       double score1, x1, y1, score2, x2, y2;
-      ret = AnalyzeImage(lightImage, score1, x1, y1, score2, x2, y2);
+      ret = AnalyzeImage(resultImageLoop, score1, x1, y1, score2, x2, y2);
       if (ret != DEVICE_OK)
       {
          pStage->SetPositionUm(startPos);
@@ -1529,6 +1706,62 @@ int AutoFocus::PerformCalibration()
 
    // Store calibration for current device setting
    calibrationMap_[deviceSettings_] = cal;
+
+   return DEVICE_OK;
+}
+
+int AutoFocus::PerformMeasureOffset()
+{
+   // Step 1: Check if we have calibration data
+   if (calibrationMap_.find(deviceSettings_) == calibrationMap_.end())
+   {
+      return DEVICE_ERR;  // No calibration data available
+   }
+
+   CalibrationData cal = calibrationMap_[deviceSettings_];
+
+   // Step 2: Get current Z position from stage
+   if (focusStage_ == "" || focusStage_ == "Undefined")
+   {
+      return ERR_NO_PHYSICAL_STAGE;
+   }
+
+   MM::Stage* pStage = static_cast<MM::Stage*>(GetDevice(focusStage_.c_str()));
+   if (pStage == nullptr)
+   {
+      return ERR_NO_PHYSICAL_STAGE;
+   }
+
+   double currentZ;
+   int ret = pStage->GetPositionUm(currentZ);
+   if (ret != DEVICE_OK)
+   {
+      return ret;
+   }
+
+   // Step 3: Snap and analyze image to get current spot position
+   ret = SnapAndAnalyze();
+   if (ret != DEVICE_OK)
+   {
+      return ret;
+   }
+
+   // Step 4: Check if spot was detected
+   if (lastSpotScore_ <= 0.0)
+   {
+      return DEVICE_ERR;  // No spot detected
+   }
+
+   // Step 5: Calculate what Z correction would be needed
+   double diffZ = CalculateTargetZDiff(cal, lastSpotX_, lastSpotY_);
+
+   // Step 6: Set offset to negative of diffZ to make current position "in focus"
+   // This works because: diffZ + offset = diffZ + (-diffZ) = 0
+   offset_ = -diffZ;
+
+   // Step 7: Notify the system of the new offset value
+   GetCoreCallback()->OnPropertyChanged(this, "Offset", CDeviceUtils::ConvertToString(offset_));
+   NotifyRegisteredStages();
 
    return DEVICE_OK;
 }

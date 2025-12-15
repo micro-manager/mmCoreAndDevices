@@ -952,6 +952,8 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
       int GetCurrentFocusScore(double& score);
       int SetOffset(double offset);
       int GetOffset(double& offset);
+      void RegisterStage(MM::Stage* stage);
+      void UnregisterStage(MM::Stage* stage);
 
       // action interface
       int OnShutter(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -965,6 +967,7 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
       int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnDeviceSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnMeasureOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnSpotSelection(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnPrecision(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnStatus(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -1004,12 +1007,14 @@ private:
       int SetCameraROI();
       int SetCameraBinning();
       int PerformCalibration();
+      int PerformMeasureOffset();
       int SaveCalibrationData();
       int LoadCalibrationData();
       double CalculateTargetZDiff(const CalibrationData& cal, double spotX, double spotY);
       int ValidateZPosition(double targetZ);
       void ContinuousFocusThread();
       void UpdateStatus(const std::string& newStatus);
+      void NotifyRegisteredStages();
 
       std::vector<std::string> availableShutters_;
       std::string shutter_;
@@ -1047,6 +1052,10 @@ private:
       std::atomic<bool> continuousFocusLocked_;
       std::atomic<bool> stopThread_;
       std::string status_;
+
+      // AutoFocusStage registration
+      std::vector<MM::Stage*> registeredStages_;
+      std::mutex registrationMutex_;
 };
 
 

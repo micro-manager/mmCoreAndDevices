@@ -110,7 +110,23 @@ int AutoFocusStage::Initialize()
 int AutoFocusStage::Shutdown()
 {
    if (initialized_)
+   {
+      // Unregister from AutoFocus device
+      if (AutoFocusDeviceName_ != "" && AutoFocusDeviceName_ != "Undefined")
+      {
+         MM::AutoFocus* afDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
+         if (afDevice != nullptr)
+         {
+            AutoFocus* pAutoFocus = dynamic_cast<AutoFocus*>(afDevice);
+            if (pAutoFocus != nullptr)
+            {
+               pAutoFocus->UnregisterStage(this);
+            }
+         }
+      }
+
       initialized_ = false;
+   }
 
    return DEVICE_OK;
 }
@@ -204,11 +220,36 @@ int AutoFocusStage::OnAutoFocusDevice(MM::PropertyBase* pProp, MM::ActionType eA
    }
    else if (eAct == MM::AfterSet)
    {
+      // Unregister from previous AutoFocus device if any
+      if (AutoFocusDeviceName_ != "" && AutoFocusDeviceName_ != "Undefined")
+      {
+         MM::AutoFocus* oldDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
+         if (oldDevice != nullptr)
+         {
+            // Cast to AutoFocus to access RegisterStage/UnregisterStage
+            AutoFocus* pAutoFocus = dynamic_cast<AutoFocus*>(oldDevice);
+            if (pAutoFocus != nullptr)
+            {
+               pAutoFocus->UnregisterStage(this);
+            }
+         }
+      }
+
       std::string AutoFocusDeviceName;
       pProp->Get(AutoFocusDeviceName);
       MM::AutoFocus* AutoFocusDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName.c_str());
       if (AutoFocusDevice != 0) {
          AutoFocusDeviceName_ = AutoFocusDeviceName;
+
+         // Register with new AutoFocus device
+         if (AutoFocusDeviceName_ != "" && AutoFocusDeviceName_ != "Undefined")
+         {
+            AutoFocus* pAutoFocus = dynamic_cast<AutoFocus*>(AutoFocusDevice);
+            if (pAutoFocus != nullptr)
+            {
+               pAutoFocus->RegisterStage(this);
+            }
+         }
       }
       else
          return ERR_INVALID_DEVICE_NAME;
