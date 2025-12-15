@@ -1088,33 +1088,43 @@ void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __re
 
 	constexpr unsigned bitsPerPixel = 3 * BitsPerComponent;
 	constexpr unsigned rightShift = 16 - BitsPerComponent;
-	constexpr int byteDepth = 8;
+	constexpr unsigned byteDepth = 8;
+	constexpr unsigned rowPaddingBytes = 4;
 
-	unsigned sizeInPixels = w * h;
-	for (unsigned i = 0; i < sizeInPixels; i++)
+	const unsigned bitsPerRow = w * bitsPerPixel;
+	const unsigned bytesPerRow = (bitsPerRow + 7) / 8;
+	const unsigned paddedBytesPerRow = ((bytesPerRow + rowPaddingBytes - 1) / rowPaddingBytes) * rowPaddingBytes;
+
+	for (unsigned row = 0; row < h; row++)
 	{
-		int pixPtrB = i * bitsPerPixel / 8;
-		int bitPtrB = i * bitsPerPixel % 8;
-		uint16_t* buf = (uint16_t*)(src + pixPtrB);
-		uint16_t b = *buf << bitPtrB;
-		b = b >> rightShift;
-		*((uint16_t*)(dest + i * byteDepth)) = b; // B
+		const uint8_t* rowSrc = src + row * paddedBytesPerRow;
+		uint8_t* rowDest = dest + row * w * byteDepth;
 
-		int pixPtrG = (i * bitsPerPixel + BitsPerComponent) / 8;
-		int bitPtrG = (i * bitsPerPixel + BitsPerComponent) % 8;
-		buf = (uint16_t*)(src + pixPtrG);
-		uint16_t g = *buf << bitPtrG;
-		g = g >> rightShift;
-		*((uint16_t*)(dest + i * byteDepth + 2)) = g; // G
+		for (unsigned col = 0; col < w; col++)
+		{
+			unsigned pixPtrB = col * bitsPerPixel / 8;
+			unsigned bitPtrB = col * bitsPerPixel % 8;
+			const uint16_t* buf = reinterpret_cast<const uint16_t*>(rowSrc + pixPtrB);
+			uint16_t b = *buf << bitPtrB;
+			b = b >> rightShift;
+			*reinterpret_cast<uint16_t*>(rowDest + col * byteDepth) = b; // B
 
-		int pixPtrR = (i * bitsPerPixel + 2 * BitsPerComponent) / 8;
-		int bitPtrR = (i * bitsPerPixel + 2 * BitsPerComponent) % 8;
-		buf = (uint16_t*)(src + pixPtrR);
-		uint16_t r = *buf << bitPtrR;
-		r = r >> rightShift;
-		*((uint16_t*)(dest + i * byteDepth + 4)) = r; // R
+			unsigned pixPtrG = (col * bitsPerPixel + BitsPerComponent) / 8;
+			unsigned bitPtrG = (col * bitsPerPixel + BitsPerComponent) % 8;
+			buf = reinterpret_cast<const uint16_t*>(rowSrc + pixPtrG);
+			uint16_t g = *buf << bitPtrG;
+			g = g >> rightShift;
+			*reinterpret_cast<uint16_t*>(rowDest + col * byteDepth + 2) = g; // G
 
-		*((uint16_t*)(dest + i * byteDepth + 6)) = 0; // A
+			unsigned pixPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) / 8;
+			unsigned bitPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) % 8;
+			buf = reinterpret_cast<const uint16_t*>(rowSrc + pixPtrR);
+			uint16_t r = *buf << bitPtrR;
+			r = r >> rightShift;
+			*reinterpret_cast<uint16_t*>(rowDest + col * byteDepth + 4) = r; // R
+
+			*reinterpret_cast<uint16_t*>(rowDest + col * byteDepth + 6) = 0; // A
+		}
 	}
 }
 
