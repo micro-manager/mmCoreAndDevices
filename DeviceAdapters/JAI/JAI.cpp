@@ -810,9 +810,9 @@ int JAICamera::SnapImage()
 		if (pixelSize == 4)
 			convert_BGR8_BGRA32(pSrcImg, pDestImg, img.Width(), img.Height());
 		else if (pixelSize == 8 && bitDepth == 10)
-			convert_BGR10P_BGRA64(pSrcImg, pDestImg, img.Width(), img.Height());
+			convert_BGRp_BGRA64<10>(pSrcImg, pDestImg, img.Width(), img.Height());
 		else if (pixelSize == 8 && bitDepth == 12)
-			convert_BGR12P_BGRA64(pSrcImg, pDestImg, img.Width(), img.Height());
+			convert_BGRp_BGRA64<12>(pSrcImg, pDestImg, img.Width(), img.Height());
 		else
 			assert(!"Wrong pixel size or bit depth");
 	}
@@ -1072,80 +1072,49 @@ void JAICamera::convert_BGR8_BGRA32(const uint8_t * src, uint8_t * dest, unsigne
 }
 
 /**
- * Converts BGR10p (packed 30-bit) image to BGRA 64-bit image. Alpha channel is set to 0.
+ * Converts BGRxp (packed x-bit) image to BGRA 64-bit image. Alpha channel is set to 0.
  *
- * @param src - source buffer (BGR10p, 3.75 bytes per pixel)
+ * @tparam BitsPerComponent - bits per color component (10 or 12)
+ * @param src - source buffer (BGRxp, packed)
  * @param dest - destination buffer (BGRA, 8 bytes per pixel, 16-bit per component)
  * @param w - image width in pixels
  * @param h - image height in pixels
  */
-void JAICamera::convert_BGR10P_BGRA64(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
+template <unsigned BitsPerComponent>
+void JAICamera::convert_BGRp_BGRA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h)
 {
-	const int byteDepth = 8;
+	static_assert(BitsPerComponent == 10 || BitsPerComponent == 12,
+		"Only 10 and 12 bits per component are supported");
+
+	constexpr unsigned bitsPerPixel = 3 * BitsPerComponent;
+	constexpr unsigned rightShift = 16 - BitsPerComponent;
+	constexpr int byteDepth = 8;
+
 	unsigned sizeInPixels = w * h;
 	for (unsigned i = 0; i < sizeInPixels; i++)
 	{
-		int pixPtrB = i * 30 / 8;
-		int bitPtrB = i * 30 % 8;
+		int pixPtrB = i * bitsPerPixel / 8;
+		int bitPtrB = i * bitsPerPixel % 8;
 		uint16_t* buf = (uint16_t*)(src + pixPtrB);
 		uint16_t b = *buf << bitPtrB;
-		b = b >> 6;
-		*((uint16_t*)(dest + i*byteDepth)) = b; // B
+		b = b >> rightShift;
+		*((uint16_t*)(dest + i * byteDepth)) = b; // B
 
-		int pixPtrG = (i * 30 + 10) / 8;
-		int bitPtrG = (i * 30 + 10) % 8;
+		int pixPtrG = (i * bitsPerPixel + BitsPerComponent) / 8;
+		int bitPtrG = (i * bitsPerPixel + BitsPerComponent) % 8;
 		buf = (uint16_t*)(src + pixPtrG);
 		uint16_t g = *buf << bitPtrG;
-		g = g >> 6;
-		*((uint16_t*)(dest + i*byteDepth + 2)) = g; // G
+		g = g >> rightShift;
+		*((uint16_t*)(dest + i * byteDepth + 2)) = g; // G
 
-		int pixPtrR = (i * 30 + 20) / 8;
-		int bitPtrR = (i * 30 + 20) % 8;
+		int pixPtrR = (i * bitsPerPixel + 2 * BitsPerComponent) / 8;
+		int bitPtrR = (i * bitsPerPixel + 2 * BitsPerComponent) % 8;
 		buf = (uint16_t*)(src + pixPtrR);
 		uint16_t r = *buf << bitPtrR;
-		r = r >> 6;
-		*((uint16_t*)(dest + i*byteDepth + 4)) = r; // R
+		r = r >> rightShift;
+		*((uint16_t*)(dest + i * byteDepth + 4)) = r; // R
 
-		*((uint16_t*)(dest + i*byteDepth + 6)) = 0; // A
-	}
-}
-
-/**
- * Converts BGR12p (packed 36-bit) image to BGRA 64-bit image. Alpha channel is set to 0.
- *
- * @param src - source buffer (BGR12p, 4.5 bytes per pixel)
- * @param dest - destination buffer (BGRA, 8 bytes per pixel, 16-bit per component)
- * @param w - image width in pixels
- * @param h - image height in pixels
- */
-void JAICamera::convert_BGR12P_BGRA64(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
-{
-	const int byteDepth = 8;
-	unsigned sizeInPixels = w * h;
-	for (unsigned i = 0; i < sizeInPixels; i++)
-	{
-		int pixPtrB = i * 36 / 8;
-		int bitPtrB = i * 36 % 8;
-		uint16_t* buf = (uint16_t*)(src + pixPtrB);
-		uint16_t b = *buf << bitPtrB;
-		b = b >> 4;
-		*((uint16_t*)(dest + i*byteDepth)) = b; // B
-
-		int pixPtrG = (i * 36 + 12) / 8;
-		int bitPtrG = (i * 36 + 12) % 8;
-		buf = (uint16_t*)(src + pixPtrG);
-		uint16_t g = *buf << bitPtrG;
-		g = g >> 4;
-		*((uint16_t*)(dest + i*byteDepth + 2)) = g; // G
-
-		int pixPtrR = (i * 36 + 24) / 8;
-		int bitPtrR = (i * 36 + 24) % 8;
-		buf = (uint16_t*)(src + pixPtrR);
-		uint16_t r = *buf << bitPtrR;
-		r = r >> 4;
-		*((uint16_t*)(dest + i*byteDepth + 4)) = r; // R
-
-		*((uint16_t*)(dest + i*byteDepth + 6)) = 0; // A
+		*((uint16_t*)(dest + i * byteDepth + 6)) = 0; // A
 	}
 }
 
@@ -1371,9 +1340,9 @@ int AcqSequenceThread::svc (void)
 			if (moduleInstance->pixelSize == 4)
 				JAICamera::convert_BGR8_BGRA32(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
 			else if (moduleInstance->pixelSize == 8 && moduleInstance->bitDepth == 10)
-				JAICamera::convert_BGR10P_BGRA64(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
+				JAICamera::convert_BGRp_BGRA64<10>(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
 			else if (moduleInstance->pixelSize == 8 && moduleInstance->bitDepth == 12)
-				JAICamera::convert_BGR12P_BGRA64(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
+				JAICamera::convert_BGRp_BGRA64<12>(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
 
 			// push image to queue
 			moduleInstance->InsertImage();

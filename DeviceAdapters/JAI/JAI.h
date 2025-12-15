@@ -198,8 +198,8 @@ private:
    int ResizeImageBuffer();
 	int processPvError(const PvResult& pvr);
 	static void convert_BGR8_BGRA32(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
-	static void convert_BGR10P_BGRA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
-	static void convert_BGR12P_BGRA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
+	template <unsigned BitsPerComponent>
+	static void convert_BGRp_BGRA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
 	bool verifyPvFormat(const PvImage* pvimg);
 	void ClearPvBuffers();
    int GetSelectorExposure(const std::string& selector, double& expMs);
