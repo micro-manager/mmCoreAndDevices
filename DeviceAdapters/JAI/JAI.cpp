@@ -34,6 +34,7 @@
 #ifdef __linux__
 #endif
 
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -1102,28 +1103,27 @@ void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __re
 
 		for (unsigned col = 0; col < w; col++)
 		{
+			uint16_t buf;
+
 			unsigned pixPtrB = col * bitsPerPixel / 8;
 			unsigned bitPtrB = col * bitsPerPixel % 8;
-			const uint16_t* buf = reinterpret_cast<const uint16_t*>(rowSrc + pixPtrB);
-			uint16_t b = *buf << bitPtrB;
-			b = b >> rightShift;
-			*reinterpret_cast<uint16_t*>(rowDest + col * byteDepth) = b; // B
+			memcpy(&buf, rowSrc + pixPtrB, sizeof(uint16_t));
+			uint16_t b = (buf << bitPtrB) >> rightShift;
+			memcpy(rowDest + col * byteDepth, &b, sizeof(uint16_t)); // B
 
 			unsigned pixPtrG = (col * bitsPerPixel + BitsPerComponent) / 8;
 			unsigned bitPtrG = (col * bitsPerPixel + BitsPerComponent) % 8;
-			buf = reinterpret_cast<const uint16_t*>(rowSrc + pixPtrG);
-			uint16_t g = *buf << bitPtrG;
-			g = g >> rightShift;
-			*reinterpret_cast<uint16_t*>(rowDest + col * byteDepth + 2) = g; // G
+			memcpy(&buf, rowSrc + pixPtrG, sizeof(uint16_t));
+			uint16_t g = (buf << bitPtrG) >> rightShift;
+			memcpy(rowDest + col * byteDepth + 2, &g, sizeof(uint16_t)); // G
 
 			unsigned pixPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) / 8;
 			unsigned bitPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) % 8;
-			buf = reinterpret_cast<const uint16_t*>(rowSrc + pixPtrR);
-			uint16_t r = *buf << bitPtrR;
-			r = r >> rightShift;
-			*reinterpret_cast<uint16_t*>(rowDest + col * byteDepth + 4) = r; // R
+			memcpy(&buf, rowSrc + pixPtrR, sizeof(uint16_t));
+			uint16_t r = (buf << bitPtrR) >> rightShift;
+			memcpy(rowDest + col * byteDepth + 4, &r, sizeof(uint16_t)); // R
 
-			*reinterpret_cast<uint16_t*>(rowDest + col * byteDepth + 6) = 0; // A
+			memset(rowDest + col * byteDepth + 6, 0, sizeof(uint16_t)); // A
 		}
 	}
 }
