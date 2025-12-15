@@ -1057,7 +1057,7 @@ int JAICamera::processPvError(const PvResult& pvr)
  * @param w - image width in pixels
  * @param h - image height in pixels
  */
-void JAICamera::convert_BGR8_BGRA32(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
+void JAICamera::convert_BGR8_BGRA32(const uint8_t* __restrict src, uint8_t* __restrict dest, unsigned w, unsigned h)
 {
 	const int byteDepth = 4;
 	int srcCounter = 0;
@@ -1081,7 +1081,7 @@ void JAICamera::convert_BGR8_BGRA32(const uint8_t * src, uint8_t * dest, unsigne
  * @param h - image height in pixels
  */
 template <unsigned BitsPerComponent>
-void JAICamera::convert_BGRp_BGRA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h)
+void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __restrict dest, unsigned w, unsigned h)
 {
 	static_assert(BitsPerComponent == 10 || BitsPerComponent == 12,
 		"Only 10 and 12 bits per component are supported");
