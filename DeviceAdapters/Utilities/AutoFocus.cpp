@@ -35,6 +35,8 @@
 const char* g_Camera = "Devices_Camera";
 const char* g_Shutter = "Devices_Shutter";
 const char* g_FocusStage = "Devices_FocusStage";
+const char* g_Settings = "Settings";
+const char* g_SettingsDescription = "SettingsDescription";
 const char* g_Alg = "Algorithm";
 const char* g_Alg_Standard = "Standard";
 
@@ -48,6 +50,7 @@ AutoFocus::AutoFocus() :
    roiWidth_(0),
    roiHeight_(0),
    binning_(1),
+   exposureMs_(5.0),
    deviceSettings_(0),
    deviceSettingsDescription_(""),
    spotSelection_("Top"),
@@ -63,6 +66,8 @@ AutoFocus::AutoFocus() :
    SetErrorText(ERR_NO_SHUTTER_DEVICE_FOUND, "No Shutter device found.  Please select a valid shutter in the Shutter property.");
    SetErrorText(ERR_NO_AUTOFOCUS_DEVICE, "No AutoFocus Device selected");
    SetErrorText(ERR_NO_AUTOFOCUS_DEVICE_FOUND, "No AutoFocus Device loaded");
+   SetErrorText(ERR_TAGET_TOO_HIGH, "Target position exceeds allowed maximum.  Likely error in autofocus");
+   SetErrorText(ERR_NOT_CALIBRATED, "These calibration settings are not yet calibrated.  Calibrate first.");
    // Name
    CreateProperty(MM::g_Keyword_Name, "AutoFocus", MM::String, true);
    // Description
@@ -202,6 +207,11 @@ int AutoFocus::Initialize()
    pAct = new CPropertyAction(this, &AutoFocus::OnBinning);
    CreateIntegerProperty("Camera_Binning", binning_, false, pAct);
 
+   // Create Exposure property
+   pAct = new CPropertyAction(this, &AutoFocus::OnExposure);
+   CreateFloatProperty("Camera_Exposure_Ms", exposureMs_, false, pAct);
+   SetPropertyLimits("Camera_Exposure_Ms", 0.1, 10000.0);
+
    // Create SpotSelection property
    pAct = new CPropertyAction(this, &AutoFocus::OnSpotSelection);
    CreateStringProperty("Cal_SpotSelection", spotSelection_.c_str(), false, pAct);
@@ -228,11 +238,11 @@ int AutoFocus::Initialize()
 
    // Create DeviceSettings property
    pAct = new CPropertyAction(this, &AutoFocus::OnDeviceSettings);
-   CreateIntegerProperty("Settings", deviceSettings_, false, pAct);
+   CreateIntegerProperty(g_Settings, deviceSettings_, false, pAct);
 
    // Create DeviceSettingsDescription property
    pAct = new CPropertyAction(this, &AutoFocus::OnDeviceSettingsDescription);
-   CreateStringProperty("SettingsDescription", deviceSettingsDescription_.c_str(), false, pAct);
+   CreateStringProperty(g_SettingsDescription, deviceSettingsDescription_.c_str(), false, pAct);
 
    // Create Calibrate action property
    pAct = new CPropertyAction(this, &AutoFocus::OnCalibrate);
@@ -416,6 +426,19 @@ int AutoFocus::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
+int AutoFocus::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(exposureMs_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(exposureMs_);
+   }
+   return DEVICE_OK;
+}
+
 int AutoFocus::OnDeviceSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -433,19 +456,19 @@ int AutoFocus::OnDeviceSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
          // Update description
          deviceSettingsDescription_ = cal.description;
-         GetCoreCallback()->OnPropertyChanged(this, "DeviceSettingsDescription", deviceSettingsDescription_.c_str());
+         GetCoreCallback()->OnPropertyChanged(this, g_SettingsDescription, deviceSettingsDescription_.c_str());
 
          // Update spot selection
          spotSelection_ = cal.spotSelection;
-         GetCoreCallback()->OnPropertyChanged(this, "SpotSelection", spotSelection_.c_str());
+         GetCoreCallback()->OnPropertyChanged(this, "Cal_SpotSelection", spotSelection_.c_str());
 
          // Update precision
          precision_ = cal.precision;
-         GetCoreCallback()->OnPropertyChanged(this, "Precision", CDeviceUtils::ConvertToString(precision_));
+         GetCoreCallback()->OnPropertyChanged(this, "Cal_Precision", CDeviceUtils::ConvertToString(precision_));
 
          // Update maxZ
          maxZ_ = cal.maxZ;
-         GetCoreCallback()->OnPropertyChanged(this, "MaxZ", CDeviceUtils::ConvertToString(maxZ_));
+         GetCoreCallback()->OnPropertyChanged(this, "Cal_MaxZ", CDeviceUtils::ConvertToString(maxZ_));
 
          // Update and apply ROI settings
          roiX_ = cal.roiX;
@@ -453,21 +476,25 @@ int AutoFocus::OnDeviceSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
          roiWidth_ = cal.roiWidth;
          roiHeight_ = cal.roiHeight;
          SetCameraROI();
-         GetCoreCallback()->OnPropertyChanged(this, "ROI-X", CDeviceUtils::ConvertToString((long)roiX_));
-         GetCoreCallback()->OnPropertyChanged(this, "ROI-Y", CDeviceUtils::ConvertToString((long)roiY_));
-         GetCoreCallback()->OnPropertyChanged(this, "ROI-Width", CDeviceUtils::ConvertToString((long)roiWidth_));
-         GetCoreCallback()->OnPropertyChanged(this, "ROI-Height", CDeviceUtils::ConvertToString((long)roiHeight_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_ROI-X", CDeviceUtils::ConvertToString((long)roiX_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_ROI-Y", CDeviceUtils::ConvertToString((long)roiY_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_ROI-Width", CDeviceUtils::ConvertToString((long)roiWidth_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_ROI-Height", CDeviceUtils::ConvertToString((long)roiHeight_));
 
          // Update and apply binning
          binning_ = cal.binning;
          SetCameraBinning();
-         GetCoreCallback()->OnPropertyChanged(this, "Binning", CDeviceUtils::ConvertToString(binning_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_Binning", CDeviceUtils::ConvertToString(binning_));
+
+         // Update exposure
+         exposureMs_ = cal.exposureMs;
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_Exposure_Ms", CDeviceUtils::ConvertToString(exposureMs_));
       }
       else
       {
          // No calibration data for this setting - clear description but leave other properties
          deviceSettingsDescription_ = "";
-         GetCoreCallback()->OnPropertyChanged(this, "DeviceSettingsDescription", deviceSettingsDescription_.c_str());
+         GetCoreCallback()->OnPropertyChanged(this, g_SettingsDescription, deviceSettingsDescription_.c_str());
       }
    }
    return DEVICE_OK;
@@ -704,7 +731,7 @@ int AutoFocus::FullFocus()
 
    // Step 3: Check if we have calibration data for current device settings
    if (calibrationMap_.find(deviceSettings_) == calibrationMap_.end())
-      return DEVICE_ERR;  // No calibration data available
+      return ERR_NOT_CALIBRATED;  // No calibration data available
 
    CalibrationData cal = calibrationMap_[deviceSettings_];
 
@@ -730,7 +757,7 @@ int AutoFocus::FullFocus()
       // Step 7: Validate Z position against stage limits and maxZ
       double targetZ = currentZ + diffZ;
       if (targetZ > maxZ_)
-         return DEVICE_ERR;  // Would exceed maximum Z limit
+         return ERR_TAGET_TOO_HIGH;  // Would exceed maximum Z limit
 
       ret = ValidateZPosition(targetZ);
       if (ret != DEVICE_OK)
@@ -924,6 +951,9 @@ int AutoFocus::SnapAndAnalyze()
    MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
    if (camera == nullptr)
       return ERR_NO_PHYSICAL_CAMERA;
+
+   // Set camera exposure
+   camera->SetExposure(exposureMs_);
 
    // Close shutter to block IR light
    shutter->SetOpen(false);
@@ -1312,8 +1342,8 @@ int AutoFocus::SetCameraROI()
    if (ret != DEVICE_OK)
    {
       unsigned x, y, xSize, ySize;
-      int ret2 = pCam->GetROI(x, y, xSize, ySize);
-      if (ret2 == DEVICE_OK)
+      ret = pCam->GetROI(x, y, xSize, ySize);
+      if (ret == DEVICE_OK)
       {
          // If no ROI is set, use full frame
          if (xSize == 0 || ySize == 0)
@@ -1379,6 +1409,9 @@ int AutoFocus::PerformCalibration()
       pStage->SetPositionUm(startPos);
       return ERR_NO_PHYSICAL_CAMERA;
    }
+
+   // Set camera exposure
+   camera->SetExposure(exposureMs_);
 
    // Close shutter and take dark image
    shutter->SetOpen(false);
@@ -1707,6 +1740,7 @@ int AutoFocus::PerformCalibration()
    cal.roiWidth = roiWidth_;
    cal.roiHeight = roiHeight_;
    cal.binning = binning_;
+   cal.exposureMs = exposureMs_;
 
    // Store calibration for current device setting
    calibrationMap_[deviceSettings_] = cal;
@@ -1864,7 +1898,8 @@ int AutoFocus::SaveCalibrationData()
       file << "      \"roiY\": " << it->second.roiY << ",\n";
       file << "      \"roiWidth\": " << it->second.roiWidth << ",\n";
       file << "      \"roiHeight\": " << it->second.roiHeight << ",\n";
-      file << "      \"binning\": " << it->second.binning << "\n";
+      file << "      \"binning\": " << it->second.binning << ",\n";
+      file << "      \"exposureMs\": " << it->second.exposureMs << "\n";
       file << "    }";
    }
 
@@ -2093,6 +2128,15 @@ int AutoFocus::LoadCalibrationData()
          if (colonPos != std::string::npos)
          {
             currentCal.binning = std::atol(line.substr(colonPos + 1).c_str());
+         }
+      }
+      // Look for exposureMs
+      else if ((pos = line.find("\"exposureMs\"")) != std::string::npos)
+      {
+         size_t colonPos = line.find(":", pos);
+         if (colonPos != std::string::npos)
+         {
+            currentCal.exposureMs = std::atof(line.substr(colonPos + 1).c_str());
          }
       }
       // Look for closing bracket - this marks end of calibration object

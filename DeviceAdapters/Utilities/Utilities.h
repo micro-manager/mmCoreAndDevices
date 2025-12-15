@@ -54,6 +54,8 @@
 #define ERR_AUTOFOCUS_NOT_SUPPORTED        10012
 #define ERR_NO_PHYSICAL_STAGE              10013
 #define ERR_NO_SHUTTER_DEVICE_FOUND        10014
+#define ERR_TAGET_TOO_HIGH                 10015
+#define ERR_NOT_CALIBRATED                 10016
 #define ERR_TIMEOUT                        10021
 
 
@@ -965,6 +967,7 @@ class AutoFocus : public CAutoFocusBase<AutoFocus>
       int OnROI_Width(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnROI_Height(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
+      int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnDeviceSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnCalibrate(MM::PropertyBase* pProp, MM::ActionType eAct);
       int OnMeasureOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -999,6 +1002,7 @@ private:
          unsigned roiWidth;
          unsigned roiHeight;
          long binning;
+         double exposureMs;
       };
 
       int SnapAndAnalyze();
@@ -1033,6 +1037,7 @@ private:
       unsigned roiWidth_;
       unsigned roiHeight_;
       long binning_;
+      double exposureMs_;
       // Last spot measurement
       double lastSpotX_;
       double lastSpotY_;
