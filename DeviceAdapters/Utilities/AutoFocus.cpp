@@ -32,8 +32,9 @@
 #include <fstream>
 #include <cstdlib>
 
-const char* g_Camera = "Camera";
-const char* g_FocusStage = "FocusStage";
+const char* g_Camera = "Devices_Camera";
+const char* g_Shutter = "Devices_Shutter";
+const char* g_FocusStage = "Devices_FocusStage";
 const char* g_Alg = "Algorithm";
 const char* g_Alg_Standard = "Standard";
 
@@ -125,14 +126,14 @@ int AutoFocus::Initialize()
    std::string defaultShutter = "Undefined";
    if (availableShutters_.size() >= 1)
       defaultShutter = availableShutters_[0];
-   CreateProperty("Shutter", defaultShutter.c_str(), MM::String, false, pAct, false);
+   CreateProperty(g_Shutter, defaultShutter.c_str(), MM::String, false, pAct, false);
    if (availableShutters_.size() >= 1)
-      SetAllowedValues("Shutter", availableShutters_);
+      SetAllowedValues(g_Shutter, availableShutters_);
    else
       return ERR_NO_SHUTTER_DEVICE_FOUND;
    // This is needed, otherwise Shutter_ is not always set resulting in crashes
    // This could lead to strange problems if multiple shutter devices are loaded
-   SetProperty("Shutter", defaultShutter.c_str());
+   SetProperty(g_Shutter, defaultShutter.c_str());
 
    // Get list with available physical cameras.
    deviceIterator = 0;
@@ -183,39 +184,39 @@ int AutoFocus::Initialize()
 
    // Create ROI-X property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_X);
-   CreateIntegerProperty("ROI-X", 0, false, pAct);
+   CreateIntegerProperty("Camera_ROI-X", 0, false, pAct);
 
    // Create ROI-Y property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Y);
-   CreateIntegerProperty("ROI-Y", 65536, false, pAct);
+   CreateIntegerProperty("Camera_ROI-Y", 65536, false, pAct);
 
    // Create ROI-Width property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Width);
-   CreateIntegerProperty("ROI-Width", 65536, false, pAct);
+   CreateIntegerProperty("Camera_ROI-Width", 65536, false, pAct);
 
    // Create ROI-Height property
    pAct = new CPropertyAction(this, &AutoFocus::OnROI_Height);
-   CreateIntegerProperty("ROI-Height", 65536, false, pAct);
+   CreateIntegerProperty("Camera_ROI-Height", 65536, false, pAct);
 
    // Create Binning property
    pAct = new CPropertyAction(this, &AutoFocus::OnBinning);
-   CreateIntegerProperty("Binning", binning_, false, pAct);
+   CreateIntegerProperty("Camera_Binning", binning_, false, pAct);
 
    // Create SpotSelection property
    pAct = new CPropertyAction(this, &AutoFocus::OnSpotSelection);
-   CreateStringProperty("SpotSelection", spotSelection_.c_str(), false, pAct);
-   AddAllowedValue("SpotSelection", "Top");
-   AddAllowedValue("SpotSelection", "Bottom");
+   CreateStringProperty("Cal_SpotSelection", spotSelection_.c_str(), false, pAct);
+   AddAllowedValue("Cal_SpotSelection", "Top");
+   AddAllowedValue("Cal_SpotSelection", "Bottom");
 
    // Create Precision property
    pAct = new CPropertyAction(this, &AutoFocus::OnPrecision);
-   CreateFloatProperty("Precision", precision_, false, pAct);
-   SetPropertyLimits("Precision", 0.0, 100.0);
+   CreateFloatProperty("Cal_Precision", precision_, false, pAct);
+   SetPropertyLimits("Cal_Precision", 0.0, 100.0);
 
    // Create MaxZ property
    pAct = new CPropertyAction(this, &AutoFocus::OnMaxZ);
-   CreateFloatProperty("MaxZ", maxZ_, false, pAct);
-   SetPropertyLimits("MaxZ", 0.0, 100000.0);
+   CreateFloatProperty("Cal_MaxZ", maxZ_, false, pAct);
+   SetPropertyLimits("Cal_MaxZ", 0.0, 100000.0);
 
    // Create Status property (read-only)
    pAct = new CPropertyAction(this, &AutoFocus::OnStatus);
@@ -227,11 +228,11 @@ int AutoFocus::Initialize()
 
    // Create DeviceSettings property
    pAct = new CPropertyAction(this, &AutoFocus::OnDeviceSettings);
-   CreateIntegerProperty("DeviceSettings", deviceSettings_, false, pAct);
+   CreateIntegerProperty("Settings", deviceSettings_, false, pAct);
 
    // Create DeviceSettingsDescription property
    pAct = new CPropertyAction(this, &AutoFocus::OnDeviceSettingsDescription);
-   CreateStringProperty("DeviceSettingsDescription", deviceSettingsDescription_.c_str(), false, pAct);
+   CreateStringProperty("SettingsDescription", deviceSettingsDescription_.c_str(), false, pAct);
 
    // Create Calibrate action property
    pAct = new CPropertyAction(this, &AutoFocus::OnCalibrate);
