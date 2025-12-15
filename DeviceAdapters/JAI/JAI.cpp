@@ -1060,15 +1060,15 @@ int JAICamera::processPvError(const PvResult& pvr)
  */
 void JAICamera::convert_BGR8_BGRA32(const uint8_t* __restrict src, uint8_t* __restrict dest, unsigned w, unsigned h)
 {
-	const int byteDepth = 4;
-	int srcCounter = 0;
-	unsigned sizeInPixels = w * h;
+	constexpr unsigned destBytesPerPx = 4;
+	unsigned srcCounter = 0;
+	const unsigned sizeInPixels = w * h;
 	for (unsigned i = 0; i < sizeInPixels; i++)
 	{
-		dest[i*byteDepth] = src[srcCounter++]; // B
-		dest[i*byteDepth + 1] = src[srcCounter++]; // G
-		dest[i*byteDepth + 2] = src[srcCounter++]; // R
-		dest[i*byteDepth + 3] = 0; // A
+		dest[i * destBytesPerPx] = src[srcCounter++]; // B
+		dest[i * destBytesPerPx + 1] = src[srcCounter++]; // G
+		dest[i * destBytesPerPx + 2] = src[srcCounter++]; // R
+		dest[i * destBytesPerPx + 3] = 0; // A
 	}
 }
 
@@ -1089,7 +1089,7 @@ void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __re
 
 	constexpr unsigned bitsPerPixel = 3 * BitsPerComponent;
 	constexpr unsigned rightShift = 16 - BitsPerComponent;
-	constexpr unsigned byteDepth = 8;
+	constexpr unsigned destBytesPerPx = 8;
 	constexpr unsigned rowPaddingBytes = 4;
 
 	const unsigned bitsPerRow = w * bitsPerPixel;
@@ -1099,7 +1099,7 @@ void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __re
 	for (unsigned row = 0; row < h; row++)
 	{
 		const uint8_t* rowSrc = src + row * paddedBytesPerRow;
-		uint8_t* rowDest = dest + row * w * byteDepth;
+		uint8_t* rowDest = dest + row * w * destBytesPerPx;
 
 		for (unsigned col = 0; col < w; col++)
 		{
@@ -1109,21 +1109,21 @@ void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __re
 			unsigned bitPtrB = col * bitsPerPixel % 8;
 			memcpy(&buf, rowSrc + pixPtrB, sizeof(uint16_t));
 			uint16_t b = (buf << bitPtrB) >> rightShift;
-			memcpy(rowDest + col * byteDepth, &b, sizeof(uint16_t)); // B
+			memcpy(rowDest + col * destBytesPerPx, &b, sizeof(uint16_t)); // B
 
 			unsigned pixPtrG = (col * bitsPerPixel + BitsPerComponent) / 8;
 			unsigned bitPtrG = (col * bitsPerPixel + BitsPerComponent) % 8;
 			memcpy(&buf, rowSrc + pixPtrG, sizeof(uint16_t));
 			uint16_t g = (buf << bitPtrG) >> rightShift;
-			memcpy(rowDest + col * byteDepth + 2, &g, sizeof(uint16_t)); // G
+			memcpy(rowDest + col * destBytesPerPx + 2, &g, sizeof(uint16_t)); // G
 
 			unsigned pixPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) / 8;
 			unsigned bitPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) % 8;
 			memcpy(&buf, rowSrc + pixPtrR, sizeof(uint16_t));
 			uint16_t r = (buf << bitPtrR) >> rightShift;
-			memcpy(rowDest + col * byteDepth + 4, &r, sizeof(uint16_t)); // R
+			memcpy(rowDest + col * destBytesPerPx + 4, &r, sizeof(uint16_t)); // R
 
-			memset(rowDest + col * byteDepth + 6, 0, sizeof(uint16_t)); // A
+			memset(rowDest + col * destBytesPerPx + 6, 0, sizeof(uint16_t)); // A
 		}
 	}
 }
