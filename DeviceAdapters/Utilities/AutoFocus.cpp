@@ -26,6 +26,8 @@
 // Prevent windows.h from defining min and max macros,
 // which clash with std::min and std::max.
 #define NOMINMAX
+#include <direct.h>   // For _mkdir
+#include <io.h>       // For _access
 #endif
 
 #include "Utilities.h"
@@ -1847,10 +1849,41 @@ int AutoFocus::ValidateZPosition(double targetZ)
    return DEVICE_OK;
 }
 
+std::string AutoFocus::GetCalibrationFilePath()
+{
+#ifdef _WIN32
+   // On Windows, use ProgramData\Micro-Manager directory
+   const char* programData = getenv("PROGRAMDATA");
+   if (programData != nullptr)
+   {
+      std::string dirPath = std::string(programData) + "\\Micro-Manager";
+      std::string filePath = dirPath + "\\Util-Autofocus.json";
+
+      // Create directory if it doesn't exist
+      _mkdir(dirPath.c_str());
+
+      // Verify directory exists after creation attempt
+      // _access returns 0 if path exists
+      if (_access(dirPath.c_str(), 0) == 0)
+      {
+         // Directory exists, use it
+         return filePath;
+      }
+      // Directory creation failed, fall back to current directory
+   }
+   // Fallback to current directory if PROGRAMDATA not set or directory creation failed
+   return "Util-Autofocus.json";
+#else
+   // On non-Windows platforms, use current directory
+   return "Util-Autofocus.json";
+#endif
+}
+
 int AutoFocus::SaveCalibrationData()
 {
    // Simple JSON format without external library
-   std::ofstream file("Util-Autofocus.json");
+   std::string filePath = GetCalibrationFilePath();
+   std::ofstream file(filePath.c_str());
    if (!file.is_open())
    {
       return DEVICE_ERR;
@@ -1912,7 +1945,8 @@ int AutoFocus::SaveCalibrationData()
 
 int AutoFocus::LoadCalibrationData()
 {
-   std::ifstream file("Util-Autofocus.json");
+   std::string filePath = GetCalibrationFilePath();
+   std::ifstream file(filePath.c_str());
    if (!file.is_open())
    {
       // File doesn't exist yet - not an error

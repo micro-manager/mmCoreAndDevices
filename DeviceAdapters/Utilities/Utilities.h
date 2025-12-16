@@ -1014,6 +1014,7 @@ private:
       int PerformMeasureOffset();
       int SaveCalibrationData();
       int LoadCalibrationData();
+      std::string GetCalibrationFilePath();
       double CalculateTargetZDiff(const CalibrationData& cal, double spotX, double spotY);
       int ValidateZPosition(double targetZ);
       void ContinuousFocusThread();
