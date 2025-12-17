@@ -59,8 +59,8 @@ namespace MM {
    class Core;
 
    /**
-    * Utility class used both MMCore and devices to maintain time intervals
-    * in the uniform, platform independent way.
+    * @brief Utility class used both MMCore and devices to maintain time
+    * intervals in the uniform, platform independent way.
     */
    class MMTime
    {
@@ -165,7 +165,7 @@ namespace MM {
 
 
    /**
-    * Timeout utility class
+    * @brief Timeout utility class.
     */
    class TimeoutMs
    {
@@ -195,7 +195,7 @@ namespace MM {
 
 
    /**
-    * Generic device interface.
+    * @brief Generic device interface.
     */
    class Device {
    public:
@@ -216,36 +216,39 @@ namespace MM {
       virtual unsigned GetNumberOfPropertyValues(const char* propertyName) const = 0;
       virtual bool GetPropertyValueAt(const char* propertyName, unsigned index, char* value) const = 0;
       /**
-       * Sequences can be used for fast acquisitions, synchronized by TTLs rather than
-       * computer commands.
-       * Sequences of states can be uploaded to the device.  The device will cycle through
-       * the uploaded list of states (triggered by an external trigger - most often coming
-       * from the camera).  If the device is capable (and ready) to do so isSequenceable will
-       * be true
+       * @brief Check whether the given property can be used with sequences.
+       *
+       * Sequences can be used for fast acquisitions, synchronized by TTLs rather
+       * than computer commands. Sequences of states can be uploaded to the
+       * device. The device will cycle through the uploaded list of states
+       * (triggered by an external trigger - most often coming from the camera).
+       * If the device is capable (and ready) to do so, isSequenceable will be
+       * true.
        */
       virtual int IsPropertySequenceable(const char* name, bool& isSequenceable) const = 0;
       /**
-       * The largest sequence that can be stored in the device
+       * @brief Return the largest sequence that can be stored in the device.
        */
       virtual int GetPropertySequenceMaxLength(const char* propertyName, long& nrEvents) const = 0;
       /**
-       * Starts execution of the sequence
+       * @brief Start execution of the sequence.
        */
       virtual int StartPropertySequence(const char* propertyName) = 0;
       /**
-       * Stops execution of the device
+       * @brief Stop execution of the sequence.
        */
       virtual int StopPropertySequence(const char* propertyName) = 0;
       /**
-       * remove previously added sequence
+       * @brief Remove previously added sequence.
        */
       virtual int ClearPropertySequence(const char* propertyName) = 0;
       /**
-       * Add one value to the sequence
+       * @brief Add one value to the sequence.
        */
       virtual int AddToPropertySequence(const char* propertyName, const char* value) = 0;
       /**
-       * Signal that we are done sending sequence values so that the adapter can send the whole sequence to the device
+       * @brief Signal that we are done sending sequence values so that the
+       * adapter can send the whole sequence to the device.
        */
       virtual int SendPropertySequence(const char* propertyName) = 0;
 
@@ -264,7 +267,8 @@ namespace MM {
 
       virtual int Initialize() = 0;
       /**
-       * Shuts down (unloads) the device.
+       * @brief Shut down (unload) the device.
+       *
        * Required by the MM::Device API.
        * Ideally this method will completely unload the device and release all resources.
        * Shutdown() may be called multiple times in a row.
@@ -289,7 +293,7 @@ namespace MM {
    };
 
    /**
-    * Generic Device
+    * @brief Generic Device.
     */
    class Generic : public Device
    {
@@ -299,7 +303,7 @@ namespace MM {
    };
 
    /**
-    * Camera API
+    * @brief Camera API.
     */
    class Camera : public Device {
    public:
@@ -311,7 +315,8 @@ namespace MM {
 
       // Camera API
       /**
-       * Performs exposure and grabs a single image.
+       * @brief Perform exposure and grab a single image.
+       *
        * Required by the MM::Camera API.
        *
        * SnapImage should start the image exposure in the camera and block until
@@ -320,7 +325,8 @@ namespace MM {
        */
       virtual int SnapImage() = 0;
       /**
-       * Returns pixel data.
+       * @brief Return pixel data.
+       *
        * Required by the MM::Camera API.
        * GetImageBuffer will be called shortly after SnapImage returns.
        * Use it to wait for camera read-out and transfer of data into memory
@@ -334,18 +340,18 @@ namespace MM {
        * appropriate properties are set (such as binning, pixel type, etc.)
        * Multi-Channel cameras should return the content of the first channel in this call.
        *
-       * Supported data types are byte (8 bits per pixel, 1 component), short 
+       * Supported data types are byte (8 bits per pixel, 1 component), short
        * (16 bits per pixel, 1 component), float (32 bits per pixel, 1 component, not
        * supported by the UI yet), RGB_32 (8 bits per component, 4 components), RGB_64
-       * (16 bits per component, 4 components, not supported by UI yet).  
+       * (16 bits per component, 4 components, not supported by UI yet).
        * RGB buffers are expected to be in big endian ARGB format (ARGB8888), which means that
-       * on little endian format (currently most/all? code is compiled for little endian 
+       * on little endian format (currently most/all? code is compiled for little endian
        * architecture), the format is BGRA888 (see: https://en.wikipedia.org/wiki/RGBA_color_model).
-       *
        */
       virtual const unsigned char* GetImageBuffer() = 0;
       /**
-       * Returns pixel data for cameras with multiple channels.
+       * @brief Return pixel data for cameras with multiple channels.
+       *
        * See description for GetImageBuffer() for details.
        * Use this overloaded version for cameras with multiple channels
        * When calling this function for a single channel camera, this function
@@ -353,101 +359,112 @@ namespace MM {
        * GetImageBuffer().  This behavior is implemented in the DeviceBase.
        * When GetImageBuffer() is called for a multi-channel camera, the
        * camera adapter should return the ImageBuffer for the first channel
+       *
        * @param channelNr Number of the channel for which the image data are requested.
        */
       virtual const unsigned char* GetImageBuffer(unsigned channelNr) = 0;
       /**
-       * Returns pixel data with interleaved RGB pixels in 32 bpp format
+       * @brief Return pixel data with interleaved RGB pixels in 32 bpp format.
        */
       virtual const unsigned int* GetImageBufferAsRGB32() = 0;
       /**
-       * Returns the number of components in this image.  This is '1' for grayscale cameras,
-       * and '4' for RGB cameras.
+       * @brief Return the number of components in this image.
+       *
+       * This is '1' for grayscale cameras, and '4' for RGB cameras.
        */
       virtual unsigned GetNumberOfComponents() const = 0;
       /**
-       * Returns the name for each component
+       * @brief Return the name for each component.
        */
       virtual int GetComponentName(unsigned component, char* name) = 0;
       /**
-       * Returns the number of simultaneous channels that camera is capable of.
+       * @brief Return the number of simultaneous channels that camera is capable of.
+       *
        * This should be used by devices capable of generating multiple channels of imagedata simultaneously.
        * Note: this should not be used by color cameras (use getNumberOfComponents instead).
        */
       virtual int unsigned GetNumberOfChannels() const = 0;
       /**
-       * Returns the name for each Channel.
+       * @brief Return the name for each Channel.
+       *
        * An implementation of this function is provided in DeviceBase.h.  It will return an empty string
        */
       virtual int GetChannelName(unsigned channel, char* name) = 0;
       /**
-       * Returns the size in bytes of the image buffer.
+       * @brief Return the size in bytes of the image buffer.
+       *
        * Required by the MM::Camera API.
        * For multi-channel cameras, return the size of a single channel
        */
       virtual long GetImageBufferSize() const = 0;
       /**
-       * Returns image buffer X-size in pixels.
+       * @brief Return image buffer X-size in pixels.
+       *
        * Required by the MM::Camera API.
        */
       virtual unsigned GetImageWidth() const = 0;
       /**
-       * Returns image buffer Y-size in pixels.
+       * @brief Return image buffer Y-size in pixels.
+       *
        * Required by the MM::Camera API.
        */
       virtual unsigned GetImageHeight() const = 0;
       /**
-       * Returns image buffer pixel depth in bytes.
+       * @brief Return image buffer pixel depth in bytes.
+       *
        * Required by the MM::Camera API.
        */
       virtual unsigned GetImageBytesPerPixel() const = 0;
       /**
-       * Returns the bit depth (dynamic range) of the pixel.
+       * @brief Return the bit depth (dynamic range) of the pixel.
+       *
        * This does not affect the buffer size, it just gives the client application
        * a guideline on how to interpret pixel values.
        * Required by the MM::Camera API.
        */
       virtual unsigned GetBitDepth() const = 0;
       /**
-       * Unused and slated for removal. Implemented in DeviceBase.h.
+       * @brief Unused and slated for removal. Implemented in DeviceBase.h.
        */
       virtual double GetPixelSizeUm() const = 0;
       /**
-       * Returns the current binning factor.
+       * @brief Return the current binning factor.
        */
       virtual int GetBinning() const = 0;
       /**
-       * Sets binning factor.
+       * @brief Set binning factor.
        */
       virtual int SetBinning(int binSize) = 0;
       /**
-       * Sets exposure in milliseconds.
+       * @brief Set exposure in milliseconds.
        */
       virtual void SetExposure(double exp_ms) = 0;
       /**
-       * Returns the current exposure setting in milliseconds.
+       * @brief Return the current exposure setting in milliseconds.
        */
       virtual double GetExposure() const = 0;
       /**
-       * Sets the camera Region Of Interest.
+       * @brief Set the camera Region Of Interest.
+       *
        * Required by the MM::Camera API.
        * This command will change the dimensions of the image.
        * Depending on the hardware capabilities the camera may not be able to configure the
        * exact dimensions requested - but should try do as close as possible.
        * If the hardware does not have this capability the software should simulate the ROI by
        * appropriately cropping each frame.
-       * @param x - top-left corner coordinate
-       * @param y - top-left corner coordinate
-       * @param xSize - width
-       * @param ySize - height
+       *
+       * @param x top-left corner coordinate
+       * @param y top-left corner coordinate
+       * @param xSize width
+       * @param ySize height
        */
       virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) = 0;
       /**
-       * Returns the actual dimensions of the current ROI.
+       * @brief Return the actual dimensions of the current ROI.
        */
       virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) = 0;
       /**
-       * Resets the Region of Interest to full frame.
+       * @brief Reset the Region of Interest to full frame.
        */
       virtual int ClearROI() = 0;
       virtual bool SupportsMultiROI() = 0;
@@ -459,54 +476,59 @@ namespace MM {
       virtual int GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
               unsigned* heights, unsigned* length) = 0;
       /**
-       * Starts continuous acquisition.
+       * @brief Start continuous acquisition.
        */
       virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) = 0;
       /**
-       * Starts Sequence Acquisition with given interval.
-       * Most camera adapters will ignore this number
-       * */
+       * @brief Start Sequence Acquisition with given interval.
+       *
+       * Most camera adapters will ignore this number.
+       */
       virtual int StartSequenceAcquisition(double interval_ms) = 0;
       /**
-       * Stops an ongoing sequence acquisition
+       * @brief Stop an ongoing sequence acquisition.
        */
       virtual int StopSequenceAcquisition() = 0;
       /**
-       * Sets up the camera so that Sequence acquisition can start without delay
+       * @brief Set up the camera so that Sequence acquisition can start without delay.
        */
       virtual int PrepareSequenceAcqusition() = 0;
       /**
-       * Flag to indicate whether Sequence Acquisition is currently running.
-       * Return true when Sequence acquisition is active, false otherwise
+       * @brief Indicate whether sequence acquisition is currently running.
+       *
+       * Returns true when sequence acquisition is active, false otherwise.
        */
       virtual bool IsCapturing() = 0;
 
       /**
-       * Get the metadata tags stored in this device.
-       * These tags will automatically be add to the metadata of an image inserted
-       * into the circular buffer
+       * @brief Get the metadata tags stored in this device.
        *
+       * These tags will automatically be add to the metadata of an image inserted
+       * into the circular buffer.
        */
       virtual void GetTags(char* serializedMetadata) = 0;
 
       /**
-       * Adds new tag or modifies the value of an existing one
+       * @brief Add new tag or modify the value of an existing one.
+       *
        * These will automatically be added to images inserted into the circular buffer.
        * Use this mechanism for tags that do not change often.  For metadata that
        * change often, create an instance of metadata yourself and add to one of
-       * the versions of the InsertImage function
+       * the versions of the InsertImage function.
        */
       virtual void AddTag(const char* key, const char* deviceLabel, const char* value) = 0;
 
       /**
-       * Removes an existing tag from the metadata associated with this device
+       * @brief Remove an existing tag from the metadata associated with this device.
+       *
        * These tags will automatically be add to the metadata of an image inserted
-       * into the circular buffer
+       * into the circular buffer.
        */
       virtual void RemoveTag(const char* key) = 0;
 
       /**
-       * Returns whether a camera's exposure time can be sequenced.
+       * @brief Return whether a camera's exposure time can be sequenced.
+       *
        * If returning true, then a Camera adapter class should also inherit
        * the SequenceableExposure class and implement its methods.
        */
@@ -532,7 +554,7 @@ namespace MM {
    };
 
    /**
-    * Shutter API
+    * @brief Shutter API.
     */
    class Shutter : public Device
    {
@@ -548,14 +570,15 @@ namespace MM {
       virtual int SetOpen(bool open = true) = 0;
       virtual int GetOpen(bool& open) = 0;
       /**
-       * Opens the shutter for the given duration, then closes it again.
-       * Currently not implemented in any shutter adapters
+       * @brief Open the shutter for the given duration, then close it again.
+       *
+       * Currently not implemented in any shutter adapters.
        */
       virtual int Fire(double deltaT) = 0;
    };
 
    /**
-    * Single axis stage API
+    * @brief Single axis stage API.
     */
    class Stage : public Device
    {
@@ -581,7 +604,7 @@ namespace MM {
       virtual int GetLimits(double& lower, double& upper) = 0;
 
       /**
-       * \brief Return the focus direction.
+       * @brief Return the focus direction.
        *
        * Indicates whether increasing position corresponds to movement in the
        * direction that brings the objective and sample closer together.
@@ -596,7 +619,8 @@ namespace MM {
       virtual int GetFocusDirection(FocusDirection& direction) = 0;
 
       /**
-       * Indicates whether a stage can be sequenced (synchronized by TTLs).
+       * @brief Indicate whether the stage can be sequenced (synchronized by
+       * TTLs).
        *
        * If true, the following methods must be implemented:
        * GetStageSequenceMaxLength(), StartStageSequence(), StopStageSequence(),
@@ -605,12 +629,10 @@ namespace MM {
       virtual int IsStageSequenceable(bool& isSequenceable) const = 0;
 
       /**
-       * Indicates whether the stage can perform linear TTL sequencing.
+       * @brief Indicate whether the stage can perform linear TTL sequencing.
        *
        * Linear sequencing uses a delta and count instead of an arbitrary list
-       * of positions.
-       *
-       * If true, the following methods must be implemented:
+       * of positions. If true, the following methods must be implemented:
        * SetStageLinearSequence(), StartStageSequence(), StopStageSequence().
        */
       virtual int IsStageLinearSequenceable(bool& isSequenceable) const = 0;
@@ -630,21 +652,21 @@ namespace MM {
       virtual int StartStageSequence() = 0;
       virtual int StopStageSequence() = 0;
       /**
-       * Remove all values in the sequence
+       * @brief Remove all values in the sequence.
        */
       virtual int ClearStageSequence() = 0;
       /**
-       * Add one value to the sequence
+       * @brief Add one value to the sequence.
        */
       virtual int AddToStageSequence(double position) = 0;
       /**
-       * Signal that we are done sending sequence values so that the adapter
-       * can send the whole sequence to the device
+       * @brief Signal that we are done sending sequence values so that the
+       * adapter can send the whole sequence to the device.
        */
       virtual int SendStageSequence() = 0;
 
       /**
-       * Set up to perform an equally-spaced triggered Z stack.
+       * @brief Set up to perform an equally-spaced triggered Z stack.
        *
        * After calling this function, StartStageSequence() must cause the stage
        * to step by dZ_um on each trigger. On the Nth trigger, the stage must
@@ -655,7 +677,7 @@ namespace MM {
    };
 
    /**
-    * Dual axis stage API
+    * @brief Dual axis stage API.
     */
    class XYStage : public Device
    {
@@ -688,18 +710,20 @@ namespace MM {
       virtual int Stop() = 0;
 
       /**
-       * Define the current position as the (hardware) origin (0, 0).
+       * @brief Define the current position as the (hardware) origin (0, 0).
        */
       virtual int SetOrigin() = 0;
 
       /**
-       * Define the current position as X = 0 (in hardware if possible).
+       * @brief Define the current position as X = 0 (in hardware if possible).
+       *
        * Do not alter the Y coordinates.
        */
       virtual int SetXOrigin() = 0;
 
       /**
-       * Define the current position as Y = 0 (in hardware if possible)
+       * @brief Define the current position as Y = 0 (in hardware if possible).
+       *
        * Do not alter the X coordinates.
        */
       virtual int SetYOrigin() = 0;
@@ -708,7 +732,8 @@ namespace MM {
       virtual double GetStepSizeXUm() = 0;
       virtual double GetStepSizeYUm() = 0;
       /**
-       * Returns whether a stage can be sequenced (synchronized by TTLs)
+       * @brief Return whether a stage can be sequenced (synchronized by TTLs).
+       *
        * If returning true, then an XYStage class should also inherit
        * the SequenceableXYStage class and implement its methods.
        */
@@ -725,23 +750,23 @@ namespace MM {
       virtual int StartXYStageSequence() = 0;
       virtual int StopXYStageSequence() = 0;
       /**
-       * Remove all values in the sequence
+       * @brief Remove all values in the sequence.
        */
       virtual int ClearXYStageSequence() = 0;
       /**
-       * Add one value to the sequence
+       * @brief Add one value to the sequence.
        */
       virtual int AddToXYStageSequence(double positionX, double positionY) = 0;
       /**
-       * Signal that we are done sending sequence values so that the adapter
-       * can send the whole sequence to the device
+       * @brief Signal that we are done sending sequence values so that the
+       * adapter can send the whole sequence to the device.
        */
       virtual int SendXYStageSequence() = 0;
 
    };
 
    /**
-    * State device API, e.g. filter wheel, objective turret, etc.
+    * @brief State device API, e.g. filter wheel, objective turret, etc.
     */
    class State : public Device
    {
@@ -767,7 +792,7 @@ namespace MM {
    };
 
    /**
-    * Serial port API.
+    * @brief Serial port API.
     */
    class Serial : public Device
    {
@@ -789,7 +814,7 @@ namespace MM {
    };
 
    /**
-    * Auto-focus device API.
+    * @brief Auto-focus device API.
     */
    class AutoFocus : public Device
    {
@@ -815,7 +840,7 @@ namespace MM {
    };
 
    /**
-    * Image processor API.
+    * @brief Image processor API.
     */
    class ImageProcessor : public Device
    {
@@ -834,7 +859,7 @@ namespace MM {
    };
 
    /**
-    * ADC and DAC interface.
+    * @brief ADC and DAC interface.
     */
    class SignalIO : public Device
    {
@@ -854,14 +879,17 @@ namespace MM {
       virtual int GetLimits(double& minVolts, double& maxVolts) = 0;
 
       /**
-       * Lets the UI know whether or not this DA device accepts sequences
-       * If the device is sequenceable, it is usually best to add a property through which
-       * the user can set "isSequenceable", since only the user knows whether the device
-       * is actually connected to a trigger source.
-       * If isDASequenceable returns true, the device adapter must
-       * also inherit the SequenceableDA class and provide method
-       * implementations.
-       * @param isSequenceable signals whether other sequence functions will work
+       * @brief Indicate whether or not this DA device accepts sequences.
+       *
+       * If the device is sequenceable, it is usually best to add a property
+       * through which the user can set "isSequenceable", since only the user
+       * knows whether the device is actually connected to a trigger source.
+       * If isDASequenceable returns true, the device adapter must also inherit
+       * the SequenceableDA class and provide method implementations.
+       *
+       * @param isSequenceable signals whether other sequence functions will
+       *        work
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int IsDASequenceable(bool& isSequenceable) const = 0;
@@ -874,43 +902,52 @@ namespace MM {
       // from the camera).  If the device is capable (and ready) to do so isSequenceable will
       // be true. If your device can not execute this simply set isSequenceable to false
       /**
-       * Returns the maximum length of a sequence that the hardware can store
+       * @brief Return the maximum length of a sequence that the hardware can store.
+       *
        * @param nrEvents max length of sequence
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int GetDASequenceMaxLength(long& nrEvents) const = 0;
       /**
-       * Tells the device to start running a sequence (i.e. start switching between voltages
-       * send previously, triggered by a TTL
+       * @brief Start running a sequence (i.e., start switching between voltages
+       * sent previously, triggered by a TTL).
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int StartDASequence() = 0;
       /**
-       * Tells the device to stop running the sequence
+       * @brief Stop running the sequence.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int StopDASequence() = 0;
       /**
-       * Clears the DA sequence from the device and the adapter.
+       * @brief Clear the DA sequence from the device and the adapter.
+       *
        * If this functions is not called in between running
        * two sequences, it is expected that the same sequence will run twice.
        * To upload a new sequence, first call this functions, then call AddToDASequence(double
        * voltage) as often as needed.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int ClearDASequence() = 0;
 
       /**
-       * Adds a new data point (voltage) to the sequence
+       * @brief Add a new data point (voltage) to the sequence.
+       *
        * The data point can either be added to a representation of the sequence in the
-       * adapter, or it can be directly written to the device
+       * adapter, or it can be directly written to the device.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int AddToDASequence(double voltage) = 0;
       /**
-       * Sends the complete sequence to the device
-       * If the individual data points were already send to the device, there is
+       * @brief Send the complete sequence to the device.
+       *
+       * If the individual data points were already sent to the device, there is
        * nothing to be done.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int SendDASequence() = 0;
@@ -918,8 +955,8 @@ namespace MM {
    };
 
    /**
-   * Devices that can change magnification of the system
-   */
+    * @brief Devices that can change magnification of the system.
+    */
    class Magnifier : public Device
    {
    public:
@@ -935,11 +972,13 @@ namespace MM {
 
 
    /**
-    * Spatial Ligh Modulator (SLM) API.  An SLM is a device that can display images.
-    * It is expected to represent a rectangular grid (i.e. it has width and height) 
-    * of pixels that can be either 8 bit or 32 bit.  Illumination (light source on 
-    * or off) is logically independent of displaying the image.  Likely the most 
-    * widely used implmentation is the GenericSLM.
+    * @brief Spatial Light Modulator (SLM) API.
+    *
+    * An SLM is a device that can display images.
+    * It is expected to represent a rectangular grid (i.e. it has width and height)
+    * of pixels that can be either 8 bit or 32 bit.  Illumination (light source on
+    * or off) is logically independent of displaying the image.  Likely the most
+    * widely used implementation is the GenericSLM.
     */
    class SLM : public Device
    {
@@ -952,57 +991,57 @@ namespace MM {
 
       // SLM API
       /**
-       * Load the image into the SLM device adapter.
+       * @brief Load the image into the SLM device adapter.
        */
       virtual int SetImage(unsigned char * pixels) = 0;
 
       /**
-      * Load a 32-bit image into the SLM device adapter.
-      */
+       * @brief Load a 32-bit image into the SLM device adapter.
+       */
       virtual int SetImage(unsigned int * pixels) = 0;
 
       /**
-       * Command the SLM to display the loaded image.
+       * @brief Command the SLM to display the loaded image.
        */
       virtual int DisplayImage() = 0;
 
       /**
-       * Command the SLM to display one 8-bit intensity.
+       * @brief Command the SLM to display one 8-bit intensity.
        */
       virtual int SetPixelsTo(unsigned char intensity) = 0;
 
       /**
-       * Command the SLM to display one 32-bit color.
+       * @brief Command the SLM to display one 32-bit color.
        */
       virtual int SetPixelsTo(unsigned char red, unsigned char green, unsigned char blue) = 0;
 
       /**
-       * Command the SLM to turn off after a specified interval.
+       * @brief Command the SLM to turn off after a specified interval.
        */
       virtual int SetExposure(double interval_ms) = 0;
 
       /**
-       * Find out the exposure interval of an SLM.
+       * @brief Get the exposure interval of an SLM.
        */
       virtual double GetExposure() = 0;
 
       /**
-       * Get the SLM width in pixels.
+       * @brief Get the SLM width in pixels.
        */
       virtual unsigned GetWidth() = 0;
 
       /**
-       * Get the SLM height in pixels.
+       * @brief Get the SLM height in pixels.
        */
       virtual unsigned GetHeight() = 0;
 
       /**
-       * Get the SLM number of components (colors).
+       * @brief Get the SLM number of components (colors).
        */
       virtual unsigned GetNumberOfComponents() = 0;
 
       /**
-       * Get the SLM number of bytes per pixel.
+       * @brief Get the SLM number of bytes per pixel.
        */
       virtual unsigned GetBytesPerPixel() = 0;
 
@@ -1016,70 +1055,85 @@ namespace MM {
       // be true. If your device can not execute sequences, IsSLMSequenceable returns false.
 
       /**
-       * Lets the core know whether or not this SLM device accepts sequences
-       * If the device is sequenceable, it is usually best to add a property through which
-       * the user can set "isSequenceable", since only the user knows whether the device
-       * is actually connected to a trigger source.
-       * If IsSLMSequenceable returns true, the device adapter must also implement the
-       * sequencing functions for the SLM.
-       * @param isSequenceable signals whether other sequence functions will work
+       * @brief Indicate whether or not this SLM device accepts sequences.
+       *
+       * If the device is sequenceable, it is usually best to add a property
+       * through which the user can set "isSequenceable", since only the user
+       * knows whether the device is actually connected to a trigger source.
+       * If IsSLMSequenceable returns true, the device adapter must also
+       * implement the sequencing functions for the SLM.
+       *
+       * @param isSequenceable signals whether other sequence functions will
+       *        work
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int IsSLMSequenceable(bool& isSequenceable) const = 0;
 
       /**
-       * Returns the maximum length of a sequence that the hardware can store.
+       * @brief Return the maximum length of a sequence that the hardware can store.
+       *
        * @param nrEvents max length of sequence
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int GetSLMSequenceMaxLength(long& nrEvents) const = 0;
 
       /**
-       * Tells the device to start running a sequence (i.e. start switching between images
+       * @brief Start running a sequence (i.e., start switching between images
        * sent previously, triggered by a TTL or internal clock).
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int StartSLMSequence() = 0;
 
       /**
-       * Tells the device to stop running the sequence.
+       * @brief Stop running the sequence.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int StopSLMSequence() = 0;
 
       /**
-       * Clears the SLM sequence from the device and the adapter.
+       * @brief Clear the SLM sequence from the device and the adapter.
+       *
        * If this function is not called in between running
        * two sequences, it is expected that the same sequence will run twice.
        * To upload a new sequence, first call this function, then call
        * AddToSLMSequence(image)
        * as often as needed.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int ClearSLMSequence() = 0;
 
       /**
-       * Adds a new 8-bit projection image to the sequence.
+       * @brief Add a new 8-bit projection image to the sequence.
+       *
        * The image can either be added to a representation of the sequence in the
-       * adapter, or it can be directly written to the device
+       * adapter, or it can be directly written to the device.
+       *
        * @param pixels An array of 8-bit pixels whose length matches that expected by the SLM.
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int AddToSLMSequence(const unsigned char * const pixels) = 0;
 
       /**
-       * Adds a new 32-bit (RGB) projection image to the sequence.
+       * @brief Add a new 32-bit (RGB) projection image to the sequence.
+       *
        * The image can either be added to a representation of the sequence in the
-       * adapter, or it can be directly written to the device
+       * adapter, or it can be directly written to the device.
+       *
        * @param pixels An array of 32-bit RGB pixels whose length matches that expected by the SLM.
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int AddToSLMSequence(const unsigned int * const pixels) = 0;
 
       /**
-       * Sends the complete sequence to the device.
-       * If the individual images were already send to the device, there is
+       * @brief Send the complete sequence to the device.
+       *
+       * If the individual images were already sent to the device, there is
        * nothing to be done.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int SendSLMSequence() = 0;
@@ -1087,18 +1141,18 @@ namespace MM {
    };
 
    /**
-    * Galvo API
+    * @brief Galvo API.
+    *
     * A Galvo in Micro-Manager is a two-axis (conveniently labeled x and y) that can illuminate
-    * a sample in the microscope.  It therefore also has the capability to switch a light source 
-    * on and off (note that this functionality can be offloaded to a shutter device 
-    * that can be obtained through a callback).  Galvos can illuminate a point, or 
+    * a sample in the microscope.  It therefore also has the capability to switch a light source
+    * on and off (note that this functionality can be offloaded to a shutter device
+    * that can be obtained through a callback).  Galvos can illuminate a point, or
     * possibly be directed to illuminate a polygon by scanning the two axis and controlling
     * the light source so that only the area with the polygon is illuminated.
-    * Currently known implementations are Utilities-DAGalvo (which uses two DAs to 
+    * Currently known implementations are Utilities-DAGalvo (which uses two DAs to
     * control a Galvo), Democamera-Galvo, ASITiger-ASIScanner, and Rapp.
     * There is no integration with a detector as would be needed for a confocal microscope,
     * and there is also no support for waveforms.
-    * 
     */
    class Galvo : public Device
    {
@@ -1112,119 +1166,146 @@ namespace MM {
    //Galvo API:
 
       /**
-       * Moves the galvo devices to the requested position, activates the light
-       * source, waits for the specified amount of time (in microseconds), and
-       * deactivates the light source.
+       * @brief Move the galvo devices to the requested position, activate the
+       * light source, wait for the specified amount of time (in microseconds),
+       * and deactivate the light source.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int PointAndFire(double x, double y, double time_us) = 0;
       /**
-       * This function seems to be misnamed.  Its name suggest that it is the 
-       * interval between illuminating two consecutive spots, but in practice it 
-       * is used to set the time a single spot is illuminated (and the time 
+       * @brief Set the spot interval time.
+       *
+       * This function seems to be misnamed.  Its name suggest that it is the
+       * interval between illuminating two consecutive spots, but in practice it
+       * is used to set the time a single spot is illuminated (and the time
        * to move between two spots is usually extremely short).
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int SetSpotInterval(double pulseInterval_us) = 0;
       /**
-       * Sets the position of the two axes of the Galvo device in native 
-       * unit (usually through a voltage that controls the galvo posiution).
+       * @brief Set the position of the two axes of the Galvo device in native
+       * unit (usually through a voltage that controls the galvo position).
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int SetPosition(double x, double y) = 0;
       /**
-       * Returns the current position of the two axes (usually the last position 
-       * that was set, although this may be different for Galvo devices that also
-       * can be controlled through another source). 
+       * @brief Return the current position of the two axes (usually the last
+       * position that was set, although this may be different for Galvo devices
+       * that also can be controlled through another source).
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int GetPosition(double& x, double& y) = 0;
       /**
-       * Switches the light source under control of this device on or off.  If light control
-       * through a Shutter device is desired, a property should be added that can be set 
-       * to the name of the lightsource. 
+       * @brief Switch the light source under control of this device on or off.
+       *
+       * If light control through a Shutter device is desired, a property should
+       * be added that can be set to the name of the lightsource.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int SetIlluminationState(bool on) = 0;
       /**
-       * X range of the device in native units.
+       * @brief Return the X range of the device in native units.
        */
       virtual double GetXRange() = 0;
       /**
-       * Minimum X value for the device in native units
-       * Must be implemented if it is not 0.0
+       * @brief Return the minimum X value for the device in native units.
+       *
+       * Must be implemented if it is not 0.0.
        */
       virtual double GetXMinimum() = 0;
       /**
-       * Y range of the device in native units.
+       * @brief Return the Y range of the device in native units.
        */
       virtual double GetYRange() = 0;
       /**
-       * Minimum Y value for the device in native units.
+       * @brief Return the minimum Y value for the device in native units.
+       *
        * Must be implemented if it is not 0.0.
        */
       virtual double GetYMinimum() = 0;
       /**
-       * A galvo device in principle can draw arbitrary polygons.  Polygons are 
+       * @brief Add a vertex point to a polygon.
+       *
+       * A galvo device in principle can draw arbitrary polygons.  Polygons are
        * added added here point by point.  There is nothing in the API that prevents
        * adding polygons in random order, but most implementations so far
        * do not deal with that well (i.e. expect polygons to be added in incremental
        * order).  Vertex points are added in order and can not be modified through the API
        * after adding (only way is to delete all polygons and start anew).
-       * 
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int AddPolygonVertex(int polygonIndex, double x, double y) = 0;
       /**
-       * Deletes all polygons previously stored in the device adapater.
+       * @brief Delete all polygons previously stored in the device adapter.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int DeletePolygons() = 0;
       /**
-       * Presumably the idea of this function is to have the Galvo draw the 
+       * @brief Run a TTL-triggered polygon sequence.
+       *
+       * Presumably the idea of this function is to have the Galvo draw the
        * each polygon in the pre-loaded sequence after its controller receives
        * a TTL trigger.  This is not likely to be supported by all Galvo devices.
        * There currently is no API method to query whether Sequences are supported.
        * When the number of TTLs exceeds the number of polygons, the desired behavior
        * is to repeat the sequence from the beginning.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int RunSequence() = 0;
       /**
-       * Transfers the polygons from the device adapter memory to the Galvo controller.
-       * Should be called before RunPolygons() or RunSequence(). This is mainly an 
+       * @brief Transfer the polygons from the device adapter memory to the Galvo controller.
+       *
+       * Should be called before RunPolygons() or RunSequence(). This is mainly an
        * optimization so that the device adapter does not need to transfer each vertex
        * individually.  Some Galvo device adapters will do nothing in this function.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int LoadPolygons() = 0;
       /**
-       * Sets the number of times the polygons should be displayed in the RunPolygons
-       * function.
+       * @brief Set the number of times the polygons should be displayed in the
+       * RunPolygons function.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int SetPolygonRepetitions(int repetitions) = 0;
       /**
-       * Displays each pre-loaded polygon in sequence, each illuminated for pulseinterval_us
-       * micro-seconds.
+       * @brief Display each pre-loaded polygon in sequence, each illuminated for
+       * pulseinterval_us micro-seconds.
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int RunPolygons() = 0;
       /**
-       * Stops the TTL triggered transitions of drawing polygons started in RunSequence().
+       * @brief Stop the TTL triggered transitions of drawing polygons started
+       * in RunSequence().
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int StopSequence() = 0;
       /**
-       * It is completely unclear what this function is supposed to do.  Deprecate?.
+       * @brief TODO-BRIEF
+       *
+       * It is completely unclear what this function is supposed to do.  Deprecate?
+       *
        * @return errorcode (DEVICE_OK if no error)
        */
       virtual int GetChannel(char* channelName) = 0;
    };
 
    /**
-    * HUB device. Used for complex uber-device functionality in microscope stands
-    * and managing auto-configuration (discovery) of other devices
+    * @brief HUB device.
+    *
+    * Used for complex uber-device functionality in microscope stands
+    * and managing auto-configuration (discovery) of other devices.
     */
    class Hub : public Device
    {
@@ -1237,7 +1318,7 @@ namespace MM {
       static const DeviceType Type;
 
       /**
-       * Instantiate all available child peripheral devices.
+       * @brief Instantiate all available child peripheral devices.
        *
        * The implementation must instantiate all available child devices and
        * register them by calling AddInstalledDevice() (currently in HubBase).
@@ -1251,7 +1332,7 @@ namespace MM {
       virtual int DetectInstalledDevices() = 0;
 
       /**
-       * Removes all Device instances that were created by
+       * @brief Remove all Device instances that were created by
        * DetectInstalledDevices(). Not used.
        *
        * Note: Device adapters traditionally call this function at the
@@ -1261,16 +1342,17 @@ namespace MM {
       virtual void ClearInstalledDevices() = 0;
 
       /**
-       * Returns the number of child Devices after DetectInstalledDevices was
-       * called.
+       * @brief Return the number of child Devices after DetectInstalledDevices
+       * was called.
        *
        * Must not be called from device adapters.
        */
       virtual unsigned GetNumberOfInstalledDevices() = 0;
 
       /**
-       * Returns a pointer to the Device with index devIdx. 0 <= devIdx <
-       * GetNumberOfInstalledDevices().
+       * @brief Return a pointer to the Device with index devIdx.
+       *
+       * 0 <= devIdx < GetNumberOfInstalledDevices().
        *
        * Must not be called from device adapters.
        */
@@ -1278,7 +1360,7 @@ namespace MM {
    };
 
    /**
-    * Pressure Pump API
+    * @brief Pressure Pump API.
     */
    class PressurePump : public Device
    {
@@ -1291,7 +1373,9 @@ namespace MM {
        static const DeviceType Type;
 
        /**
-        * Stops the pump. The implementation should halt any dispensing/withdrawal,
+        * @brief Stop the pump.
+        *
+        * The implementation should halt any dispensing/withdrawal,
         * and make the pump available again (make Busy() return false).
         *
         * Required function of PressurePump API.
@@ -1299,35 +1383,39 @@ namespace MM {
        virtual int Stop() = 0;
 
        /**
-        * Calibrates the pressure controller. If no internal calibration is
-        * supported, just return DEVICE_UNSUPPORTED_COMMAND.
+        * @brief Calibrate the pressure controller.
+        *
+        * If no internal calibration is supported, just return
+        * DEVICE_UNSUPPORTED_COMMAND.
         *
         * Optional function of PressurePump API.
         */
        virtual int Calibrate() = 0;
 
        /**
-        * Returns whether the pressure controller is functional before calibration,
-        * or it needs to undergo internal calibration before any commands can be
-        * executed.
+        * @brief Return whether the pressure controller is functional before
+        * calibration, or it needs to undergo internal calibration before any
+        * commands can be executed.
         *
         * Required function of PressurePump API.
         */
        virtual bool RequiresCalibration() = 0;
 
        /**
-        * Sets the pressure of the pressure controller. The provided value will
-        * be in kPa. The implementation should convert the unit from kPa to the
-        * desired unit by the device.
+        * @brief Set the pressure of the pressure controller.
+        *
+        * The provided value will be in kPa. The implementation should convert
+        * the unit from kPa to the desired unit by the device.
         *
         * Required function of PressurePump API.
         */
        virtual int SetPressureKPa(double pressureKPa) = 0;
 
        /**
-        * Gets the pressure of the pressure controller. The returned value
-        * has to be in kPa. The implementation, therefore, should convert the
-        * value provided by the pressure controller to kPa.
+        * @brief Get the pressure of the pressure controller.
+        *
+        * The returned value has to be in kPa. The implementation, therefore,
+        * should convert the value provided by the pressure controller to kPa.
         *
         * Required function of PressurePump API.
         */
@@ -1335,7 +1423,7 @@ namespace MM {
    };
 
    /**
-    * Volumetric Pump API
+    * @brief Volumetric Pump API.
     */
    class VolumetricPump : public Device
    {
@@ -1348,118 +1436,124 @@ namespace MM {
        static const DeviceType Type;
 
        /**
-        * Homes the pump. If no homing is supported, just return
-        * DEVICE_UNSUPPORTED_COMMAND.
+        * @brief Home the pump.
         *
-        * Optional function of VolumetricPump API
+        * If no homing is supported, just return DEVICE_UNSUPPORTED_COMMAND.
+        *
+        * Optional function of VolumetricPump API.
         */
        virtual int Home() = 0;
 
        /**
-        * Stops the pump. The implementation should halt any dispensing/withdrawal,
+        * @brief Stop the pump.
+        *
+        * The implementation should halt any dispensing/withdrawal,
         * and make the pump available again (make Busy() return false).
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int Stop() = 0;
 
        /**
-        * Flag to check whether the pump requires homing before being operational
+        * @brief Check whether the pump requires homing before being operational.
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual bool RequiresHoming() = 0;
 
        /**
-        * Sets the direction of the pump. Certain pump
-        * (e.g. peristaltic and DC pumps) don't have an apriori forward-reverse direction,
-        * as it depends on how it is connected. This function allows you to switch
-        * forward and reverse.
+        * @brief Set the direction of the pump.
+        *
+        * Certain pumps (e.g. peristaltic and DC pumps) don't have an apriori
+        * forward-reverse direction, as it depends on how it is connected. This
+        * function allows you to switch forward and reverse.
         *
         * If the pump is uni-directional, this function does not need to be
         * implemented (return DEVICE_UNSUPPORTED_COMMAND).
         *
-        * Optional function of VolumetricPump API
+        * Optional function of VolumetricPump API.
         */
        virtual int InvertDirection(bool inverted) = 0;
 
        /**
-        * Sets the direction of the pump. Certain pump
-        * (e.g. peristaltic and DC pumps) don't have an apriori forward-reverse direction,
-        * as it depends on how it is connected. This function allows you to switch
-        * forward and reverse.
+        * @brief Check whether the direction of the pump is inverted.
+        *
+        * Certain pumps (e.g. peristaltic and DC pumps) don't have an apriori
+        * forward-reverse direction, as it depends on how it is connected.
         *
         * When the pump is uni-directional, this function should always assign
-        * false to `inverted`
+        * false to `inverted`.
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int IsDirectionInverted(bool& inverted) = 0;
 
        /**
-        * Sets the current volume of the pump in microliters (uL).
+        * @brief Set the current volume of the pump in microliters (uL).
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int SetVolumeUl(double volUl) = 0;
 
        /**
-        * Gets the current volume of the pump in microliters (uL).
+        * @brief Get the current volume of the pump in microliters (uL).
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int GetVolumeUl(double& volUl) = 0;
 
        /**
-        * Sets the maximum volume of the pump in microliters (uL).
+        * @brief Set the maximum volume of the pump in microliters (uL).
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int SetMaxVolumeUl(double volUl) = 0;
 
        /**
-        * Gets the maximum volume of the pump in microliters (uL).
+        * @brief Get the maximum volume of the pump in microliters (uL).
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int GetMaxVolumeUl(double& volUl) = 0;
 
        /**
-        * Sets the flowrate in microliter (uL) per second. The implementation
-        * should convert the provided flowrate to whichever unit the pump desires
-        * (steps/s, mL/h, V).
+        * @brief Set the flowrate in microliter (uL) per second.
         *
-        * Required function of VolumetricPump API
+        * The implementation should convert the provided flowrate to whichever
+        * unit the pump desires (steps/s, mL/h, V).
+        *
+        * Required function of VolumetricPump API.
         */
        virtual int SetFlowrateUlPerSecond(double flowrate) = 0;
 
        /**
-        * Gets the flowrate in microliter (uL) per second.
+        * @brief Get the flowrate in microliter (uL) per second.
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int GetFlowrateUlPerSecond(double& flowrate) = 0;
 
        /**
-        * Dispenses/withdraws until the minimum or maximum volume has been
-        * reached, or the pumping is manually stopped
+        * @brief Start dispensing/withdrawing until the minimum or maximum volume
+        * has been reached, or the pumping is manually stopped.
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int Start() = 0;
 
        /**
-        * Dispenses/withdraws for the provided time, with the flowrate provided
-        * by GetFlowrate_uLperMin
-        * Dispensing for an undetermined amount of time can be done with DBL_MAX
+        * @brief Dispense/withdraw for the provided time.
+        *
+        * Uses the flowrate provided by GetFlowrate_uLperMin.
+        * Dispensing for an undetermined amount of time can be done with DBL_MAX.
         * During the dispensing/withdrawal, Busy() should return "true".
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int DispenseDurationSeconds(double durSec) = 0;
 
        /**
-        * Dispenses/withdraws the provided volume.
+        * @brief Dispense/withdraw the provided volume.
         *
         * The implementation should cause positive volumes to be dispensed, whereas
         * negative volumes should be withdrawn. The implementation should prevent
@@ -1471,15 +1565,16 @@ namespace MM {
         *
         * During the dispensing/withdrawal, Busy() should return "true".
         *
-        * Required function of VolumetricPump API
+        * Required function of VolumetricPump API.
         */
        virtual int DispenseVolumeUl(double volUl) = 0;
    };
 
 
    /**
-    * Callback API to the core control module.
-    * Devices use this abstract interface to use Core services
+    * @brief Callback API to the core control module.
+    *
+    * Devices use this abstract interface to use Core services.
     */
    class Core
    {
@@ -1488,29 +1583,33 @@ namespace MM {
       virtual ~Core() {}
 
       /**
-       * Logs a message (msg) in the Corelog output, labeled with the device name (derived 
-       * from caller).  If debugOnly flag is true, the output will only be logged if the 
+       * @brief Log a message (msg) in the Corelog output, labeled with the device
+       * name (derived from caller).
+       *
+       * If debugOnly flag is true, the output will only be logged if the
        * general system has been set to output debug logging.
        */
       virtual int LogMessage(const Device* caller, const char* msg, bool debugOnly) const = 0;
       /**
-       * Callback that allows this device adapter to get a pointer to another device.  Be aware of
-       * potential threading issues. Provide a valid label for the device and receive a pointer 
-       * to the desired device.
+       * @brief Get a pointer to another device.
+       *
+       * Be aware of potential threading issues. Provide a valid label for the
+       * device and receive a pointer to the desired device.
        */
       virtual Device* GetDevice(const Device* caller, const char* label) = 0;
       virtual int GetDeviceProperty(const char* deviceName, const char* propName, char* value) = 0;
       virtual int SetDeviceProperty(const char* deviceName, const char* propName, const char* value) = 0;
 
-      /// Get the names of currently loaded devices of a given type.
       /**
+       * @brief Get the names of currently loaded devices of a given type.
+       *
        * If deviceIterator exceeds or is equal to the number of currently
        * loaded devices of type devType, an empty string is returned.
        *
-       * \param[in] caller - the calling device
-       * \param[in] devType - the device type
-       * \param[out] pDeviceName - buffer in which device name will be returned
-       * \param[in] deviceIterator - index of device (within the given type)
+       * @param caller the calling device
+       * @param devType the device type
+       * @param pDeviceName buffer in which device name will be returned
+       * @param deviceIterator index of device (within the given type)
        */
       virtual void GetLoadedDeviceOfType(const Device* caller, MM::DeviceType devType, char* pDeviceName, const unsigned int deviceIterator) = 0;
 
@@ -1530,35 +1629,34 @@ namespace MM {
 
       virtual int OnPropertiesChanged(const Device* caller) = 0;
       /**
-       * Callback to signal the UI that a property changed
+       * @brief Signal the UI that a property changed.
+       *
        * The Core will check if groups or pixel size changed as a consequence of
-       * the change of this property and inform the UI
+       * the change of this property and inform the UI.
        */
       virtual int OnPropertyChanged(const Device* caller, const char* propName, const char* propValue) = 0;
       /**
-       * If the stage is aware that it has reached a new position, it should call
-       * this callback to signal the UI
+       * @brief Signal the UI when the stage has reached a new position.
        */
       virtual int OnStagePositionChanged(const Device* caller, double pos) = 0;
       /**
-       * If an XY stage is aware that it has reached a new position, it should call
-       * this callback to signal the UI
+       * @brief Signal the UI when the XY stage has reached a new position.
        */
       virtual int OnXYStagePositionChanged(const Device* caller, double xPos, double yPos) = 0;
       /**
-       * When the exposure time has changed, use this callback to inform the UI
+       * @brief Inform the UI when the exposure time has changed.
        */
       virtual int OnExposureChanged(const Device* caller, double newExposure) = 0;
       /**
-       * When the SLM exposure time has changed, use this callback to inform the UI
+       * @brief Inform the UI when the SLM exposure time has changed.
        */
       virtual int OnSLMExposureChanged(const Device* caller, double newExposure) = 0;
       /**
-       * Magnifiers can use this to signal changes in magnification
+       * @brief Signal changes in magnification.
        */
       virtual int OnMagnifierChanged(const Device* caller) = 0;
       /**
-       * Signals that the shutter opened or closed
+       * @brief Signal that the shutter opened or closed.
        */
       virtual int OnShutterOpenChanged(const Device* caller, bool open) = 0;
 
@@ -1576,6 +1674,8 @@ namespace MM {
       virtual int PrepareForAcq(const Device* caller) = 0;
 
       /**
+       * @brief Send a frame to the Core during sequence acquisition.
+       *
        * Cameras must call this function during sequence acquisition to send
        * each frame to the Core.
        *
@@ -1598,14 +1698,15 @@ namespace MM {
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true) = 0;
 
       /**
-       * Same as the overload with the added nComponents parameter.
+       * @brief Send a grayscale frame to the Core during sequence acquisition.
        *
+       * Same as the overload with the added nComponents parameter.
        * Assumes nComponents == 1 (grayscale).
        */
       virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata = nullptr, const bool doProcess = true) = 0;
 
       /**
-       * Prepare the sequence buffer for the given image size and pixel format.
+       * @brief Prepare the sequence buffer for the given image size and pixel format.
        *
        * Cameras normally do not need to call this explicitly.
        * 'channels' is ignored (should be 1) and 'slices' must be 1.
