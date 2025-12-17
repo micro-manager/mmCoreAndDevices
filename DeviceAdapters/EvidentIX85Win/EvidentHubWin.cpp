@@ -830,55 +830,78 @@ int EvidentHubWin::ExecuteCommand(const std::string& command, std::string& respo
 {
     std::lock_guard<std::mutex> lock(commandMutex_);
 
-    // Reset response state BEFORE sending command to avoid race condition
-    // where callback fires before GetResponse can set responseReady_ = false
+    // Retry logic for empty responses (device not ready)
+    const int MAX_RETRIES = 20;
+    const int RETRY_DELAY_MS = 50;  // 50ms delay between retries
+
+    for (int attempt = 0; attempt < MAX_RETRIES; attempt++)
     {
-        std::lock_guard<std::mutex> responseLock(responseMutex_);
-        responseReady_ = false;
-        pendingResponse_.clear();
+
+       // Reset response state BEFORE sending command to avoid race condition
+       // where callback fires before GetResponse can set responseReady_ = false
+       {
+          std::lock_guard<std::mutex> responseLock(responseMutex_);
+          responseReady_ = false;
+          pendingResponse_.clear();
+       }
+
+       int ret = SendCommand(command);
+       if (ret != DEVICE_OK)
+          return ret;
+
+       // Extract expected response tag from command
+       // First strip any trailing whitespace/terminators from the command
+       std::string cleanCommand = command;
+       size_t end = cleanCommand.find_last_not_of(" \t\r\n");
+       if (end != std::string::npos)
+          cleanCommand = cleanCommand.substr(0, end + 1);
+       std::string expectedTag = ExtractTag(cleanCommand);
+
+       ret = GetResponse(response, answerTimeoutMs_);
+       if (ret != DEVICE_OK)
+          return ret;
+
+       // Verify response tag matches command tag
+       std::string responseTag = ExtractTag(response);
+
+       if (responseTag == expectedTag)
+       {
+          if (!IsPositiveAck(response, expectedTag.c_str()))
+          {
+             // Check if device is busy (error code 70)
+             if (IsDeviceBusyError(response) && attempt < MAX_RETRIES - 1)
+             {
+                LogMessage(("Device " + expectedTag + " busy(attempt " +
+                   std::to_string(attempt + 1) + "), retrying...").c_str(), true);
+                CDeviceUtils::SleepMs(RETRY_DELAY_MS);
+                continue;  // Retry
+             }
+          }
+       }
+       else // if (responseTag != expectedTag)
+       {
+          // Received wrong response - this can happen if responses arrive out of order
+          LogMessage(("Warning: Expected response for '" + expectedTag +
+             "' but received '" + responseTag + "' (" + response +
+             "). Discarding and waiting for correct response.").c_str(), false);
+
+          // Wait for the correct response (with remaining timeout)
+          ret = GetResponse(response, answerTimeoutMs_);
+          if (ret != DEVICE_OK)
+             return ret;
+
+          // Check again
+          responseTag = ExtractTag(response);
+          if (responseTag != expectedTag)
+          {
+             LogMessage(("Error: Still did not receive expected response for '" +
+                expectedTag + "', got '" + responseTag + "' instead.").c_str(), false);
+             return ERR_INVALID_RESPONSE;
+          }
+       }
+
+       return DEVICE_OK;
     }
-
-    int ret = SendCommand(command);
-    if (ret != DEVICE_OK)
-        return ret;
-
-    // Extract expected response tag from command
-    // First strip any trailing whitespace/terminators from the command
-    std::string cleanCommand = command;
-    size_t end = cleanCommand.find_last_not_of(" \t\r\n");
-    if (end != std::string::npos)
-        cleanCommand = cleanCommand.substr(0, end + 1);
-    std::string expectedTag = ExtractTag(cleanCommand);
-
-    ret = GetResponse(response, answerTimeoutMs_);
-    if (ret != DEVICE_OK)
-        return ret;
-
-    // Verify response tag matches command tag
-    std::string responseTag = ExtractTag(response);
-    if (responseTag != expectedTag)
-    {
-        // Received wrong response - this can happen if responses arrive out of order
-        LogMessage(("Warning: Expected response for '" + expectedTag +
-                    "' but received '" + responseTag + "' (" + response +
-                    "). Discarding and waiting for correct response.").c_str(), false);
-
-        // Wait for the correct response (with remaining timeout)
-        ret = GetResponse(response, answerTimeoutMs_);
-        if (ret != DEVICE_OK)
-            return ret;
-
-        // Check again
-        responseTag = ExtractTag(response);
-        if (responseTag != expectedTag)
-        {
-            LogMessage(("Error: Still did not receive expected response for '" +
-                        expectedTag + "', got '" + responseTag + "' instead.").c_str(), false);
-            return ERR_INVALID_RESPONSE;
-        }
-    }
-
-    return DEVICE_OK;
 }
 
 int EvidentHubWin::SendCommand(const std::string& command)
@@ -901,8 +924,13 @@ int EvidentHubWin::SendCommand(const std::string& command)
     // Send command via SDK
     if (!pfnSendCommand_(interfaceHandle_, &pendingCommand_))
     {
-        LogMessage("SDK SendCommand failed", false);
-        return EvidentSDK::SDK_ERR_SEND_FAILED;
+        LogMessage("SDK SendCommand failed, retrying...", false);
+        CDeviceUtils::SleepMs(50);
+        if (!pfnSendCommand_(interfaceHandle_, &pendingCommand_))
+        {
+           LogMessage("SDK SendCommand failed again.");
+           return EvidentSDK::SDK_ERR_SEND_FAILED;
+        }
     }
 
     return DEVICE_OK;
@@ -1951,6 +1979,7 @@ int EvidentHubWin::SetFocusPositionSteps(long steps)
 
 void EvidentHubWin::ProcessNotification(const std::string& message)
 {
+   bool isCommandCompletion = false;
     std::string tag = ExtractTag(message);
     std::vector<std::string> params = ParseParameters(message);
 
@@ -2532,7 +2561,43 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
             SendCommand(cmd);
         }
     }
+    else if (tag == CMD_EPI_SHUTTER1 && params.size() > 0 && params[0] == "+")
+    {
+       // this was not a notification, but a command completion:
+       LogMessage("Command completion for EPI Shutter 1 received", true);
+       isCommandCompletion = true;
+    }
+    else if (tag == CMD_EPI_SHUTTER2 && params.size() > 0 && params[0] == "+")
+    {
+       // this was not a notification, but a command completion:
+       LogMessage("Command completion for EPI Shutter 2 received", true);
+       isCommandCompletion = true;
+    }
+    else if (tag == CMD_MIRROR_UNIT1 && params.size() > 0 && params[0] == "+")
+    {
+       // this was not a notification, but a command completion:
+       LogMessage("Command completion for EPI Shutter 2 received", true);
+       isCommandCompletion = true;
+    }
+    else if (tag == CMD_MIRROR_UNIT2 && params.size() > 0 && params[0] == "+")
+    {
+       // this was not a notification, but a command completion:
+       LogMessage("Command completion for EPI Shutter 2 received", true);
+       isCommandCompletion = true;
+    }
     // Add more notification handlers as needed
+    LogMessage(("Unhandled notification: " + message).c_str(), true);
+
+    if (isCommandCompletion)
+    {
+       // Signal waiting thread with the response
+       {
+           std::lock_guard<std::mutex> lock(responseMutex_);
+           pendingResponse_ = message;
+           responseReady_ = true;
+       }
+       responseCV_.notify_one();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2773,6 +2838,8 @@ int EvidentHubWin::OnCommandComplete(EvidentSDK::MDK_MSL_CMD* pCmd)
 
     // Extract response from the command structure
     std::string response = EvidentSDK::GetResponseString(*pCmd);
+    if (response == "")
+       return 0;
 
     // Signal waiting thread with the response
     {

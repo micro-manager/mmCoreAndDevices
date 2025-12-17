@@ -332,6 +332,23 @@ inline bool IsPositionOutOfRangeError(const std::string& response)
     return response.find("E0B500020") != std::string::npos;
 }
 
+// Check if response contains device busy error (error code ending in 70)
+inline bool IsDeviceBusyError(const std::string& response)
+{
+   if (response.size() < 3)
+      return false;
+    // Error code ending in "70" indicates device is busy
+    // Response format: "ESH1 !,E0BB00070" or similar
+    return response.find("!") != std::string::npos 
+       && response.substr(response.size() - 2, 2) == "70";
+}
+
+// Check if response is empty (device not ready)
+inline bool IsEmptyResponse(const std::string& response)
+{
+    return response.empty();
+}
+
 inline bool IsUnknown(const std::string& response)
 {
     return response.find(" X") != std::string::npos;

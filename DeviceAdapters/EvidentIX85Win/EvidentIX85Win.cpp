@@ -2152,7 +2152,11 @@ int EvidentEPIShutter1::Shutdown()
 
 bool EvidentEPIShutter1::Busy()
 {
-    return false;  // Shutter changes are instantaneous
+    EvidentHubWin* hub = GetHub();
+    if (!hub)
+        return false;
+
+    return hub->GetModel()->IsBusy(DeviceType_EPIShutter1);;  // Shutter changes are instantaneous
 }
 
 int EvidentEPIShutter1::SetOpen(bool open)
@@ -2163,17 +2167,22 @@ int EvidentEPIShutter1::SetOpen(bool open)
 
     std::string cmd = BuildCommand(CMD_EPI_SHUTTER1, open ? 1 : 0);
     std::string response;
-    int ret = hub->ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
-        return ret;
 
-    if (!IsPositiveAck(response, CMD_EPI_SHUTTER1))
+     hub->GetModel()->SetBusy(DeviceType_EPIShutter1, true);  // Shutter changes are instantaneous
+     int ret = hub->ExecuteCommand(cmd, response);
+     if (ret != DEVICE_OK)
+         return ret;
+
+     // Got a response, check if it's positive
+     if (!IsPositiveAck(response, CMD_EPI_SHUTTER1))
+     {
         return ERR_NEGATIVE_ACK;
+     }
 
-    // Update MCU indicator I5 with new shutter state (0=closed, 1=open)
-    hub->UpdateEPIShutter1Indicator(open ? 1 : 0);
-
-    return DEVICE_OK;
+     // Success - update indicator and return
+     hub->GetModel()->SetBusy(DeviceType_EPIShutter1, false);
+     hub->UpdateEPIShutter1Indicator(open ? 1 : 0);
+     return DEVICE_OK;
 }
 
 int EvidentEPIShutter1::GetOpen(bool& open)
@@ -2373,15 +2382,20 @@ int EvidentMirrorUnit1::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         // Convert from 0-based to 1-based for the microscope
         std::string cmd = BuildCommand(CMD_MIRROR_UNIT1, static_cast<int>(pos + 1));
         std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-            return ret;
 
-        if (!IsPositiveAck(response, CMD_MIRROR_UNIT1))
-            return ERR_NEGATIVE_ACK;
+         int ret = hub->ExecuteCommand(cmd, response);
+         if (ret != DEVICE_OK)
+             return ret;
 
-        // Update MCU indicator I2 with new mirror position (1-based)
-        hub->UpdateMirrorUnitIndicator(static_cast<int>(pos + 1));
+
+         if (!IsPositiveAck(response, CMD_MIRROR_UNIT1))
+         {
+                 return ERR_NEGATIVE_ACK;
+         }
+
+         // Success - update indicator and return
+         hub->UpdateMirrorUnitIndicator(static_cast<int>(pos + 1));
+         return DEVICE_OK;
     }
     return DEVICE_OK;
 }
@@ -3236,14 +3250,19 @@ int EvidentEPIShutter2::SetOpen(bool open)
 
     std::string cmd = BuildCommand(CMD_EPI_SHUTTER2, open ? 1 : 0);
     std::string response;
-    int ret = hub->ExecuteCommand(cmd, response);
-    if (ret != DEVICE_OK)
-        return ret;
 
-    if (!IsPositiveAck(response, CMD_EPI_SHUTTER2))
-        return ERR_NEGATIVE_ACK;
+     int ret = hub->ExecuteCommand(cmd, response);
+     if (ret != DEVICE_OK)
+         return ret;
 
-    return DEVICE_OK;
+     // Got a response, check if it's positive
+     if (!IsPositiveAck(response, CMD_EPI_SHUTTER2))
+     {
+            return ERR_NEGATIVE_ACK;
+     }
+
+     // Success
+     return DEVICE_OK;
 }
 
 int EvidentEPIShutter2::GetOpen(bool& open)
@@ -3435,12 +3454,19 @@ int EvidentMirrorUnit2::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
         // Convert from 0-based to 1-based for the microscope
         std::string cmd = BuildCommand(CMD_MIRROR_UNIT2, static_cast<int>(pos + 1));
         std::string response;
+
         int ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
             return ret;
 
+
         if (!IsPositiveAck(response, CMD_MIRROR_UNIT2))
+        {
             return ERR_NEGATIVE_ACK;
+        }
+
+        // Success
+        return DEVICE_OK;
     }
     return DEVICE_OK;
 }
@@ -4270,12 +4296,16 @@ int EvidentAutofocus::FindFocusWithOffset()
     // Step 1: Run AF mode 3 (Offset lens mode)
     std::string cmd = BuildCommand(CMD_AF_START_STOP, 3);
     std::string response;
+
+
     int ret = hub->ExecuteCommand(cmd, response);
     if (ret != DEVICE_OK)
-        return ret;
+       return ret;
 
     if (!IsPositiveAck(response, CMD_AF_START_STOP))
-        return ERR_NEGATIVE_ACK;
+    {
+          return ERR_NEGATIVE_ACK;
+    }
 
     LogMessage("Find Focus with Offset: Running AF mode 3");
 
