@@ -16,6 +16,10 @@ EXCLUDE_SYMBOLS        = internal std
 EXTRACT_ALL            = YES
 RECURSIVE              = YES
 
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = MMDEVICE_DEPRECATED=
+
 CLASS_GRAPH            = TEXT
 COLLABORATION_GRAPH    = NO
 GROUP_GRAPHS           = NO
