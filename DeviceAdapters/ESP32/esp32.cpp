@@ -1713,7 +1713,7 @@ int CESP32Stage::MoveZ(double pos)
     if ( pos < lowerLimit_ ) pos = lowerLimit_;
 
     char buf[25];
-    int length = sprintf(buf, "Z,%3.3f\r\n", pos);
+    snprintf(buf, sizeof(buf), "Z,%3.3f\r\n", pos);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << pos;
@@ -1722,7 +1722,7 @@ int CESP32Stage::MoveZ(double pos)
     MMThreadGuard myLock(hub->GetLock());
     hub->PurgeComPortH();
 
-    int ret = hub->WriteToComPortH(( unsigned char* ) buf, length);
+    int ret = hub->WriteToComPortH(( unsigned char* ) buf, strlen(buf));
     if ( ret != DEVICE_OK ) return ret;
 
     MM::MMTime startTime = GetCurrentMMTime();
@@ -1903,7 +1903,7 @@ int CESP32XYStage::MoveX(double posUm)
     if ( posUm > upperLimitX_ ) posUm = upperLimitX_;
 
     char buf[25];
-    int length = sprintf(buf, "X,%3.3f\r\n", posUm);
+    snprintf(buf, sizeof(buf), "X,%3.3f\r\n", posUm);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << posUm;
@@ -1912,7 +1912,7 @@ int CESP32XYStage::MoveX(double posUm)
     MMThreadGuard myLock(hub->GetLock());
     hub->PurgeComPortH();
 
-    int ret = hub->WriteToComPortH(( unsigned char* ) buf, length);
+    int ret = hub->WriteToComPortH(( unsigned char* ) buf, strlen(buf));
     if ( ret != DEVICE_OK ) return ret;
 
     MM::MMTime startTime = GetCurrentMMTime();
@@ -1953,7 +1953,7 @@ int CESP32XYStage::MoveY(double posUm)
     if ( posUm > upperLimitY_ ) posUm = upperLimitY_;
 
     char buf[25];
-    int length = sprintf(buf, "Y,%3.3f\r\n", posUm);
+    snprintf(buf, sizeof(buf), "Y,%3.3f\r\n", posUm);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << posUm;
@@ -1962,7 +1962,7 @@ int CESP32XYStage::MoveY(double posUm)
     MMThreadGuard myLock(hub->GetLock());
     hub->PurgeComPortH();
 
-    int ret = hub->WriteToComPortH(( unsigned char* ) buf, length);
+    int ret = hub->WriteToComPortH(( unsigned char* ) buf, strlen(buf));
     if ( ret != DEVICE_OK ) return ret;
 
     MM::MMTime startTime = GetCurrentMMTime();

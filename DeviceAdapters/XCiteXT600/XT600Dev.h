@@ -62,7 +62,7 @@ public:
     // get Led parameter Value
     int GetLedParm(unsigned char* sCmd, unsigned char* sResp, char* sParm = NULL);
     int GetLedParmVal(unsigned char* sResp, char* sParm);
-    int GetStatusDescription(long lStatus, char* sStatus);
+    int GetStatusDescription(long lStatus, char* sStatus, size_t sStatusSize);
 
 
     // action interface

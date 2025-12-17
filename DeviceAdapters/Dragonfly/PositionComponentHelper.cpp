@@ -22,7 +22,7 @@ bool CPositionComponentHelper::RetrievePositionsFromFilterSet( IFilterSet* Filte
         if ( AddIndexToPositionNames )
         {
           char vIndexString[7];
-          sprintf( vIndexString, "%2d", vIndex );
+          snprintf( vIndexString, sizeof(vIndexString), "%2d", vIndex );
           vPositionName += vIndexString + string( " - " );
         }
         if ( FilterSet->GetFilterDescription( vIndex, vDescription, vStringLength ) == false )

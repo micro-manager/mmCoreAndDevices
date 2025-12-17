@@ -270,7 +270,7 @@ int XCite120PC::SetOpen(bool open)
 		  {
 			 timeElapsed = (GetCurrentMMTime()-timeShutterClosed_).getMsec();
 			 memset(cBuff, 0, 20);
-			 sprintf(cBuff, "[%.2f]", timeElapsed), 
+			 snprintf(cBuff, sizeof(cBuff), "[%.2f]", timeElapsed),
 			 LogMessage("XCite120PC: Waiting for shuttle dwell before the shutter is reopening..." + string(cBuff));
 		  } while ( timeElapsed < (double)shutterDwellTime_);
 	  }
@@ -282,7 +282,7 @@ int XCite120PC::SetOpen(bool open)
       LogMessage("XCite120PC: Close Shutter");
 	  timeShutterClosed_ = this->GetCurrentMMTime();
 	  memset(cBuff, 0, 20);
-	  sprintf(cBuff, "[%.2f]", timeShutterClosed_.getMsec()), 
+	  snprintf(cBuff, sizeof(cBuff), "[%.2f]", timeShutterClosed_.getMsec()),
 	  LogMessage("XCite120PC: Shutter Closed Time..." + string(cBuff));
 
       ret = ExecuteCommand(cmdCloseShutter);
@@ -403,7 +403,7 @@ int XCite120PC::OnShutterDwellTime(MM::PropertyBase* pProp, MM::ActionType eAct)
       pProp->Get(shutterDwellTime_);
       char cBuffer[20];
 	  memset(cBuffer, 0, 20);
-      sprintf(cBuffer, "%ld", shutterDwellTime_);
+      snprintf(cBuffer, sizeof(cBuffer), "%ld", shutterDwellTime_);
       LogMessage("XCiteExacte: Shutter Setteling Time: " + string(cBuffer));
    }
    return DEVICE_OK;

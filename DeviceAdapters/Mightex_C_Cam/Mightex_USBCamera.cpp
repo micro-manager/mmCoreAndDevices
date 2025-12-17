@@ -445,7 +445,7 @@ int CMightex_BUF_USBCCDCamera::InitCamera()
 		char *s_ModuleNo = strchr(ModuleNo, ' ');
 		if(s_ModuleNo)
 			*s_ModuleNo = '\0';
-		sprintf(camNames, "%s:%s\0", ModuleNo, SerialNo);
+		snprintf(camNames, sizeof(camNames), "%s:%s", ModuleNo, SerialNo);
 	}
 
 		BUFCCDUSB_AddDeviceToWorkingSet(1);
@@ -1772,7 +1772,7 @@ int CMightex_BUF_USBCCDCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType
 				//	 return DEVICE_ERR;
 				binSize_ = binFactor;
 
-				sprintf(s_resolution, "%d*%d", cameraCCDXSize_, cameraCCDYSize_);
+				snprintf(s_resolution, sizeof(s_resolution), "%d*%d", cameraCCDXSize_, cameraCCDYSize_);
 			   vector<string> ResValues;
 			   for(int i = 0; i <= s_MAX_RESOLUTION; i++)
 				   ResValues.push_back(g_Res[i]);
@@ -1807,7 +1807,7 @@ int CMightex_BUF_USBCCDCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType
 					return DEVICE_ERR;
 				binSize_ = binFactor;
 
-				sprintf(s_resolution, "%d*%d(1:%d)", p_frmSize[binFactor-1].width, p_frmSize[binFactor-1].height, binFactor);
+				snprintf(s_resolution, sizeof(s_resolution), "%d*%d(1:%d)", p_frmSize[binFactor-1].width, p_frmSize[binFactor-1].height, binFactor);
 				vector<string> resolutionValue;
 				resolutionValue.push_back(s_resolution);
 				ret = SetAllowedValues(g_Keyword_Resolution, resolutionValue);

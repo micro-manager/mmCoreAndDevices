@@ -247,7 +247,7 @@ int Conex_AxisBase:: SetSpeed(double speed)
    int ret;
 
    setlocale(LC_ALL,"C");
-   sprintf(oBufString,"1VA%6.6f",speed/coef_);
+   snprintf(oBufString, sizeof(oBufString),"1VA%6.6f",speed/coef_);
    ret=SendCommand(oBufString);
    return ret;
 }	
@@ -259,7 +259,7 @@ int Conex_AxisBase:: SetAcceleration(double acceleration)
    int ret;
 
    setlocale(LC_ALL,"C");
-   sprintf(oBufString,"1AC%6.6f",acceleration/coef_);
+   snprintf(oBufString, sizeof(oBufString),"1AC%6.6f",acceleration/coef_);
    ret=SendCommand(oBufString);
    return ret;
 }	
@@ -270,7 +270,7 @@ int Conex_AxisBase:: SetPositiveLimit(double limit)
    int ret;
 
    setlocale(LC_ALL,"C");
-   sprintf(oBufString,"1SR%6.6f",limit/coef_);
+   snprintf(oBufString, sizeof(oBufString),"1SR%6.6f",limit/coef_);
    ret=SendCommand(oBufString);
    return ret;
 }	
@@ -282,7 +282,7 @@ int Conex_AxisBase:: SetNegativeLimit(double limit)
    int ret;
 
    setlocale(LC_ALL,"C");
-   sprintf(oBufString,"1SL%6.6f",limit/coef_);
+   snprintf(oBufString, sizeof(oBufString),"1SL%6.6f",limit/coef_);
    ret=SendCommand(oBufString);
 
    return ret;
@@ -410,7 +410,7 @@ int  Conex_AxisBase::MoveRelative(double position)
    int ret;
 
    setlocale(LC_ALL,"C");
-   sprintf(oBufString,"1PR%6.6f",position/coef_);
+   snprintf(oBufString, sizeof(oBufString),"1PR%6.6f",position/coef_);
    ret=SendCommand(oBufString);
    return ret;
 }	
@@ -421,7 +421,7 @@ int Conex_AxisBase:: MoveAbsolute( double target)
    int ret;
 
    setlocale(LC_ALL,"C");
-   sprintf(oBufString,"1PA%6.6f",target/coef_);
+   snprintf(oBufString, sizeof(oBufString),"1PA%6.6f",target/coef_);
    ret=SendCommand(oBufString);
    return ret;
 }	
@@ -535,11 +535,11 @@ test();
    char reponse[255];
    if (Moving())
 		{
-        sprintf(reponse,"V=%6.3f  A=%6.3f Moving",speed_,acceleration_);
+        snprintf(reponse, sizeof(reponse),"V=%6.3f  A=%6.3f Moving",speed_,acceleration_);
 	    }
 	else
 		{
-        sprintf(reponse,"V=%6.3f  A=%6.3f Not moving",speed_,acceleration_);
+        snprintf(reponse, sizeof(reponse),"V=%6.3f  A=%6.3f Not moving",speed_,acceleration_);
 	    }
    MessageBox(0,reponse,g_X_AxisDeviceName,0);  
 */

@@ -129,7 +129,7 @@ int RAMPSXYStage::SetPositionSteps(long x, long y)
 
   // TODO(dek): if no position change, don't send new position.
   char buff[100];
-  sprintf(buff, "G0 X%f Y%f", posX_um_/1000., posY_um_/1000.);
+  snprintf(buff, sizeof(buff), "G0 X%f Y%f", posX_um_/1000., posY_um_/1000.);
   std::string buffAsStdStr = buff;
   int ret = pHub->SendCommand(buffAsStdStr);
   if (ret != DEVICE_OK)

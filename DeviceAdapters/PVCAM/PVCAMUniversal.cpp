@@ -4420,7 +4420,7 @@ int Universal::PollingThreadRun(void)
         }
         while (DEVICE_OK == ret && !pollingThd_->getStop() && imagesInserted_ < imagesToAcquire_);
 
-        sprintf( dbgBuf, "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u, imagesInserted_: %lu, imagesToAcquire_: %lu", \
+        snprintf( dbgBuf, sizeof(dbgBuf), "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u, imagesInserted_: %lu, imagesToAcquire_: %lu", \
             pollingThd_->getStop(), ret, imagesInserted_, imagesToAcquire_);
         LogAdapterMessage( __LINE__, dbgBuf );
 
@@ -4511,7 +4511,7 @@ int Universal::initializeStaticCameraParams()
         char buf[8]; // MMM.mmm
         uns16 versionMinor = fwVersion & 0x00FF;
         uns16 versionMajor = (fwVersion >> 8) & 0x00FF;
-        sprintf( buf, "%d.%d", versionMajor, versionMinor );
+        snprintf( buf, sizeof(buf), "%d.%d", versionMajor, versionMinor );
         nRet = CreateProperty(g_Keyword_FirmwareVersion, buf, MM::String, true);
         LogAdapterMessage("PARAM_CAM_FW_VERSION: " + std::string(buf));
     }

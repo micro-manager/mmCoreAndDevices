@@ -555,7 +555,7 @@ int TEHub::SetLampVoltage(MM::Device& device, MM::Core& core, double voltage)
 {
    const char* command = "LMC";
    char fmtBuf[100];
-   sprintf(fmtBuf, "%s%.1f", command, voltage);
+   snprintf(fmtBuf, sizeof(fmtBuf), "%s%.1f", command, voltage);
 
    // send command
    int ret = ExecuteCommand(device, core, "c", fmtBuf);

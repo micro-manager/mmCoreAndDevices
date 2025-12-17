@@ -338,7 +338,7 @@ private:
    int UpdateExposureFromCamera();
    int UpdatePreampGains();
    int GetPreAmpGainString(int PreAmpgainIdx, char * PreAmpGainString,int PreAmpGainStringLength );
-   void GetROIPropertyName(int position, int hSize, int vSize, char * buffer, int mode);
+   void GetROIPropertyName(int position, int hSize, int vSize, char * buffer, size_t bufferSize, int mode);
 
    int HSSpeedIdx_;
    int PreAmpGainIdx_;

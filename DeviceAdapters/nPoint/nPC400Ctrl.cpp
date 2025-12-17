@@ -120,7 +120,7 @@ int nPC400Ctrl::Initialize()
 
     // Name
     char sBoardName[120];
-    sprintf(sBoardName, "%s%s", nPC400::Instance()->GetC400Str(nPC400::C400_ChannelBoardNameLabel).c_str(), MM::g_Keyword_Name);
+    snprintf(sBoardName, sizeof(sBoardName), "%s%s", nPC400::Instance()->GetC400Str(nPC400::C400_ChannelBoardNameLabel).c_str(), MM::g_Keyword_Name);
     ret = CreateProperty(sBoardName, nPC400::Instance()->GetC400Str(nPC400::C400_ChannelBoardName).c_str(), MM::String, true);
 
     if (nPC400::Instance()->GetDebugLogFlag() > 0)
@@ -134,7 +134,7 @@ int nPC400Ctrl::Initialize()
 
     // Description
     char sBoardDesc[120];
-    sprintf(sBoardDesc, "%s%s", nPC400::Instance()->GetC400Str(nPC400::C400_ChannelBoardDescLabel).c_str(), MM::g_Keyword_Description);
+    snprintf(sBoardDesc, sizeof(sBoardDesc), "%s%s", nPC400::Instance()->GetC400Str(nPC400::C400_ChannelBoardDescLabel).c_str(), MM::g_Keyword_Description);
     ret = CreateProperty(sBoardDesc, nPC400::Instance()->GetC400Str(nPC400::C400_ChannelBoardName).c_str(), MM::String, true);
 
     if (nPC400::Instance()->GetDebugLogFlag() > 0)
