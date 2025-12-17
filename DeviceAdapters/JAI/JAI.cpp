@@ -1100,7 +1100,7 @@ void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __re
 		"Only 10 and 12 bits per component are supported");
 
 	constexpr unsigned bitsPerPixel = 3 * BitsPerComponent;
-	constexpr unsigned rightShift = 16 - BitsPerComponent;
+	constexpr uint16_t componentMask = (1 << BitsPerComponent) - 1;
 	constexpr unsigned destBytesPerPx = 8;
 
 	const unsigned bitsPerRow = w * bitsPerPixel;
@@ -1119,19 +1119,19 @@ void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __re
 			unsigned pixPtrB = col * bitsPerPixel / 8;
 			unsigned bitPtrB = col * bitsPerPixel % 8;
 			memcpy(&buf, rowSrc + pixPtrB, sizeof(uint16_t));
-			uint16_t b = (buf << bitPtrB) >> rightShift;
+			uint16_t b = (buf >> bitPtrB) & componentMask;
 			memcpy(rowDest + col * destBytesPerPx, &b, sizeof(uint16_t)); // B
 
 			unsigned pixPtrG = (col * bitsPerPixel + BitsPerComponent) / 8;
 			unsigned bitPtrG = (col * bitsPerPixel + BitsPerComponent) % 8;
 			memcpy(&buf, rowSrc + pixPtrG, sizeof(uint16_t));
-			uint16_t g = (buf << bitPtrG) >> rightShift;
+			uint16_t g = (buf >> bitPtrG) & componentMask;
 			memcpy(rowDest + col * destBytesPerPx + 2, &g, sizeof(uint16_t)); // G
 
 			unsigned pixPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) / 8;
 			unsigned bitPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) % 8;
 			memcpy(&buf, rowSrc + pixPtrR, sizeof(uint16_t));
-			uint16_t r = (buf << bitPtrR) >> rightShift;
+			uint16_t r = (buf >> bitPtrR) & componentMask;
 			memcpy(rowDest + col * destBytesPerPx + 4, &r, sizeof(uint16_t)); // R
 
 			memset(rowDest + col * destBytesPerPx + 6, 0, sizeof(uint16_t)); // A
