@@ -251,22 +251,6 @@ Run the Meson build first:
                 </executions>
             </plugin>
 
-            <!-- GPG signing -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <version>3.2.8</version>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
             <!-- Clean natives staging to remove stale libraries from previous
                  builds -->
             <plugin>
