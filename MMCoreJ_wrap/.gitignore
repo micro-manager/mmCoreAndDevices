@@ -1,2 +1,3 @@
 .wraplock
 /target/
+.flattened-pom.xml
