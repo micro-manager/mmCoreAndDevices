@@ -282,19 +282,19 @@ int Pixelink::Initialize()
 	// camera identification and other read-only information
 	char buf[512] = "";
 
-	sprintf(buf, "%d", cameraInfo.SerialNumber);
+	snprintf(buf, sizeof(buf), "%d", cameraInfo.SerialNumber);
 	int ret = CreateProperty(MM::g_Keyword_CameraID, buf, MM::String, true);
 	assert(ret == DEVICE_OK);
 
-	sprintf(buf, "%s", cameraInfo.ModelName);
+	snprintf(buf, sizeof(buf), "%s", cameraInfo.ModelName);
 	ret = CreateProperty(MM::g_Keyword_CameraName, buf, MM::String, true);
 	assert(ret == DEVICE_OK);
 
-	sprintf(buf, "%s", cameraInfo.CameraName);
+	snprintf(buf, sizeof(buf), "%s", cameraInfo.CameraName);
 	ret = CreateProperty(MM::g_Keyword_Description, buf, MM::String, true);
 	assert(ret == DEVICE_OK);
 
-	sprintf(buf, "%s", cameraInfo.VendorName);
+	snprintf(buf, sizeof(buf), "%s", cameraInfo.VendorName);
 	ret = CreateProperty(g_VendorName, buf, MM::String, true);
 	assert(ret == DEVICE_OK);
 

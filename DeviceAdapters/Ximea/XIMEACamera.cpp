@@ -1129,7 +1129,7 @@ void XimeaCamera::CreateCameraProperties()
 		try {
 			char buf[16] = "";
 			camera->SetXIAPIParamInt(XI_PRM_DOWNSAMPLING, i); // will throw exception if it fails
-			sprintf(buf, "%d", i);
+			snprintf(buf, sizeof(buf), "%d", i);
 			binningValues.push_back(buf);
 		}
 		catch (xiAPIplus_Exception exc) { /* No need to log or take action */ }

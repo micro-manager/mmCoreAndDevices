@@ -76,33 +76,35 @@
 #endif
 
 
-class CPluginManager;
-class CircularBuffer;
-class ConfigGroupCollection;
-class CoreCallback;
-class CorePropertyCollection;
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
 
-class AutoFocusInstance;
-class CameraInstance;
-class DeviceInstance;
-class GalvoInstance;
-class ImageProcessorInstance;
-class SLMInstance;
-class ShutterInstance;
-class StageInstance;
-class XYStageInstance;
-class PressurePumpInstance;
-class VolumetricPumpInstance;
-
 class CMMCore;
 
-namespace mm {
+namespace mmcore {
+namespace internal {
+   class AutoFocusInstance;
+   class CameraInstance;
+   class DeviceInstance;
+   class GalvoInstance;
+   class ImageProcessorInstance;
+   class SLMInstance;
+   class ShutterInstance;
+   class StageInstance;
+   class XYStageInstance;
+   class PressurePumpInstance;
+   class VolumetricPumpInstance;
+
+   class CircularBuffer;
+   class ConfigGroupCollection;
+   class CoreCallback;
+   class CorePropertyCollection;
+   class CPluginManager;
    class DeviceManager;
    class LogManager;
-} // namespace mm
+} // namespace internal
+} // namespace mmcore
 
 typedef unsigned int* imgRGB32;
 
@@ -124,8 +126,8 @@ enum DeviceInitializationState {
  */
 class CMMCore
 {
-   friend class CoreCallback;
-   friend class CorePropertyCollection;
+   friend class mmcore::internal::CoreCallback;
+   friend class mmcore::internal::CorePropertyCollection;
 
 public:
    CMMCore();
@@ -690,20 +692,20 @@ private:
 private:
    // LogManager should be the first data member, so that it is available for
    // as long as possible during construction and (especially) destruction.
-   std::shared_ptr<mm::LogManager> logManager_;
-   mm::logging::Logger appLogger_;
-   mm::logging::Logger coreLogger_;
+   std::shared_ptr<mmcore::internal::LogManager> logManager_;
+   mmcore::internal::logging::Logger appLogger_;
+   mmcore::internal::logging::Logger coreLogger_;
 
    bool everSnapped_;
 
-   std::weak_ptr<CameraInstance> currentCameraDevice_;
-   std::weak_ptr<ShutterInstance> currentShutterDevice_;
-   std::weak_ptr<StageInstance> currentFocusDevice_;
-   std::weak_ptr<XYStageInstance> currentXYStageDevice_;
-   std::weak_ptr<AutoFocusInstance> currentAutofocusDevice_;
-   std::weak_ptr<SLMInstance> currentSLMDevice_;
-   std::weak_ptr<GalvoInstance> currentGalvoDevice_;
-   std::weak_ptr<ImageProcessorInstance> currentImageProcessor_;
+   std::weak_ptr<mmcore::internal::CameraInstance> currentCameraDevice_;
+   std::weak_ptr<mmcore::internal::ShutterInstance> currentShutterDevice_;
+   std::weak_ptr<mmcore::internal::StageInstance> currentFocusDevice_;
+   std::weak_ptr<mmcore::internal::XYStageInstance> currentXYStageDevice_;
+   std::weak_ptr<mmcore::internal::AutoFocusInstance> currentAutofocusDevice_;
+   std::weak_ptr<mmcore::internal::SLMInstance> currentSLMDevice_;
+   std::weak_ptr<mmcore::internal::GalvoInstance> currentGalvoDevice_;
+   std::weak_ptr<mmcore::internal::ImageProcessorInstance> currentImageProcessor_;
 
    std::string channelGroup_;
    long pollingIntervalMs_;
@@ -711,14 +713,14 @@ private:
    bool autoShutter_;
    std::vector<double> *nullAffine_;
    MM::Core* callback_;                 // core services for devices
-   ConfigGroupCollection* configGroups_;
-   CorePropertyCollection* properties_;
+   mmcore::internal::ConfigGroupCollection* configGroups_;
+   mmcore::internal::CorePropertyCollection* properties_;
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
-   CircularBuffer* cbuf_;
+   mmcore::internal::CircularBuffer* cbuf_;
 
-   std::shared_ptr<CPluginManager> pluginManager_;
-   std::shared_ptr<mm::DeviceManager> deviceManager_;
+   std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
+   std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
 
    // Must be unlocked when calling MMEventCallback or calling device methods
@@ -745,18 +747,18 @@ private:
 
    void applyConfiguration(const Configuration& config) MMCORE_LEGACY_THROW(CMMError);
    int applyProperties(std::vector<PropertySetting>& props, std::string& lastError);
-   void waitForDevice(std::shared_ptr<DeviceInstance> pDev) MMCORE_LEGACY_THROW(CMMError);
+   void waitForDevice(std::shared_ptr<mmcore::internal::DeviceInstance> pDev) MMCORE_LEGACY_THROW(CMMError);
    Configuration getConfigGroupState(const char* group, bool fromCache) MMCORE_LEGACY_THROW(CMMError);
-   std::string getDeviceErrorText(int deviceCode, std::shared_ptr<DeviceInstance> pDevice);
-   std::string getDeviceName(std::shared_ptr<DeviceInstance> pDev);
+   std::string getDeviceErrorText(int deviceCode, std::shared_ptr<mmcore::internal::DeviceInstance> pDevice);
+   std::string getDeviceName(std::shared_ptr<mmcore::internal::DeviceInstance> pDev);
    void logError(const char* device, const char* msg);
    void updateAllowedChannelGroups();
-   void assignDefaultRole(std::shared_ptr<DeviceInstance> pDev);
-   void removeDeviceRole(std::shared_ptr<DeviceInstance> pDev);
+   void assignDefaultRole(std::shared_ptr<mmcore::internal::DeviceInstance> pDev);
+   void removeDeviceRole(std::shared_ptr<mmcore::internal::DeviceInstance> pDev);
    void removeAllDeviceRoles();
    void updateCoreProperty(const char* propName, MM::DeviceType devType) MMCORE_LEGACY_THROW(CMMError);
    void loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
    void initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError);
    void initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError);
-   int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<DeviceInstance>, std::string> > pDevices);
+   int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<mmcore::internal::DeviceInstance>, std::string> > pDevices);
 };

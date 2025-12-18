@@ -17,13 +17,11 @@
 #pragma once
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
-namespace internal
-{
+namespace internal {
 
 template <
    typename TLoggerData,
@@ -57,4 +55,5 @@ public:
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

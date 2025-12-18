@@ -22,6 +22,9 @@
 #include "SignalIOInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int SignalIOInstance::SetGateOpen(bool open) { RequireInitialized(__func__); return GetImpl()->SetGateOpen(open); }
 int SignalIOInstance::GetGateOpen(bool& open) { RequireInitialized(__func__); return GetImpl()->GetGateOpen(open); }
 int SignalIOInstance::SetSignal(double volts) { RequireInitialized(__func__); return GetImpl()->SetSignal(volts); }
@@ -34,3 +37,6 @@ int SignalIOInstance::StopDASequence() { RequireInitialized(__func__); return Ge
 int SignalIOInstance::ClearDASequence() { RequireInitialized(__func__); return GetImpl()->ClearDASequence(); }
 int SignalIOInstance::AddToDASequence(double voltage) { RequireInitialized(__func__); return GetImpl()->AddToDASequence(voltage); }
 int SignalIOInstance::SendDASequence() { RequireInitialized(__func__); return GetImpl()->SendDASequence(); }
+
+} // namespace internal
+} // namespace mmcore

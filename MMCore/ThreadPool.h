@@ -31,6 +31,9 @@
 #include <thread>
 #include <vector>
 
+namespace mmcore {
+namespace internal {
+
 class Task;
 
 class ThreadPool final
@@ -54,3 +57,6 @@ private:
     std::condition_variable cv_{};
     std::deque<Task*> queue_{};
 };
+
+} // namespace internal
+} // namespace mmcore

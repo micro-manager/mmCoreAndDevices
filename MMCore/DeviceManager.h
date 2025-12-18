@@ -31,12 +31,13 @@
 #include <vector>
 
 class CMMCore;
-class HubInstance;
+
+
+namespace mmcore {
+namespace internal {
+
 class LoadedDeviceAdapter;
-
-
-namespace mm
-{
+class HubInstance;
 
 class DeviceManager /* final */
 {
@@ -62,8 +63,8 @@ public:
    std::shared_ptr<DeviceInstance>
    LoadDevice(std::shared_ptr<LoadedDeviceAdapter> module,
          const std::string& deviceName, const std::string& label, CMMCore* core,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger);
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger);
 
    /**
     * \brief Unload a device.
@@ -141,4 +142,5 @@ public:
    explicit DeviceModuleLockGuard(std::shared_ptr<DeviceInstance> device);
 };
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

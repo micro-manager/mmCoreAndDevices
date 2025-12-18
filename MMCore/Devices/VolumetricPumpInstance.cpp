@@ -21,6 +21,10 @@
 
 #include "VolumetricPumpInstance.h"
 
+
+namespace mmcore {
+namespace internal {
+
 // Volume controlled pump functions
 int VolumetricPumpInstance::Home() { RequireInitialized(__func__); return GetImpl()->Home(); }
 int VolumetricPumpInstance::Stop() { RequireInitialized(__func__); return GetImpl()->Stop(); }
@@ -36,3 +40,6 @@ int VolumetricPumpInstance::GetFlowrateUlPerSecond(double& flowrate) { RequireIn
 int VolumetricPumpInstance::Start() { RequireInitialized(__func__); return GetImpl()->Start(); }
 int VolumetricPumpInstance::DispenseDurationSeconds(double durSec) { RequireInitialized(__func__); return GetImpl()->DispenseDurationSeconds(durSec); }
 int VolumetricPumpInstance::DispenseVolumeUl(double volUl) { RequireInitialized(__func__); return GetImpl()->DispenseVolumeUl(volUl); }
+
+} // namespace internal
+} // namespace mmcore

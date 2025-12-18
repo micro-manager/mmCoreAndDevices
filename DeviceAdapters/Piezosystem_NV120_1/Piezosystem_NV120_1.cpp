@@ -478,7 +478,7 @@ int Stage::GetActorname(std::string& name)
 {
 	std::string result;
 	char c[20];
-	sprintf(c,"acdescr,%d",nr_);
+	snprintf(c,sizeof(c),"acdescr,%d",nr_);
 	const char* cm = c;		
    int returnStatus = SendSerialCommand(port_.c_str(), cm, g_Mesg_Send_term);
    if (returnStatus != DEVICE_OK) 
@@ -498,7 +498,7 @@ int Stage::GetAxisname(std::string& name)
 	std::string result;
 	int i=0;
 	char c[20];
-	sprintf(c,"accoor,%d",nr_);
+	snprintf(c,sizeof(c),"accoor,%d",nr_);
 	const char* cm = c ;		
    int returnStatus = SendSerialCommand(port_.c_str(), cm, g_Mesg_Send_term);
    if (returnStatus != DEVICE_OK) 
@@ -631,7 +631,7 @@ int Stage::GetCommandValue(const char* c,double& d){
 	LogMessage ("Get command value d");
 
 	char str[50]="";
-	sprintf(str,"%s",c);	
+	snprintf(str,sizeof(str),"%s",c);
 	const char* cmd = str; 
 	//LogMessage (cmd);
     int ret;
@@ -662,7 +662,7 @@ int Stage::GetCommandValue(const char* c,int& i){
 	LogMessage ("Get command value i");
 
 	char str[50]="";
-	sprintf(str,"%s,%d",c,nr_);	
+	snprintf(str,sizeof(str),"%s,%d",c,nr_);
 	const char* cmd = str; 
 	//LogMessage (cmd);
     int ret;
@@ -693,7 +693,7 @@ int Stage::GetCommandValue(const char* c,int& i){
 int Stage::SetCommandValue(const char* c,double fkt){
 	LogMessage ("Set command value d");
 	char str[50]="";
-	sprintf(str,"%s,%.3lf",c,fkt);	
+	snprintf(str,sizeof(str),"%s,%.3lf",c,fkt);
 	const char* cmd = str; 
 	LogMessage (cmd);
     int ret;
@@ -981,11 +981,11 @@ int Stage::OnLight(MM::PropertyBase* pProp, MM::ActionType eAct){
 		light_=i;
 		pProp->Set((long)light_);
 	}
-	 else if (eAct == MM::AfterSet){	  
+	 else if (eAct == MM::AfterSet){
 		int i;
 		char light[20];
 		pProp->Get((long&)i);
-		sprintf(light,"light,%d",i);
+		snprintf(light,sizeof(light),"light,%d",i);
 		int ret = SendSerialCommand(port_.c_str(), light, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
 			return ret;		
@@ -1020,7 +1020,7 @@ int Stage::OnEncmode(MM::PropertyBase* pProp, MM::ActionType eAct){
 			  pProp->Set(g_Encoder_Mode1);
 		}
 	}
-	 else if (eAct == MM::AfterSet){	  
+	 else if (eAct == MM::AfterSet){
 		int i=0;
 		char mode[20];
 		std::string m;
@@ -1031,7 +1031,7 @@ int Stage::OnEncmode(MM::PropertyBase* pProp, MM::ActionType eAct){
 			i=1;
 		if(m==g_Encoder_Mode2)
 			i=2;
-		sprintf(mode,"encmode,%d",i);
+		snprintf(mode,sizeof(mode),"encmode,%d",i);
 		int ret = SendSerialCommand(port_.c_str(), mode, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
 			return ret;		
@@ -1053,11 +1053,11 @@ int Stage::OnEnctime(MM::PropertyBase* pProp, MM::ActionType eAct){
 		m=atoi(dest[1]);		
 		pProp->Set((long)m);
 	}
-	 else if (eAct == MM::AfterSet){	  
+	 else if (eAct == MM::AfterSet){
 		int i;
 		char mode[20];
 		pProp->Get((long&)i);
-		sprintf(mode,"enctime,%d",i);
+		snprintf(mode,sizeof(mode),"enctime,%d",i);
 		int ret = SendSerialCommand(port_.c_str(), mode, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
 			return ret;		
@@ -1079,11 +1079,11 @@ int Stage::OnEnclim(MM::PropertyBase* pProp, MM::ActionType eAct){
 		m=atoi(dest[1]);		
 		pProp->Set((long)m);
 	}
-	 else if (eAct == MM::AfterSet){	  
+	 else if (eAct == MM::AfterSet){
 		int i;
 		char mode[20];
 		pProp->Get((long&)i);
-		sprintf(mode,"enclim,%d",i);
+		snprintf(mode,sizeof(mode),"enclim,%d",i);
 		int ret = SendSerialCommand(port_.c_str(), mode, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
 			return ret;		
@@ -1105,11 +1105,11 @@ int Stage::OnEncexp(MM::PropertyBase* pProp, MM::ActionType eAct){
 		m=atoi(dest[1]);		
 		pProp->Set((long)m);
 	}
-	 else if (eAct == MM::AfterSet){	  
+	 else if (eAct == MM::AfterSet){
 		int i;
 		char mode[20];
 		pProp->Get((long&)i);
-		sprintf(mode,"encexp,%d",i);
+		snprintf(mode,sizeof(mode),"encexp,%d",i);
 		int ret = SendSerialCommand(port_.c_str(), mode, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
 			return ret;		
@@ -1131,11 +1131,11 @@ int Stage::OnEncstol(MM::PropertyBase* pProp, MM::ActionType eAct){
 		m=atof(dest[1]);		
 		pProp->Set(m);
 	}
-	 else if (eAct == MM::AfterSet){	  
+	 else if (eAct == MM::AfterSet){
 		double d;
 		char loop[20];
 		pProp->Get(d);
-		sprintf(loop,"encstol,%.3f",d);
+		snprintf(loop,sizeof(loop),"encstol,%.3f",d);
 		int ret = SendSerialCommand(port_.c_str(), loop, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
 			return ret;		
@@ -1157,11 +1157,11 @@ int Stage::OnEncstcl(MM::PropertyBase* pProp, MM::ActionType eAct){
 		m=atof(dest[1]);		
 		pProp->Set(m);
 	}
-	 else if (eAct == MM::AfterSet){	  
+	 else if (eAct == MM::AfterSet){
 		double d;
 		char loop[20];
 		pProp->Get(d);
-		sprintf(loop,"encstcl,%.3f",d);
+		snprintf(loop,sizeof(loop),"encstcl,%.3f",d);
 		int ret = SendSerialCommand(port_.c_str(), loop, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
 			return ret;		

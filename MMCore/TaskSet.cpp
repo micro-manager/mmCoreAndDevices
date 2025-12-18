@@ -25,6 +25,9 @@
 
 #include <cassert>
 
+namespace mmcore {
+namespace internal {
+
 TaskSet::TaskSet(std::shared_ptr<ThreadPool> pool)
     : pool_(pool),
     semaphore_(std::make_shared<Semaphore>())
@@ -52,3 +55,6 @@ void TaskSet::Wait()
 {
     semaphore_->Wait(usedTaskCount_);
 }
+
+} // namespace internal
+} // namespace mmcore

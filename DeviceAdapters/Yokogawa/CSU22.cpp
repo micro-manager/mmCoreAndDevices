@@ -683,7 +683,7 @@ int DriveSpeed::Initialize()
    if (current_ > max_)
       current_ = max_;
    char speed[5];
-   sprintf(speed,"%d", current_);
+   snprintf(speed, sizeof(speed), "%d", current_);
    // Speed
    CPropertyAction* pAct = new CPropertyAction (this, &DriveSpeed::OnSpeed);
    ret = CreateProperty(MM::g_Keyword_State, speed, MM::Integer, false, pAct); 

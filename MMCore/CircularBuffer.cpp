@@ -27,6 +27,7 @@
 #include "CoreUtils.h"
 
 #include "TaskSet_CopyMemory.h"
+#include "ThreadPool.h"
 
 #include "DeviceUtils.h"
 
@@ -35,6 +36,9 @@
 #include <ctime>
 #include <memory>
 #include <string>
+
+namespace mmcore {
+namespace internal {
 
 const long long bytesInMB = 1 << 20;
 const long adjustThreshold = LONG_MAX / 2;
@@ -202,8 +206,8 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
     MMThreadGuard insertGuard(g_insertLock);
- 
-    mm::ImgBuffer* pImg;
+
+    ImgBuffer* pImg;
     unsigned long singleChannelSize = (unsigned long)width * height * byteDepth;
  
     {
@@ -308,23 +312,23 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
 
 const unsigned char* CircularBuffer::GetTopImage() const
 {
-   const mm::ImgBuffer* img = GetNthFromTopImageBuffer(0, 0);
+   const ImgBuffer* img = GetNthFromTopImageBuffer(0, 0);
    if (!img)
       return 0;
    return img->GetPixels();
 }
 
-const mm::ImgBuffer* CircularBuffer::GetTopImageBuffer(unsigned channel) const
+const ImgBuffer* CircularBuffer::GetTopImageBuffer(unsigned channel) const
 {
    return GetNthFromTopImageBuffer(0, channel);
 }
 
-const mm::ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
+const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
 {
    return GetNthFromTopImageBuffer(static_cast<long>(n), 0);
 }
 
-const mm::ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
+const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
       unsigned channel) const
 {
    MMThreadGuard guard(g_bufferLock);
@@ -343,13 +347,13 @@ const mm::ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
 
 const unsigned char* CircularBuffer::GetNextImage()
 {
-   const mm::ImgBuffer* img = GetNextImageBuffer(0);
+   const ImgBuffer* img = GetNextImageBuffer(0);
    if (!img)
       return 0;
    return img->GetPixels();
 }
 
-const mm::ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
+const ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
 {
    MMThreadGuard guard(g_bufferLock);
 
@@ -361,3 +365,6 @@ const mm::ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
    ++saveIndex_;
    return frameArray_[targetIndex].FindImage(channel);
 }
+
+} // namespace internal
+} // namespace mmcore

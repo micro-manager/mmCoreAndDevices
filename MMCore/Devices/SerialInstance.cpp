@@ -22,9 +22,15 @@
 #include "SerialInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 MM::PortType SerialInstance::GetPortType() const { RequireInitialized(__func__); return GetImpl()->GetPortType(); }
 int SerialInstance::SetCommand(const char* command, const char* term) { RequireInitialized(__func__); return GetImpl()->SetCommand(command, term); }
 int SerialInstance::GetAnswer(char* txt, unsigned maxChars, const char* term) { RequireInitialized(__func__); return GetImpl()->GetAnswer(txt, maxChars, term); }
 int SerialInstance::Write(const unsigned char* buf, unsigned long bufLen) { RequireInitialized(__func__); return GetImpl()->Write(buf, bufLen); }
 int SerialInstance::Read(unsigned char* buf, unsigned long bufLen, unsigned long& charsRead) { RequireInitialized(__func__); return GetImpl()->Read(buf, bufLen, charsRead); }
 int SerialInstance::Purge() { RequireInitialized(__func__); return GetImpl()->Purge(); }
+
+} // namespace internal
+} // namespace mmcore

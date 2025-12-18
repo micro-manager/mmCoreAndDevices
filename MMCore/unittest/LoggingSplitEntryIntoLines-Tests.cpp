@@ -9,7 +9,8 @@
 #include <string>
 #include <vector>
 
-namespace mm {
+namespace mmcore {
+namespace internal {
 namespace logging {
 
 TEST_CASE("split entry into lines", "[Logging]")
@@ -176,4 +177,5 @@ TEST_CASE("split entry into lines", "[Logging]")
 }
 
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

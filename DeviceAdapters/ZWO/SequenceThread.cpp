@@ -29,7 +29,7 @@ inline static void OutputDbgPrint(const char* strOutPutString, ...)
 {
 #ifdef _DEBUG
 	char strBuf[128] = {0};
-	sprintf(strBuf, "<%s> ", "MM_ASI");
+	snprintf(strBuf, sizeof(strBuf), "<%s> ", "MM_ASI");
 	va_list vlArgs;
 	va_start(vlArgs, strOutPutString);
 	vsnprintf((char*)(strBuf+strlen(strBuf)), sizeof(strBuf)-strlen(strBuf), strOutPutString, vlArgs);

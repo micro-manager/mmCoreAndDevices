@@ -22,4 +22,10 @@
 #include "ImageProcessorInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int ImageProcessorInstance::Process(unsigned char* buffer, unsigned width, unsigned height, unsigned byteDepth) { RequireInitialized(__func__); return GetImpl()->Process(buffer, width, height, byteDepth); }
+
+} // namespace internal
+} // namespace mmcore

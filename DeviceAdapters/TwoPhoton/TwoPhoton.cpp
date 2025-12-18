@@ -1007,7 +1007,7 @@ int BitFlowCamera::LiveThread::svc()
 
       if (ret != DEVICE_OK) {
          char txt[1000];
-         sprintf(txt, "BitFlow live thread: ImageSnap() error %d", ret);
+         snprintf(txt, sizeof(txt), "BitFlow live thread: ImageSnap() error %d", ret);
          cam_->GetCoreCallback()->LogMessage(cam_, txt, false);
          break;
       }

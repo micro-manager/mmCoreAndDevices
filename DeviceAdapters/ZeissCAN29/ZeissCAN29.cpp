@@ -1224,11 +1224,7 @@ int Turret::Initialize()
    char buf[bufSize];
    for (unsigned i=0; i < numPos_; i++)
    {
-      #ifdef WIN32
-      sprintf(buf, "Position-%d", i+1);
-      #else
       snprintf(buf, bufSize, "Position-%d", i+1);
-      #endif
       SetPositionLabel(i, buf);
    }
 

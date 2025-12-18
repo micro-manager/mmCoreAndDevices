@@ -26,12 +26,10 @@
 #include <string>
 
 
-namespace mm
-{
-namespace logging
-{
-namespace internal
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
+namespace internal {
 
 
 inline const char*
@@ -140,4 +138,5 @@ MetadataFormatter::FormatContinuationPrefix(std::ostream& stream)
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

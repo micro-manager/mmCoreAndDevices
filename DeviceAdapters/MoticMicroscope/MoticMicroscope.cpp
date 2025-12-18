@@ -699,7 +699,7 @@ int Objectives::Initialize()
 		char buf[64];
 		for(map<int, double>::iterator i = _mag.begin(); i != _mag.end(); ++i)
 		{
-			sprintf(buf, "%dX", (int)i->second);
+			snprintf(buf, sizeof(buf), "%dX", (int)i->second);
 			SetPositionLabel(i->first, buf);
 		}
 		_curpos = obj_GetCurrentObjective();

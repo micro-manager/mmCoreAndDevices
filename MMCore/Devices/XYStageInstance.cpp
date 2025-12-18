@@ -22,6 +22,9 @@
 #include "XYStageInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int XYStageInstance::SetPositionUm(double x, double y) { RequireInitialized(__func__); return GetImpl()->SetPositionUm(x, y); }
 int XYStageInstance::SetRelativePositionUm(double dx, double dy) { RequireInitialized(__func__); return GetImpl()->SetRelativePositionUm(dx, dy); }
 int XYStageInstance::SetAdapterOriginUm(double x, double y) { RequireInitialized(__func__); return GetImpl()->SetAdapterOriginUm(x, y); }
@@ -46,3 +49,6 @@ int XYStageInstance::StopXYStageSequence() { RequireInitialized(__func__); retur
 int XYStageInstance::ClearXYStageSequence() { RequireInitialized(__func__); return GetImpl()->ClearXYStageSequence(); }
 int XYStageInstance::AddToXYStageSequence(double positionX, double positionY) { RequireInitialized(__func__); return GetImpl()->AddToXYStageSequence(positionX, positionY); }
 int XYStageInstance::SendXYStageSequence() { RequireInitialized(__func__); return GetImpl()->SendXYStageSequence(); }
+
+} // namespace internal
+} // namespace mmcore

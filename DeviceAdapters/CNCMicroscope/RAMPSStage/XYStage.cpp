@@ -129,7 +129,7 @@ int RAMPSXYStage::SetPositionSteps(long x, long y)
 
   // TODO(dek): if no position change, don't send new position.
   char buff[100];
-  sprintf(buff, "G0 X%f Y%f", posX_um_/1000., posY_um_/1000.);
+  snprintf(buff, sizeof(buff), "G0 X%f Y%f", posX_um_/1000., posY_um_/1000.);
   std::string buffAsStdStr = buff;
   int ret = pHub->SendCommand(buffAsStdStr);
   if (ret != DEVICE_OK)
@@ -141,7 +141,7 @@ int RAMPSXYStage::SetPositionSteps(long x, long y)
 	  LogMessage("Error sending XY move.");
 	  return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
 	  LogMessage("Failed to get ok response to XY move.");
   }
   ret = OnXYStagePositionChanged(posX_um_, posY_um_);
@@ -182,7 +182,7 @@ int RAMPSXYStage::Home() {
     LogMessage("error getting response to homing command.");
     return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
     LogMessage("Homing command: expected ok.");
     return DEVICE_ERR;
   }
@@ -210,7 +210,7 @@ int RAMPSXYStage::SetAdapterOriginUm(double x, double y) {
     LogMessage("error getting response to origin command.");
     return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
     LogMessage("Origin command: expected ok.");
     return DEVICE_ERR;
   }

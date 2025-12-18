@@ -22,4 +22,10 @@
 #include "MagnifierInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 double MagnifierInstance::GetMagnification() { RequireInitialized(__func__); return GetImpl()->GetMagnification(); }
+
+} // namespace internal
+} // namespace mmcore

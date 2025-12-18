@@ -1888,7 +1888,7 @@ int CWOSMStage::MoveZ(double pos)
     LogMessage("after limits", false);
 
     char buf[50];
-    int length = sprintf(buf, "dac_out pz %3.3f\r\n", pos);
+    snprintf(buf, sizeof(buf), "dac_out pz %3.3f\r\n", pos);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << pos;
@@ -1897,7 +1897,7 @@ int CWOSMStage::MoveZ(double pos)
     MMThreadGuard myLock(hub->GetLock());
     hub->PurgeComPortH();
 
-    int ret = hub->WriteToComPortH(( unsigned char* ) buf, length);
+    int ret = hub->WriteToComPortH(( unsigned char* ) buf, strlen(buf));
     if ( ret != DEVICE_OK ) return ret;
 
     MM::MMTime startTime = GetCurrentMMTime();
@@ -2077,8 +2077,8 @@ int CWOSMXYStage::MoveX(double posUm)
     if ( posUm < lowerLimitX_ ) posUm = lowerLimitX_;
     if ( posUm > upperLimitX_ ) posUm = upperLimitX_;
 
-    char buf[25];
-    int length = sprintf(buf, "dac_out px %1.3f\r\n", posUm);
+    char buf[50];
+    snprintf(buf, sizeof(buf), "dac_out px %1.3f\r\n", posUm);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << posUm;
@@ -2087,7 +2087,7 @@ int CWOSMXYStage::MoveX(double posUm)
     MMThreadGuard myLock(hub->GetLock());
     hub->PurgeComPortH();
 
-    int ret = hub->WriteToComPortH(( unsigned char* ) buf, length);
+    int ret = hub->WriteToComPortH(( unsigned char* ) buf, strlen(buf));
     if ( ret != DEVICE_OK ) return ret;
 
     MM::MMTime startTime = GetCurrentMMTime();
@@ -2127,8 +2127,8 @@ int CWOSMXYStage::MoveY(double posUm)
     if ( posUm < lowerLimitY_ ) posUm = lowerLimitY_;
     if ( posUm > upperLimitY_ ) posUm = upperLimitY_;
 
-    char buf[25];
-    int length = sprintf(buf, "dac_out py %1.3f\r\n", posUm);
+    char buf[50];
+    snprintf(buf, sizeof(buf), "dac_out py %1.3f\r\n", posUm);
 
     std::stringstream ss;
     ss << "Command: " << buf << "  Position set: " << posUm;
@@ -2137,7 +2137,7 @@ int CWOSMXYStage::MoveY(double posUm)
     MMThreadGuard myLock(hub->GetLock());
     hub->PurgeComPortH();
 
-    int ret = hub->WriteToComPortH(( unsigned char* ) buf, length);
+    int ret = hub->WriteToComPortH(( unsigned char* ) buf, strlen(buf));
     if ( ret != DEVICE_OK ) return ret;
 
     MM::MMTime startTime = GetCurrentMMTime();

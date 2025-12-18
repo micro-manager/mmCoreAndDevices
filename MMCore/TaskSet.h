@@ -30,6 +30,9 @@
 #include <memory>
 #include <vector>
 
+namespace mmcore {
+namespace internal {
+
 class TaskSet
 {
 public:
@@ -68,3 +71,6 @@ protected:
     std::vector<Task*> tasks_{};
     size_t usedTaskCount_{ 0 };
 };
+
+} // namespace internal
+} // namespace mmcore

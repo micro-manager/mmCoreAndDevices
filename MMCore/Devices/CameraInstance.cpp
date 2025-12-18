@@ -22,6 +22,9 @@
 #include "CameraInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int CameraInstance::SnapImage() { RequireInitialized(__func__); return GetImpl()->SnapImage(); }
 const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(); }
 const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(channelNr); }
@@ -153,3 +156,6 @@ int CameraInstance::StopExposureSequence() { RequireInitialized(__func__); retur
 int CameraInstance::ClearExposureSequence() { RequireInitialized(__func__); return GetImpl()->ClearExposureSequence(); }
 int CameraInstance::AddToExposureSequence(double exposureTime_ms) { RequireInitialized(__func__); return GetImpl()->AddToExposureSequence(exposureTime_ms); }
 int CameraInstance::SendExposureSequence() const { RequireInitialized(__func__); return GetImpl()->SendExposureSequence(); }
+
+} // namespace internal
+} // namespace mmcore

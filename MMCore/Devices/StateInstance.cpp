@@ -22,6 +22,9 @@
 #include "StateInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int StateInstance::SetPosition(long pos) { RequireInitialized(__func__); return GetImpl()->SetPosition(pos); }
 int StateInstance::SetPosition(const char* label) { RequireInitialized(__func__); return GetImpl()->SetPosition(label); }
 int StateInstance::GetPosition(long& pos) const { RequireInitialized(__func__); return GetImpl()->GetPosition(pos); }
@@ -49,3 +52,6 @@ int StateInstance::SetPositionLabel(long pos, const char* label) { RequireInitia
 unsigned long StateInstance::GetNumberOfPositions() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfPositions(); }
 int StateInstance::SetGateOpen(bool open) { RequireInitialized(__func__); return GetImpl()->SetGateOpen(open); }
 int StateInstance::GetGateOpen(bool& open) { RequireInitialized(__func__); return GetImpl()->GetGateOpen(open); }
+
+} // namespace internal
+} // namespace mmcore

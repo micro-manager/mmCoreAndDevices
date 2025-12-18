@@ -23,6 +23,8 @@
 
 #include <string>
 
+namespace mmcore {
+namespace internal {
 
 class LoadedModuleImpl;
 
@@ -42,3 +44,6 @@ private:
    LoadedModuleImpl* pImpl_;
    const std::string filename_;
 };
+
+} // namespace internal
+} // namespace mmcore

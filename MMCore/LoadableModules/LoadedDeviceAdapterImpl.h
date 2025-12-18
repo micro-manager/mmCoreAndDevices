@@ -22,6 +22,9 @@
 #include "MMDevice.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class LoadedDeviceAdapterImpl
 {
 public:
@@ -41,3 +44,6 @@ public:
    virtual MM::Device* CreateDevice(const char* deviceName) = 0;
    virtual void DeleteDevice(MM::Device* device) = 0;
 };
+
+} // namespace internal
+} // namespace mmcore

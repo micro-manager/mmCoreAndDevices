@@ -117,8 +117,8 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // Helper Functions (global scope)
 /////////////////////////////////////////////////////////////////////////////
 
-void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString)
-{	
+void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString, size_t outStringSize)
+{
    float readoutSpeed;
 
    switch(inSpeed) {
@@ -163,7 +163,7 @@ void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString)
        break;
    }
 
-   sprintf(outString, "%4.1f MHz", readoutSpeed);
+   snprintf(outString, outStringSize, "%4.1f MHz", readoutSpeed);
 }
 
 bool dequals(const double a, const double b, const double eps)
@@ -728,7 +728,7 @@ int QICamera::Initialize()
          throw DEVICE_ERR;
       }
 
-      sprintf(qcamVersionStr, "QCam %u.%u.%u", major, minor, build);
+      snprintf(qcamVersionStr, sizeof(qcamVersionStr), "QCam %u.%u.%u", major, minor, build);
       nRet = CreateProperty("QCam Version", qcamVersionStr, MM::String, true);
       m_nDriverBuild = major * 100 + minor * 10 + build;
 
@@ -900,7 +900,7 @@ int QICamera::Initialize()
          strcpy(cameraStr, "N/A");
       }
 
-      sprintf(cameraIDStr, "Serial number %s", cameraStr);
+      snprintf(cameraIDStr, sizeof(cameraIDStr), "Serial number %s", cameraStr);
 
       nRet = CreateProperty(MM::g_Keyword_CameraID, cameraIDStr, MM::String, true);
       if (nRet != DEVICE_OK && nRet != DEVICE_NOT_SUPPORTED) {
@@ -1170,7 +1170,7 @@ int QICamera::SetupExposure()
 
    // convert the nanosecond exposure time into a millisecond string
    exposureAsFloat = (float)exposure / 1000000.0f;
-   sprintf(tempStr, "%f", exposureAsFloat);
+   snprintf(tempStr, sizeof(tempStr), "%f", exposureAsFloat);
    m_dExposure = exposureAsFloat;
 
    propertyAction = new CPropertyAction (this, &QICamera::OnExposure);
@@ -1183,7 +1183,7 @@ int QICamera::SetupExposure()
    if (minMaxSupport) {
       // create the min property
       exposureMinAsFloat = (float)exposureMin / 1000000.0f;
-      sprintf(tempStr, "%f", exposureMinAsFloat);
+      snprintf(tempStr, sizeof(tempStr), "%f", exposureMinAsFloat);
       nRet = CreateProperty(g_Keyword_Exposure_Min, tempStr, MM::Float, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1192,7 +1192,7 @@ int QICamera::SetupExposure()
 
       // create the max property
       exposureMaxAsFloat = (float)exposureMax / 1000000.0f;
-      sprintf(tempStr, "%f", exposureMaxAsFloat);
+      snprintf(tempStr, sizeof(tempStr), "%f", exposureMaxAsFloat);
       nRet = CreateProperty(g_Keyword_Exposure_Max, tempStr, MM::Float, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1240,7 +1240,7 @@ int QICamera::SetupBinning()
    // go through each binning mode
    for (counter = 0; counter < binningTableSize; counter ++) {
       // convert the integer to a string
-      sprintf(tempStr, "%lu", binningTable[counter]);
+      snprintf(tempStr, sizeof(tempStr), "%lu", binningTable[counter]);
 
       // add the binning value to the vector
       binValues.push_back(tempStr);
@@ -1309,7 +1309,7 @@ int QICamera::SetupGain()
 
    // setup the gain property
    gainAsFloat = (float)gain / 1000000.0f;
-   sprintf(tempStr, "%f", gainAsFloat);
+   snprintf(tempStr, sizeof(tempStr), "%f", gainAsFloat);
 
    propertyAction = new CPropertyAction (this, &QICamera::OnGain);
    nRet = CreateProperty(MM::g_Keyword_Gain, tempStr, MM::Float, false, propertyAction);
@@ -1321,7 +1321,7 @@ int QICamera::SetupGain()
    if (minMaxSupport) {
       // create the min property
       gainMinAsFloat = (float)gainMin / 1000000.0f;
-      sprintf(tempStr, "%f", gainMinAsFloat);
+      snprintf(tempStr, sizeof(tempStr), "%f", gainMinAsFloat);
       nRet = CreateProperty(g_Keyword_Gain_Min, tempStr, MM::Float, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1330,7 +1330,7 @@ int QICamera::SetupGain()
 
       // create a max property
       gainMaxAsFloat = (float)gainMax / 1000000.0f;
-      sprintf(tempStr, "%f", gainMaxAsFloat);
+      snprintf(tempStr, sizeof(tempStr), "%f", gainMaxAsFloat);
       nRet = CreateProperty(g_Keyword_Gain_Max, tempStr, MM::Float, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1390,7 +1390,7 @@ int QICamera::SetupOffset()
    }
 
    // create the main property
-   sprintf(tempStr, "%ld", offset);
+   snprintf(tempStr, sizeof(tempStr), "%ld", offset);
    propertyAction = new CPropertyAction (this, &QICamera::OnOffset);
    nRet = CreateProperty(MM::g_Keyword_Offset, tempStr, MM::Integer, false, propertyAction);
    if (nRet != DEVICE_OK) {
@@ -1400,7 +1400,7 @@ int QICamera::SetupOffset()
 
    if (minMaxSupport) {
       // create the min property
-      sprintf(tempStr, "%ld", offsetMin);
+      snprintf(tempStr, sizeof(tempStr), "%ld", offsetMin);
       nRet = CreateProperty(g_Keyword_Offset_Min, tempStr, MM::Integer, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1408,7 +1408,7 @@ int QICamera::SetupOffset()
       }
 
       // create the max property
-      sprintf(tempStr, "%ld", offsetMax);
+      snprintf(tempStr, sizeof(tempStr), "%ld", offsetMax);
       nRet = CreateProperty(g_Keyword_Offset_Max, tempStr, MM::Integer, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1491,7 +1491,7 @@ int QICamera::SetupReadoutSpeed()
 
       // go through each readout speed and add the string version to the vector
       for (counter = 0; counter < readoutTableSize; counter ++) {
-         ConvertReadoutSpeedToString((QCam_qcReadoutSpeed)readoutTable[counter], tempStr);
+         ConvertReadoutSpeedToString((QCam_qcReadoutSpeed)readoutTable[counter], tempStr, sizeof(tempStr));
          // only add it if it does not exist
          bFound = false;
          for (readoutItr = readoutValues.begin(); readoutItr != readoutValues.end(); ++readoutItr) {
@@ -1527,7 +1527,7 @@ int QICamera::SetupReadoutSpeed()
       return DEVICE_ERR;
    }
 
-   ConvertReadoutSpeedToString((QCam_qcReadoutSpeed)defaultSpeedEnum, defaultSpeedStr);
+   ConvertReadoutSpeedToString((QCam_qcReadoutSpeed)defaultSpeedEnum, defaultSpeedStr, sizeof(defaultSpeedStr));
 
    // SetupReadoutSpeed() can be called more than once to update the allowed values
    // Only create the property if it does not exist yet
@@ -1644,7 +1644,7 @@ int QICamera::SetupBitDepth()
       return DEVICE_ERR;
    }
    m_maxBitDepth = (int)maxBitDepth;
-   sprintf(mono16Str, "%dbit", m_maxBitDepth);
+   snprintf(mono16Str, sizeof(mono16Str), "%dbit", m_maxBitDepth);
 
    // get the allowed image formats. Not all cameras support 8bit mode
    mono8allowed = false;
@@ -1826,7 +1826,7 @@ int QICamera::SetupRegulatedCooling()
 
    if (minMaxSupport) {
       // create a min temperature property
-      sprintf(minTempStr, "%ld", minCoolingTemp);
+      snprintf(minTempStr, sizeof(minTempStr), "%ld", minCoolingTemp);
       nRet = CreateProperty(g_Keyword_CCDTemperature_Min, minTempStr, MM::Integer, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1834,7 +1834,7 @@ int QICamera::SetupRegulatedCooling()
       }
 
       // create a max temperature property
-      sprintf(maxTempStr, "%ld", maxCoolingTemp);
+      snprintf(maxTempStr, sizeof(maxTempStr), "%ld", maxCoolingTemp);
       nRet = CreateProperty(g_Keyword_CCDTemperature_Max, maxTempStr, MM::Integer, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1906,7 +1906,7 @@ int QICamera::SetupEMGain()
       return DEVICE_ERR;
    }
 
-   sprintf(tempStr, "%lu", emGain);
+   snprintf(tempStr, sizeof(tempStr), "%lu", emGain);
 
    propertyAction = new CPropertyAction (this, &QICamera::OnEMGain);
    nRet = CreateProperty(MM::g_Keyword_EMGain, tempStr, MM::Integer, false, propertyAction);
@@ -1917,7 +1917,7 @@ int QICamera::SetupEMGain()
 
    if (minMaxSupport) {
       // create the min property
-      sprintf(tempStr, "%lu", emGainMin);
+      snprintf(tempStr, sizeof(tempStr), "%lu", emGainMin);
       nRet = CreateProperty(g_Keyword_EMGain_Min, tempStr, MM::Integer, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1925,7 +1925,7 @@ int QICamera::SetupEMGain()
       }
 
       // create the max property
-      sprintf(tempStr, "%lu", emGainMax);
+      snprintf(tempStr, sizeof(tempStr), "%lu", emGainMax);
       nRet = CreateProperty(g_Keyword_EMGain_Max, tempStr, MM::Integer, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -1994,7 +1994,7 @@ int QICamera::SetupITGain()
 
    // setup the intensified gain property
    itGainAsFloat = (float)itGain / 1000000.0f;
-   sprintf(tempStr, "%f", itGainAsFloat);
+   snprintf(tempStr, sizeof(tempStr), "%f", itGainAsFloat);
 
    propertyAction = new CPropertyAction (this, &QICamera::OnITGain);
    nRet = CreateProperty(g_Keyword_ITGain, tempStr, MM::Float, false, propertyAction);
@@ -2006,7 +2006,7 @@ int QICamera::SetupITGain()
    if (minMaxSupport) {
       // create the min property
       itGainMinAsFloat = (float)itGainMin / 1000000.0f;
-      sprintf(tempStr, "%f", itGainMinAsFloat);
+      snprintf(tempStr, sizeof(tempStr), "%f", itGainMinAsFloat);
       nRet = CreateProperty(g_Keyword_ITGain_Min, tempStr, MM::Float, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -2015,7 +2015,7 @@ int QICamera::SetupITGain()
 
       // create the max property
       itGainMaxAsFloat = (float)itGainMax / 1000000.0f;
-      sprintf(tempStr, "%f", itGainMaxAsFloat);
+      snprintf(tempStr, sizeof(tempStr), "%f", itGainMaxAsFloat);
       nRet = CreateProperty(g_Keyword_ITGain_Max, tempStr, MM::Float, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -2090,7 +2090,7 @@ int QICamera::SetupEMAndEasyEMGain()
    CPropertyActionEx       *propertyAction;
    char                    tempStr[256];
 
-   sprintf(tempStr, "%lu", emGain);
+   snprintf(tempStr, sizeof(tempStr), "%lu", emGain);
 
    propertyAction = new CPropertyActionEx (this, &QICamera::OnEasyEMGain, 1);
    nRet = CreateProperty("Easy EM Gain", tempStr, MM::Integer, false, propertyAction);
@@ -2101,7 +2101,7 @@ int QICamera::SetupEMAndEasyEMGain()
 
    if (minMaxSupport) {
       // create the min property
-      sprintf(tempStr, "%lu", emGainMin);
+      snprintf(tempStr, sizeof(tempStr), "%lu", emGainMin);
       nRet = CreateProperty(g_Keyword_EMGain_Min, tempStr, MM::Integer, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -2109,7 +2109,7 @@ int QICamera::SetupEMAndEasyEMGain()
       }
 
       // create the max property
-      sprintf(tempStr, "%lu", emGainMax);
+      snprintf(tempStr, sizeof(tempStr), "%lu", emGainMax);
       nRet = CreateProperty(g_Keyword_EMGain_Max, tempStr, MM::Integer, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -2298,7 +2298,7 @@ int QICamera::SetupTriggerDelay()
 
    // convert the nanosecond delay time into a millisecond string
    delayAsFloat = (float)delay / 1000000.0f;
-   sprintf(tempStr, "%f", delayAsFloat);
+   snprintf(tempStr, sizeof(tempStr), "%f", delayAsFloat);
 
    propertyAction = new CPropertyAction (this, &QICamera::OnTriggerDelay);
    nRet = CreateProperty(g_Keyword_TriggerDelay, tempStr, MM::Float, false, propertyAction);
@@ -2310,7 +2310,7 @@ int QICamera::SetupTriggerDelay()
    if (minMaxSupport) {
       // create the min property
       delayMinAsFloat = (float)delayMin / 1000000.0f;
-      sprintf(tempStr, "%f", delayMinAsFloat);
+      snprintf(tempStr, sizeof(tempStr), "%f", delayMinAsFloat);
       nRet = CreateProperty(g_Keyword_TriggerDelay_Min, tempStr, MM::Float, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -2319,7 +2319,7 @@ int QICamera::SetupTriggerDelay()
 
       // create the max property
       delayMaxAsFloat = (float)delayMax / 1000000.0f;
-      sprintf(tempStr, "%f", delayMaxAsFloat);
+      snprintf(tempStr, sizeof(tempStr), "%f", delayMaxAsFloat);
       nRet = CreateProperty(g_Keyword_TriggerDelay_Max, tempStr, MM::Float, true);
       if (nRet != DEVICE_OK) {
          REPORT_MMERR(nRet);
@@ -3186,7 +3186,7 @@ int QICamera::OnReadoutSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_ERR;
       }
 
-      ConvertReadoutSpeedToString(readoutSpeedEnum, readoutSpeedChars);
+      ConvertReadoutSpeedToString(readoutSpeedEnum, readoutSpeedChars, sizeof(readoutSpeedChars));
 
       pProp->Set(readoutSpeedChars);
    }
@@ -3324,11 +3324,11 @@ int QICamera::OnBitDepth(MM::PropertyBase* pProp, MM::ActionType eAct)
       // see which one it is
       if (QCam_is16bit(imageFormat)) {
          m_bitDepth = m_maxBitDepth;
-      } else {	
+      } else {
          m_bitDepth = 8;
       }
 
-      sprintf(tempStr, "%dbit", m_bitDepth);
+      snprintf(tempStr, sizeof(tempStr), "%dbit", m_bitDepth);
       pProp->Set(tempStr);
    }
 
@@ -3448,7 +3448,7 @@ int QICamera::OnRegulatedCooling(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
 
       // convert to a string
-      sprintf(tempStr, "%ld", coolingTemp);
+      snprintf(tempStr, sizeof(tempStr), "%ld", coolingTemp);
 
       pProp->Set(tempStr);
    }

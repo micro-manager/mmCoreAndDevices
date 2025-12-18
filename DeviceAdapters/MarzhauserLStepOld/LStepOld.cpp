@@ -98,8 +98,8 @@ int LStepOld::Initialize()
    if (s!=DEVICE_OK)
       return s;
    motor_speed_ = atof( answer.c_str() ) * .1;
-   char speed[5];
-   sprintf( speed, "%2.1f",  motor_speed_ );
+   char speed[16];
+   snprintf( speed, sizeof(speed), "%2.1f",  motor_speed_ );
    CPropertyAction* pAct = new CPropertyAction(this, &LStepOld::OnSpeed );
    CreateProperty( "Motor-speed [Hz]", speed, MM::Float, false, pAct);
    SetPropertyLimits( "Motor-speed [Hz]", 0.01, 25 );
@@ -141,8 +141,8 @@ int LStepOld::SetPositionUm(double x, double y)
 {
    char posx[16];
    char posy[16];
-   sprintf( posx, "%015d", (int) x );
-   sprintf( posy, "%015d", (int) y );
+   snprintf( posx, sizeof(posx), "%015d", (int) x );
+   snprintf( posy, sizeof(posy), "%015d", (int) y );
    int s = ExecuteCommand( g_cmd_goto_absolute );
    if (s!=DEVICE_OK)
       return s;
@@ -256,7 +256,7 @@ int LStepOld::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
       int speed = (int) ((motor_speed_+.05)*10);
 
       char input[5];
-      sprintf( input, "%03d",  speed );
+      snprintf( input, sizeof(input), "%03d",  speed );
       int s = ExecuteCommand( g_cmd_set_motor_speed, input, 3 );
       if (s!=DEVICE_OK)
          return s;

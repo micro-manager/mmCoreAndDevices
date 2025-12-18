@@ -29,6 +29,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+namespace mmcore {
+namespace internal {
 
 class LoadedModuleImplWindows: public LoadedModuleImpl
 {
@@ -41,5 +43,8 @@ public:
 private:
    HMODULE handle_;
 };
+
+} // namespace internal
+} // namespace mmcore
 
 #endif // _WIN32

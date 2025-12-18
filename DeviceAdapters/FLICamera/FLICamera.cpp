@@ -201,7 +201,7 @@ int CFLICamera::Initialize()
 	for(int i = 1; i <= 8; i += 1)
 	{
 	  char b[16];
-		sprintf(b, "%d", i);
+		snprintf(b, sizeof(b), "%d", i);
 		binValues.push_back(b);
 	}
   ret = SetAllowedValues(MM::g_Keyword_Binning, binValues);
@@ -398,7 +398,7 @@ int CFLICamera::GetComponentName(unsigned channel, char* name)
      return DEVICE_NONEXISTENT_CHANNEL;
 
 	char buf[32];
-	sprintf(buf, "Channel %d", channel);
+	snprintf(buf, sizeof(buf), "Channel %d", channel);
 
   CDeviceUtils::CopyLimitedString(name, buf);
   return DEVICE_OK;

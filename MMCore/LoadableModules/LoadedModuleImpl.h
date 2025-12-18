@@ -24,6 +24,9 @@
 
 #include "LoadedModule.h"
 
+namespace mmcore {
+namespace internal {
+
 class LoadedModuleImpl
 {
 public:
@@ -40,3 +43,6 @@ public:
 protected:
    LoadedModuleImpl() {}
 };
+
+} // namespace internal
+} // namespace mmcore

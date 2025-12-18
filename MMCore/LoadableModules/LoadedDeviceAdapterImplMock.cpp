@@ -23,6 +23,9 @@
 #include "ModuleInterface.h"
 
 
+namespace mmcore {
+namespace internal {
+
 void LoadedDeviceAdapterImplMock::InitializeModuleData()
 {
    impl_->InitializeModuleData(
@@ -79,3 +82,6 @@ void LoadedDeviceAdapterImplMock::DeleteDevice(MM::Device* device)
 {
    return impl_->DeleteDevice(device);
 }
+
+} // namespace internal
+} // namespace mmcore

@@ -106,7 +106,7 @@ int nPC400CH::Initialize()
     {
         // Channel Device Name
         char sChDevName[120];
-        sprintf(sChDevName, "%s%s", nPC400::Instance()->GetC400Str(nPC400::C400_ChannelDeviceNameLabel).c_str(), MM::g_Keyword_Name);
+        snprintf(sChDevName, sizeof(sChDevName), "%s%s", nPC400::Instance()->GetC400Str(nPC400::C400_ChannelDeviceNameLabel).c_str(), MM::g_Keyword_Name);
         int ret = CreateProperty(sChDevName, nPC400::Instance()->GetC400Str(nPC400::C400_CH1DeviceName + m_nChannel).c_str(), MM::String, true);
 
         if (nPC400::Instance()->GetDebugLogFlag() > 0)
@@ -120,7 +120,7 @@ int nPC400CH::Initialize()
 
         // Description
         char sChDevDesc[120];
-        sprintf(sChDevDesc, "%s%s", nPC400::Instance()->GetC400Str(nPC400::C400_ChannelDeviceDescLabel).c_str(), MM::g_Keyword_Description);
+        snprintf(sChDevDesc, sizeof(sChDevDesc), "%s%s", nPC400::Instance()->GetC400Str(nPC400::C400_ChannelDeviceDescLabel).c_str(), MM::g_Keyword_Description);
         ret = CreateProperty(sChDevDesc, nPC400::Instance()->GetC400Str(nPC400::C400_CH1DeviceName + m_nChannel).c_str(), MM::String, true);
 
         if (nPC400::Instance()->GetDebugLogFlag() > 0)
@@ -148,7 +148,7 @@ int nPC400CH::Initialize()
         CPropertyAction* pActRadius = new CPropertyAction (this, &nPC400CH::OnRadius);
 
         char sRadius[20];
-        sprintf(sRadius, "%.2f", m_dRadius);
+        snprintf(sRadius, sizeof(sRadius), "%.2f", m_dRadius);
         
         ret = CreateProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelRangeRadLabel).c_str() , sRadius, MM::Float, false, pActRadius);
         //ret = CreateProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelRangeUnitLabel).c_str() , m_nRangeUnit, MM::String, true);
@@ -169,7 +169,7 @@ int nPC400CH::Initialize()
         if (ret != DEVICE_OK) return ret;
 
         char sRangeUnit[20];
-        sprintf(sRangeUnit, "%d", m_nRangeUnit);
+        snprintf(sRangeUnit, sizeof(sRangeUnit), "%d", m_nRangeUnit);
         
         ret = CreateProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelRangeUnitLabel).c_str() , sRangeUnit, MM::Integer, false, pActRangeUnit);
         //ret = CreateProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelRangeUnitLabel).c_str() , m_nRangeUnit, MM::String, true);
@@ -189,7 +189,7 @@ int nPC400CH::Initialize()
         ret = GetRange_(m_nRange);
         if (ret != DEVICE_OK) m_nRange = 1;
         char sRange[20];
-        sprintf(sRange, "%d", m_nRange);
+        snprintf(sRange, sizeof(sRange), "%d", m_nRange);
 
         ret = CreateProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelRangeLabel).c_str() , sRange, MM::Integer, false, pActRange);
         //ret = CreateProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelRangeLabel).c_str() , sRange, MM::Integer, true);
@@ -210,7 +210,7 @@ int nPC400CH::Initialize()
         if (ret != DEVICE_OK) lPos = 0;
         double dPos = (double)lPos / m_dStepSizeUm;
         char sPosSet[20];
-        sprintf(sPosSet, "%.2f", dPos);
+        snprintf(sPosSet, sizeof(sPosSet), "%.2f", dPos);
 
         ret = CreateProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelPositionSetLabel).c_str(), sPosSet, MM::Float, false, pActPositionSet);
 
@@ -230,7 +230,7 @@ int nPC400CH::Initialize()
         if (ret != DEVICE_OK) lPos = 0;
         dPos = (double)lPos / m_dStepSizeUm;
         char sPosGet[20];
-        sprintf(sPosGet, "%.2f", dPos);
+        snprintf(sPosGet, sizeof(sPosGet), "%.2f", dPos);
 
         ret = CreateProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelPositionGetLabel).c_str(), sPosGet, MM::Float, false, pActPositionGet);
 
@@ -373,7 +373,7 @@ int nPC400CH::GetPositionSteps(long& lPosSteps)
 
     double dPos = (double) lPosSteps / m_dStepSizeUm;
     char sPos[20];
-    sprintf(sPos, "%.2f", dPos);
+    snprintf(sPos, sizeof(sPos), "%.2f", dPos);
 
     // Channel Position Get Property
     ret = SetProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelPositionGetLabel).c_str(), (const char*)sPos);
@@ -479,7 +479,7 @@ int nPC400CH::SetPositionSteps(long lPosSteps)
 
     double dPos = (double) lPosSteps / m_dStepSizeUm;
     char sPos[20];
-    sprintf(sPos, "%.2f", dPos);
+    snprintf(sPos, sizeof(sPos), "%.2f", dPos);
 
     // Channel Position Get Property
     ret = SetProperty(nPC400::Instance()->GetC400Str(nPC400::C400_ChannelPositionSetLabel).c_str(), sPos);

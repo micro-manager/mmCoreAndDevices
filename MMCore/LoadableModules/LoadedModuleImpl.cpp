@@ -24,15 +24,24 @@
 
 #ifdef _WIN32
 #  include "LoadedModuleImplWindows.h"
-typedef LoadedModuleImplWindows PlatformLoadedModuleImpl;
 #else
 #  include "LoadedModuleImplUnix.h"
-typedef LoadedModuleImplUnix PlatformLoadedModuleImpl;
 #endif
 
+namespace mmcore {
+namespace internal {
+
+#ifdef _WIN32
+typedef LoadedModuleImplWindows PlatformLoadedModuleImpl;
+#else
+typedef LoadedModuleImplUnix PlatformLoadedModuleImpl;
+#endif
 
 LoadedModuleImpl*
 LoadedModuleImpl::NewPlatformImpl(const std::string& filename)
 {
    return new PlatformLoadedModuleImpl(filename);
 }
+
+} // namespace internal
+} // namespace mmcore

@@ -457,7 +457,7 @@ int Camera::Initialize()
 	if (!ans) { return ERR_CAMERA_GET_FPS_FAILED; }
 
 	char s[256] = { '\0' };
-	sprintf(s, "%.*f", 2, fps_);
+	snprintf(s, sizeof(s), "%.*f", 2, fps_);
 
 	ret = CreateStringProperty(g_CameraFPS, s, false);
 	if (ret != DEVICE_OK)
@@ -1532,7 +1532,7 @@ int Camera::OnClockSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		ClearAllowedValues(g_CameraFPS);
 		char s[256] = { '\0' };
-		sprintf(s, "%.*f", 2, fps_);
+		snprintf(s, sizeof(s), "%.*f", 2, fps_);
 		AddAllowedValue(g_CameraFPS, s);
 
 		// Re-setting of the exposure time range.

@@ -77,7 +77,8 @@ static std::string GetExecutableName()
 #endif // __linux__
 
 
-namespace MMCorePrivate {
+namespace mmcore {
+namespace internal {
 
 // Note: This can return a relative path on Linux. On OS X, an absolute (though
 // not necessarily normalized) path is returned. This should not normally be a
@@ -107,6 +108,7 @@ std::string GetPathOfThisModule()
    return path;
 }
 
-} // namespace MMCorePrivate
+} // namespace internal
+} // namespace mmcore
 
 #endif // __APPLE__ || __linux__

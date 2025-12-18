@@ -24,10 +24,9 @@
 #include <memory>
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
 
 class CannotOpenFileException : public std::exception
@@ -37,8 +36,7 @@ public:
 };
 
 
-namespace internal
-{
+namespace internal {
 
 
 template <class TFormatter, class UMetadata, typename VPacketIter>
@@ -168,4 +166,5 @@ public:
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore
