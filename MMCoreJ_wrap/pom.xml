@@ -435,7 +435,7 @@ Run the Meson build first:
             </properties>
         </profile>
         <profile>
-            <!-- 32-bit ARM on (older) Raspberry Pi is usually 'armv7l' -->
+            <!-- 32-bit ARM on Raspberry Pi 2-4 is usually 'armv7l' -->
             <id>natives-arch-armv7l</id>
             <activation>
                 <os><arch>armv7l</arch></os>
