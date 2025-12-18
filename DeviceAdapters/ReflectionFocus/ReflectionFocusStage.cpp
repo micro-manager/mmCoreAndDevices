@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          AutoFocusStage.cpp
+// FILE:          ReflectionFocusStage.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -36,7 +36,7 @@ extern const char* g_DeviceNameReflectionFocusStage;
 
 
 
-AutoFocusStage::AutoFocusStage() :
+ReflectionFocusStage::ReflectionFocusStage() :
    AutoFocusDeviceName_(""),
    initialized_(false)
 {
@@ -54,18 +54,18 @@ AutoFocusStage::AutoFocusStage() :
 
 }
 
-AutoFocusStage::~AutoFocusStage()
+ReflectionFocusStage::~ReflectionFocusStage()
 {
 }
 
-void AutoFocusStage::GetName(char* name) const
+void ReflectionFocusStage::GetName(char* name) const
 {
    CDeviceUtils::CopyLimitedString(name, g_DeviceNameReflectionFocusStage);
 }
 
-int AutoFocusStage::Initialize()
+int ReflectionFocusStage::Initialize()
 {
-   // get list with available AutoFocus devices.
+   // get list with available ReflectionFocus devices.
    // TODO: this is a initialization parameter, which makes it harder for the end-user to set up!
    char deviceName[MM::MaxStrLength];
    unsigned int deviceIterator = 0;
@@ -80,7 +80,7 @@ int AutoFocusStage::Initialize()
          break;
    }
 
-   CPropertyAction* pAct = new CPropertyAction(this, &AutoFocusStage::OnAutoFocusDevice);
+   CPropertyAction* pAct = new CPropertyAction(this, &ReflectionFocusStage::OnReflectionFocusDevice);
    std::string defaultAutoFocus = "Undefined";
    if (availableAutoFocusDevices_.size() >= 1)
       defaultAutoFocus = availableAutoFocusDevices_[0];
@@ -91,7 +91,7 @@ int AutoFocusStage::Initialize()
       return ERR_NO_AUTOFOCUS_DEVICE_FOUND;
 
    // This is needed, otherwise DeviceAUtofocus_ is not always set resulting in crashes
-   // This could lead to strange problems if multiple AutoFocus devices are loaded
+   // This could lead to strange problems if multiple ReflectionFocus devices are loaded
    SetProperty("AutoFocus Device", defaultAutoFocus.c_str());
 
    int ret = UpdateStatus();
@@ -107,17 +107,17 @@ int AutoFocusStage::Initialize()
    return DEVICE_OK;
 }
 
-int AutoFocusStage::Shutdown()
+int ReflectionFocusStage::Shutdown()
 {
    if (initialized_)
    {
-      // Unregister from AutoFocus device
+      // Unregister from ReflectionFocus device
       if (AutoFocusDeviceName_ != "" && AutoFocusDeviceName_ != "Undefined")
       {
          MM::AutoFocus* afDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
          if (afDevice != nullptr)
          {
-            AutoFocus* pAutoFocus = dynamic_cast<AutoFocus*>(afDevice);
+            ReflectionFocus* pAutoFocus = dynamic_cast<ReflectionFocus*>(afDevice);
             if (pAutoFocus != nullptr)
             {
                pAutoFocus->UnregisterStage(this);
@@ -131,7 +131,7 @@ int AutoFocusStage::Shutdown()
    return DEVICE_OK;
 }
 
-bool AutoFocusStage::Busy()
+bool ReflectionFocusStage::Busy()
 {
    MM::AutoFocus* AutoFocusDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
    if (AutoFocusDevice != 0)
@@ -144,7 +144,7 @@ bool AutoFocusStage::Busy()
 /*
  * Sets the position of the stage in um relative to the position of the origin
  */
-int AutoFocusStage::SetPositionUm(double pos)
+int ReflectionFocusStage::SetPositionUm(double pos)
 {
    MM::AutoFocus* AutoFocusDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
    if (AutoFocusDevice == 0)
@@ -156,7 +156,7 @@ int AutoFocusStage::SetPositionUm(double pos)
 /*
  * Reports the current position of the stage in um relative to the origin
  */
-int AutoFocusStage::GetPositionUm(double& pos)
+int ReflectionFocusStage::GetPositionUm(double& pos)
 {
    MM::AutoFocus* AutoFocusDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
    if (AutoFocusDevice == 0)
@@ -169,7 +169,7 @@ int AutoFocusStage::GetPositionUm(double& pos)
  * Sets a voltage (in mV) on the DA, relative to the minimum Stage position
  * The origin is NOT taken into account
  */
-int AutoFocusStage::SetPositionSteps(long /* steps */)
+int ReflectionFocusStage::SetPositionSteps(long /* steps */)
 {
    MM::AutoFocus* AutoFocusDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
    if (AutoFocusDevice == 0)
@@ -178,7 +178,7 @@ int AutoFocusStage::SetPositionSteps(long /* steps */)
    return  DEVICE_UNSUPPORTED_COMMAND;
 }
 
-int AutoFocusStage::GetPositionSteps(long& /*steps */)
+int ReflectionFocusStage::GetPositionSteps(long& /*steps */)
 {
    MM::AutoFocus* AutoFocusDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
    if (AutoFocusDevice == 0)
@@ -190,7 +190,7 @@ int AutoFocusStage::GetPositionSteps(long& /*steps */)
 /*
  * Sets the origin (relative position 0) to the current absolute position
  */
-int AutoFocusStage::SetOrigin()
+int ReflectionFocusStage::SetOrigin()
 {
    MM::AutoFocus* AutoFocusDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
    if (AutoFocusDevice == 0)
@@ -199,7 +199,7 @@ int AutoFocusStage::SetOrigin()
    return  DEVICE_UNSUPPORTED_COMMAND;
 }
 
-int AutoFocusStage::GetLimits(double& /*min*/, double& /*max*/)
+int ReflectionFocusStage::GetLimits(double& /*min*/, double& /*max*/)
 {
    MM::AutoFocus* AutoFocusDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
    if (AutoFocusDevice == 0)
@@ -212,7 +212,7 @@ int AutoFocusStage::GetLimits(double& /*min*/, double& /*max*/)
 ///////////////////////////////////////
 // Action Interface
 //////////////////////////////////////
-int AutoFocusStage::OnAutoFocusDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
+int ReflectionFocusStage::OnReflectionFocusDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
@@ -220,14 +220,14 @@ int AutoFocusStage::OnAutoFocusDevice(MM::PropertyBase* pProp, MM::ActionType eA
    }
    else if (eAct == MM::AfterSet)
    {
-      // Unregister from previous AutoFocus device if any
+      // Unregister from previous ReflectionFocus device if any
       if (AutoFocusDeviceName_ != "" && AutoFocusDeviceName_ != "Undefined")
       {
          MM::AutoFocus* oldDevice = (MM::AutoFocus*)GetDevice(AutoFocusDeviceName_.c_str());
          if (oldDevice != nullptr)
          {
-            // Cast to AutoFocus to access RegisterStage/UnregisterStage
-            AutoFocus* pAutoFocus = dynamic_cast<AutoFocus*>(oldDevice);
+            // Cast to ReflectionFocus to access RegisterStage/UnregisterStage
+            ReflectionFocus* pAutoFocus = dynamic_cast<ReflectionFocus*>(oldDevice);
             if (pAutoFocus != nullptr)
             {
                pAutoFocus->UnregisterStage(this);
@@ -241,10 +241,10 @@ int AutoFocusStage::OnAutoFocusDevice(MM::PropertyBase* pProp, MM::ActionType eA
       if (AutoFocusDevice != 0) {
          AutoFocusDeviceName_ = AutoFocusDeviceName;
 
-         // Register with new AutoFocus device
+         // Register with new ReflectionFocus device
          if (AutoFocusDeviceName_ != "" && AutoFocusDeviceName_ != "Undefined")
          {
-            AutoFocus* pAutoFocus = dynamic_cast<AutoFocus*>(AutoFocusDevice);
+            ReflectionFocus* pAutoFocus = dynamic_cast<ReflectionFocus*>(AutoFocusDevice);
             if (pAutoFocus != nullptr)
             {
                pAutoFocus->RegisterStage(this);

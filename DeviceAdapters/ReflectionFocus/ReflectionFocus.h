@@ -61,11 +61,11 @@ extern const char* g_DeviceNameReflectionFocusStage;
  * Treats a ReflectionFocus device as a Drive.
  * Can be used to make the ReflectionFocus offset appear in the position list
  */
-class AutoFocusStage : public CStageBase<AutoFocusStage>
+class ReflectionFocusStage : public CStageBase<ReflectionFocusStage>
 {
 public:
-   AutoFocusStage();
-   ~AutoFocusStage();
+   ReflectionFocusStage();
+   ~ReflectionFocusStage();
 
    // Device API
    // ----------
@@ -89,7 +89,7 @@ public:
 
    // action interface
    // ----------------
-   int OnAutoFocusDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnReflectionFocusDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    std::vector<std::string> availableAutoFocusDevices_;
@@ -106,18 +106,18 @@ private:
   * Multiples algorithms can be used to determine the
   * location of the best focus.
   */
-class AutoFocus : public CAutoFocusBase<AutoFocus>
+class ReflectionFocus : public CAutoFocusBase<ReflectionFocus>
 {
    public:
-      AutoFocus();
-      ~AutoFocus();
+      ReflectionFocus();
+      ~ReflectionFocus();
       // Device API
       // ----------
       int Initialize();
       int Shutdown();
       void GetName(char* name) const;
       bool Busy();
-      // AutoFocus API
+      // ReflectionFocus API
       // -------------
       int SetContinuousFocusing(bool on);
       int GetContinuousFocusing(bool& on);
@@ -233,7 +233,7 @@ private:
       std::atomic<bool> stopThread_;
       std::string status_;
 
-      // AutoFocusStage registration
+      // ReflectionFocusStage registration
       std::vector<MM::Stage*> registeredStages_;
       std::mutex registrationMutex_;
 };
