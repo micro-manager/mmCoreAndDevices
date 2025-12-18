@@ -612,22 +612,27 @@ int EvidentHubWin::Shutdown()
 
         // Wait for worker thread to finish
         if (workerThread_.joinable())
+        {
             workerThread_.join();
+        }
 
         // Clear any pending commands
         {
             std::lock_guard<std::mutex> lock(queueMutex_);
             while (!commandQueue_.empty())
             {
-                auto& task = commandQueue_.front();
-                // Set exception on unfulfilled promises to prevent blocking
-                try {
-                    task.responsePromise.set_exception(
-                        std::make_exception_ptr(std::runtime_error("Hub shutting down")));
-                } catch (...) {
-                    // Promise might already be fulfilled, ignore
-                }
-                commandQueue_.pop();
+               auto& task = commandQueue_.front();
+               // Set exception on unfulfilled promises to prevent blocking
+               try
+               {
+                  task.responsePromise.set_exception(
+                     std::make_exception_ptr(std::runtime_error("Hub shutting down")));
+               }
+               catch (...)
+               {
+                  // Promise might already be fulfilled, ignore
+               }
+               commandQueue_.pop();
             }
         }
 
@@ -857,146 +862,161 @@ int EvidentHubWin::GetUnitDirect(std::string& unit)
 
 int EvidentHubWin::ExecuteCommandInternal(const std::string& command, std::string& response)
 {
-    // Worker thread provides serialization, no mutex needed here
+   // Worker thread provides serialization, no mutex needed here
 
-    // Retry logic for empty responses (device not ready)
-    const int MAX_RETRIES = 20;
-    const int RETRY_DELAY_MS = 50;  // 50ms delay between retries
+   // Retry logic for empty responses (device not ready)
+   const int MAX_RETRIES = 20;
+   const int RETRY_DELAY_MS = 50;  // 50ms delay between retries
 
-    for (int attempt = 0; attempt < MAX_RETRIES; attempt++)
-    {
+   for (int attempt = 0; attempt < MAX_RETRIES; attempt++)
+   {
+      // Reset response state BEFORE sending command to avoid race condition
+      // where callback fires before GetResponse can set responseReady_ = false
+      {
+         std::lock_guard<std::mutex> responseLock(responseMutex_);
+         responseReady_ = false;
+         pendingResponse_.clear();
+      }
 
-       // Reset response state BEFORE sending command to avoid race condition
-       // where callback fires before GetResponse can set responseReady_ = false
-       {
-          std::lock_guard<std::mutex> responseLock(responseMutex_);
-          responseReady_ = false;
-          pendingResponse_.clear();
-       }
+      int ret = SendCommand(command);
+      if (ret != DEVICE_OK)
+      {
+         return ret;
+      }
 
-       int ret = SendCommand(command);
-       if (ret != DEVICE_OK)
-          return ret;
+      // Extract expected response tag from command
+      // First strip any trailing whitespace/terminators from the command
+      std::string cleanCommand = command;
+      size_t end = cleanCommand.find_last_not_of(" \t\r\n");
+      if (end != std::string::npos)
+      {
+         cleanCommand = cleanCommand.substr(0, end + 1);
+      }
+      std::string expectedTag = ExtractTag(cleanCommand);
 
-       // Extract expected response tag from command
-       // First strip any trailing whitespace/terminators from the command
-       std::string cleanCommand = command;
-       size_t end = cleanCommand.find_last_not_of(" \t\r\n");
-       if (end != std::string::npos)
-          cleanCommand = cleanCommand.substr(0, end + 1);
-       std::string expectedTag = ExtractTag(cleanCommand);
+      ret = GetResponse(response, answerTimeoutMs_);
+      if (ret != DEVICE_OK)
+      {
+         return ret;
+      }
 
-       ret = GetResponse(response, answerTimeoutMs_);
-       if (ret != DEVICE_OK)
-          return ret;
+      // Verify response tag matches command tag
+      std::string responseTag = ExtractTag(response);
 
-       // Verify response tag matches command tag
-       std::string responseTag = ExtractTag(response);
+      if (responseTag == expectedTag)
+      {
+         if (!IsPositiveAck(response, expectedTag.c_str()))
+         {
+            // Check if device is busy (error code 70)
+            if (IsDeviceBusyError(response) && attempt < MAX_RETRIES - 1)
+            {
+               LogMessage(("Device " + expectedTag + " busy(attempt " +
+                  std::to_string(attempt + 1) + "), retrying...").c_str(), true);
+               CDeviceUtils::SleepMs(RETRY_DELAY_MS);
+               continue;  // Retry
+            }
+         }
+      }
+      else // if (responseTag != expectedTag)
+      {
+         // Received wrong response - this can happen if responses arrive out of order
+         LogMessage(("Warning: Expected response for '" + expectedTag +
+            "' but received '" + responseTag + "' (" + response +
+            "). Discarding and waiting for correct response.").c_str(), false);
 
-       if (responseTag == expectedTag)
-       {
-          if (!IsPositiveAck(response, expectedTag.c_str()))
-          {
-             // Check if device is busy (error code 70)
-             if (IsDeviceBusyError(response) && attempt < MAX_RETRIES - 1)
-             {
-                LogMessage(("Device " + expectedTag + " busy(attempt " +
-                   std::to_string(attempt + 1) + "), retrying...").c_str(), true);
-                CDeviceUtils::SleepMs(RETRY_DELAY_MS);
-                continue;  // Retry
-             }
-          }
-       }
-       else // if (responseTag != expectedTag)
-       {
-          // Received wrong response - this can happen if responses arrive out of order
-          LogMessage(("Warning: Expected response for '" + expectedTag +
-             "' but received '" + responseTag + "' (" + response +
-             "). Discarding and waiting for correct response.").c_str(), false);
+         // Wait for the correct response (with remaining timeout)
+         ret = GetResponse(response, answerTimeoutMs_);
+         if (ret != DEVICE_OK)
+         {
+            return ret;
+         }
 
-          // Wait for the correct response (with remaining timeout)
-          ret = GetResponse(response, answerTimeoutMs_);
-          if (ret != DEVICE_OK)
-             return ret;
+         // Check again
+         responseTag = ExtractTag(response);
+         if (responseTag != expectedTag)
+         {
+            LogMessage(("Error: Still did not receive expected response for '" +
+               expectedTag + "', got '" + responseTag + "' instead.").c_str(), false);
+            return ERR_INVALID_RESPONSE;
+         }
+      }
 
-          // Check again
-          responseTag = ExtractTag(response);
-          if (responseTag != expectedTag)
-          {
-             LogMessage(("Error: Still did not receive expected response for '" +
-                expectedTag + "', got '" + responseTag + "' instead.").c_str(), false);
-             return ERR_INVALID_RESPONSE;
-          }
-       }
-
-       return DEVICE_OK;
-    }
-    return DEVICE_OK;
+      return DEVICE_OK;
+   }
+   return DEVICE_OK;
 }
 
 std::future<std::pair<int, std::string>> EvidentHubWin::ExecuteCommandAsync(const std::string& command)
 {
-    CommandTask task(command);
-    auto future = task.responsePromise.get_future();
+   CommandTask task(command);
+   auto future = task.responsePromise.get_future();
 
-    {
-        std::lock_guard<std::mutex> lock(queueMutex_);
-        commandQueue_.push(std::move(task));
-    }
-    queueCV_.notify_one();
+   {
+      std::lock_guard<std::mutex> lock(queueMutex_);
+      commandQueue_.push(std::move(task));
+   }
+   queueCV_.notify_one();
 
-    return future;
+   return future;
 }
 
 int EvidentHubWin::ExecuteCommand(const std::string& command, std::string& response)
 {
-    // Submit to queue and wait for completion
-    auto future = ExecuteCommandAsync(command);
+   // Submit to queue and wait for completion
+   auto future = ExecuteCommandAsync(command);
 
-    // Block until response ready
-    auto result = future.get();
+   // Block until response ready
+   auto result = future.get();
 
-    // Extract return code and response
-    int ret = result.first;
-    response = result.second;
+   // Extract return code and response
+   int ret = result.first;
+   response = result.second;
 
-    return ret;
+   return ret;
 }
 
 void EvidentHubWin::CommandWorkerThread()
 {
-    while (workerRunning_)
-    {
-        CommandTask task("");
+   while (workerRunning_)
+   {
+      CommandTask task("");
 
-        // Wait for command in queue
-        {
-            std::unique_lock<std::mutex> lock(queueMutex_);
-            queueCV_.wait(lock, [this] {
-                return !commandQueue_.empty() || !workerRunning_;
-            });
+      // Wait for command in queue
+      {
+         std::unique_lock<std::mutex> lock(queueMutex_);
+         queueCV_.wait(lock, [this]
+         {
+            return !commandQueue_.empty() || !workerRunning_;
+         });
 
-            if (!workerRunning_ && commandQueue_.empty())
-                break;  // Shutdown signal
+         if (!workerRunning_ && commandQueue_.empty())
+         {
+            break;  // Shutdown signal
+         }
 
-            if (commandQueue_.empty())
-                continue;
+         if (commandQueue_.empty())
+         {
+            continue;
+         }
 
-            // Move task out of queue
-            task = std::move(commandQueue_.front());
-            commandQueue_.pop();
-        }
+         // Move task out of queue
+         task = std::move(commandQueue_.front());
+         commandQueue_.pop();
+      }
 
-        // Execute command (outside queue lock to allow new submissions)
-        std::string response;
+      // Execute command (outside queue lock to allow new submissions)
+      std::string response;
 
-        try {
-            int ret = ExecuteCommandInternal(task.command, response);
-            task.responsePromise.set_value(std::make_pair(ret, response));
-        } catch (...) {
-            task.responsePromise.set_exception(std::current_exception());
-        }
-    }
+      try
+      {
+         int ret = ExecuteCommandInternal(task.command, response);
+         task.responsePromise.set_value(std::make_pair(ret, response));
+      }
+      catch (...)
+      {
+         task.responsePromise.set_exception(std::current_exception());
+      }
+   }
 }
 
 int EvidentHubWin::SendCommand(const std::string& command)

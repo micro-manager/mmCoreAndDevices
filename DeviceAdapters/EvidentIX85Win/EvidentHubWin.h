@@ -38,17 +38,18 @@
 #include <atomic>
 
 // Command task structure for worker thread queue
-struct CommandTask {
-    std::string command;
-    std::promise<std::pair<int, std::string>> responsePromise;
+struct CommandTask
+{
+   std::string command;
+   std::promise<std::pair<int, std::string>> responsePromise;
 
-    CommandTask(std::string cmd) : command(std::move(cmd)) {}
+   CommandTask(std::string cmd) : command(std::move(cmd)) {}
 
-    // Move-only type (promise is not copyable)
-    CommandTask(CommandTask&&) = default;
-    CommandTask& operator=(CommandTask&&) = default;
-    CommandTask(const CommandTask&) = delete;
-    CommandTask& operator=(const CommandTask&) = delete;
+   // Move-only type (promise is not copyable)
+   CommandTask(CommandTask&&) = default;
+   CommandTask& operator=(CommandTask&&) = default;
+   CommandTask(const CommandTask&) = delete;
+   CommandTask& operator=(const CommandTask&) = delete;
 };
 
 class EvidentHubWin : public HubBase<EvidentHubWin>
