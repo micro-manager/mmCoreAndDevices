@@ -168,6 +168,10 @@ int EvidentHubWin::Initialize()
 
     usedDevices_.clear();
 
+    // Start worker thread for command queue
+    workerRunning_ = true;
+    workerThread_ = std::thread(&EvidentHubWin::CommandWorkerThread, this);
+
     // Load Evident SDK DLL
     int ret = LoadSDK();
     if (ret != DEVICE_OK)
@@ -224,12 +228,12 @@ int EvidentHubWin::Initialize()
         {
             long pos = model_.GetPosition(DeviceType_MirrorUnit1);
             // Position will be 0 if unknown (not yet queried), display as unknown
-            UpdateMirrorUnitIndicator(pos == 0 ? -1 : static_cast<int>(pos));
+            UpdateMirrorUnitIndicator(pos == 0 ? -1 : static_cast<int>(pos), false);
         }
         else
         {
             // No mirror unit, display "---"
-            UpdateMirrorUnitIndicator(-1);
+            UpdateMirrorUnitIndicator(-1, false); 
         }
 
         // Enable encoder E1 for nosepiece control if nosepiece is present
@@ -408,12 +412,12 @@ int EvidentHubWin::Initialize()
         {
             long pos = model_.GetPosition(DeviceType_LightPath);
             // Position will be 0 if unknown (not yet queried), display as unknown (all off)
-            UpdateLightPathIndicator(pos == 0 ? -1 : static_cast<int>(pos));
+            UpdateLightPathIndicator(pos == 0 ? -1 : static_cast<int>(pos), false);
         }
         else
         {
             // No light path, display all off
-            UpdateLightPathIndicator(-1);
+            UpdateLightPathIndicator(-1, false);
         }
 
         // Initialize EPI shutter 1 indicator (I5)
@@ -421,12 +425,12 @@ int EvidentHubWin::Initialize()
         {
             long state = model_.GetPosition(DeviceType_EPIShutter1);
             // Position will be 0 if unknown (not yet queried), display as closed (I5 1)
-            UpdateEPIShutter1Indicator(state == 0 ? 0 : static_cast<int>(state));
+            UpdateEPIShutter1Indicator(state == 0 ? 0 : static_cast<int>(state), false);
         }
         else
         {
             // No EPI shutter 1, display as closed
-            UpdateEPIShutter1Indicator(0);
+            UpdateEPIShutter1Indicator(0, false);
         }
 
         // Create Hand Switch control properties
@@ -601,6 +605,31 @@ int EvidentHubWin::Shutdown()
         std::string cmd = BuildCommand(CMD_LOGIN, 0);  // 0 = Local mode
         std::string response;
         ExecuteCommand(cmd, response);
+
+        // Stop worker thread
+        workerRunning_ = false;
+        queueCV_.notify_one();
+
+        // Wait for worker thread to finish
+        if (workerThread_.joinable())
+            workerThread_.join();
+
+        // Clear any pending commands
+        {
+            std::lock_guard<std::mutex> lock(queueMutex_);
+            while (!commandQueue_.empty())
+            {
+                auto& task = commandQueue_.front();
+                // Set exception on unfulfilled promises to prevent blocking
+                try {
+                    task.responsePromise.set_exception(
+                        std::make_exception_ptr(std::runtime_error("Hub shutting down")));
+                } catch (...) {
+                    // Promise might already be fulfilled, ignore
+                }
+                commandQueue_.pop();
+            }
+        }
 
         // Close SDK interface and unload DLL
         if (interfaceHandle_ != nullptr)
@@ -826,9 +855,9 @@ int EvidentHubWin::GetUnitDirect(std::string& unit)
     return ERR_INVALID_RESPONSE;
 }
 
-int EvidentHubWin::ExecuteCommand(const std::string& command, std::string& response)
+int EvidentHubWin::ExecuteCommandInternal(const std::string& command, std::string& response)
 {
-    std::lock_guard<std::mutex> lock(commandMutex_);
+    // Worker thread provides serialization, no mutex needed here
 
     // Retry logic for empty responses (device not ready)
     const int MAX_RETRIES = 20;
@@ -902,6 +931,72 @@ int EvidentHubWin::ExecuteCommand(const std::string& command, std::string& respo
 
        return DEVICE_OK;
     }
+    return DEVICE_OK;
+}
+
+std::future<std::pair<int, std::string>> EvidentHubWin::ExecuteCommandAsync(const std::string& command)
+{
+    CommandTask task(command);
+    auto future = task.responsePromise.get_future();
+
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        commandQueue_.push(std::move(task));
+    }
+    queueCV_.notify_one();
+
+    return future;
+}
+
+int EvidentHubWin::ExecuteCommand(const std::string& command, std::string& response)
+{
+    // Submit to queue and wait for completion
+    auto future = ExecuteCommandAsync(command);
+
+    // Block until response ready
+    auto result = future.get();
+
+    // Extract return code and response
+    int ret = result.first;
+    response = result.second;
+
+    return ret;
+}
+
+void EvidentHubWin::CommandWorkerThread()
+{
+    while (workerRunning_)
+    {
+        CommandTask task("");
+
+        // Wait for command in queue
+        {
+            std::unique_lock<std::mutex> lock(queueMutex_);
+            queueCV_.wait(lock, [this] {
+                return !commandQueue_.empty() || !workerRunning_;
+            });
+
+            if (!workerRunning_ && commandQueue_.empty())
+                break;  // Shutdown signal
+
+            if (commandQueue_.empty())
+                continue;
+
+            // Move task out of queue
+            task = std::move(commandQueue_.front());
+            commandQueue_.pop();
+        }
+
+        // Execute command (outside queue lock to allow new submissions)
+        std::string response;
+
+        try {
+            int ret = ExecuteCommandInternal(task.command, response);
+            task.responsePromise.set_value(std::make_pair(ret, response));
+        } catch (...) {
+            task.responsePromise.set_exception(std::current_exception());
+        }
+    }
 }
 
 int EvidentHubWin::SendCommand(const std::string& command)
@@ -924,13 +1019,26 @@ int EvidentHubWin::SendCommand(const std::string& command)
     // Send command via SDK
     if (!pfnSendCommand_(interfaceHandle_, &pendingCommand_))
     {
-        LogMessage("SDK SendCommand failed, retrying...", false);
-        CDeviceUtils::SleepMs(50);
-        if (!pfnSendCommand_(interfaceHandle_, &pendingCommand_))
-        {
-           LogMessage("SDK SendCommand failed again.");
-           return EvidentSDK::SDK_ERR_SEND_FAILED;
-        }
+       LogMessage("SDK SendCommand failed, retrying...", false);
+       CDeviceUtils::SleepMs(50);
+       if (!pfnSendCommand_(interfaceHandle_, &pendingCommand_))
+       {
+          LogMessage("SDK SendCommand failed again.");
+          // go nuclear, unload and reload interface
+          if (interfaceHandle_ != nullptr)
+          {
+              if (pfnCloseInterface_ != nullptr)
+              {
+                  pfnCloseInterface_(interfaceHandle_);
+              }
+              interfaceHandle_ = nullptr;
+          }
+          this->EnumerateAndOpenInterface();
+          if (!pfnSendCommand_(interfaceHandle_, &pendingCommand_))
+          {
+             return EvidentSDK::SDK_ERR_SEND_FAILED;
+          }
+       }
     }
 
     return DEVICE_OK;
@@ -1790,7 +1898,7 @@ int EvidentHubWin::UpdateNosepieceIndicator(int position)
     return DEVICE_OK;
 }
 
-int EvidentHubWin::UpdateMirrorUnitIndicator(int position)
+int EvidentHubWin::UpdateMirrorUnitIndicator(int position, bool async)
 {
     // Check if MCU is present
     if (!model_.IsDevicePresent(DeviceType_ManualControl))
@@ -1815,20 +1923,29 @@ int EvidentHubWin::UpdateMirrorUnitIndicator(int position)
         cmd = oss.str();
     }
 
-    // Send command without waiting for response (to avoid deadlock when called from monitoring thread)
-    // The "I2 +" response will be consumed by the monitoring thread as a pseudo-notification
-    int ret = SendCommand(cmd);
-    if (ret != DEVICE_OK)
+    if (async)
     {
-        LogMessage(("Failed to send mirror unit indicator command: " + cmd).c_str());
-        return ret;
+       auto future = ExecuteCommandAsync(cmd);
+    }
+    else
+    {
+       std::string response;
+       int ret = ExecuteCommand(cmd, response);
+       if (ret != DEVICE_OK)
+          return ret;
+
+       // Got a response, check if it's positive
+       if (!IsPositiveAck(response, "I2"))
+       {
+          return ERR_NEGATIVE_ACK;
+       }
     }
 
-    LogMessage(("Sent mirror unit indicator command: " + cmd).c_str(), true);
+    LogMessage(("Sent mirror unit indicator command async: " + cmd).c_str(), true);
     return DEVICE_OK;
 }
 
-int EvidentHubWin::UpdateLightPathIndicator(int position)
+int EvidentHubWin::UpdateLightPathIndicator(int position, bool async)
 {
     // Check if MCU is present
     if (!model_.IsDevicePresent(DeviceType_ManualControl))
@@ -1857,20 +1974,30 @@ int EvidentHubWin::UpdateLightPathIndicator(int position)
     oss << "I4 " << i4Value;
     cmd = oss.str();
 
-    // Send command without waiting for response (to avoid deadlock when called from monitoring thread)
-    // The "I4 +" response will be consumed by the monitoring thread as a pseudo-notification
-    int ret = SendCommand(cmd);
-    if (ret != DEVICE_OK)
+    if (async)
     {
-        LogMessage(("Failed to send light path indicator command: " + cmd).c_str());
-        return ret;
+       auto future = ExecuteCommandAsync(cmd);
+       LogMessage(("Sent Light Path indicator command async " + cmd).c_str(), true);
     }
+    else
+    {
+       std::string response;
+       int ret = ExecuteCommand(cmd, response);
+       if (ret != DEVICE_OK)
+          return ret;
 
-    LogMessage(("Sent light path indicator command: " + cmd).c_str(), true);
+       // Got a response, check if it's positive
+       if (!IsPositiveAck(response, "I4"))
+       {
+          return ERR_NEGATIVE_ACK;
+       }
+
+       LogMessage(("Sent light path indicator command: " + cmd).c_str(), true);
+    }
     return DEVICE_OK;
 }
 
-int EvidentHubWin::UpdateEPIShutter1Indicator(int state)
+int EvidentHubWin::UpdateEPIShutter1Indicator(int state, bool async)
 {
     // Check if MCU is present
     if (!model_.IsDevicePresent(DeviceType_ManualControl))
@@ -1893,16 +2020,26 @@ int EvidentHubWin::UpdateEPIShutter1Indicator(int state)
     oss << "I5 " << i5Value;
     cmd = oss.str();
 
-    // Send command without waiting for response (to avoid deadlock when called from monitoring thread)
-    // The "I5 +" response will be consumed by the monitoring thread as a pseudo-notification
-    int ret = SendCommand(cmd);
-    if (ret != DEVICE_OK)
+    if (async)
     {
-        LogMessage(("Failed to send EPI shutter indicator command: " + cmd).c_str());
-        return ret;
+       auto future = ExecuteCommandAsync(cmd);
+       // we discard the future, since we do not want to block
+       LogMessage(("Sent EPI shutter indicator command async: " + cmd).c_str(), true);
     }
+    else {
+       std::string response;
+       int ret = ExecuteCommand(cmd, response);
+       if (ret != DEVICE_OK)
+          return ret;
 
-    LogMessage(("Sent EPI shutter indicator command: " + cmd).c_str(), true);
+       // Got a response, check if it's positive
+       if (!IsPositiveAck(response, CMD_EPI_SHUTTER1))
+       {
+          return ERR_NEGATIVE_ACK;
+       }
+
+       LogMessage(("Sent EPI shutter indicator command: " + cmd).c_str(), true);
+    }
     return DEVICE_OK;
 }
 
@@ -2165,11 +2302,14 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
             LogMessage(msg.str().c_str(), true);
 
             // Send the command (fire-and-forget, the NOB notification will update the model)
+            auto future = ExecuteCommandAsync(cmd);
+            /*
             int ret = SendCommand(cmd);
             if (ret != DEVICE_OK)
             {
                 LogMessage("Failed to send nosepiece command from encoder", false);
             }
+            */
         }
     }
     else if (tag == CMD_ENCODER2 && params.size() > 0)
@@ -2203,36 +2343,29 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
             msg << "E2 encoder: moving mirror unit from " << currentPos << " to " << newPos;
             LogMessage(msg.str().c_str(), true);
 
-            // Use SendCommand (not ExecuteCommand) to avoid deadlock when called from monitoring thread
-            // The "MU1 +" response will be consumed by monitoring thread as a command response
-            int ret = SendCommand(cmd);
-            if (ret == DEVICE_OK)
-            {
-                // Optimistically update model and indicator (mirror unit has no position change notifications)
-                model_.SetPosition(DeviceType_MirrorUnit1, newPos);
-                UpdateMirrorUnitIndicator(newPos);
+            // Response to the command can be read only after we exit this function, so do not 
+            // wait for it here, but trust it will be successful.
+            auto future = ExecuteCommandAsync(cmd);
+             // Optimistically update model and indicator (mirror unit has no position change notifications)
+             model_.SetPosition(DeviceType_MirrorUnit1, newPos);
+             UpdateMirrorUnitIndicator(newPos, true);
 
-                // Notify core callback of State property change
-                auto it = usedDevices_.find(DeviceType_MirrorUnit1);
-                if (it != usedDevices_.end() && it->second != nullptr)
-                {
-                    // Convert from 1-based position to 0-based state value
-                    int stateValue = newPos - 1;
-                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
-                        CDeviceUtils::ConvertToString(stateValue));
+             // Notify core callback of State property change
+             auto it = usedDevices_.find(DeviceType_MirrorUnit1);
+             if (it != usedDevices_.end() && it->second != nullptr)
+             {
+                 // Convert from 1-based position to 0-based state value
+                 int stateValue = newPos - 1;
+                 GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                     CDeviceUtils::ConvertToString(stateValue));
 
-                    // This should works since the MirrorUnit is a state device
-                    // it would be safer to test the type first
-                    char label[MM::MaxStrLength];
-                    ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
-                    if (ret == DEVICE_OK)
-                       GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
-                }
-            }
-            else
-            {
-                LogMessage("Failed to send mirror unit command from encoder", false);
-            }
+                 // This should works since the MirrorUnit is a state device
+                 // it would be safer to test the type first
+                 char label[MM::MaxStrLength];
+                 int ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+                 if (ret == DEVICE_OK)
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
+             }
         }
     }
     else if (tag == CMD_ENCODER3 && params.size() > 0)
@@ -2358,32 +2491,25 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
                     newPos = 3;
 
                 std::string cmd = BuildCommand(CMD_LIGHT_PATH, newPos);
-                int ret = SendCommand(cmd);
-                if (ret == DEVICE_OK)
-                {
-                    model_.SetPosition(DeviceType_LightPath, newPos);
-                    UpdateLightPathIndicator(newPos);
+                auto future = ExecuteCommandAsync(cmd);
+                model_.SetPosition(DeviceType_LightPath, newPos);
+                UpdateLightPathIndicator(newPos, true);
 
-                    auto it = usedDevices_.find(DeviceType_LightPath);
-                    if (it != usedDevices_.end() && it->second != nullptr)
-                    {
-                        int stateValue = newPos - 1;
-                        GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
-                            CDeviceUtils::ConvertToString(stateValue));
-
-                        // This should works since the LightPath is a state device
-                        // it would be safer to test the type first
-                        char label[MM::MaxStrLength];
-                        ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
-                        if (ret == DEVICE_OK)
-                           GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
-                    }
-                    LogMessage(("Switch 1: Light path changed to position " + std::to_string(newPos)).c_str(), true);
-                }
-                else
+                auto it = usedDevices_.find(DeviceType_LightPath);
+                if (it != usedDevices_.end() && it->second != nullptr)
                 {
-                    LogMessage("Failed to change light path from switch", false);
+                    int stateValue = newPos - 1;
+                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                        CDeviceUtils::ConvertToString(stateValue));
+
+                    // This should works since the LightPath is a state device
+                    // it would be safer to test the type first
+                    char label[MM::MaxStrLength];
+                    int ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+                    if (ret == DEVICE_OK)
+                       GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
                 }
+                LogMessage(("Switch 1: Light path changed to position " + std::to_string(newPos)).c_str(), true);
             }
         }
 
@@ -2399,22 +2525,16 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
 
                 // Send toggle command using SendCommand (not ExecuteCommand) to avoid deadlock
                 std::string cmd = BuildCommand(CMD_EPI_SHUTTER1, newState);
-                int ret = SendCommand(cmd);
-                if (ret == DEVICE_OK)
-                {
-                    model_.SetPosition(DeviceType_EPIShutter1, newState);
-                    UpdateEPIShutter1Indicator(newState);
+                std::string response;
+                auto future = ExecuteCommandAsync(cmd);
+                model_.SetPosition(DeviceType_EPIShutter1, newState);
+                UpdateEPIShutter1Indicator(newState, true);
 
-                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
-                        CDeviceUtils::ConvertToString(static_cast<long>(newState)));
-                    GetCoreCallback()->OnShutterOpenChanged(it->second, newState == 1);
-
-                    LogMessage(("Switch 2: EPI shutter toggled to " + std::string(newState ? "open" : "closed")).c_str(), true);
-                }
-                else
-                {
-                    LogMessage("Failed to toggle EPI shutter from switch", false);
-                }
+                // we can not easily check if we succeeded since the above function are asynchronous
+                // assume all is good...
+                GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                    CDeviceUtils::ConvertToString(static_cast<long>(newState)));
+                GetCoreCallback()->OnShutterOpenChanged(it->second, newState == 1);
             }
         }
 
@@ -2524,41 +2644,34 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
 
             // Disable MCZ control
             std::string cmd = BuildCommand(CMD_MCZ_SWITCH, 0);
-            SendCommand(cmd);
+            ExecuteCommandAsync(cmd);
 
             // Execute mirror switch
             cmd = BuildCommand(CMD_MIRROR_UNIT1, requestedPos);
-            int ret = SendCommand(cmd);
-            if (ret == DEVICE_OK)
+            auto future = ExecuteCommandAsync(cmd);
+            // Update model and indicator
+            model_.SetPosition(DeviceType_MirrorUnit1, requestedPos);
+            UpdateMirrorUnitIndicator(requestedPos, true);
+
+            // Notify core callback
+            auto it = usedDevices_.find(DeviceType_MirrorUnit1);
+            if (it != usedDevices_.end() && it->second != nullptr)
             {
-                // Update model and indicator
-                model_.SetPosition(DeviceType_MirrorUnit1, requestedPos);
-                UpdateMirrorUnitIndicator(requestedPos);
+               int stateValue = requestedPos - 1;
+               GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
+                   CDeviceUtils::ConvertToString(stateValue));
 
-                // Notify core callback
-                auto it = usedDevices_.find(DeviceType_MirrorUnit1);
-                if (it != usedDevices_.end() && it->second != nullptr)
-                {
-                    int stateValue = requestedPos - 1;
-                    GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_State,
-                        CDeviceUtils::ConvertToString(stateValue));
-
-                    char label[MM::MaxStrLength];
-                    ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
-                    if (ret == DEVICE_OK)
-                        GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
-                }
-
-                LogMessage(("Mirror dial: switched to position " + std::to_string(requestedPos)).c_str(), true);
+               char label[MM::MaxStrLength];
+               int ret = ((MM::State*) it->second)->GetPositionLabel(stateValue, label);
+               if (ret == DEVICE_OK)
+                   GetCoreCallback()->OnPropertyChanged(it->second, MM::g_Keyword_Label, label);
             }
-            else
-            {
-                LogMessage("Failed to execute mirror switch from dial", false);
-            }
+
+            LogMessage(("Mirror dial: Async switched to position " + std::to_string(requestedPos)).c_str(), true);
 
             // Re-enable MCZ control
             cmd = BuildCommand(CMD_MCZ_SWITCH, 1);
-            SendCommand(cmd);
+            ExecuteCommandAsync(cmd);
         }
     }
     else if (tag == CMD_EPI_SHUTTER1 && params.size() > 0 && params[0] == "+")
@@ -2585,8 +2698,10 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
        LogMessage("Command completion for EPI Shutter 2 received", true);
        isCommandCompletion = true;
     }
-    // Add more notification handlers as needed
-    LogMessage(("Unhandled notification: " + message).c_str(), true);
+    else {
+       // Add more notification handlers as needed
+       LogMessage(("Unhandled notification: " + message).c_str(), true);
+    }
 
     if (isCommandCompletion)
     {

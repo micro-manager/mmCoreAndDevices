@@ -32,6 +32,24 @@
 #include <condition_variable>
 #include <string>
 #include <vector>
+#include <queue>
+#include <future>
+#include <thread>
+#include <atomic>
+
+// Command task structure for worker thread queue
+struct CommandTask {
+    std::string command;
+    std::promise<std::pair<int, std::string>> responsePromise;
+
+    CommandTask(std::string cmd) : command(std::move(cmd)) {}
+
+    // Move-only type (promise is not copyable)
+    CommandTask(CommandTask&&) = default;
+    CommandTask& operator=(CommandTask&&) = default;
+    CommandTask(const CommandTask&) = delete;
+    CommandTask& operator=(const CommandTask&) = delete;
+};
 
 class EvidentHubWin : public HubBase<EvidentHubWin>
 {
@@ -62,7 +80,8 @@ public:
     // Hub interface for devices to access state
     EvidentIX85Win::MicroscopeModel* GetModel() { return &model_; }
 
-    // Command execution (thread-safe)
+    // Command execution (thread-safe with worker thread queue)
+    std::future<std::pair<int, std::string>> ExecuteCommandAsync(const std::string& command);
     int ExecuteCommand(const std::string& command, std::string& response);
     int SendCommand(const std::string& command);
     int GetResponse(std::string& response, long timeoutMs = -1);
@@ -80,9 +99,9 @@ public:
     void RegisterDeviceAsUsed(EvidentIX85Win::DeviceType type, MM::Device* device) { usedDevices_[type] = device;};
     void UnRegisterDeviceAsUsed(EvidentIX85Win::DeviceType type) { usedDevices_.erase(type); };
 
-    int UpdateMirrorUnitIndicator(int position);
-    int UpdateLightPathIndicator(int position);
-    int UpdateEPIShutter1Indicator(int state);
+    int UpdateMirrorUnitIndicator(int position, bool async);
+    int UpdateLightPathIndicator(int position, bool async);
+    int UpdateEPIShutter1Indicator(int state, bool async);
 
     // DIA brightness memory for logical shutter
     int GetRememberedDIABrightness() const { return rememberedDIABrightness_; }
@@ -104,6 +123,10 @@ private:
     int ClearPort();
     int DoDeviceDetection();
     int QueryObjectiveInfo();
+
+    // Worker thread for command queue
+    void CommandWorkerThread();
+    int ExecuteCommandInternal(const std::string& command, std::string& response);
 
     // Device query helpers
     int QueryFocus();
@@ -173,12 +196,19 @@ private:
     EvidentSDK::fn_MSL_PM_RegisterCallback pfnRegisterCallback_;
 
     // Command synchronization (keep pattern - callbacks signal instead of monitor thread)
-    mutable std::mutex commandMutex_;  // Protects command sending
+    mutable std::mutex commandMutex_;  // Protects command sending (deprecated - worker thread serializes)
     std::mutex responseMutex_;         // Protects response handling
     std::condition_variable responseCV_;
     std::string pendingResponse_;
     bool responseReady_;
     EvidentSDK::MDK_MSL_CMD pendingCommand_;  // Must be member to stay valid for async callback
+
+    // Command queue for worker thread
+    std::queue<CommandTask> commandQueue_;
+    std::mutex queueMutex_;
+    std::condition_variable queueCV_;
+    std::thread workerThread_;
+    std::atomic<bool> workerRunning_;
 
     // State
     std::string version_;

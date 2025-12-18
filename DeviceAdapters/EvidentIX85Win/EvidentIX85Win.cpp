@@ -1522,7 +1522,7 @@ int EvidentLightPath::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ERR_NEGATIVE_ACK;
 
         // Update MCU indicator I4 with new light path position (1-based)
-        hub->UpdateLightPathIndicator(static_cast<int>(pos + 1));
+        hub->UpdateLightPathIndicator(static_cast<int>(pos + 1), false);
     }
     return DEVICE_OK;
 }
@@ -2181,7 +2181,7 @@ int EvidentEPIShutter1::SetOpen(bool open)
 
      // Success - update indicator and return
      hub->GetModel()->SetBusy(DeviceType_EPIShutter1, false);
-     hub->UpdateEPIShutter1Indicator(open ? 1 : 0);
+     hub->UpdateEPIShutter1Indicator(open ? 1 : 0, true);
      return DEVICE_OK;
 }
 
@@ -2394,7 +2394,7 @@ int EvidentMirrorUnit1::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          }
 
          // Success - update indicator and return
-         hub->UpdateMirrorUnitIndicator(static_cast<int>(pos + 1));
+         hub->UpdateMirrorUnitIndicator(static_cast<int>(pos + 1), false);
          return DEVICE_OK;
     }
     return DEVICE_OK;
