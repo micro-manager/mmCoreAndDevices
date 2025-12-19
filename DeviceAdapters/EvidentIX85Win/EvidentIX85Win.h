@@ -104,6 +104,7 @@ private:
     int EnableNotifications(bool enable);
     int QueryNearLimits();  // Query and store near limits from microscope
     int QueryParfocalSettings();  // Query parfocal positions and enabled state
+    int SendParfocalSettings(std::vector<long> parfocalPositions);  // Send parfocal positions and enabled state to microscope
 
     bool initialized_;
     std::string name_;

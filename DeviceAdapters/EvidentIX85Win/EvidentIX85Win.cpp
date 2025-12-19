@@ -999,42 +999,30 @@ int EvidentNosepiece::OnSetParfocalPosition(MM::PropertyBase* pProp, MM::ActionT
                 return ERR_POSITION_UNKNOWN;
             }
 
+            std::vector<long> parfocalPositions = parfocalPositions_;
             // Update parfocal position for current objective (convert 1-based to 0-based)
-            parfocalPositions_[nosepiecePos - 1] = focusPos;
+            parfocalPositions[nosepiecePos - 1] = focusPos;
 
-            // Build PF command with all 6 positions: "PF p1,p2,p3,p4,p5,p6"
-            std::ostringstream cmd;
-            cmd << CMD_PARFOCAL << TAG_DELIMITER;
-            for (size_t i = 0; i < parfocalPositions_.size(); i++)
-            {
-                if (i > 0)
-                    cmd << DATA_DELIMITER;
-                cmd << parfocalPositions_[i];
-            }
+            int ret = SendParfocalSettings(parfocalPositions);
 
-            // Execute command
-            std::string response;
-            int ret = hub->ExecuteCommand(cmd.str(), response);
+            // Reset property to empty
+            pProp->Set("");
+
             if (ret != DEVICE_OK)
             {
-                pProp->Set("");  // Reset to empty
-                return ret;
-            }
-
-            if (!IsPositiveAck(response, CMD_PARFOCAL))
-            {
-                pProp->Set("");  // Reset to empty
-                return ERR_NEGATIVE_ACK;
+               std::ostringstream errMsg;
+               errMsg << "Failed to set parfocal positions";
+               LogMessage(errMsg.str().c_str());
+               return ret;
             }
 
             // Log success
+            parfocalPositions_ = parfocalPositions;
             std::ostringstream logMsg;
             logMsg << "Set parfocal position for objective " << nosepiecePos
                    << " to " << (focusPos * FOCUS_STEP_SIZE_UM) << " um";
             LogMessage(logMsg.str().c_str());
 
-            // Reset property to empty
-            pProp->Set("");
         }
         else if (value == "Clear")
         {
@@ -1047,44 +1035,82 @@ int EvidentNosepiece::OnSetParfocalPosition(MM::PropertyBase* pProp, MM::ActionT
             if (nosepiecePos < 1 || nosepiecePos > (long)parfocalPositions_.size())
                 return ERR_INVALID_PARAMETER;
 
+            std::vector<long> parfocalPositions = parfocalPositions_;
+
             // Set parfocal position to zero (no offset)
-            parfocalPositions_[nosepiecePos - 1] = 0;
+            parfocalPositions[nosepiecePos - 1] = 0;
 
-            // Build PF command with all 6 positions: "PF p1,p2,p3,p4,p5,p6"
-            std::ostringstream cmd;
-            cmd << CMD_PARFOCAL << TAG_DELIMITER;
-            for (size_t i = 0; i < parfocalPositions_.size(); i++)
-            {
-                if (i > 0)
-                    cmd << DATA_DELIMITER;
-                cmd << parfocalPositions_[i];
-            }
+            int ret = SendParfocalSettings(parfocalPositions);
+            pProp->Set("");  // Reset to empty
 
-            // Execute command
-            std::string response;
-            int ret = hub->ExecuteCommand(cmd.str(), response);
             if (ret != DEVICE_OK)
             {
-                pProp->Set("");  // Reset to empty
-                return ret;
+               std::ostringstream errMsg;
+               errMsg << "Failed to clear parfocal positions";
+               LogMessage(errMsg.str().c_str());
+               return ret;
             }
-
-            if (!IsPositiveAck(response, CMD_PARFOCAL))
-            {
-                pProp->Set("");  // Reset to empty
-                return ERR_NEGATIVE_ACK;
-            }
-
             // Log success
             std::ostringstream logMsg;
             logMsg << "Cleared parfocal position for objective " << nosepiecePos;
             LogMessage(logMsg.str().c_str());
 
-            // Reset property to empty
-            pProp->Set("");
+            parfocalPositions_ = parfocalPositions;
         }
     }
     return DEVICE_OK;
+}
+
+
+;  // Send parfocal positions and enabled state to microscope
+int EvidentNosepiece::SendParfocalSettings(std::vector<long> parfocalPositions)
+{
+   EvidentHubWin* hub = GetHub();
+   if (!hub)
+       return DEVICE_ERR;
+
+   // Enter Setting mode
+   std::string cmd = BuildCommand(CMD_OPERATION_MODE, 1);
+   std::string response;
+   int ret = hub->ExecuteCommand(cmd, response);
+   if (ret != DEVICE_OK)
+   {
+      LogMessage("Failed to enter Setting mode");
+      return ret;
+   }
+
+   // Build PF command with all 6 positions: "PF p1,p2,p3,p4,p5,p6"
+   std::ostringstream scmd;
+   scmd << CMD_PARFOCAL << TAG_DELIMITER;
+   for (size_t i = 0; i < parfocalPositions.size(); i++)
+   {
+       if (i > 0)
+           scmd << DATA_DELIMITER;
+       scmd << parfocalPositions[i];
+   }
+
+   // Execute command
+   ret = hub->ExecuteCommand(scmd.str(), response);
+
+   // Exit Setting mode (always do this, even if S_OB failed)
+   cmd = BuildCommand(CMD_OPERATION_MODE, 0);
+   std::string exitResponse;
+   hub->ExecuteCommand(cmd, exitResponse);
+
+   if (ret != DEVICE_OK)
+   {
+      std::ostringstream errMsg;
+      errMsg << "Failed to set parfocal positions";
+      LogMessage(errMsg.str().c_str());
+      return ret;
+   }
+
+   if (!IsPositiveAck(response, CMD_PARFOCAL))
+   {
+       return ERR_NEGATIVE_ACK;
+   }
+
+   return DEVICE_OK;
 }
 
 int EvidentNosepiece::OnParfocalEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -1099,15 +1125,29 @@ int EvidentNosepiece::OnParfocalEnabled(MM::PropertyBase* pProp, MM::ActionType 
     }
     else if (eAct == MM::AfterSet)
     {
+        // Enter Setting mode
+        std::string cmd = BuildCommand(CMD_OPERATION_MODE, 1);
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd, response);
+        if (ret != DEVICE_OK)
+        {
+           LogMessage("Failed to enter Setting mode");
+           return ret;
+        }
+
         std::string value;
         pProp->Get(value);
         int enabled = (value == "Enabled") ? 1 : 0;
 
-        std::string cmd = BuildCommand(CMD_ENABLE_PARFOCAL, enabled);
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
+        cmd = BuildCommand(CMD_ENABLE_PARFOCAL, enabled);
+        ret = hub->ExecuteCommand(cmd, response);
         if (ret != DEVICE_OK)
             return ret;
+
+        // Exit Setting mode (always do this, even if CMD failed)
+        cmd = BuildCommand(CMD_OPERATION_MODE, 0);
+        std::string exitResponse;
+        hub->ExecuteCommand(cmd, exitResponse);
 
         if (!IsPositiveAck(response, CMD_ENABLE_PARFOCAL))
             return ERR_NEGATIVE_ACK;
