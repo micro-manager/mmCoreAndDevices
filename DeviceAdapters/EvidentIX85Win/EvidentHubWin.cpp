@@ -143,7 +143,9 @@ EvidentHubWin::EvidentHubWin() :
     CreateProperty(g_PropDLLPath, dllPath_.c_str(), MM::String, false, pAct, true);
 
     pAct = new CPropertyAction(this, &EvidentHubWin::OnAnswerTimeout);
-    CreateProperty(g_PropAnswerTimeout, "4000", MM::Integer, false, pAct, true);
+    std::ostringstream os;
+    os << ANSWER_TIMEOUT_MS;
+    CreateProperty(g_PropAnswerTimeout, os.str().c_str(), MM::Integer, false, pAct, true);
 }
 
 EvidentHubWin::~EvidentHubWin()
