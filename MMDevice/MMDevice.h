@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 74
+#define DEVICE_INTERFACE_VERSION 75
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -604,6 +604,15 @@ namespace MM {
       virtual int GetLimits(double& lower, double& upper) = 0;
 
       /**
+      * @brief Stages can use the OnStagePositionChanged callback to signal 
+      * updates about their position.  Some adapters do so, others do not,
+      * in which case the UI code should use polling.  This function signals whether
+      * the device adapters uses callbacks, so that the UI knows it does not need
+      *  to poll this device
+      */
+      virtual bool UsesOnStagePositionChanged() = 0;
+
+      /**
        * @brief Return the focus direction.
        *
        * Indicates whether increasing position corresponds to movement in the
@@ -708,6 +717,15 @@ namespace MM {
       virtual int SetRelativePositionSteps(long x, long y) = 0;
       virtual int Home() = 0;
       virtual int Stop() = 0;
+
+      /**
+      * @brief XY stages can use the OnXYStagePositionChanged callback to signal 
+      * updates about their position.  Some stage adapters do so, others do not,
+      * in which case the UI code can use polling.  This function signals whether
+      * the device adapters uses callbacks, so that the UI knows it does not need
+      *  to poll this device
+      */
+      virtual bool UsesOnXYStagePositionChanged() = 0;
 
       /**
        * @brief Define the current position as the (hardware) origin (0, 0).
