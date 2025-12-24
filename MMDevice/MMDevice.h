@@ -723,7 +723,7 @@ namespace MM {
       * updates about their position.  Some stage adapters do so, others do not,
       * in which case the UI code can use polling.  This function signals whether
       * the device adapters uses callbacks, so that the UI knows it does not need
-      *  to poll this device
+      * to poll this device
       */
       virtual bool UsesOnXYStagePositionChanged() = 0;
 
