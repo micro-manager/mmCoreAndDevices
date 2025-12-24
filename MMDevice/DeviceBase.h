@@ -1901,7 +1901,6 @@ class CStageBase : public CDeviceBase<MM::Stage, U>
       return false;
    }
 
-
    virtual int IsStageLinearSequenceable(bool& isSequenceable) const
    {
       isSequenceable = false;
