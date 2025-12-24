@@ -604,7 +604,7 @@ namespace MM {
       virtual int GetLimits(double& lower, double& upper) = 0;
 
       /**
-      * @brief Stages can use the OnStagePositionChanged callback to signal 
+      * @brief Stages can use the OnStagePositionChanged callback to signal
       * updates about their position.  Some adapters do so, others do not,
       * in which case the UI code should use polling.  This function signals whether
       * the device adapters uses callbacks, so that the UI knows it does not need
