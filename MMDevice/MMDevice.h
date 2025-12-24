@@ -719,7 +719,7 @@ namespace MM {
       virtual int Stop() = 0;
 
       /**
-      * @brief XY stages can use the OnXYStagePositionChanged callback to signal 
+      * @brief XY stages can use the OnXYStagePositionChanged callback to signal
       * updates about their position.  Some stage adapters do so, others do not,
       * in which case the UI code can use polling.  This function signals whether
       * the device adapters uses callbacks, so that the UI knows it does not need
