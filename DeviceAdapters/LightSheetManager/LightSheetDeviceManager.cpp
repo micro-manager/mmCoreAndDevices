@@ -9,8 +9,8 @@
 
 LightSheetDeviceManager::LightSheetDeviceManager() :
     initialized_(false),
-    geometryType_("diSPIM"),
-    lightSheetType_("Scanned"),
+    geometryType_("SCAPE"),
+    lightSheetType_("Static"),
     numImagingPaths_(1),
     numIlluminationPaths_(1),
     numSimultaneousCameras_(1) {
@@ -18,29 +18,12 @@ LightSheetDeviceManager::LightSheetDeviceManager() :
     // call the base class method to setup default error codes/messages
     InitializeDefaultErrorMessages();
 
-    // pre-init properties
-    CPropertyAction* pAct = nullptr;
-    
-    pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnMicroscopeGeometry);
-    CreateProperty(gMicroscopeGeometry, "diSPIM", MM::String, false, pAct, true);
-    SetAllowedValues(gMicroscopeGeometry, geometry_.GetGeometryTypes());
-
-    pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumSimultaneousCameras);
-    CreateProperty(gSimultaneousCameras, "1", MM::Integer, false, pAct, true);
-    SetPropertyLimits(gSimultaneousCameras, 1, 8);
-
-    pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumImagingPaths);
-    CreateProperty(gImagingPaths, "1", MM::Integer, false, pAct, true);
-    SetPropertyLimits(gImagingPaths, 1, 8);
-
-    pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnNumIlluminationPaths);
-    CreateProperty(gIlluminationPaths, "1", MM::Integer, false, pAct, true);
-    SetPropertyLimits(gIlluminationPaths, 1, 8);
-
-    pAct = new CPropertyAction(this, &LightSheetDeviceManager::OnLightSheetType);
-    CreateProperty(gLightSheetType, gLightSheetTypeScanned, MM::String, false, pAct, true);
-    AddAllowedValue(gLightSheetType, gLightSheetTypeScanned);
-    AddAllowedValue(gLightSheetType, gLightSheetTypeStatic);
+    // Create pre-init properties
+    CreateNumIlluminationPathsProperty();
+    CreateNumImagingPathsProperty();
+    CreateLightSheetTypeProperty();
+    CreateMicroscopeGeometryProperty();
+    CreateNumSimultaneousCamerasProperty();
 }
 
 LightSheetDeviceManager::~LightSheetDeviceManager() {
@@ -189,59 +172,101 @@ void LightSheetDeviceManager::CreatePrefixProperties(const std::string& property
     }
 }
 
-// Pre-init Property Actions
+// Pre-init Properties
 
-int LightSheetDeviceManager::OnNumImagingPaths(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(numImagingPaths_);
-    } else if (eAct == MM::AfterSet) {
-        long numPaths;
-        pProp->Get(numPaths);
-        numImagingPaths_ = numPaths;
-    }
-    return DEVICE_OK;
+void LightSheetDeviceManager::CreateNumImagingPathsProperty() {
+    const std::string propertyName = "ImagingPaths";
+    CreateIntegerProperty(
+        propertyName.c_str(), numImagingPaths_, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(numImagingPaths_);
+            } else if (eAct == MM::AfterSet) {
+                long numPaths;
+                pProp->Get(numPaths);
+                numImagingPaths_ = numPaths;
+            }
+            return DEVICE_OK;
+        }),
+        true
+    );
+    SetPropertyLimits(propertyName.c_str(), 1, 8);
 }
 
-int LightSheetDeviceManager::OnNumIlluminationPaths(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(numIlluminationPaths_);
-    } else if (eAct == MM::AfterSet) {
-        long numPaths;
-        pProp->Get(numPaths);
-        numIlluminationPaths_ = numPaths;
-    }
-    return DEVICE_OK;
+void LightSheetDeviceManager::CreateNumIlluminationPathsProperty() {
+    const std::string propertyName = "IlluminationPaths";
+    CreateIntegerProperty(
+        propertyName.c_str(), numIlluminationPaths_, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(numIlluminationPaths_);
+            } else if (eAct == MM::AfterSet) {
+                long numPaths;
+                pProp->Get(numPaths);
+                numIlluminationPaths_ = numPaths;
+            }
+            return DEVICE_OK;
+        }),
+        true
+    );
+    SetPropertyLimits(propertyName.c_str(), 1, 8);
 }
 
-int LightSheetDeviceManager::OnNumSimultaneousCameras(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(numSimultaneousCameras_);
-    } else if (eAct == MM::AfterSet) {
-        long numPaths;
-        pProp->Get(numPaths);
-        numSimultaneousCameras_ = numPaths;
-    }
-    return DEVICE_OK;
+void LightSheetDeviceManager::CreateLightSheetTypeProperty() {
+    const std::string propertyName = "LightSheetType";
+    CreateStringProperty(
+        propertyName.c_str(), lightSheetType_.c_str(), false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(lightSheetType_.c_str());
+            } else if (eAct == MM::AfterSet) {
+                std::string lightSheetType;
+                pProp->Get(lightSheetType);
+                lightSheetType_ = lightSheetType;
+            }
+            return DEVICE_OK;
+        }),
+        true
+    );
+    AddAllowedValue(propertyName.c_str(), gLightSheetTypeScanned);
+    AddAllowedValue(propertyName.c_str(), gLightSheetTypeStatic);
 }
 
-int LightSheetDeviceManager::OnMicroscopeGeometry(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(geometryType_.c_str());
-    } else if (eAct == MM::AfterSet) {
-        std::string geometryType;
-        pProp->Get(geometryType);
-        geometryType_ = geometryType;
-    }
-    return DEVICE_OK;
+void LightSheetDeviceManager::CreateMicroscopeGeometryProperty() {
+    const std::string propertyName = "MicroscopeGeometry";
+    CreateStringProperty(
+        propertyName.c_str(), geometryType_.c_str(), false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(geometryType_.c_str());
+            } else if (eAct == MM::AfterSet) {
+                std::string geometryType;
+                pProp->Get(geometryType);
+                geometryType_ = geometryType;
+            }
+            return DEVICE_OK;
+        }),
+        true
+    );
+    std::vector<std::string> allowedValues = geometry_.GetGeometryTypes();
+    SetAllowedValues(propertyName.c_str(), allowedValues);
 }
 
-int LightSheetDeviceManager::OnLightSheetType(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(lightSheetType_.c_str());
-    } else if (eAct == MM::AfterSet) {
-        std::string lightSheetType;
-        pProp->Get(lightSheetType);
-        lightSheetType_ = lightSheetType;
-    }
-    return DEVICE_OK;
+void LightSheetDeviceManager::CreateNumSimultaneousCamerasProperty() {
+    const std::string propertyName = "SimultaneousCameras";
+    CreateIntegerProperty(
+        propertyName.c_str(), numSimultaneousCameras_, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(numSimultaneousCameras_);
+            } else if (eAct == MM::AfterSet) {
+                long numCameras;
+                pProp->Get(numCameras);
+                numSimultaneousCameras_ = numCameras;
+            }
+            return DEVICE_OK;
+        }),
+        true
+    );
+    SetPropertyLimits(propertyName.c_str(), 1, 8);
 }
