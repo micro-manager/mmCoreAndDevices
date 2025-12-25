@@ -106,7 +106,7 @@ namespace mmi = mmcore::internal;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 11, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 12, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2265,6 +2265,24 @@ void CMMCore::loadExposureSequence(const char* cameraLabel, std::vector<double> 
       throw CMMError(getDeviceErrorText(ret, pCamera));
 }
 
+/**
+* Queries whether this stage uses callbacks to signal position changes
+* When false, use polling to stay updated about the positionf of the stage
+*/
+bool CMMCore::isStageUsingCallbacks(const char* label) MMCORE_LEGACY_THROW(CMMError)
+{
+   std::shared_ptr<mmi::StageInstance> pStage =
+      deviceManager_->GetDeviceOfType<mmi::StageInstance>(label);
+
+   mmi::DeviceModuleLockGuard guard(pStage);
+
+   bool result;
+   int ret = pStage->UsesOnStagePositionChanged(result);
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, pStage));
+   return result;
+}
+
 
 /**
  * Queries stage if it can be used in a sequence
@@ -2415,6 +2433,26 @@ void CMMCore::setStageLinearSequence(const char* label, double dZ_um, int nSlice
    ret = pStage->SetStageLinearSequence(dZ_um, nSlices);
    if (ret != DEVICE_OK)
       throw CMMError(getDeviceErrorText(ret, pStage));
+}
+
+
+/**
+* Queries whether this XYStage uses callbacks to signal position changes
+* When false, use polling to stay updated about the positionf of the stage
+*/
+bool CMMCore::isXYStageUsingCallbacks(const char* label) MMCORE_LEGACY_THROW(CMMError)
+{
+   std::shared_ptr<mmi::XYStageInstance> pStage =
+      deviceManager_->GetDeviceOfType<mmi::XYStageInstance>(label);
+
+   mmi::DeviceModuleLockGuard guard(pStage);
+
+   bool result;
+   int ret = pStage->UsesOnXYStagePositionChanged(result);
+   if (ret != DEVICE_OK)
+      throw CMMError(getDeviceErrorText(ret, pStage));
+
+   return result;
 }
 
 /**
