@@ -610,7 +610,7 @@ namespace MM {
       * the device adapters uses callbacks, so that the UI knows it does not need
       * to poll this device
       */
-      virtual bool UsesOnStagePositionChanged() = 0;
+      virtual int UsesOnStagePositionChanged(bool& result) const = 0;
 
       /**
        * @brief Return the focus direction.
@@ -725,7 +725,7 @@ namespace MM {
       * the device adapters uses callbacks, so that the UI knows it does not need
       * to poll this device
       */
-      virtual bool UsesOnXYStagePositionChanged() = 0;
+      virtual int UsesOnXYStagePositionChanged(bool &result) const = 0;
 
       /**
        * @brief Define the current position as the (hardware) origin (0, 0).

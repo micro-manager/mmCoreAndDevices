@@ -1896,9 +1896,10 @@ class CStageBase : public CDeviceBase<MM::Stage, U>
    /**
    * @brief Return true when your device adapter uses OnStagePositionChanged callbacks.
    */
-   virtual bool UsesOnStagePositionChanged()
+   virtual int UsesOnStagePositionChanged(bool& result) const
    {
-      return false;
+      result = false;
+      return DEVICE_OK;
    }
 
    virtual int IsStageLinearSequenceable(bool& isSequenceable) const
@@ -2112,11 +2113,12 @@ public:
    }
 
    /**
-   * @brief Return true when your device adapter uses OnXYStagePositionChanged callbacks.
+    * @brief Return true when your device adapter uses OnXYStagePositionChanged callbacks.
    */
-   virtual bool UsesOnXYStagePositionChanged()
+   virtual int UsesOnXYStagePositionChanged(bool& result) const
    {
-      return false;
+      result = false;
+      return DEVICE_OK;
    }
 
    virtual int Move(double /*vx*/, double /*vy*/)
