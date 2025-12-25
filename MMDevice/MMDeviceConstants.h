@@ -119,6 +119,9 @@ namespace MM {
    const char* const g_Keyword_State            = "State";
    const char* const g_Keyword_Label            = "Label";
    const char* const g_Keyword_Position         = "Position";
+   const char* const g_Keyword_LastSetPosition  = "LastSetPosition";
+   const char* const g_Keyword_LastSetPositionX = "LastSetPositionX";
+   const char* const g_Keyword_LastSetPositionY = "LastSetPositionY";
    const char* const g_Keyword_Type             = "Type";
    const char* const g_Keyword_Delay            = "Delay_ms";
    const char* const g_Keyword_BaudRate         = "BaudRate";
