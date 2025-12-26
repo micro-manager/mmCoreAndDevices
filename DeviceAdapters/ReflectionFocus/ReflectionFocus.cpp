@@ -1554,7 +1554,7 @@ int ReflectionFocus::PerformCalibration()
          double track1X = 0.0;
          double track1Y = 0.0;
          double track2X = 0.0;
-         double track2Y = 0.0;;
+         double track2Y = 0.0;
          bool haveTrack2 = false;
 
          if (hasSpot2 && score2 > 0)

@@ -3,8 +3,8 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Various 'Meta-Devices' that add to or combine functionality of 
-//                physcial devices.
+// DESCRIPTION:   Various 'Meta-Devices' that add to or combine functionality of
+//                physical devices.
 //
 // AUTHOR:        Nico Stuurman, nico@cmp.ucsf.edu, 11/07/2008
 //                DAXYStage by Ed Simmon, 11/28/2011
@@ -90,7 +90,7 @@ int ReflectionFocusStage::Initialize()
    else
       return ERR_NO_AUTOFOCUS_DEVICE_FOUND;
 
-   // This is needed, otherwise DeviceAUtofocus_ is not always set resulting in crashes
+   // This is needed, otherwise AutoFocusDeviceName_ is not always set resulting in crashes
    // This could lead to strange problems if multiple ReflectionFocus devices are loaded
    SetProperty("AutoFocus Device", defaultAutoFocus.c_str());
 
@@ -162,7 +162,7 @@ int ReflectionFocusStage::GetPositionUm(double& pos)
    if (AutoFocusDevice == 0)
       return ERR_NO_AUTOFOCUS_DEVICE;
 
-   return  AutoFocusDevice->GetOffset(pos);;
+   return  AutoFocusDevice->GetOffset(pos);
 }
 
 /*
