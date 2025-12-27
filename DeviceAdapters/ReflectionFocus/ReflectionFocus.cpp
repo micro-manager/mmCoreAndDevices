@@ -196,15 +196,15 @@ int ReflectionFocus::Initialize()
 
    // Create ROI-Y property
    pAct = new CPropertyAction(this, &ReflectionFocus::OnROI_Y);
-   CreateIntegerProperty("Camera_ROI-Y", 65536, false, pAct);
+   CreateIntegerProperty("Camera_ROI-Y", 0, false, pAct);
 
    // Create ROI-Width property
    pAct = new CPropertyAction(this, &ReflectionFocus::OnROI_Width);
-   CreateIntegerProperty("Camera_ROI-Width", 65536, false, pAct);
+   CreateIntegerProperty("Camera_ROI-Width", 512, false, pAct);
 
    // Create ROI-Height property
    pAct = new CPropertyAction(this, &ReflectionFocus::OnROI_Height);
-   CreateIntegerProperty("Camera_ROI-Height", 65536, false, pAct);
+   CreateIntegerProperty("Camera_ROI-Height", 512, false, pAct);
 
    // Create Binning property
    pAct = new CPropertyAction(this, &ReflectionFocus::OnBinning);
@@ -1323,7 +1323,7 @@ int ReflectionFocus::SetCameraBinning()
       binning_ = pCam->GetBinning();
       if (binning_ <= 0)
          binning_ = 1;
-      GetCoreCallback()->OnPropertyChanged(this, "Binning", CDeviceUtils::ConvertToString(binning_));
+      GetCoreCallback()->OnPropertyChanged(this, "Camera_Binning", CDeviceUtils::ConvertToString(binning_));
    }
    return DEVICE_OK;
 }
@@ -1364,10 +1364,10 @@ int ReflectionFocus::SetCameraROI()
             roiHeight_ = ySize;
 
          }
-         GetCoreCallback()->OnPropertyChanged(this, "ROI-X", CDeviceUtils::ConvertToString((long)roiX_));
-         GetCoreCallback()->OnPropertyChanged(this, "ROI-Y", CDeviceUtils::ConvertToString((long)roiY_));
-         GetCoreCallback()->OnPropertyChanged(this, "ROI-Width", CDeviceUtils::ConvertToString((long)roiWidth_));
-         GetCoreCallback()->OnPropertyChanged(this, "ROI-Height", CDeviceUtils::ConvertToString((long)roiHeight_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_ROI-X", CDeviceUtils::ConvertToString((long)roiX_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_ROI-Y", CDeviceUtils::ConvertToString((long)roiY_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_ROI-Width", CDeviceUtils::ConvertToString((long)roiWidth_));
+         GetCoreCallback()->OnPropertyChanged(this, "Camera_ROI-Height", CDeviceUtils::ConvertToString((long)roiHeight_));
       }
    }
    return ret;
@@ -1409,7 +1409,7 @@ int ReflectionFocus::PerformCalibration()
    MM::Camera* camera = static_cast<MM::Camera*>(GetDevice(camera_.c_str()));
    if (shutter == nullptr || camera == nullptr)
    {
-      pStage->SetPositionUm(startPos);
+      pStage->SetPositionUm(originalPos);
       return ERR_NO_PHYSICAL_CAMERA;
    }
 
@@ -1485,7 +1485,7 @@ int ReflectionFocus::PerformCalibration()
       if (ret != DEVICE_OK)
       {
          // Try to restore original position
-         pStage->SetPositionUm(startPos);
+         pStage->SetPositionUm(originalPos);
          return ret;
       }
 
@@ -1544,7 +1544,7 @@ int ReflectionFocus::PerformCalibration()
       ret = AnalyzeImage(resultImageLoop, score1, x1, y1, score2, x2, y2);
       if (ret != DEVICE_OK)
       {
-         pStage->SetPositionUm(startPos);
+         pStage->SetPositionUm(originalPos);
          return ret;
       }
 
@@ -1812,7 +1812,6 @@ double ReflectionFocus::CalculateTargetZDiff(const CalibrationData& cal, double 
    const double MIN_SLOPE = 1e-6;  // Threshold for effectively zero slope
    const double INVALID_Z = -1.0e10;  // Sentinel value
 
-   // bool xValid = fabs(cal.slopeX) > MIN_SLOPE;
    bool xValid = fabs(cal.slopeX) > MIN_SLOPE;
    bool yValid = fabs(cal.slopeY) > MIN_SLOPE;
 
@@ -1858,7 +1857,7 @@ std::string ReflectionFocus::GetCalibrationFilePath()
    if (programData != nullptr)
    {
       std::string dirPath = std::string(programData) + "\\Micro-Manager";
-      std::string filePath = dirPath + "\\Util-Autofocus.json";
+      std::string filePath = dirPath + "\\ReflectionFocus-Calibration.json";
 
       // Create directory if it doesn't exist
       _mkdir(dirPath.c_str());
@@ -1873,10 +1872,10 @@ std::string ReflectionFocus::GetCalibrationFilePath()
       // Directory creation failed, fall back to current directory
    }
    // Fallback to current directory if PROGRAMDATA not set or directory creation failed
-   return "Util-Autofocus.json";
+   return "ReflectionFocus-Calibration.json";
 #else
    // On non-Windows platforms, use current directory
-   return "Util-Autofocus.json";
+   return "ReflectionFocus-Calibration.json";
 #endif
 }
 
