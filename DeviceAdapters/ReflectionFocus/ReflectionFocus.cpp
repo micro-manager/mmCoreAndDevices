@@ -159,7 +159,7 @@ int ReflectionFocus::Initialize()
    std::string defaultCamera = "Undefined";
    CreateProperty(g_Camera, defaultCamera.c_str(), MM::String, false, pAct, false);
    AddAllowedValue(g_Camera, defaultCamera.c_str());
-   for (int i = 0; i < availableCameras_.size(); i++)
+   for (size_t i = 0; i < availableCameras_.size(); i++)
    {
       AddAllowedValue(g_Camera, availableCameras_[i].c_str());
    }
@@ -180,7 +180,7 @@ int ReflectionFocus::Initialize()
    std::string defaultFocusStage = "Undefined";
    CreateProperty(g_FocusStage, defaultFocusStage.c_str(), MM::String, false, pAct, false);
    AddAllowedValue(g_FocusStage, defaultFocusStage.c_str());
-   for (int i = 0; i < availableFocusStages_.size(); i++)
+   for (size_t i = 0; i < availableFocusStages_.size(); i++)
    {
       AddAllowedValue(g_FocusStage, availableFocusStages_[i].c_str());
    }
@@ -965,6 +965,11 @@ int ReflectionFocus::SnapAndAnalyze()
    camera->SnapImage();
    ImgBuffer darkImage;
    int ret = GetImageFromBuffer(darkImage);
+   if (ret != DEVICE_OK)
+   {
+      shutter->SetOpen(false);
+      return ret;
+   }
 
    shutter->SetOpen(true);
    CDeviceUtils::SleepMs(10); // wait for shutter to open
@@ -973,6 +978,10 @@ int ReflectionFocus::SnapAndAnalyze()
    ImgBuffer lightImage;
    ret = GetImageFromBuffer(lightImage);
    shutter->SetOpen(false);
+   if (ret != DEVICE_OK)
+   {
+      return ret;
+   }
 
    // Subtract darkImage from lightImage
    ImgBuffer resultImage(lightImage.Width(), lightImage.Height(), lightImage.Depth());
@@ -1422,6 +1431,11 @@ int ReflectionFocus::PerformCalibration()
    camera->SnapImage();
    ImgBuffer darkImage;
    ret = GetImageFromBuffer(darkImage);
+   if (ret != DEVICE_OK)
+   {
+      pStage->SetPositionUm(originalPos);
+      return ret;
+   }
 
    // Open shutter and take light image
    shutter->SetOpen(true);
@@ -1429,6 +1443,12 @@ int ReflectionFocus::PerformCalibration()
    camera->SnapImage();
    ImgBuffer lightImage;
    ret = GetImageFromBuffer(lightImage);
+   if (ret != DEVICE_OK)
+   {
+      shutter->SetOpen(false);
+      pStage->SetPositionUm(originalPos);
+      return ret;
+   }
 
    // Subtract darkImage from lightImage
    ImgBuffer resultImage(lightImage.Width(), lightImage.Height(), lightImage.Depth());
@@ -1501,6 +1521,11 @@ int ReflectionFocus::PerformCalibration()
       camera->SnapImage();
       ImgBuffer darkImageLoop;
       ret = GetImageFromBuffer(darkImageLoop);
+      if (ret != DEVICE_OK)
+      {
+         pStage->SetPositionUm(originalPos);
+         return ret;
+      }
 
       // Open shutter and take light image
       shutter->SetOpen(true);
@@ -1508,6 +1533,12 @@ int ReflectionFocus::PerformCalibration()
       camera->SnapImage();
       ImgBuffer lightImageLoop;
       ret = GetImageFromBuffer(lightImageLoop);
+      if (ret != DEVICE_OK)
+      {
+         shutter->SetOpen(false);
+         pStage->SetPositionUm(originalPos);
+         return ret;
+      }
 
       // Subtract darkImage from lightImage
       ImgBuffer resultImageLoop(lightImageLoop.Width(), lightImageLoop.Height(), lightImageLoop.Depth());

@@ -3,8 +3,8 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Hardware-based reflection spot tracking autofocus using a
-//                camera and optional shutter.
+// DESCRIPTION:   Module initialization and device factory for ReflectionFocus
+//                device adapter.
 //
 // AUTHOR:        Nico Stuurman, nico@cmp.ucsf.edu, 11/07/2008
 //                Nico Stuurman, nstuurman@altoslabs.com, 4/22/2022

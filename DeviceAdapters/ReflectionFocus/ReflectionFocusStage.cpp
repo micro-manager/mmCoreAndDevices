@@ -3,8 +3,7 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Various 'Meta-Devices' that add to or combine functionality of
-//                physical devices.
+// DESCRIPTION:   Stage wrapper device that exposes ReflectionFocus offset as a Z-stage.
 //
 // AUTHOR:        Nico Stuurman, nico@cmp.ucsf.edu, 11/07/2008
 //                DAXYStage by Ed Simmon, 11/28/2011
@@ -162,7 +161,7 @@ int ReflectionFocusStage::GetPositionUm(double& pos)
    if (AutoFocusDevice == 0)
       return ERR_NO_AUTOFOCUS_DEVICE;
 
-   return  AutoFocusDevice->GetOffset(pos);
+   return AutoFocusDevice->GetOffset(pos);
 }
 
 /*
