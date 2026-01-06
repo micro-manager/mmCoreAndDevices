@@ -183,7 +183,7 @@ CDemoStateDevice::CDemoStateDevice()
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_UNKNOWN_POSITION, "Requested position not available in this device");
-   EnableDelay(); // signals that the dealy setting will be used
+   EnableDelay(); // signals that the delay setting will be used
 
    // Number of positions
    // -----

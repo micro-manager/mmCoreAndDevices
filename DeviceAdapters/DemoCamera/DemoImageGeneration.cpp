@@ -627,7 +627,7 @@ void CDemoCamera::AddSignal(ImgBuffer& img, double photonFlux, double exp, doubl
 double CDemoCamera::GaussDistributedValue(double mean, double std)
 {
    double s = 2;
-   double u = 1; // incosequential, but avoid potantial use of uninitialized value
+   double u = 1; // inconsequential, but avoid potential use of uninitialized value
    double v;
    double halfRandMax = (double) RAND_MAX / 2.0;
    while (s >= 1 || s <= 0)
