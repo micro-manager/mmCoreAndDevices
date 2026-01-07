@@ -79,6 +79,7 @@
   </ItemDefinitionGroup>
   <!-- Source files -->
   <ItemGroup>
+    <ClCompile Include="ImageAnalyzers.cpp" />
     <ClCompile Include="ReflectionFocus.cpp" />
     <ClCompile Include="ReflectionFocusStage.cpp" />
     <ClCompile Include="ReflectionFocusModule.cpp" />

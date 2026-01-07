@@ -98,6 +98,39 @@ private:
 };
 
 /**
+* Abstract base class for image analysis algorithms
+* Implementations can provide the location and score of up to two spots
+* in the provided image buffer.
+*/
+class ImageAnalyzer
+{
+public: 
+   virtual int AnalyzeImage(ImgBuffer img, double& score1, double& x1, double& y1, double& score2, double& x2, double& y2) = 0;
+   virtual std::string GetDescription() const = 0;
+   virtual const char* GetName() const = 0;
+};
+
+/**
+ * Simple implementation of ImageAnalyzer that detects
+ * the two brightest spots in the image.
+ */
+class DetectTwoBrightSpots : public ImageAnalyzer
+{
+public: 
+   int AnalyzeImage(ImgBuffer img, double& score1, double& x1, double& y1, double& score2, double& x2, double& y2) override;
+   std::string GetDescription() const {
+      return "Detects the location of up to two bright spots";
+   }
+   const char* GetName() const {
+     return "DetectTwoBrightSpots";
+   }
+   static const char* GetAnalyzerName() {
+      return "DetectTwoBrightSpots";
+   }
+};
+
+
+/**
  * Hardware-based autofocus device that uses a shutter (to
   * switch IR light source on/off) and a camera to determine
   * the location/size of the reflection spot.  Since images
@@ -181,7 +214,7 @@ private:
 
       int SnapAndAnalyze();
       int GetImageFromBuffer(ImgBuffer& img);
-      int AnalyzeImage(ImgBuffer img, double& score1, double& x1, double& y1, double& score2, double& x2, double& y2);
+      //int AnalyzeImage(ImgBuffer img, double& score1, double& x1, double& y1, double& score2, double& x2, double& y2);
       int SetCameraROI();
       int SetCameraBinning();
       int PerformCalibration();
@@ -204,7 +237,6 @@ private:
       bool initialized_;
       bool continuousFocusing_;
       double offset_;
-      std::string algorithm_;
       ImgBuffer img_;
       // Camera ROI and binning settings
       unsigned roiX_;
@@ -236,6 +268,7 @@ private:
       // ReflectionFocusStage registration
       std::vector<MM::Stage*> registeredStages_;
       std::mutex registrationMutex_;
+      ImageAnalyzer* imageAnalyzer_;
 };
 
 

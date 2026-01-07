@@ -20,6 +20,9 @@
     <ClCompile Include="ReflectionFocusModule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ImageAnalyzers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ReflectionFocus.h">
