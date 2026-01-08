@@ -95,6 +95,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DemoCamera.cpp" />
+    <ClCompile Include="DemoCameraModule.cpp" />
+    <ClCompile Include="DemoHub.cpp" />
+    <ClCompile Include="DemoImageGeneration.cpp" />
+    <ClCompile Include="DemoStateDevices.cpp" />
+    <ClCompile Include="DemoStages.cpp" />
+    <ClCompile Include="DemoShutter.cpp" />
+    <ClCompile Include="DemoDA.cpp" />
+    <ClCompile Include="DemoMagnifier.cpp" />
+    <ClCompile Include="DemoAutoFocus.cpp" />
+    <ClCompile Include="DemoGalvo.cpp" />
+    <ClCompile Include="DemoImageProcessors.cpp" />
+    <ClCompile Include="DemoPumps.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DemoCamera.h" />
