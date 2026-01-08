@@ -211,7 +211,7 @@ int ChooseAvailableZStageAxis(unsigned short pid, unsigned char axisBitmap, int 
 	case MICRODRIVE4:
 	case MICRODRIVE4P:
 	{
-		int neworder[] = { M3AXIS, M4AXIS, 0, 0, 0, 0, 0, 0};
+		int neworder[] = { M3AXIS, M4AXIS, M2AXIS, M1AXIS, 0, 0, 0, 0};
 		copy(neworder, neworder + ordersize, order);
 		break;
 	}
