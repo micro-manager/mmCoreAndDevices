@@ -106,7 +106,7 @@ namespace mmi = mmcore::internal;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 11, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 12, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4405,6 +4405,131 @@ double CMMCore::getExposure(const char* label) MMCORE_LEGACY_THROW(CMMError)
   }
   else
      return 0.0;
+}
+
+/**
+ * Returns the current binning setting of the camera.
+ * Binning values in "NxN" format (e.g., "2x2") are parsed to return the integer factor (e.g., 2).
+ * @return the binning factor (1-100)
+ */
+int CMMCore::getBinning() MMCORE_LEGACY_THROW(CMMError)
+{
+   std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
+   if (!camera)
+   {
+      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
+   }
+   else
+   {
+      std::string cameraName;
+      {
+         mmi::DeviceModuleLockGuard guard(camera);
+         cameraName = camera->GetLabel();
+      }
+      return getBinning(cameraName.c_str());
+   }
+}
+
+/**
+ * Returns the current binning setting of the specified camera.
+ * Binning values in "NxN" format (e.g., "2x2") are parsed to return the integer factor (e.g., 2).
+ * @param label  the camera device label
+ * @return the binning factor (1-100)
+ */
+int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
+{
+   std::shared_ptr<mmi::CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
+   if (pCamera)
+   {
+      mmi::DeviceModuleLockGuard guard(pCamera);
+      return pCamera->GetBinning();
+   }
+   else
+      return 1;
+}
+
+/**
+ * Sets the binning setting of the camera.
+ * Automatically handles both integer ("2") and "NxN" ("2x2") property formats.
+ * @param binning the binning factor (1-100)
+ */
+void CMMCore::setBinning(int binning) MMCORE_LEGACY_THROW(CMMError)
+{
+   if (binning < 1 || binning > 100)
+   {
+      throw CMMError("Binning must be between 1 and 100");
+   }
+
+   std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
+   if (!camera)
+   {
+      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
+   }
+   else
+   {
+      std::string cameraName;
+      {
+         mmi::DeviceModuleLockGuard guard(camera);
+         cameraName = camera->GetLabel();
+      }
+      setBinning(cameraName.c_str(), binning);
+   }
+}
+
+/**
+ * Sets the binning setting of the specified camera.
+ * Automatically handles both integer ("2") and "NxN" ("2x2") property formats.
+ * @param label  the camera device label
+ * @param binning the binning factor (1-100)
+ */
+void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMMError)
+{
+   if (binning < 1 || binning > 100)
+   {
+      throw CMMError("Binning must be between 1 and 100");
+   }
+
+   std::shared_ptr<mmi::CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
+
+   {
+      mmi::DeviceModuleLockGuard guard(pCamera);
+      LOG_DEBUG(coreLogger_) << "Will set camera " << label <<
+         " binning to " << binning;
+
+      if (!pCamera->HasProperty(MM::g_Keyword_Binning))
+      {
+         throw CMMError("Camera does not support binning property");
+      }
+
+      // Determine the format by checking the current property value
+      std::string currentValue = pCamera->GetProperty(MM::g_Keyword_Binning);
+
+      std::string binningValue;
+      if (currentValue.find('x') != std::string::npos)
+      {
+         // NxN format: "2x2", "4x4", etc.
+         std::string binStr = CDeviceUtils::ConvertToString(binning);
+         binningValue = binStr + "x" + binStr;
+      }
+      else
+      {
+         // Integer format: "2", "4", etc.
+         binningValue = CDeviceUtils::ConvertToString(binning);
+      }
+
+      // Set the property directly (SetProperty will throw CMMError on failure)
+      pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
+
+      {
+         MMThreadGuard scg(stateCacheLock_);
+         stateCache_.addSetting(PropertySetting(label, MM::g_Keyword_Binning, binningValue.c_str()));
+      }
+   }
+
+   LOG_DEBUG(coreLogger_) << "Did set camera " << label <<
+      " binning to " << binning;
 }
 
 /**
