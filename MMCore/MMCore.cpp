@@ -4440,13 +4440,32 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
-   if (pCamera)
+
+   mmi::DeviceModuleLockGuard guard(pCamera);
+
+   if (!pCamera->HasProperty(MM::g_Keyword_Binning))
    {
-      mmi::DeviceModuleLockGuard guard(pCamera);
-      return pCamera->GetBinning();
+      throw CMMError("Camera does not support binning property");
    }
-   else
-      return 1;
+
+   std::string binningValue = pCamera->GetProperty(MM::g_Keyword_Binning);
+
+   // Parse the binning value - handle both integer ("2") and NxN ("2x2") formats
+   if (binningValue.empty())
+   {
+      throw CMMError("Binning property returned empty value");
+   }
+
+   // atoi() naturally handles both formats - it parses until it hits non-digit
+   // "2" -> 2, "2x2" -> 2, "4x4" -> 4
+   int binning = atoi(binningValue.c_str());
+
+   if (binning < 1 || binning > 100)
+   {
+      throw CMMError("Binning value out of valid range (1-100): " + binningValue);
+   }
+
+   return binning;
 }
 
 /**
