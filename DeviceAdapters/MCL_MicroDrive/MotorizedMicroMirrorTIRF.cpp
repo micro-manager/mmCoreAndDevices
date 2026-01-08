@@ -20,14 +20,9 @@ License:	Distributed under the BSD license.
 using namespace std;
 
 // MMTState bitmask values.
-#define M1_LS1_BITMASK 0x01
-#define M1_LS2_BITMASK 0x02
-#define M2_LS1_BITMASK 0x04
-#define M2_LS2_BITMASK 0x08
-#define M3_LS1_BITMASK 0x10
-#define M3_LS2_BITMASK 0x20
-#define M4_LS1_BITMASK 0x40
-#define M4_LS2_BITMASK 0x80  
+#define ENTRANCE_LIMIT_BITMASK	0x01
+#define EXIT_LIMIT_BITMASK		0x02
+#define FOCUS_LIMIT_BITMASK		0x04  
 
 MotorizedMicroMirrorTIRF::MotorizedMicroMirrorTIRF() :
 	handle_(0),
@@ -39,6 +34,7 @@ MotorizedMicroMirrorTIRF::MotorizedMicroMirrorTIRF() :
 	entranceAxis_(0),
 	exitAxis_(0),
 	focusAxis_(0),
+	swapEntranceAndExitMirrors_(false),
 	entranceStepSize_(0.0),
 	exitStepSize_(0.0),
 	focusStepSize_(0.0),
@@ -137,19 +133,19 @@ int MotorizedMicroMirrorTIRF::InitDeviceAdapter()
 		return ret;
 	focusStepSize_ = ss * 1000.0 * 1000.0;
 
-	MMTState mmtState;
+	MotorizedMicromirrorTirf mmtState;
 	ret = MCL_MMTGetState(&mmtState, handle_);	
 	if (ret != MCL_SUCCESS)
 		return ret;
-	foundEntranceLimit_ = (mmtState.limitSwitchesFound & M2_LS2_BITMASK) == M2_LS2_BITMASK;
-	foundExitLimit_ = (mmtState.limitSwitchesFound & M3_LS2_BITMASK) == M3_LS2_BITMASK;
-	foundFocusLimit_ = (mmtState.limitSwitchesFound & M4_LS2_BITMASK) == M4_LS2_BITMASK;
+	foundEntranceLimit_ = (mmtState.limitSwitchesFound & ENTRANCE_LIMIT_BITMASK) == ENTRANCE_LIMIT_BITMASK;
+	foundExitLimit_ = (mmtState.limitSwitchesFound & EXIT_LIMIT_BITMASK) == EXIT_LIMIT_BITMASK;
+	foundFocusLimit_ = (mmtState.limitSwitchesFound & FOCUS_LIMIT_BITMASK) == FOCUS_LIMIT_BITMASK;
 	foundEpi_ = mmtState.epiFound == 1;
 	foundFocus_ = mmtState.focusFound == 1;
 	foundTIRFAir_ = mmtState.tirfAIRFound == 1;
-	entranceLimitStepCount_ = mmtState.m2LS2Steps;
-	exitLimitStepCount_ = mmtState.m3LS2Steps;
-	focusLimitStepCount_ = mmtState.m4LS2Steps;
+	entranceLimitStepCount_ = mmtState.entranceLimitSteps;
+	exitLimitStepCount_ = mmtState.exitLimitSteps;
+	focusLimitStepCount_ = mmtState.finalFocusingMirrorLimitSteps;
 	stepCountFromEpiToTIRF_ = mmtState.epiToTirfSteps;
 	epiStepCount_ = mmtState.epiSteps;
 	focusStepCount_ = mmtState.focusSteps;
@@ -178,7 +174,7 @@ int MotorizedMicroMirrorTIRF::CreateProperties()
 	yesNoList.push_back(g_Listword_No);
 	yesNoList.push_back(g_Listword_Yes);
 
-	int propertyCount = 32;
+	int propertyCount = 33;
 	int ii = 0;
 	int *propErrors = new int[propertyCount];
 	memset(propErrors, 0, sizeof(int) * propertyCount);
@@ -189,11 +185,11 @@ int MotorizedMicroMirrorTIRF::CreateProperties()
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_Handle, handle_, true);
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_ProductID, pid_, true);
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_Serial_Num, serialNumber_, true);
-	propErrors[ii++] = CreateIntegerProperty(g_Keyword_EntranceAxis, entranceAxis_, true);
-	propErrors[ii++] = CreateIntegerProperty(g_Keyword_ExitAxis, exitAxis_, true);
+	propErrors[ii++] = CreateIntegerProperty(g_Keyword_EntranceAxis, entranceAxis_, true, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnEntranceAxis));
+	propErrors[ii++] = CreateIntegerProperty(g_Keyword_ExitAxis, exitAxis_, true, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnExitAxis));
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_FocusAxis, focusAxis_, true);
-	propErrors[ii++] = CreateFloatProperty(g_Keyword_EntranceStepSize, entranceStepSize_, true);
-	propErrors[ii++] = CreateFloatProperty(g_Keyword_ExitStepSize, exitStepSize_, true);
+	propErrors[ii++] = CreateFloatProperty(g_Keyword_EntranceStepSize, entranceStepSize_, true, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnEntranceStepSize));
+	propErrors[ii++] = CreateFloatProperty(g_Keyword_ExitStepSize, exitStepSize_, true, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnExitStepSize));
 	propErrors[ii++] = CreateFloatProperty(g_Keyword_FocusStepSize, focusStepSize_, true);
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_EntranceLimitStepCount, entranceLimitStepCount_, true, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnEntranceLimitStepCount));
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_ExitLimitStepCount, exitLimitStepCount_, true, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnExitLimitStepCount));
@@ -209,7 +205,7 @@ int MotorizedMicroMirrorTIRF::CreateProperties()
 	/// Read/Write Properties
 	propErrors[ii++] = CreateFloatProperty(g_Keyword_MoveDistanceEntrance, 0.0, false);
 	propErrors[ii++] = CreateFloatProperty(g_Keyword_MoveDistanceFocus, 0.0, false);
-	propErrors[ii++] = CreateFloatProperty(g_Keyword_MoveDistanceTirf, 0, 0, false);
+	propErrors[ii++] = CreateFloatProperty(g_Keyword_MoveDistanceTirf, 0.0, false);
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_EpiStepCount, epiStepCount_, false, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnEpiStepCount));
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_FocusStepCount, focusStepCount_, false, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnFocusStepCount));
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_TirfStepCount, tirfStepCount_, false, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnTirfStepCount));
@@ -219,7 +215,8 @@ int MotorizedMicroMirrorTIRF::CreateProperties()
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_FoundFocus, foundFocus_ ? 1 : 0, false, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnFoundFocus));
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_FoundTIRFAir, foundTIRFAir_ ? 1 : 0, false, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnFoundTIRFAir));
 	propErrors[ii++] = CreateIntegerProperty(g_Keyword_AxesToMove, 0, false, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnMove));
-	//32
+	propErrors[ii++] = CreateIntegerProperty(g_Keyword_SwapEntranceAndExitAxes, swapEntranceAndExitMirrors_ ? 1 : 0, false, new CPropertyAction(this, &MotorizedMicroMirrorTIRF::OnSwapEntranceAndExit));
+	//33
 
 	for (int jj = 0; jj < propertyCount; jj++)
 	{
@@ -248,6 +245,42 @@ int MotorizedMicroMirrorTIRF::Shutdown() {
 
 	HandleListUnlock();
 
+	return DEVICE_OK;
+}
+
+int MotorizedMicroMirrorTIRF::OnEntranceAxis(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set((long)entranceAxis_);
+	}
+	return DEVICE_OK;
+}
+
+int MotorizedMicroMirrorTIRF::OnExitAxis(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set((long)exitAxis_);
+	}
+	return DEVICE_OK;
+}
+
+int MotorizedMicroMirrorTIRF::OnEntranceStepSize(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(entranceStepSize_);
+	}
+	return DEVICE_OK;
+}
+
+int MotorizedMicroMirrorTIRF::OnExitStepSize(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(exitStepSize_);
+	}
 	return DEVICE_OK;
 }
 
@@ -316,11 +349,16 @@ int MotorizedMicroMirrorTIRF::OnFoundEntranceLimit(MM::PropertyBase* pProp, MM::
 {
 	if (eAct == MM::BeforeGet)
 	{
-		MMTState mmtState;
+		MotorizedMicromirrorTirf mmtState;
 		int ret = MCL_MMTGetState(&mmtState, handle_);
 		if (ret != MCL_SUCCESS)
 			return ret;
-		foundEntranceLimit_ = (mmtState.limitSwitchesFound & M2_LS2_BITMASK) == M2_LS2_BITMASK;
+
+		if (swapEntranceAndExitMirrors_ == false)
+			foundEntranceLimit_ = (mmtState.limitSwitchesFound & ENTRANCE_LIMIT_BITMASK) == ENTRANCE_LIMIT_BITMASK;
+		else
+			foundEntranceLimit_ = (mmtState.limitSwitchesFound & EXIT_LIMIT_BITMASK) == EXIT_LIMIT_BITMASK;
+
 		pProp->Set(foundEntranceLimit_ ? 1l : 0l);
 	}
 
@@ -331,11 +369,16 @@ int MotorizedMicroMirrorTIRF::OnFoundExitLimit(MM::PropertyBase* pProp, MM::Acti
 {
 	if (eAct == MM::BeforeGet)
 	{
-		MMTState mmtState;
+		MotorizedMicromirrorTirf mmtState;
 		int ret = MCL_MMTGetState(&mmtState, handle_);
 		if (ret != MCL_SUCCESS)
 			return ret;
-		foundExitLimit_ = (mmtState.limitSwitchesFound & M3_LS2_BITMASK) == M3_LS2_BITMASK;
+
+		if (swapEntranceAndExitMirrors_ == false)
+			foundExitLimit_ = (mmtState.limitSwitchesFound & EXIT_LIMIT_BITMASK) == EXIT_LIMIT_BITMASK;
+		else
+			foundExitLimit_ = (mmtState.limitSwitchesFound & ENTRANCE_LIMIT_BITMASK) == ENTRANCE_LIMIT_BITMASK;
+
 		pProp->Set(foundExitLimit_ ? 1l : 0l);
 	}
 	return DEVICE_OK;
@@ -345,11 +388,11 @@ int MotorizedMicroMirrorTIRF::OnFoundFocusLimit(MM::PropertyBase* pProp, MM::Act
 {
 	if (eAct == MM::BeforeGet)
 	{
-		MMTState mmtState;
+		MotorizedMicromirrorTirf mmtState;
 		int ret = MCL_MMTGetState(&mmtState, handle_);
 		if (ret != MCL_SUCCESS)
 			return ret;
-		foundFocusLimit_ = (mmtState.limitSwitchesFound & M4_LS2_BITMASK) == M4_LS2_BITMASK;
+		foundFocusLimit_ = (mmtState.limitSwitchesFound & FOCUS_LIMIT_BITMASK) == FOCUS_LIMIT_BITMASK;
 		pProp->Set(foundFocusLimit_ ? 1l : 0l);
 	}
 	return DEVICE_OK;
@@ -371,7 +414,7 @@ int MotorizedMicroMirrorTIRF::OnFoundEpi(MM::PropertyBase* pProp, MM::ActionType
 		{
 			int ret = MCL_SUCCESS;
 			int microsteps = 0;
-			MMTState mmt;
+			MotorizedMicromirrorTirf mmt;
 			ret = MCL_MMTGetState(&mmt, handle_);
 			if (ret != MCL_SUCCESS)
 				return ret;
@@ -379,7 +422,11 @@ int MotorizedMicroMirrorTIRF::OnFoundEpi(MM::PropertyBase* pProp, MM::ActionType
 			if (ret != MCL_SUCCESS)
 				return ret;
 
-			epiStepCount_ = microsteps - mmt.m2LS2Steps;
+			if (swapEntranceAndExitMirrors_ == false)
+				epiStepCount_ = microsteps - mmt.entranceLimitSteps;
+			else
+				epiStepCount_ = microsteps - mmt.exitLimitSteps;
+
 			ret = MCL_MMTSetState(MC_MTS_EPI_FOUND, 1, handle_);
 			if (ret != MCL_SUCCESS)
 				return ret;
@@ -415,7 +462,7 @@ int MotorizedMicroMirrorTIRF::OnFoundFocus(MM::PropertyBase* pProp, MM::ActionTy
 			int ret = MCL_SUCCESS;
 			int microsteps = 0;
 
-			MMTState mmt;
+			MotorizedMicromirrorTirf mmt;
 			ret = MCL_MMTGetState(&mmt, handle_);
 			if (ret != MCL_SUCCESS)
 				return ret;
@@ -423,7 +470,7 @@ int MotorizedMicroMirrorTIRF::OnFoundFocus(MM::PropertyBase* pProp, MM::ActionTy
 			if (ret != MCL_SUCCESS)
 				return ret;
 
-			focusStepCount_ = microsteps - mmt.m4LS2Steps;
+			focusStepCount_ = microsteps - mmt.finalFocusingMirrorLimitSteps;
 			ret = MCL_MMTSetState(MC_MTS_FOCUS_FOUND, 1, handle_);
 			if (ret != MCL_SUCCESS)
 				return ret;
@@ -460,7 +507,7 @@ int MotorizedMicroMirrorTIRF::OnFoundTIRFAir(MM::PropertyBase* pProp, MM::Action
 			int ret = MCL_SUCCESS;
 			int microsteps = 0;
 			int microstepsEpi = 0;
-			MMTState mmt;
+			MotorizedMicromirrorTirf mmt;
 			ret = MCL_MMTGetState(&mmt, handle_);
 			if (ret != MCL_SUCCESS)
 				return ret;
@@ -471,8 +518,16 @@ int MotorizedMicroMirrorTIRF::OnFoundTIRFAir(MM::PropertyBase* pProp, MM::Action
 			if (ret != MCL_SUCCESS)
 				return ret;
 
-			tirfStepCount_ = microsteps - mmt.m3LS2Steps;
-			stepCountFromEpiToTIRF_ = microstepsEpi - (mmt.m2LS2Steps + mmt.epiSteps);
+			if (swapEntranceAndExitMirrors_ == false)
+			{
+				tirfStepCount_ = microsteps - mmt.exitLimitSteps;
+				stepCountFromEpiToTIRF_ = microstepsEpi - (mmt.entranceLimitSteps + mmt.epiSteps);
+			}
+			else
+			{
+				tirfStepCount_ = microsteps - mmt.entranceLimitSteps;
+				stepCountFromEpiToTIRF_ = microstepsEpi - (mmt.exitLimitSteps + mmt.epiSteps);
+			}
 
 			ret = MCL_MMTSetState(MC_MTS_TIRF_FOUND, 1, handle_);
 			if (ret != MCL_SUCCESS)
@@ -533,16 +588,27 @@ int MotorizedMicroMirrorTIRF::OnMove(MM::PropertyBase* pProp, MM::ActionType eAc
 			return ret;
 
 		// After each move check to see if the limit steps have updated.
-		MMTState mmtState;
+		MotorizedMicromirrorTirf mmtState;
 		ret = MCL_MMTGetState(&mmtState, handle_);
 		if (ret != MCL_SUCCESS)
 			return ret;
-		foundEntranceLimit_ = (mmtState.limitSwitchesFound & M2_LS2_BITMASK) == M2_LS2_BITMASK;
-		foundExitLimit_ = (mmtState.limitSwitchesFound & M3_LS2_BITMASK) == M3_LS2_BITMASK;
-		foundFocusLimit_ = (mmtState.limitSwitchesFound & M4_LS2_BITMASK) == M4_LS2_BITMASK;
-		entranceLimitStepCount_ = mmtState.m2LS2Steps;
-		exitLimitStepCount_ = mmtState.m3LS2Steps;
-		focusLimitStepCount_ = mmtState.m4LS2Steps;
+
+		if (swapEntranceAndExitMirrors_ == false)
+		{
+			foundEntranceLimit_ = (mmtState.limitSwitchesFound & ENTRANCE_LIMIT_BITMASK) == ENTRANCE_LIMIT_BITMASK;
+			foundExitLimit_ = (mmtState.limitSwitchesFound & EXIT_LIMIT_BITMASK) == EXIT_LIMIT_BITMASK;
+			entranceLimitStepCount_ = mmtState.entranceLimitSteps;
+			exitLimitStepCount_ = mmtState.exitLimitSteps;
+		}
+		else
+		{
+			foundExitLimit_ = (mmtState.limitSwitchesFound & ENTRANCE_LIMIT_BITMASK) == ENTRANCE_LIMIT_BITMASK;
+			foundEntranceLimit_ = (mmtState.limitSwitchesFound & EXIT_LIMIT_BITMASK) == EXIT_LIMIT_BITMASK;
+			exitLimitStepCount_ = mmtState.entranceLimitSteps;
+			entranceLimitStepCount_ = mmtState.exitLimitSteps;
+		}
+		foundFocusLimit_ = (mmtState.limitSwitchesFound & FOCUS_LIMIT_BITMASK) == FOCUS_LIMIT_BITMASK;
+		focusLimitStepCount_ = mmtState.finalFocusingMirrorLimitSteps;
 	}
 
 	return DEVICE_OK;
@@ -666,5 +732,98 @@ int MotorizedMicroMirrorTIRF::OnEpiToTIRFStepCount(MM::PropertyBase* pProp, MM::
 		if (ret != MCL_SUCCESS)
 			return ret;
 	}
+	return DEVICE_OK;
+}
+
+int MotorizedMicroMirrorTIRF::OnSwapEntranceAndExit(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(swapEntranceAndExitMirrors_ ? 1l : 0l);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		long value = -1;
+		pProp->Get(value);
+
+		// Swap axes and keep state.
+		if (value == 2)
+		{
+			// Swap the axes.
+			int tempAxis = entranceAxis_;
+			entranceAxis_ = exitAxis_;
+			exitAxis_ = tempAxis;
+
+			// Swap the step counts.
+			int tempStepCount = entranceLimitStepCount_;
+			entranceLimitStepCount_ = exitLimitStepCount_;
+			exitLimitStepCount_ = tempStepCount;
+
+			// Swap the step sizes
+			double tempStepSize = entranceStepSize_;
+			entranceStepSize_ = exitStepSize_;
+			exitStepSize_ = tempStepSize;
+
+			swapEntranceAndExitMirrors_ = !swapEntranceAndExitMirrors_;
+		}
+		// Swap axis and reset state.
+		else if (value == 1)
+		{
+			// Swap the axes.
+			int tempAxis = entranceAxis_;
+			entranceAxis_ = exitAxis_;
+			exitAxis_ = tempAxis;
+
+			// Swap the step counts.
+			int tempStepCount = entranceLimitStepCount_;
+			entranceLimitStepCount_ = exitLimitStepCount_;
+			exitLimitStepCount_ = tempStepCount;
+
+			// Swap the step sizes
+			double tempStepSize = entranceStepSize_;
+			entranceStepSize_ = exitStepSize_;
+			exitStepSize_ = tempStepSize;
+
+			// Reset the MMT state.
+			int ret = 0;
+			ret = MCL_MMTSetState(MC_MTS_EPI_FOUND, 0, handle_);
+			if (ret != MCL_SUCCESS)
+				return ret;
+			ret = MCL_MMTSetState(MC_MTS_EPI_STEPS, 0, handle_);
+			if (ret != MCL_SUCCESS)
+				return ret;
+			ret = MCL_MMTSetState(MC_MTS_FOCUS_FOUND, 0, handle_);
+			if (ret != MCL_SUCCESS)
+				return ret;
+			ret = MCL_MMTSetState(MC_MTS_FOCUS_STEPS, 0, handle_);
+			if (ret != MCL_SUCCESS)
+				return ret;
+			ret = MCL_MMTSetState(MC_MTS_TIRF_FOUND, 0, handle_);
+			if (ret != MCL_SUCCESS)
+				return ret;
+			ret = MCL_MMTSetState(MC_MTS_TIRF_STEPS, 0, handle_);
+			if (ret != MCL_SUCCESS)
+				return ret;
+			ret = MCL_MMTSetState(MC_MTS_EPI_TO_TIRF_STEPS, 0, handle_);
+			if (ret != MCL_SUCCESS)
+				return ret;
+
+			foundEpi_ = 0;
+			foundFocus_ = 0;
+			foundTIRFAir_ = 0;
+			stepCountFromEpiToTIRF_ = 0;
+			epiStepCount_ = 0;
+			focusStepCount_ = 0;
+			tirfStepCount_ = 0;
+
+			swapEntranceAndExitMirrors_ = !swapEntranceAndExitMirrors_;
+		}
+		else
+		{
+			// If the value is invalid, reset the value.
+			pProp->Set(swapEntranceAndExitMirrors_ ? 1l : 0l);
+		}
+	}
+
 	return DEVICE_OK;
 }
