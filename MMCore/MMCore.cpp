@@ -4522,11 +4522,27 @@ void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMM
          throw CMMError("Camera does not support binning property");
       }
 
-      // Determine the format by checking the current property value
-      std::string currentValue = pCamera->GetProperty(MM::g_Keyword_Binning);
+      // Try to determine the format by checking the current property value
+      std::string currentValue;
+      bool useNxNFormat = false;
 
+      try
+      {
+         currentValue = pCamera->GetProperty(MM::g_Keyword_Binning);
+         // If current value contains 'x' and looks like NxN format, use that
+         if (!currentValue.empty() && currentValue.find('x') != std::string::npos)
+         {
+            useNxNFormat = true;
+         }
+      }
+      catch (...)
+      {
+         // If we can't get current value, we'll try integer format first
+      }
+
+      // Build the property value string
       std::string binningValue;
-      if (currentValue.find('x') != std::string::npos)
+      if (useNxNFormat)
       {
          // NxN format: "2x2", "4x4", etc.
          std::string binStr = CDeviceUtils::ConvertToString(binning);
@@ -4538,8 +4554,29 @@ void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMM
          binningValue = CDeviceUtils::ConvertToString(binning);
       }
 
-      // Set the property directly (SetProperty will throw CMMError on failure)
-      pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
+      // Try to set the property with detected format
+      try
+      {
+         pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
+      }
+      catch (const CMMError&)
+      {
+         // If it failed and we haven't tried the other format yet, try it
+         if (useNxNFormat)
+         {
+            // Tried NxN, now try integer
+            binningValue = CDeviceUtils::ConvertToString(binning);
+         }
+         else
+         {
+            // Tried integer, now try NxN
+            std::string binStr = CDeviceUtils::ConvertToString(binning);
+            binningValue = binStr + "x" + binStr;
+         }
+
+         // Try with alternate format (this will throw if it still fails)
+         pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
+      }
 
       {
          MMThreadGuard scg(stateCacheLock_);
