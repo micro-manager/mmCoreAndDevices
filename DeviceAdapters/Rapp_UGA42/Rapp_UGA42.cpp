@@ -104,8 +104,8 @@ RappUGA42Scanner::RappUGA42Scanner() :
    sequenceRunning_(false)
 {
    // Pre-initialization properties
-   CPropertyAction* pAct = new CPropertyAction(this, &RappUGA42Scanner::OnPort);
-   CreateProperty(g_PropertyVirtualComPort, "", MM::String, false, pAct, true);
+   // CPropertyAction* pAct = new CPropertyAction(this, &RappUGA42Scanner::OnPort);
+   // CreateProperty(g_PropertyVirtualComPort, "", MM::String, false, pAct, true);
 
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, "Port cannot be changed after initialization");
@@ -156,7 +156,6 @@ int RappUGA42Scanner::Initialize()
          if (device_->GetDeviceInfo(i, &devInfo) == RETCODE::OK)
          {
             availablePorts.push_back(std::string(devInfo.COMPort));
-            AddAllowedValue(g_PropertyVirtualComPort, devInfo.COMPort);
          }
       }
       if (availablePorts.empty())
@@ -318,6 +317,16 @@ int RappUGA42Scanner::Shutdown()
 
    initialized_ = false;
    return DEVICE_OK;
+}
+
+int RappUGA42Scanner::UpdateLaser()
+{
+   if (laserAdded_)
+   {
+      device_->RemoveLaser(laserID_);
+      laserAdded_ = false;
+   }
+   return AddLaser();
 }
 
 bool RappUGA42Scanner::Busy()
@@ -745,6 +754,8 @@ int RappUGA42Scanner::OnLaserType(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (type == "Continuous")
          laserFrequency_ = 0;
       // If changed to pulsed, user needs to set frequency via LaserFrequency property
+
+      return UpdateLaser();
    }
    return DEVICE_OK;
 }
@@ -760,6 +771,8 @@ int RappUGA42Scanner::OnLaserFrequency(MM::PropertyBase* pProp, MM::ActionType e
       long value;
       pProp->Get(value);
       laserFrequency_ = static_cast<UINT32>(value);
+
+      return UpdateLaser();
    }
    return DEVICE_OK;
 }
@@ -809,6 +822,8 @@ int RappUGA42Scanner::OnLaserPort(MM::PropertyBase* pProp, MM::ActionType eAct)
       else if (port == "RMIPort2") laserPort_ = OutputPorts::RMIPort2;
       else if (port == "RMIPort3") laserPort_ = OutputPorts::RMIPort3;
       else if (port == "RMIPort4") laserPort_ = OutputPorts::RMIPort4;
+
+      return UpdateLaser();
    }
    return DEVICE_OK;
 }
@@ -824,6 +839,8 @@ int RappUGA42Scanner::OnDigitalRiseTime(MM::PropertyBase* pProp, MM::ActionType 
       long value;
       pProp->Get(value);
       digitalRiseTime_ = static_cast<UINT32>(value);
+
+      return UpdateLaser();
    }
    return DEVICE_OK;
 }
@@ -839,6 +856,8 @@ int RappUGA42Scanner::OnDigitalFallTime(MM::PropertyBase* pProp, MM::ActionType 
       long value;
       pProp->Get(value);
       digitalFallTime_ = static_cast<UINT32>(value);
+
+      return UpdateLaser();
    }
    return DEVICE_OK;
 }
@@ -854,6 +873,8 @@ int RappUGA42Scanner::OnAnalogChangeTime(MM::PropertyBase* pProp, MM::ActionType
       long value;
       pProp->Get(value);
       analogChangeTime_ = static_cast<UINT32>(value);
+
+      return UpdateLaser();
    }
    return DEVICE_OK;
 }

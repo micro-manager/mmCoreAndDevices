@@ -145,7 +145,7 @@ private:
    // ----------------
    int MapRetCode(UINT32 retCode);
    int AddLaser();
-   int UpdateDeviceState();
+   int UpdateLaser();
    State GetDeviceState();
    bool IsDeviceIdle();
 };
