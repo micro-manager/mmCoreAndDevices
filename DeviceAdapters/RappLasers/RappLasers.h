@@ -106,6 +106,7 @@ private:
    int SendCommand(unsigned char cmd, const unsigned char* params, int paramLen);
    int ReadResponse(unsigned char* response, int maxLen, unsigned long& bytesRead);
    int ReadStringResponse(std::string& response);
+   int ReadFixedResponse(unsigned char* response, int expectedLen, unsigned long& bytesRead);
 
    // High-level device commands
    int SetShutterState(bool open);

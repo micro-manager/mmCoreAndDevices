@@ -362,8 +362,13 @@ int RappLaser::OnLaserName(MM::PropertyBase* pProp, MM::ActionType eAct)
  */
 int RappLaser::SendInitializationSequence()
 {
-   const unsigned char initCmds[] = {0x17, 0x11, 0x14, 0x16, 0x1A, 0x15, 0x19, 0x18, 0x1C};
+   // First set of init commands (not including serial number and laser name queries)
+   const unsigned char initCmds[] = {0x17, 0x11, 0x14, 0x16, 0x1A, 0x15};
    const int numCmds = sizeof(initCmds) / sizeof(initCmds[0]);
+
+   // Clear port first
+   PurgeComPort(port_.c_str());
+   CDeviceUtils::SleepMs(50);
 
    for (int i = 0; i < numCmds; i++)
    {
@@ -374,7 +379,7 @@ int RappLaser::SendInitializationSequence()
       // Small delay between commands
       CDeviceUtils::SleepMs(50);
 
-      // Read and discard response
+      // Read and discard response (these are short responses)
       unsigned char response[256];
       unsigned long read = 0;
       ReadResponse(response, sizeof(response), read);
@@ -383,7 +388,7 @@ int RappLaser::SendInitializationSequence()
       if (read > 0)
       {
          std::ostringstream msg;
-         msg << "Init cmd 0x" << std::hex << (int)initCmds[i] << " response: ";
+         msg << "Init cmd 0x" << std::hex << (int)initCmds[i] << " response (" << std::dec << read << " bytes): ";
          for (unsigned long j = 0; j < read && j < 20; j++)
          {
             msg << "0x" << std::hex << (int)response[j] << " ";
@@ -391,6 +396,45 @@ int RappLaser::SendInitializationSequence()
          LogMessage(msg.str().c_str(), true);
       }
    }
+
+   // Now query serial number (0x19) - this returns a fixed 8-byte ASCII string
+   std::string tempSerialNum;
+   int ret = QuerySerialNumber(tempSerialNum);
+   if (ret != DEVICE_OK)
+   {
+      LogMessage("Failed to query serial number during init", false);
+      return ret;
+   }
+   LogMessage(("Init: Serial Number = " + tempSerialNum).c_str(), true);
+
+   // Send 0x18 command
+   ret = SendCommand(0x18);
+   if (ret != DEVICE_OK)
+      return ret;
+   CDeviceUtils::SleepMs(50);
+   unsigned char response[256];
+   unsigned long read = 0;
+   ReadResponse(response, sizeof(response), read);
+   if (read > 0)
+   {
+      std::ostringstream msg;
+      msg << "Init cmd 0x18 response (" << std::dec << read << " bytes): ";
+      for (unsigned long j = 0; j < read && j < 20; j++)
+      {
+         msg << "0x" << std::hex << (int)response[j] << " ";
+      }
+      LogMessage(msg.str().c_str(), true);
+   }
+
+   // Query laser name (0x1C) - this returns a null-terminated string
+   std::string tempLaserName;
+   ret = QueryLaserName(tempLaserName);
+   if (ret != DEVICE_OK)
+   {
+      LogMessage("Failed to query laser name during init", false);
+      return ret;
+   }
+   LogMessage(("Init: Laser Name = " + tempLaserName).c_str(), true);
 
    return DEVICE_OK;
 }
@@ -462,17 +506,45 @@ int RappLaser::ReadResponse(unsigned char* response, int maxLen, unsigned long& 
 }
 
 /**
- * Read ASCII string response
+ * Read ASCII string response with null terminator (for 0x19 and 0x1C commands)
  */
 int RappLaser::ReadStringResponse(std::string& response)
 {
    unsigned char buffer[256];
    memset(buffer, 0, sizeof(buffer));
+   double startTime = GetCurrentMMTime().getMsec();
    unsigned long bytesRead = 0;
+   bool foundTerminator = false;
 
-   int ret = ReadResponse(buffer, sizeof(buffer) - 1, bytesRead);
-   if (ret != DEVICE_OK)
-      return ret;
+   // Read until we find 0x00 terminator or timeout
+   while (bytesRead < sizeof(buffer) - 1 && !foundTerminator)
+   {
+      unsigned long read = 0;
+      int ret = ReadFromComPort(port_.c_str(), &buffer[bytesRead], 1, read);
+
+      if (ret != DEVICE_OK)
+         return ret;
+
+      if (read > 0)
+      {
+         // Check if we found the null terminator
+         if (buffer[bytesRead] == 0x00)
+         {
+            foundTerminator = true;
+            break;
+         }
+         bytesRead += read;
+      }
+
+      // Check timeout
+      double elapsed = GetCurrentMMTime().getMsec() - startTime;
+      if (elapsed > answerTimeoutMs_)
+         break;
+
+      // Small delay if no data
+      if (read == 0)
+         CDeviceUtils::SleepMs(1);
+   }
 
    // Convert to string, filtering printable characters
    response.clear();
@@ -482,6 +554,43 @@ int RappLaser::ReadStringResponse(std::string& response)
       {
          response += (char)buffer[i];
       }
+   }
+
+   return DEVICE_OK;
+}
+
+/**
+ * Read fixed-length response, ensuring we get all bytes
+ */
+int RappLaser::ReadFixedResponse(unsigned char* response, int expectedLen, unsigned long& bytesRead)
+{
+   double startTime = GetCurrentMMTime().getMsec();
+   bytesRead = 0;
+
+   // Keep reading until we get all expected bytes or timeout
+   while (bytesRead < (unsigned long)expectedLen)
+   {
+      unsigned long read = 0;
+      int ret = ReadFromComPort(port_.c_str(), &response[bytesRead], expectedLen - bytesRead, read);
+
+      if (ret != DEVICE_OK)
+         return ret;
+
+      bytesRead += read;
+
+      // Check timeout
+      double elapsed = GetCurrentMMTime().getMsec() - startTime;
+      if (elapsed > answerTimeoutMs_)
+      {
+         std::ostringstream msg;
+         msg << "ReadFixedResponse timeout: expected " << expectedLen << " bytes, got " << bytesRead;
+         LogMessage(msg.str().c_str(), false);
+         break;
+      }
+
+      // Small delay if no data yet
+      if (read == 0)
+         CDeviceUtils::SleepMs(1);
    }
 
    return DEVICE_OK;
@@ -505,14 +614,16 @@ int RappLaser::SetShutterState(bool open)
    if (ret != DEVICE_OK)
       return ERR_COMMUNICATION;
 
-   // Read and validate response
+   // Read and validate fixed 2-byte response
    unsigned char response[2];
    unsigned long read = 0;
-   ret = ReadResponse(response, 2, read);
+   ret = ReadFixedResponse(response, 2, read);
 
    if (ret != DEVICE_OK || read != 2)
    {
-      LogMessage("Shutter command: invalid response length", false);
+      std::ostringstream msg;
+      msg << "Shutter command: invalid response length (expected 2, got " << read << ")";
+      LogMessage(msg.str().c_str(), false);
       return ERR_COMMUNICATION;
    }
 
@@ -554,14 +665,16 @@ int RappLaser::SetLightState(bool on)
    if (ret != DEVICE_OK)
       return ERR_COMMUNICATION;
 
-   // Read and validate response
+   // Read and validate fixed 2-byte response
    unsigned char response[2];
    unsigned long read = 0;
-   ret = ReadResponse(response, 2, read);
+   ret = ReadFixedResponse(response, 2, read);
 
    if (ret != DEVICE_OK || read != 2)
    {
-      LogMessage("Light command: invalid response length", false);
+      std::ostringstream msg;
+      msg << "Light command: invalid response length (expected 2, got " << read << ")";
+      LogMessage(msg.str().c_str(), false);
       return ERR_COMMUNICATION;
    }
 
@@ -609,14 +722,16 @@ int RappLaser::SetIntensity(double intensityPercent)
    if (ret != DEVICE_OK)
       return ERR_COMMUNICATION;
 
-   // Read and validate response
+   // Read and validate fixed 2-byte response
    unsigned char response[2];
    unsigned long read = 0;
-   ret = ReadResponse(response, 2, read);
+   ret = ReadFixedResponse(response, 2, read);
 
    if (ret != DEVICE_OK || read != 2)
    {
-      LogMessage("Intensity command: invalid response length", false);
+      std::ostringstream msg;
+      msg << "Intensity command: invalid response length (expected 2, got " << read << ")";
+      LogMessage(msg.str().c_str(), false);
       return ERR_COMMUNICATION;
    }
 
@@ -645,7 +760,7 @@ int RappLaser::GetIntensity(double& intensityPercent)
 }
 
 /**
- * Query serial number
+ * Query serial number (returns fixed 8-byte ASCII string)
  */
 int RappLaser::QuerySerialNumber(std::string& serialNum)
 {
@@ -656,10 +771,25 @@ int RappLaser::QuerySerialNumber(std::string& serialNum)
    if (ret != DEVICE_OK)
       return ret;
 
-   // Read string response
-   ret = ReadStringResponse(serialNum);
-   if (ret != DEVICE_OK)
-      return ret;
+   // Read fixed 8-byte response (e.g., "230-2644")
+   unsigned char buffer[8];
+   unsigned long bytesRead = 0;
+   ret = ReadFixedResponse(buffer, 8, bytesRead);
+   if (ret != DEVICE_OK || bytesRead != 8)
+   {
+      std::ostringstream msg;
+      msg << "QuerySerialNumber: expected 8 bytes, got " << bytesRead;
+      LogMessage(msg.str().c_str(), false);
+      return ERR_COMMUNICATION;
+   }
+
+   // Convert to string
+   serialNum.clear();
+   for (int i = 0; i < 8; i++)
+   {
+      if (buffer[i] >= 0x20 && buffer[i] < 0x7F)
+         serialNum += (char)buffer[i];
+   }
 
    return DEVICE_OK;
 }
@@ -696,13 +826,13 @@ int RappLaser::QueryStatus()
    if (ret != DEVICE_OK)
       return ret;
 
-   // Read 9-byte response
+   // Read fixed 9-byte response
    unsigned char response[9];
    unsigned long read = 0;
-   ret = ReadResponse(response, 9, read);
+   ret = ReadFixedResponse(response, 9, read);
 
    if (ret != DEVICE_OK || read < 8)
-      return ret; // Not fatal, will retry
+      return ret; // Not fatal, will retry next poll
 
    // Validate response
    if (response[0] != CMD_STATUS)
@@ -715,7 +845,7 @@ int RappLaser::QueryStatus()
    lightOn_ = (response[2] == 0x01);
    shutterOpen_ = (response[3] == 0x01);
 
-   // Parse intensity from bytes 5-7
+   // Parse intensity from bytes 5-7 (need at least 8 bytes for this)
    if (read >= 8)
    {
       long rawIntensity = BytesToIntensity(&response[5]);
