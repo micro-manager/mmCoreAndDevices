@@ -66,6 +66,7 @@ public:
    int OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLaserName(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnControlMode(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Thread-safe access
    static MMThreadLock& GetLock() { return lock_; }
@@ -85,6 +86,7 @@ private:
    double intensityPercent_;  // 0-100%
    std::string serialNumber_;
    std::string laserName_;
+   unsigned char controlMode_;  // 0x00-0x06
 
    // Threading
    static MMThreadLock lock_;
@@ -97,6 +99,7 @@ private:
    static const unsigned char CMD_LIGHT = 0x43;
    static const unsigned char CMD_INTENSITY = 0x44;
    static const unsigned char CMD_STATUS = 0x40;
+   static const unsigned char CMD_CONTROL_MODE = 0x41;
    static const unsigned char RESPONSE_OK = 0xFF;
 
    // Protocol implementation
@@ -115,6 +118,8 @@ private:
    int GetLightState(bool& on);
    int SetIntensity(double intensityPercent);
    int GetIntensity(double& intensityPercent);
+   int SetControlMode(unsigned char mode);
+   int GetControlMode(unsigned char& mode);
    int QuerySerialNumber(std::string& serialNum);
    int QueryLaserName(std::string& laserName);
 

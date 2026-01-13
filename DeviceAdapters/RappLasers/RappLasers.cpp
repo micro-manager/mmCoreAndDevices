@@ -70,6 +70,7 @@ RappLaser::RappLaser() :
    shutterOpen_(false),
    lightOn_(false),
    intensityPercent_(0.0),
+   controlMode_(0x00),
    pollingThread_(0)
 {
    InitializeDefaultErrorMessages();
@@ -189,10 +190,23 @@ int RappLaser::Initialize()
       return ret;
    SetPropertyLimits("Intensity (%)", 0.0, 100.0);
 
+   pAct = new CPropertyAction(this, &RappLaser::OnControlMode);
+   ret = CreateProperty("ControlMode", "Software", MM::String, false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   AddAllowedValue("ControlMode", "Software");
+   AddAllowedValue("ControlMode", "External-Mix");
+   AddAllowedValue("ControlMode", "External-Digital");
+   AddAllowedValue("ControlMode", "RMI-Mix");
+   AddAllowedValue("ControlMode", "RMI-Digital");
+   AddAllowedValue("ControlMode", "External-Analog");
+   AddAllowedValue("ControlMode", "RMI-Analog");
+
    // Initialize cached state
    shutterOpen_ = false;
    lightOn_ = false;
    intensityPercent_ = 0.0;
+   controlMode_ = 0x00;
 
    // Start polling thread
    pollingThread_ = new PollingThread(*this);
@@ -348,6 +362,57 @@ int RappLaser::OnLaserName(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       MMThreadGuard guard(lock_);
       pProp->Set(laserName_.c_str());
+   }
+
+   return DEVICE_OK;
+}
+
+/**
+ * Control mode property handler
+ */
+int RappLaser::OnControlMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      MMThreadGuard guard(lock_);
+      std::string mode;
+      switch (controlMode_)
+      {
+         case 0x00: mode = "Software"; break;
+         case 0x01: mode = "External-Mix"; break;
+         case 0x02: mode = "External-Digital"; break;
+         case 0x03: mode = "RMI-Mix"; break;
+         case 0x04: mode = "RMI-Digital"; break;
+         case 0x05: mode = "External-Analog"; break;
+         case 0x06: mode = "RMI-Analog"; break;
+         default: mode = "Software"; break;
+      }
+      pProp->Set(mode.c_str());
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string value;
+      pProp->Get(value);
+
+      unsigned char mode = 0x00;
+      if (value == "Software")
+         mode = 0x00;
+      else if (value == "External-Mix")
+         mode = 0x01;
+      else if (value == "External-Digital")
+         mode = 0x02;
+      else if (value == "RMI-Mix")
+         mode = 0x03;
+      else if (value == "RMI-Digital")
+         mode = 0x04;
+      else if (value == "External-Analog")
+         mode = 0x05;
+      else if (value == "RMI-Analog")
+         mode = 0x06;
+
+      int ret = SetControlMode(mode);
+      if (ret != DEVICE_OK)
+         return ret;
    }
 
    return DEVICE_OK;
@@ -756,6 +821,58 @@ int RappLaser::GetIntensity(double& intensityPercent)
 {
    MMThreadGuard guard(lock_);
    intensityPercent = intensityPercent_;
+   return DEVICE_OK;
+}
+
+/**
+ * Set control mode
+ */
+int RappLaser::SetControlMode(unsigned char mode)
+{
+   MMThreadGuard guard(lock_);
+
+   if (mode > 0x06)
+      return DEVICE_INVALID_PROPERTY_VALUE;
+
+   // Send command
+   int ret = SendCommand(CMD_CONTROL_MODE, mode);
+   if (ret != DEVICE_OK)
+      return ERR_COMMUNICATION;
+
+   // Read and validate fixed 2-byte response
+   unsigned char response[2];
+   unsigned long read = 0;
+   ret = ReadFixedResponse(response, 2, read);
+
+   if (ret != DEVICE_OK || read != 2)
+   {
+      std::ostringstream msg;
+      msg << "ControlMode command: invalid response length (expected 2, got " << read << ")";
+      LogMessage(msg.str().c_str(), false);
+      return ERR_COMMUNICATION;
+   }
+
+   if (response[0] != CMD_CONTROL_MODE || response[1] != RESPONSE_OK)
+   {
+      std::ostringstream msg;
+      msg << "ControlMode command failed: response = 0x" << std::hex << (int)response[0] << " 0x" << (int)response[1];
+      LogMessage(msg.str().c_str(), false);
+      return ERR_INVALID_RESPONSE;
+   }
+
+   // Update cached state
+   controlMode_ = mode;
+
+   return DEVICE_OK;
+}
+
+/**
+ * Get control mode
+ */
+int RappLaser::GetControlMode(unsigned char& mode)
+{
+   MMThreadGuard guard(lock_);
+   mode = controlMode_;
    return DEVICE_OK;
 }
 
