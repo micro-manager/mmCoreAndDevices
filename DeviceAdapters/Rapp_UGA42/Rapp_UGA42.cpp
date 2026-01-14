@@ -101,7 +101,10 @@ RappUGA42Scanner::RappUGA42Scanner() :
    currentY_(0.0),
    polygonRepetitions_(1),
    lastSequenceID_(0),
-   sequenceRunning_(false)
+   sequenceRunning_(false),
+   loadedPolygonSequenceID_(0),
+   polygonsLoaded_(false),
+   workerThread_(nullptr)
 {
    // Pre-initialization properties
    // CPropertyAction* pAct = new CPropertyAction(this, &RappUGA42Scanner::OnPort);
@@ -284,6 +287,10 @@ int RappUGA42Scanner::Initialize()
    CreateIntegerProperty("MaxIntensity", maxIntensity_, false, pAct);
    SetPropertyLimits("MaxIntensity", 0, 10000);
 
+   // Start worker thread for async operations
+   workerThread_ = new DeviceWorkerThread(*this);
+   workerThread_->Start();
+
    initialized_ = true;
    return DEVICE_OK;
 }
@@ -293,12 +300,20 @@ int RappUGA42Scanner::Shutdown()
    if (!initialized_)
       return DEVICE_OK;
 
+   // Stop worker thread first
+   if (workerThread_)
+   {
+      workerThread_->Stop();
+      delete workerThread_;
+      workerThread_ = nullptr;
+   }
+
    if (device_ != nullptr)
    {
       // Stop any running sequences
       device_->Stop();
 
-      // Delete all sequences from device memory
+      // Delete all sequences from device memory (includes loaded polygons)
       device_->DeleteAllSequences();
 
       // Remove laser
@@ -314,6 +329,10 @@ int RappUGA42Scanner::Shutdown()
       delete device_;
       device_ = nullptr;
    }
+
+   // Reset polygon state
+   loadedPolygonSequenceID_ = 0;
+   polygonsLoaded_ = false;
 
    initialized_ = false;
    return DEVICE_OK;
@@ -331,13 +350,10 @@ int RappUGA42Scanner::UpdateLaser()
 
 bool RappUGA42Scanner::Busy()
 {
-   if (!initialized_ || device_ == nullptr)
+   if (!initialized_ || device_ == nullptr || workerThread_ == nullptr)
       return false;
 
-   State state = GetDeviceState();
-   return (state == State::SequenceRunning ||
-           state == State::Calibrating ||
-           state == State::Initializing);
+   return workerThread_->IsBusy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -346,54 +362,14 @@ bool RappUGA42Scanner::Busy()
 
 int RappUGA42Scanner::PointAndFire(double x, double y, double pulseTime_us)
 {
-   if (!initialized_ || device_ == nullptr)
+   if (!initialized_ || device_ == nullptr || workerThread_ == nullptr)
       return DEVICE_NOT_CONNECTED;
 
-   if (!IsDeviceIdle())
-      return ERR_INVALID_DEVICE_STATE;
+   // Create command and enqueue it
+   PointAndFireCommand* cmd = new PointAndFireCommand(x, y, pulseTime_us);
+   workerThread_->EnqueueCommand(cmd);
 
-   // Create a sequence point with the given coordinates (already in device coordinates)
-   SequencePoint* point = new SequencePoint(x, y);
-   point->StartTick = 0;
-   point->LaserID[0] = laserID_;
-   point->Intensity[0] = currentIntensity_;
-   point->Repeats = static_cast<UINT32>(pulseTime_us / tickTime_);
-   if (point->Repeats < 1)
-      point->Repeats = 1;
-
-   // Upload sequence
-   SequenceObject* sequence[1] = { point };
-   UINT16 sequenceID;
-   UINT32 ret = device_->UploadSequence(sequence, 1, &sequenceID);
-
-   delete point;
-
-   if (ret != RETCODE::OK)
-      return MapRetCode(ret);
-
-   // Start sequence
-   ret = device_->StartSequence(sequenceID, ttlTriggerPort_, ttlTriggerBehavior_, 1);
-   if (ret != RETCODE::OK)
-   {
-      device_->DeleteSequence(sequenceID);
-      return MapRetCode(ret);
-   }
-
-   // Wait for sequence to complete
-   State state;
-   do {
-      CDeviceUtils::SleepMs(10);
-      device_->GetState(&state);
-   } while (state == State::SequenceRunning);
-
-   // Clean up
-   device_->DeleteSequence(sequenceID);
-
-   // Update current position
-   currentX_ = x;
-   currentY_ = y;
-
-   return DEVICE_OK;
+   return DEVICE_OK;  // Return immediately
 }
 
 int RappUGA42Scanner::SetSpotInterval(double pulseTime_us)
@@ -404,24 +380,14 @@ int RappUGA42Scanner::SetSpotInterval(double pulseTime_us)
 
 int RappUGA42Scanner::SetPosition(double x, double y)
 {
-   if (!initialized_ || device_ == nullptr)
+   if (!initialized_ || device_ == nullptr || workerThread_ == nullptr)
       return DEVICE_NOT_CONNECTED;
 
-   if (!IsDeviceIdle())
-      return ERR_INVALID_DEVICE_STATE;
+   // Create command and enqueue it
+   SetPositionCommand* cmd = new SetPositionCommand(x, y);
+   workerThread_->EnqueueCommand(cmd);
 
-   // Convert to UINT32 for device (coordinates already in device range 0-65535)
-   UINT32 deviceX = static_cast<UINT32>(x);
-   UINT32 deviceY = static_cast<UINT32>(y);
-
-   UINT32 ret = device_->MoveAbsolute(deviceX, deviceY);
-   if (ret != RETCODE::OK)
-      return MapRetCode(ret);
-
-   currentX_ = x;
-   currentY_ = y;
-
-   return DEVICE_OK;
+   return DEVICE_OK;  // Return immediately
 }
 
 int RappUGA42Scanner::GetPosition(double& x, double& y)
@@ -429,30 +395,24 @@ int RappUGA42Scanner::GetPosition(double& x, double& y)
    if (!initialized_ || device_ == nullptr)
       return DEVICE_NOT_CONNECTED;
 
-   POINT pos;
-   UINT32 ret = device_->GetActualPosition(&pos);
-   if (ret != RETCODE::OK)
-      return MapRetCode(ret);
-
-   x = static_cast<double>(pos.x);
-   y = static_cast<double>(pos.y);
-
-   currentX_ = x;
-   currentY_ = y;
+   // Return cached values instead of querying device
+   // These are updated by SetPosition and PointAndFire commands
+   x = currentX_;
+   y = currentY_;
 
    return DEVICE_OK;
 }
 
 int RappUGA42Scanner::SetIlluminationState(bool on)
 {
-   if (!initialized_ || device_ == nullptr)
+   if (!initialized_ || device_ == nullptr || workerThread_ == nullptr)
       return DEVICE_NOT_CONNECTED;
 
-   if (!IsDeviceIdle())
-      return ERR_INVALID_DEVICE_STATE;
+   // Create command and enqueue it
+   SetIlluminationCommand* cmd = new SetIlluminationCommand(on);
+   workerThread_->EnqueueCommand(cmd);
 
-   UINT32 ret = device_->SetLaserONOFF(laserID_, on ? TRUE : FALSE);
-   return MapRetCode(ret);
+   return DEVICE_OK;  // Return immediately
 }
 
 double RappUGA42Scanner::GetXRange()
@@ -491,18 +451,35 @@ int RappUGA42Scanner::AddPolygonVertex(int polygonIndex, double x, double y)
 int RappUGA42Scanner::DeletePolygons()
 {
    polygons_.clear();
+
+   // Mark polygons as no longer loaded
+   // Note: Don't delete the sequence here - let LoadPolygons() handle cleanup
+   polygonsLoaded_ = false;
+
    return DEVICE_OK;
 }
 
 int RappUGA42Scanner::LoadPolygons()
 {
-   // Polygons are loaded on-demand when RunPolygons() is called
-   return DEVICE_OK;
+   if (!initialized_ || device_ == nullptr || workerThread_ == nullptr)
+      return DEVICE_NOT_CONNECTED;
+
+   if (polygons_.empty())
+   {
+      polygonsLoaded_ = false;
+      return DEVICE_OK;
+   }
+
+   // Create command and enqueue it
+   LoadPolygonsCommand* cmd = new LoadPolygonsCommand(polygons_);
+   workerThread_->EnqueueCommand(cmd);
+
+   return DEVICE_OK;  // Return immediately
 }
 
 int RappUGA42Scanner::SetPolygonRepetitions(int repetitions)
 {
-   if (repetitions < 1)
+   if (repetitions < 0)
       return DEVICE_INVALID_PROPERTY_VALUE;
 
    polygonRepetitions_ = repetitions;
@@ -511,79 +488,17 @@ int RappUGA42Scanner::SetPolygonRepetitions(int repetitions)
 
 int RappUGA42Scanner::RunPolygons()
 {
-   if (!initialized_ || device_ == nullptr)
+   if (!initialized_ || device_ == nullptr || workerThread_ == nullptr)
       return DEVICE_NOT_CONNECTED;
-
-   if (!IsDeviceIdle())
-      return ERR_INVALID_DEVICE_STATE;
 
    if (polygons_.empty())
       return DEVICE_OK;  // Nothing to do
 
-   // Create sequence objects for each polygon
-   std::vector<SequenceObject*> sequenceObjects;
-   UINT32 currentTick = 0;
+   // Create command and enqueue it
+   RunPolygonsCommand* cmd = new RunPolygonsCommand(polygons_, polygonRepetitions_);
+   workerThread_->EnqueueCommand(cmd);
 
-   for (size_t i = 0; i < polygons_.size(); i++)
-   {
-      if (polygons_[i].empty())
-         continue;
-
-      SequencePolygon* poly = new SequencePolygon(
-         polygons_[i].data(),
-         static_cast<UINT32>(polygons_[i].size()),
-         TRUE);  // Filled
-
-      poly->StartTick = currentTick;
-      poly->LaserID[0] = laserID_;
-      poly->Intensity[0] = currentIntensity_;
-      poly->Repeats = 1;
-
-      sequenceObjects.push_back(poly);
-
-      // Calculate timing for next polygon
-      UINT32 objTickCount = 0;
-      UINT32 illTickCount = 0;
-      device_->GetTiming(*poly, &objTickCount, &illTickCount);
-      currentTick += objTickCount;
-   }
-
-   if (sequenceObjects.empty())
-      return DEVICE_OK;
-
-   // Upload sequence
-   UINT16 sequenceID;
-   UINT32 ret = device_->UploadSequence(
-      sequenceObjects.data(),
-      static_cast<UINT32>(sequenceObjects.size()),
-      &sequenceID);
-
-   // Clean up sequence objects
-   for (auto obj : sequenceObjects)
-   {
-      delete obj;
-   }
-
-   if (ret != RETCODE::OK)
-      return MapRetCode(ret);
-
-   // Start sequence
-   ret = device_->StartSequence(
-      sequenceID,
-      ttlTriggerPort_,
-      ttlTriggerBehavior_,
-      static_cast<UINT32>(polygonRepetitions_));
-
-   if (ret != RETCODE::OK)
-   {
-      device_->DeleteSequence(sequenceID);
-      return MapRetCode(ret);
-   }
-
-   lastSequenceID_ = sequenceID;
-   sequenceRunning_ = true;
-
-   return DEVICE_OK;
+   return DEVICE_OK;  // Return immediately
 }
 
 int RappUGA42Scanner::RunSequence()
@@ -596,13 +511,13 @@ int RappUGA42Scanner::RunSequence()
 
 int RappUGA42Scanner::StopSequence()
 {
-   if (!initialized_ || device_ == nullptr)
+   if (!initialized_ || device_ == nullptr || workerThread_ == nullptr)
       return DEVICE_NOT_CONNECTED;
 
-   UINT32 ret = device_->Stop();
-   sequenceRunning_ = false;
+   // Only stops RunPolygons sequences, not PointAndFire
+   workerThread_->StopPolygonSequence();
 
-   return MapRetCode(ret);
+   return DEVICE_OK;
 }
 
 int RappUGA42Scanner::GetChannel(char* channelName)
@@ -982,4 +897,292 @@ bool RappUGA42Scanner::IsDeviceIdle()
 {
    State state = GetDeviceState();
    return (state == State::IDLE);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Command Implementations
+///////////////////////////////////////////////////////////////////////////////
+
+int PointAndFireCommand::Execute(RappUGA42Scanner& device)
+{
+   // Create sequence point
+   SequencePoint* point = new SequencePoint(x_, y_);
+   point->StartTick = 0;
+   point->LaserID[0] = device.laserID_;
+   point->Intensity[0] = device.currentIntensity_;
+   point->Repeats = static_cast<UINT32>(pulseTime_us_ / device.tickTime_);
+   if (point->Repeats < 1)
+      point->Repeats = 1;
+
+   // Upload sequence
+   SequenceObject* sequence[1] = { point };
+   UINT16 sequenceID;
+   UINT32 ret = device.device_->UploadSequence(sequence, 1, &sequenceID);
+
+   delete point;
+
+   if (ret != RETCODE::OK)
+      return device.MapRetCode(ret);
+
+   // Start sequence
+   ret = device.device_->StartSequence(sequenceID, device.ttlTriggerPort_,
+                                       device.ttlTriggerBehavior_, 1);
+   if (ret != RETCODE::OK)
+   {
+      device.device_->DeleteSequence(sequenceID);
+      return device.MapRetCode(ret);
+   }
+
+   // Poll until complete (blocks the worker thread)
+   State state;
+   do {
+      CDeviceUtils::SleepMs(10);
+      device.device_->GetState(&state);
+   } while (state == State::SequenceRunning);
+
+   // Clean up
+   device.device_->DeleteSequence(sequenceID);
+
+   // Update current position
+   device.currentX_ = x_;
+   device.currentY_ = y_;
+
+   return DEVICE_OK;
+}
+
+int SetPositionCommand::Execute(RappUGA42Scanner& device)
+{
+   // Convert to UINT32 for device
+   UINT32 deviceX = static_cast<UINT32>(x_);
+   UINT32 deviceY = static_cast<UINT32>(y_);
+
+   UINT32 ret = device.device_->MoveAbsolute(deviceX, deviceY);
+   if (ret != RETCODE::OK)
+      return device.MapRetCode(ret);
+
+   device.currentX_ = x_;
+   device.currentY_ = y_;
+
+   return DEVICE_OK;
+}
+
+int SetIlluminationCommand::Execute(RappUGA42Scanner& device)
+{
+   UINT32 ret = device.device_->SetLaserONOFF(device.laserID_, on_ ? TRUE : FALSE);
+   return device.MapRetCode(ret);
+}
+
+int LoadPolygonsCommand::Execute(RappUGA42Scanner& device)
+{
+   // Delete any previously loaded polygon sequence
+   if (device.loadedPolygonSequenceID_ != 0)
+   {
+      device.device_->DeleteSequence(device.loadedPolygonSequenceID_);
+      device.loadedPolygonSequenceID_ = 0;
+   }
+
+   if (polygons_.empty())
+   {
+      device.polygonsLoaded_ = false;
+      return DEVICE_OK;
+   }
+
+   // Create sequence objects for each polygon
+   std::vector<SequenceObject*> sequenceObjects;
+   UINT32 currentTick = 0;
+
+   for (size_t i = 0; i < polygons_.size(); i++)
+   {
+      if (polygons_[i].empty())
+         continue;
+
+      SequencePolygon* poly = new SequencePolygon(
+         polygons_[i].data(),
+         static_cast<UINT32>(polygons_[i].size()),
+         TRUE);  // Filled
+
+      poly->StartTick = currentTick;
+      poly->LaserID[0] = device.laserID_;
+      poly->Intensity[0] = device.currentIntensity_;
+      poly->Repeats = 1;
+
+      sequenceObjects.push_back(poly);
+
+      // Calculate timing for next polygon
+      UINT32 objTickCount = 0;
+      UINT32 illTickCount = 0;
+      device.device_->GetTiming(*poly, &objTickCount, &illTickCount);
+      currentTick += objTickCount;
+   }
+
+   if (sequenceObjects.empty())
+   {
+      device.polygonsLoaded_ = false;
+      return DEVICE_OK;
+   }
+
+   // Upload sequence to device and CACHE the ID
+   UINT16 sequenceID;
+   UINT32 ret = device.device_->UploadSequence(
+      sequenceObjects.data(),
+      static_cast<UINT32>(sequenceObjects.size()),
+      &sequenceID);
+
+   // Clean up sequence objects
+   for (auto obj : sequenceObjects)
+   {
+      delete obj;
+   }
+
+   if (ret != RETCODE::OK)
+   {
+      device.polygonsLoaded_ = false;
+      return device.MapRetCode(ret);
+   }
+
+   // Store the sequence ID for later use by RunPolygons
+   device.loadedPolygonSequenceID_ = sequenceID;
+   device.polygonsLoaded_ = true;
+
+   return DEVICE_OK;
+}
+
+int RunPolygonsCommand::Execute(RappUGA42Scanner& device)
+{
+   // Check if polygons were pre-loaded
+   if (!device.polygonsLoaded_ || device.loadedPolygonSequenceID_ == 0)
+   {
+      // Polygons not loaded, return error
+      return ERR_INVALID_DEVICE_STATE;
+   }
+
+   // Start the pre-loaded sequence (FAST - no upload needed)
+   UINT32 ret = device.device_->StartSequence(
+      device.loadedPolygonSequenceID_,
+      device.ttlTriggerPort_,
+      device.ttlTriggerBehavior_,
+      static_cast<UINT32>(repetitions_));
+
+   if (ret != RETCODE::OK)
+      return device.MapRetCode(ret);
+
+   device.lastSequenceID_ = device.loadedPolygonSequenceID_;
+   device.sequenceRunning_ = true;
+
+   return DEVICE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// DeviceWorkerThread Implementation
+///////////////////////////////////////////////////////////////////////////////
+
+DeviceWorkerThread::DeviceWorkerThread(RappUGA42Scanner& device) :
+   device_(device),
+   stop_(false),
+   activeCommand_(nullptr),
+   stopPolygonRequested_(false)
+{
+}
+
+DeviceWorkerThread::~DeviceWorkerThread()
+{
+   Stop();
+   wait();
+}
+
+void DeviceWorkerThread::Start()
+{
+   stop_ = false;
+   activate();
+}
+
+void DeviceWorkerThread::Stop()
+{
+   {
+      std::lock_guard<std::mutex> lock(queueMutex_);
+      stop_ = true;
+   }
+   queueCV_.notify_one();
+}
+
+void DeviceWorkerThread::EnqueueCommand(Command* cmd)
+{
+   {
+      std::lock_guard<std::mutex> lock(queueMutex_);
+      commandQueue_.push(cmd);
+   }
+   queueCV_.notify_one();
+}
+
+bool DeviceWorkerThread::IsBusy()
+{
+   std::lock_guard<std::mutex> lock(queueMutex_);
+   return !commandQueue_.empty() || activeCommand_ != nullptr;
+}
+
+void DeviceWorkerThread::StopPolygonSequence()
+{
+   stopPolygonRequested_ = true;
+
+   // Clear any queued RunPolygons commands
+   std::lock_guard<std::mutex> lock(queueMutex_);
+   std::queue<Command*> filteredQueue;
+   while (!commandQueue_.empty())
+   {
+      Command* cmd = commandQueue_.front();
+      commandQueue_.pop();
+      if (cmd->GetType() != Command::RUN_POLYGONS)
+      {
+         filteredQueue.push(cmd);
+      }
+      else
+      {
+         delete cmd;  // Discard RunPolygons commands
+      }
+   }
+   commandQueue_ = filteredQueue;
+}
+
+int DeviceWorkerThread::svc()
+{
+   while (!stop_)
+   {
+      Command* cmd = nullptr;
+
+      // Wait for command or stop signal
+      {
+         std::unique_lock<std::mutex> lock(queueMutex_);
+         queueCV_.wait(lock, [this] {
+            return !commandQueue_.empty() || stop_;
+         });
+
+         if (stop_)
+            break;
+
+         if (!commandQueue_.empty())
+         {
+            cmd = commandQueue_.front();
+            commandQueue_.pop();
+            activeCommand_ = cmd;
+         }
+      }
+
+      // Execute command outside of lock
+      if (cmd)
+      {
+         // Check if we need to stop a RunPolygons sequence
+         if (stopPolygonRequested_ && cmd->GetType() == Command::RUN_POLYGONS)
+         {
+            device_.device_->Stop();
+            device_.sequenceRunning_ = false;
+            stopPolygonRequested_ = false;
+         }
+
+         cmd->Execute(device_);
+         delete cmd;
+         activeCommand_ = nullptr;
+      }
+   }
+
+   return 0;
 }

@@ -27,9 +27,13 @@
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
+#include "DeviceThreads.h"
 #include <string>
 #include <vector>
 #include <map>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 
 #pragma warning( push )
 #pragma warning( disable : 4251 )
@@ -47,11 +51,138 @@
 #define ERR_MEMORY_OVERLOAD          10008
 #define ERR_SEQUENCE_INVALID         10009
 
+// Forward declarations
+class RappUGA42Scanner;
+class DeviceWorkerThread;
+
+// Command pattern for async device operations
+class Command
+{
+public:
+   enum Type {
+      POINT_AND_FIRE,
+      SET_POSITION,
+      SET_ILLUMINATION,
+      RUN_POLYGONS,
+      LOAD_POLYGONS
+   };
+
+   virtual ~Command() {}
+   virtual Type GetType() const = 0;
+   virtual int Execute(RappUGA42Scanner& device) = 0;
+};
+
+class PointAndFireCommand : public Command
+{
+public:
+   PointAndFireCommand(double x, double y, double pulseTime_us) :
+      x_(x), y_(y), pulseTime_us_(pulseTime_us) {}
+
+   Type GetType() const { return POINT_AND_FIRE; }
+   int Execute(RappUGA42Scanner& device);
+
+private:
+   double x_;
+   double y_;
+   double pulseTime_us_;
+};
+
+class SetPositionCommand : public Command
+{
+public:
+   SetPositionCommand(double x, double y) : x_(x), y_(y) {}
+
+   Type GetType() const { return SET_POSITION; }
+   int Execute(RappUGA42Scanner& device);
+
+private:
+   double x_;
+   double y_;
+};
+
+class SetIlluminationCommand : public Command
+{
+public:
+   SetIlluminationCommand(bool on) : on_(on) {}
+
+   Type GetType() const { return SET_ILLUMINATION; }
+   int Execute(RappUGA42Scanner& device);
+
+private:
+   bool on_;
+};
+
+class RunPolygonsCommand : public Command
+{
+public:
+   RunPolygonsCommand(const std::vector<std::vector<RPOINTF>>& polygons, int repetitions) :
+      polygons_(polygons), repetitions_(repetitions) {}
+
+   Type GetType() const { return RUN_POLYGONS; }
+   int Execute(RappUGA42Scanner& device);
+
+private:
+   std::vector<std::vector<RPOINTF>> polygons_;
+   int repetitions_;
+};
+
+class LoadPolygonsCommand : public Command
+{
+public:
+   LoadPolygonsCommand(const std::vector<std::vector<RPOINTF>>& polygons) :
+      polygons_(polygons) {}
+
+   Type GetType() const { return LOAD_POLYGONS; }
+   int Execute(RappUGA42Scanner& device);
+
+private:
+   std::vector<std::vector<RPOINTF>> polygons_;
+};
+
+// Worker thread for async device operations
+class DeviceWorkerThread : public MMDeviceThreadBase
+{
+public:
+   DeviceWorkerThread(RappUGA42Scanner& device);
+   ~DeviceWorkerThread();
+
+   int svc();
+   int open(void*) { return 0; }
+   int close(unsigned long) { return 0; }
+
+   void Start();
+   void Stop();
+   void EnqueueCommand(Command* cmd);
+   bool IsBusy();
+   void StopPolygonSequence();
+
+private:
+   RappUGA42Scanner& device_;
+   std::queue<Command*> commandQueue_;
+   std::mutex queueMutex_;
+   std::condition_variable queueCV_;
+   bool stop_;
+   Command* activeCommand_;
+   bool stopPolygonRequested_;
+
+   DeviceWorkerThread& operator=(const DeviceWorkerThread&) {
+      return *this;
+   }
+};
+
 class RappUGA42Scanner : public CGalvoBase<RappUGA42Scanner>
 {
 public:
    RappUGA42Scanner();
    ~RappUGA42Scanner();
+
+   // Friend classes for command execution
+   friend class PointAndFireCommand;
+   friend class SetPositionCommand;
+   friend class SetIlluminationCommand;
+   friend class RunPolygonsCommand;
+   friend class LoadPolygonsCommand;
+   friend class DeviceWorkerThread;
 
    // Device API
    // ----------
@@ -140,6 +271,11 @@ private:
    // Sequence management
    UINT16 lastSequenceID_;
    bool sequenceRunning_;
+   UINT16 loadedPolygonSequenceID_;  // Cached polygon sequence from LoadPolygons
+   bool polygonsLoaded_;              // Flag indicating polygons are pre-uploaded
+
+   // Worker thread for async operations
+   DeviceWorkerThread* workerThread_;
 
    // Helper functions
    // ----------------
