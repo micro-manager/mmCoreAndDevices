@@ -24,7 +24,7 @@
 //
 // Runtime requirements: 
 // obstools.dll
-// "ROE UGA42 SDK.dll"
+// "ROE UGA-42 SDK.dll"
 
 
 #include "Rapp_UGA42.h"
@@ -1239,6 +1239,17 @@ DeviceWorkerThread::~DeviceWorkerThread()
 {
    Stop();
    wait();
+
+   // Clean up any remaining commands in the queue to avoid memory leaks
+   {
+      std::lock_guard<std::mutex> lock(queueMutex_);
+      while (!commandQueue_.empty())
+      {
+         Command* cmd = commandQueue_.front();
+         commandQueue_.pop();
+         delete cmd;
+      }
+   }
 }
 
 void DeviceWorkerThread::Start()
@@ -1324,6 +1335,14 @@ int DeviceWorkerThread::svc()
          if (stop_)
          {
             device_.LogMessage("UGA42 Worker: Stop requested, exiting", true);
+
+            // Clean up any remaining commands in the queue to prevent memory leaks
+            while (!commandQueue_.empty())
+            {
+               Command* leftoverCmd = commandQueue_.front();
+               commandQueue_.pop();
+               delete leftoverCmd;
+            }
             break;
          }
 
@@ -1383,6 +1402,12 @@ int DeviceWorkerThread::svc()
             device_.device_->Stop();
             device_.sequenceRunning_ = false;
             stopPolygonRequested_ = false;
+
+            // Cancel this command: it has been stopped and should not be executed
+            delete cmd;
+            cmd = nullptr;
+            activeCommand_ = nullptr;
+            continue;
          }
 
          device_.LogMessage("UGA42 Worker: Executing command type " + std::to_string(cmd->GetType()), true);

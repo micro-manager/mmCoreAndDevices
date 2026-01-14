@@ -166,9 +166,9 @@ private:
    bool stopPolygonRequested_;
    std::chrono::steady_clock::time_point lastKeepaliveTime_;
 
-   DeviceWorkerThread& operator=(const DeviceWorkerThread&) {
-      return *this;
-   }
+   // Prevent copying - thread objects should not be copied
+   DeviceWorkerThread(const DeviceWorkerThread&) = delete;
+   DeviceWorkerThread& operator=(const DeviceWorkerThread&) = delete;
 };
 
 class RappUGA42Scanner : public CGalvoBase<RappUGA42Scanner>
