@@ -230,6 +230,7 @@ public:
    int OnAnalogChangeTime(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMinIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPolygonIlluminationRepeats(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    // Device connection
@@ -269,6 +270,7 @@ private:
    // Polygon support
    std::vector<std::vector<RPOINTF>> polygons_;
    int polygonRepetitions_;
+   int polygonIlluminationRepeats_;  // How many times each polygon is illuminated (0 = once)
 
    // Sequence management
    UINT16 lastSequenceID_;

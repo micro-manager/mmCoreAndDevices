@@ -100,6 +100,7 @@ RappUGA42Scanner::RappUGA42Scanner() :
    currentX_(0.0),
    currentY_(0.0),
    polygonRepetitions_(1),
+   polygonIlluminationRepeats_(0),
    lastSequenceID_(0),
    sequenceRunning_(false),
    loadedPolygonSequenceID_(0),
@@ -303,6 +304,11 @@ int RappUGA42Scanner::Initialize()
    pAct = new CPropertyAction(this, &RappUGA42Scanner::OnMaxIntensity);
    CreateIntegerProperty("MaxIntensity", maxIntensity_, false, pAct);
    SetPropertyLimits("MaxIntensity", 0, 10000);
+
+   // Polygon illumination repeats (0 = illuminate once, 1 = illuminate twice, etc.)
+   pAct = new CPropertyAction(this, &RappUGA42Scanner::OnPolygonIlluminationRepeats);
+   CreateIntegerProperty("PolygonIlluminationRepeats", polygonIlluminationRepeats_, false, pAct);
+   SetPropertyLimits("PolygonIlluminationRepeats", 0, 1000);
 
    // Start worker thread AFTER all initialization is complete
    // This prevents race conditions between main thread SDK calls and worker keepalive
@@ -864,6 +870,21 @@ int RappUGA42Scanner::OnMaxIntensity(MM::PropertyBase* pProp, MM::ActionType eAc
    return DEVICE_OK;
 }
 
+int RappUGA42Scanner::OnPolygonIlluminationRepeats(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(static_cast<long>(polygonIlluminationRepeats_));
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long value;
+      pProp->Get(value);
+      polygonIlluminationRepeats_ = static_cast<int>(value);
+   }
+   return DEVICE_OK;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Helper Functions
 ///////////////////////////////////////////////////////////////////////////////
@@ -1147,7 +1168,7 @@ int LoadPolygonsCommand::Execute(RappUGA42Scanner& device)
       poly->StartTick = currentTick;
       poly->LaserID[0] = device.laserID_;
       poly->Intensity[0] = device.currentIntensity_;
-      poly->Repeats = 1;
+      poly->Repeats = static_cast<UINT32>(device.polygonIlluminationRepeats_);
 
       sequenceObjects.push_back(poly);
 
