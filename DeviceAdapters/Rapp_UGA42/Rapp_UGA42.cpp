@@ -80,7 +80,7 @@ RappUGA42Scanner::RappUGA42Scanner() :
    initialized_(false),
    port_(""),
    device_(nullptr),
-   debugMode_(true),  // Start with debug mode for development
+   debugMode_(false),  // Default to fast mode
    laserID_(0),
    laserAdded_(false),
    laserPort_(RMIPort1),
@@ -110,6 +110,12 @@ RappUGA42Scanner::RappUGA42Scanner() :
    // CPropertyAction* pAct = new CPropertyAction(this, &RappUGA42Scanner::OnPort);
    // CreateProperty(g_PropertyVirtualComPort, "", MM::String, false, pAct, true);
 
+   // Debug Mode property (pre-initialization)
+   CPropertyAction* pAct = new CPropertyAction(this, &RappUGA42Scanner::OnDebugMode);
+   CreateProperty("DebugMode", "False", MM::String, false, pAct, true);
+   AddAllowedValue("DebugMode", "True");
+   AddAllowedValue("DebugMode", "False");
+
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, "Port cannot be changed after initialization");
    SetErrorText(ERR_DEVICE_NOT_FOUND, "No UGA-42 device found");
@@ -136,6 +142,8 @@ int RappUGA42Scanner::Initialize()
 {
    if (initialized_)
       return DEVICE_OK;
+
+   LogMessage("UGA42: Initialize() starting, debugMode=" + std::string(debugMode_ ? "true" : "false"), true);
 
    // Create device instance
    device_ = new UGA42(debugMode_);
@@ -171,17 +179,22 @@ int RappUGA42Scanner::Initialize()
    }
 
    // Connect to device
+   LogMessage("UGA42: Connecting to port " + port_, true);
    UINT32 ret = device_->Connect(port_.c_str());
    if (ret != RETCODE::OK)
    {
+      LogMessage("UGA42: Connect failed with code " + std::to_string(ret), true);
       delete device_;
       device_ = nullptr;
       return MapRetCode(ret);
    }
+   LogMessage("UGA42: Connected successfully", true);
 
    // Verify connection
    State state;
+   LogMessage("UGA42: Calling GetState to verify connection", true);
    ret = device_->GetState(&state);
+   LogMessage("UGA42: GetState returned " + std::to_string(ret) + ", state=" + std::to_string(static_cast<int>(state)), true);
    if (ret != RETCODE::OK || state == State::Disconnected)
    {
       delete device_;
@@ -190,16 +203,20 @@ int RappUGA42Scanner::Initialize()
    }
 
    // Set tick time
+   LogMessage("UGA42: Setting tick time to " + std::to_string(tickTime_), true);
    ret = device_->SetTickTime(tickTime_);
    if (ret != RETCODE::OK)
    {
+      LogMessage("UGA42: SetTickTime failed with code " + std::to_string(ret), true);
       device_->Disconnect();
       delete device_;
       device_ = nullptr;
       return MapRetCode(ret);
    }
+   LogMessage("UGA42: Tick time set successfully", true);
 
    // Add and configure laser
+   LogMessage("UGA42: Adding laser", true);
    int result = AddLaser();
    if (result != DEVICE_OK)
    {
@@ -287,11 +304,14 @@ int RappUGA42Scanner::Initialize()
    CreateIntegerProperty("MaxIntensity", maxIntensity_, false, pAct);
    SetPropertyLimits("MaxIntensity", 0, 10000);
 
-   // Start worker thread for async operations
+   // Start worker thread AFTER all initialization is complete
+   // This prevents race conditions between main thread SDK calls and worker keepalive
+   LogMessage("UGA42: Starting worker thread", true);
    workerThread_ = new DeviceWorkerThread(*this);
    workerThread_->Start();
 
    initialized_ = true;
+   LogMessage("UGA42: Initialize() completed successfully", true);
    return DEVICE_OK;
 }
 
@@ -543,6 +563,26 @@ int RappUGA42Scanner::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
          return ERR_PORT_CHANGE_FORBIDDEN;
       }
       pProp->Get(port_);
+   }
+   return DEVICE_OK;
+}
+
+int RappUGA42Scanner::OnDebugMode(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(debugMode_ ? "True" : "False");
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      if (initialized_)
+      {
+         return ERR_PORT_CHANGE_FORBIDDEN;
+      }
+
+      std::string value;
+      pProp->Get(value);
+      debugMode_ = (value == "True");
    }
    return DEVICE_OK;
 }
@@ -853,6 +893,11 @@ int RappUGA42Scanner::AddLaser()
    if (laserAdded_)
       return DEVICE_OK;
 
+   LogMessage("UGA42 AddLaser: port=" + std::to_string(static_cast<int>(laserPort_)) +
+              ", riseTime=" + std::to_string(digitalRiseTime_) +
+              ", fallTime=" + std::to_string(digitalFallTime_) +
+              ", freq=" + std::to_string(laserFrequency_), true);
+
    UINT32 ret = device_->AddLaser(
       digitalRiseTime_,
       digitalFallTime_,
@@ -863,20 +908,25 @@ int RappUGA42Scanner::AddLaser()
       laserFrequency_,
       &laserID_);
 
+   LogMessage("UGA42 AddLaser: returned " + std::to_string(ret) + ", laserID=" + std::to_string(laserID_), true);
+
    if (ret != RETCODE::OK)
       return ERR_LASER_SETUP_FAILED;
 
    // Set spot size
    ret = device_->SetLaserStepSize(laserID_, spotSize_);
+   LogMessage("UGA42 AddLaser: SetLaserStepSize returned " + std::to_string(ret), true);
    if (ret != RETCODE::OK)
       return ERR_LASER_SETUP_FAILED;
 
    // Reset calibration to identity (1:1 mapping)
    ret = device_->ResetCalibration(laserID_);
+   LogMessage("UGA42 AddLaser: ResetCalibration returned " + std::to_string(ret), true);
    if (ret != RETCODE::OK)
       return ERR_LASER_SETUP_FAILED;
 
    laserAdded_ = true;
+   LogMessage("UGA42 AddLaser: Laser added successfully", true);
    return DEVICE_OK;
 }
 
@@ -899,12 +949,81 @@ bool RappUGA42Scanner::IsDeviceIdle()
    return (state == State::IDLE);
 }
 
+bool RappUGA42Scanner::Reconnect()
+{
+   LogMessage("UGA42: Reconnect() starting", true);
+
+   if (device_ == nullptr)
+   {
+      LogMessage("UGA42: Reconnect failed - device is null", true);
+      return false;
+   }
+
+   // Remove existing laser before disconnect (SDK remembers laser even after disconnect)
+   if (laserAdded_)
+   {
+      LogMessage("UGA42: Reconnect - Removing existing laser " + std::to_string(laserID_), true);
+      device_->RemoveLaser(laserID_);
+      laserAdded_ = false;
+   }
+
+   // Disconnect first
+   device_->Disconnect();
+
+   // Reconnect
+   UINT32 ret = device_->Connect(port_.c_str());
+   if (ret != RETCODE::OK)
+   {
+      LogMessage("UGA42: Reconnect failed at Connect: " + std::to_string(ret), true);
+      return false;
+   }
+   LogMessage("UGA42: Reconnect - Connect successful", true);
+
+   // Verify connection
+   State state;
+   ret = device_->GetState(&state);
+   if (ret != RETCODE::OK || state == State::Disconnected)
+   {
+      LogMessage("UGA42: Reconnect failed at GetState: ret=" + std::to_string(ret) +
+                 ", state=" + std::to_string(static_cast<int>(state)), true);
+      return false;
+   }
+   LogMessage("UGA42: Reconnect - GetState successful, state=" + std::to_string(static_cast<int>(state)), true);
+
+   // Reconfigure tick time
+   ret = device_->SetTickTime(tickTime_);
+   if (ret != RETCODE::OK)
+   {
+      LogMessage("UGA42: Reconnect failed at SetTickTime: " + std::to_string(ret), true);
+      return false;
+   }
+   LogMessage("UGA42: Reconnect - SetTickTime successful", true);
+
+   // Re-add laser
+   laserAdded_ = false;  // Reset flag so AddLaser will run
+   int result = AddLaser();
+   if (result != DEVICE_OK)
+   {
+      LogMessage("UGA42: Reconnect failed at AddLaser: " + std::to_string(result), true);
+      return false;
+   }
+
+   LogMessage("UGA42: Reconnect successful", true);
+   return true;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Command Implementations
 ///////////////////////////////////////////////////////////////////////////////
 
 int PointAndFireCommand::Execute(RappUGA42Scanner& device)
 {
+   device.LogMessage("UGA42 PointAndFire: x=" + std::to_string(x_) +
+                     ", y=" + std::to_string(y_) +
+                     ", pulseTime=" + std::to_string(pulseTime_us_) + "us" +
+                     ", intensity=" + std::to_string(device.currentIntensity_) +
+                     ", laserID=" + std::to_string(device.laserID_), true);
+
    // Create sequence point
    SequencePoint* point = new SequencePoint(x_, y_);
    point->StartTick = 0;
@@ -914,6 +1033,8 @@ int PointAndFireCommand::Execute(RappUGA42Scanner& device)
    if (point->Repeats < 1)
       point->Repeats = 1;
 
+   device.LogMessage("UGA42 PointAndFire: Repeats=" + std::to_string(point->Repeats), true);
+
    // Upload sequence
    SequenceObject* sequence[1] = { point };
    UINT16 sequenceID;
@@ -921,12 +1042,18 @@ int PointAndFireCommand::Execute(RappUGA42Scanner& device)
 
    delete point;
 
+   device.LogMessage("UGA42 PointAndFire: UploadSequence returned " + std::to_string(ret) +
+                     ", sequenceID=" + std::to_string(sequenceID), true);
+
    if (ret != RETCODE::OK)
       return device.MapRetCode(ret);
 
    // Start sequence
+   device.LogMessage("UGA42 PointAndFire: Starting sequence, triggerPort=" +
+                     std::to_string(static_cast<int>(device.ttlTriggerPort_)), true);
    ret = device.device_->StartSequence(sequenceID, device.ttlTriggerPort_,
                                        device.ttlTriggerBehavior_, 1);
+   device.LogMessage("UGA42 PointAndFire: StartSequence returned " + std::to_string(ret), true);
    if (ret != RETCODE::OK)
    {
       device.device_->DeleteSequence(sequenceID);
@@ -935,10 +1062,15 @@ int PointAndFireCommand::Execute(RappUGA42Scanner& device)
 
    // Poll until complete (blocks the worker thread)
    State state;
+   int pollCount = 0;
    do {
       CDeviceUtils::SleepMs(10);
       device.device_->GetState(&state);
+      pollCount++;
    } while (state == State::SequenceRunning);
+
+   device.LogMessage("UGA42 PointAndFire: Sequence completed after " + std::to_string(pollCount) +
+                     " polls, final state=" + std::to_string(static_cast<int>(state)), true);
 
    // Clean up
    device.device_->DeleteSequence(sequenceID);
@@ -952,11 +1084,14 @@ int PointAndFireCommand::Execute(RappUGA42Scanner& device)
 
 int SetPositionCommand::Execute(RappUGA42Scanner& device)
 {
+   device.LogMessage("UGA42 SetPosition: x=" + std::to_string(x_) + ", y=" + std::to_string(y_), true);
+
    // Convert to UINT32 for device
    UINT32 deviceX = static_cast<UINT32>(x_);
    UINT32 deviceY = static_cast<UINT32>(y_);
 
    UINT32 ret = device.device_->MoveAbsolute(deviceX, deviceY);
+   device.LogMessage("UGA42 SetPosition: MoveAbsolute returned " + std::to_string(ret), true);
    if (ret != RETCODE::OK)
       return device.MapRetCode(ret);
 
@@ -968,21 +1103,29 @@ int SetPositionCommand::Execute(RappUGA42Scanner& device)
 
 int SetIlluminationCommand::Execute(RappUGA42Scanner& device)
 {
+   device.LogMessage("UGA42 SetIllumination: on=" + std::string(on_ ? "true" : "false") +
+                     ", laserID=" + std::to_string(device.laserID_), true);
    UINT32 ret = device.device_->SetLaserONOFF(device.laserID_, on_ ? TRUE : FALSE);
+   device.LogMessage("UGA42 SetIllumination: SetLaserONOFF returned " + std::to_string(ret), true);
    return device.MapRetCode(ret);
 }
 
 int LoadPolygonsCommand::Execute(RappUGA42Scanner& device)
 {
+   device.LogMessage("UGA42 LoadPolygons: " + std::to_string(polygons_.size()) + " polygons", true);
+
    // Delete any previously loaded polygon sequence
    if (device.loadedPolygonSequenceID_ != 0)
    {
+      device.LogMessage("UGA42 LoadPolygons: Deleting previous sequence " +
+                        std::to_string(device.loadedPolygonSequenceID_), true);
       device.device_->DeleteSequence(device.loadedPolygonSequenceID_);
       device.loadedPolygonSequenceID_ = 0;
    }
 
    if (polygons_.empty())
    {
+      device.LogMessage("UGA42 LoadPolygons: No polygons to load", true);
       device.polygonsLoaded_ = false;
       return DEVICE_OK;
    }
@@ -1043,15 +1186,20 @@ int LoadPolygonsCommand::Execute(RappUGA42Scanner& device)
    // Store the sequence ID for later use by RunPolygons
    device.loadedPolygonSequenceID_ = sequenceID;
    device.polygonsLoaded_ = true;
+   device.LogMessage("UGA42 LoadPolygons: Uploaded sequence ID " + std::to_string(sequenceID), true);
 
    return DEVICE_OK;
 }
 
 int RunPolygonsCommand::Execute(RappUGA42Scanner& device)
 {
+   device.LogMessage("UGA42 RunPolygons: repetitions=" + std::to_string(repetitions_) +
+                     ", sequenceID=" + std::to_string(device.loadedPolygonSequenceID_), true);
+
    // Check if polygons were pre-loaded
    if (!device.polygonsLoaded_ || device.loadedPolygonSequenceID_ == 0)
    {
+      device.LogMessage("UGA42 RunPolygons: No polygons loaded", true);
       // Polygons not loaded, return error
       return ERR_INVALID_DEVICE_STATE;
    }
@@ -1062,6 +1210,8 @@ int RunPolygonsCommand::Execute(RappUGA42Scanner& device)
       device.ttlTriggerPort_,
       device.ttlTriggerBehavior_,
       static_cast<UINT32>(repetitions_));
+
+   device.LogMessage("UGA42 RunPolygons: StartSequence returned " + std::to_string(ret), true);
 
    if (ret != RETCODE::OK)
       return device.MapRetCode(ret);
@@ -1080,7 +1230,8 @@ DeviceWorkerThread::DeviceWorkerThread(RappUGA42Scanner& device) :
    device_(device),
    stop_(false),
    activeCommand_(nullptr),
-   stopPolygonRequested_(false)
+   stopPolygonRequested_(false),
+   lastKeepaliveTime_(std::chrono::steady_clock::now())
 {
 }
 
@@ -1145,25 +1296,80 @@ void DeviceWorkerThread::StopPolygonSequence()
 
 int DeviceWorkerThread::svc()
 {
+   device_.LogMessage("UGA42 Worker: Thread started", true);
+
+   // Immediate first GetState call on thread start to prevent initial timeout
+   if (!device_.debugMode_ && device_.device_ != nullptr)
+   {
+      State state;
+      UINT32 ret = device_.device_->GetState(&state);
+      device_.LogMessage("UGA42 Worker: Initial GetState returned " +
+                         std::to_string(ret) + ", state=" + std::to_string(static_cast<int>(state)), true);
+      lastKeepaliveTime_ = std::chrono::steady_clock::now();
+   }
+
    while (!stop_)
    {
       Command* cmd = nullptr;
 
-      // Wait for command or stop signal
+      // Wait for command or stop signal (with timeout for keepalive check)
       {
          std::unique_lock<std::mutex> lock(queueMutex_);
-         queueCV_.wait(lock, [this] {
+
+         // Wait with 500ms timeout to periodically check keepalive
+         queueCV_.wait_for(lock, std::chrono::milliseconds(500), [this] {
             return !commandQueue_.empty() || stop_;
          });
 
          if (stop_)
+         {
+            device_.LogMessage("UGA42 Worker: Stop requested, exiting", true);
             break;
+         }
 
          if (!commandQueue_.empty())
          {
             cmd = commandQueue_.front();
             commandQueue_.pop();
             activeCommand_ = cmd;
+            device_.LogMessage("UGA42 Worker: Dequeued command type " + std::to_string(cmd->GetType()), true);
+         }
+      }
+
+      // Send keepalive if needed (not in debug mode and 1+ seconds elapsed)
+      // In fast mode, GetState must be called every 4 seconds to maintain connection.
+      // We use 1 second for safety margin. This runs regardless of command queue state
+      // to ensure keepalive happens even during long idle periods.
+      auto now = std::chrono::steady_clock::now();
+      if (!device_.debugMode_)
+      {
+         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+            now - lastKeepaliveTime_).count();
+
+         if (elapsed >= 1)
+         {
+            // Send keepalive GetState call
+            State state;
+            UINT32 ret = device_.device_->GetState(&state);
+            device_.LogMessage("UGA42 Worker: Keepalive GetState returned " + std::to_string(ret) +
+                              ", state=" + std::to_string(static_cast<int>(state)) +
+                              ", elapsed=" + std::to_string(elapsed) + "s", true);
+
+            // If connection error, attempt reconnect
+            if (ret != RETCODE::OK || state == State::Disconnected)
+            {
+               device_.LogMessage("UGA42 Worker: Connection lost, attempting reconnect", true);
+               if (device_.Reconnect())
+               {
+                  device_.LogMessage("UGA42 Worker: Reconnect succeeded", true);
+               }
+               else
+               {
+                  device_.LogMessage("UGA42 Worker: Reconnect failed", true);
+               }
+            }
+
+            lastKeepaliveTime_ = now;
          }
       }
 
@@ -1173,16 +1379,23 @@ int DeviceWorkerThread::svc()
          // Check if we need to stop a RunPolygons sequence
          if (stopPolygonRequested_ && cmd->GetType() == Command::RUN_POLYGONS)
          {
+            device_.LogMessage("UGA42 Worker: Stopping polygon sequence as requested", true);
             device_.device_->Stop();
             device_.sequenceRunning_ = false;
             stopPolygonRequested_ = false;
          }
 
-         cmd->Execute(device_);
+         device_.LogMessage("UGA42 Worker: Executing command type " + std::to_string(cmd->GetType()), true);
+         int result = cmd->Execute(device_);
+         device_.LogMessage("UGA42 Worker: Command completed with result " + std::to_string(result), true);
          delete cmd;
          activeCommand_ = nullptr;
+
+         // Update keepalive time after command (device communication happened)
+         lastKeepaliveTime_ = std::chrono::steady_clock::now();
       }
    }
 
+   device_.LogMessage("UGA42 Worker: Thread exiting", true);
    return 0;
 }

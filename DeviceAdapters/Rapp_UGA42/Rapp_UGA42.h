@@ -164,6 +164,7 @@ private:
    bool stop_;
    Command* activeCommand_;
    bool stopPolygonRequested_;
+   std::chrono::steady_clock::time_point lastKeepaliveTime_;
 
    DeviceWorkerThread& operator=(const DeviceWorkerThread&) {
       return *this;
@@ -214,6 +215,7 @@ public:
    // Property action handlers
    // ------------------------
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnDebugMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSpotSize(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLaserIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -284,6 +286,7 @@ private:
    int UpdateLaser();
    State GetDeviceState();
    bool IsDeviceIdle();
+   bool Reconnect();
 };
 
 #endif //_Rapp_UGA42_H_
