@@ -45,7 +45,7 @@ class PollingThread;
  * Controls Rapp lasers via binary serial protocol
  * Implements continuous polling to keep laser alive
  */
-class RappLaser : public CGenericBase<RappLaser>
+class RappLaser : public CShutterBase<RappLaser>
 {
 public:
    RappLaser();
@@ -58,6 +58,11 @@ public:
    int Shutdown();
    void GetName(char* name) const;
    bool Busy() { return false; }
+
+   // Shutter API
+   int SetOpen(bool open = true);
+   int GetOpen(bool& open);
+   int Fire(double deltaT);
 
    // Property action handlers
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);

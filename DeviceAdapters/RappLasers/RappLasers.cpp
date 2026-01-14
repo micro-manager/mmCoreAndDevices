@@ -32,7 +32,7 @@ const char* g_DeviceName = "RappLaser";
 
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_DeviceName, MM::GenericDevice, "Rapp Laser Controller");
+   RegisterDevice(g_DeviceName, MM::ShutterDevice, "Rapp Laser Controller");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -238,6 +238,40 @@ int RappLaser::Shutdown()
       initialized_ = false;
    }
    return DEVICE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Shutter API
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Open or close the shutter (controls Light, not hardware Shutter)
+ */
+int RappLaser::SetOpen(bool open)
+{
+   return SetLightState(open);
+}
+
+/**
+ * Get shutter state (returns Light state, not hardware Shutter)
+ */
+int RappLaser::GetOpen(bool& open)
+{
+   return GetLightState(open);
+}
+
+/**
+ * Fire the shutter for a specified duration
+ */
+int RappLaser::Fire(double deltaT)
+{
+   int ret = SetOpen(true);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   CDeviceUtils::SleepMs((long)(deltaT + 0.5));
+
+   return SetOpen(false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
