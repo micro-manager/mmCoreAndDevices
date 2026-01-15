@@ -339,6 +339,7 @@ int JAICamera::Initialize()
 						CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(eMs),
 							MM::Float, false, action);
 						SetPropertyLimits(propName.c_str(), eMinMs, eMaxMs);
+						individualExposureSelectors_.push_back(selectorName);
 					}
 				}
 			}
