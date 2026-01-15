@@ -272,6 +272,8 @@ private:
    bool GenerateColorTestPattern(ImgBuffer& img);
    int ResizeImageBuffer();
    void GenerateBeadPositions();
+   void GenerateBeadsForTile(int tileX, int tileY, std::vector<Bead>& beads);
+   unsigned int HashTileCoords(int tileX, int tileY);
    void RenderBeadToImage(ImgBuffer& img, const Bead& bead, double blurRadius, double stageX, double stageY);
    void GenerateBeadsImage(ImgBuffer& img, double exposure);
    double GetCurrentZPosition();
@@ -337,9 +339,9 @@ private:
    std::vector<Bead> beads_;
    bool beadsGenerated_ = false;
    int beadDensity_ = 100;
-   double beadSize_ = 5.0;
+   double beadSize_ = 2.0;
    double beadBrightness_ = 1.0;
-   double blurRate_ = 0.1;
+   double blurRate_ = 0.5;
 };
 
 class MySequenceThread : public MMDeviceThreadBase

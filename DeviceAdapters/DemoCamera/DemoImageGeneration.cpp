@@ -653,32 +653,83 @@ double CDemoCamera::GaussDistributedValue(double mean, double std)
 // Bead mode implementation
 ///////////////////////////////////////////////////////////////////////////////
 
+// Hash function for tile coordinates - generates deterministic "random" seed
+unsigned int CDemoCamera::HashTileCoords(int tileX, int tileY)
+{
+   // Simple hash combining tile coordinates
+   // Using prime numbers for better distribution
+   unsigned int hash = 0;
+   hash = tileX * 73856093;
+   hash ^= tileY * 19349663;
+   return hash;
+}
+
+// Generate beads for a specific tile using procedural generation
+void CDemoCamera::GenerateBeadsForTile(int tileX, int tileY, std::vector<Bead>& beads)
+{
+   const double tileSize = 512.0; // microns, matches typical image size
+   
+   // Use tile hash as seed for deterministic random generation
+   unsigned int seed = HashTileCoords(tileX, tileY);
+   std::srand(seed);
+   
+   // Calculate tile boundaries in world coordinates
+   double tileWorldX = tileX * tileSize;
+   double tileWorldY = tileY * tileSize;
+   
+   // Generate beads for this tile
+   // beadDensity_ is per image (512x512), so use same density per tile
+   int beadsPerTile = beadDensity_;
+   
+   for (int i = 0; i < beadsPerTile; ++i)
+   {
+      Bead bead;
+      // Generate position within this tile
+      bead.worldX = tileWorldX + (double)std::rand() / RAND_MAX * tileSize;
+      bead.worldY = tileWorldY + (double)std::rand() / RAND_MAX * tileSize;
+      bead.intensityFactor = 0.8 + 0.4 * (double)std::rand() / RAND_MAX;  // 80-120%
+      bead.sizeFactor = 0.8 + 0.4 * (double)std::rand() / RAND_MAX;       // 80-120%
+      beads.push_back(bead);
+   }
+}
+
 void CDemoCamera::GenerateBeadPositions()
 {
    beads_.clear();
    
-   // Use seeded random for reproducible positions
-   std::srand(12345);
+   const double tileSize = 512.0; // microns
    
-   // Demo 1px = 1um. Image is typically 512x512.
-   double pixelSizeUm = 1.0;
-   // Generate in an area 2x larger than FOV to have higher density
-   double worldWidth = 512.0 * pixelSizeUm * 2.0; 
-   double worldHeight = 512.0 * pixelSizeUm * 2.0;
+   // Get current stage position
+   double stageX, stageY;
+   GetCurrentXYPosition(stageX, stageY);
    
-   // Get current stage position to center the bead field around it
-   double centerX, centerY;
-   GetCurrentXYPosition(centerX, centerY);
+   // Calculate which tiles are visible
+   // Image size in world coords (1px = 1um, typical 512x512)
+   double imageWidth = 512.0;
+   double imageHeight = 512.0;
    
-   for (int i = 0; i < beadDensity_; ++i)
+   // Add margin to ensure beads near edges with blur are included
+   double margin = 100.0; // microns
+   
+   // Calculate view bounds
+   double viewLeft = stageX - imageWidth / 2.0 - margin;
+   double viewRight = stageX + imageWidth / 2.0 + margin;
+   double viewBottom = stageY - imageHeight / 2.0 - margin;
+   double viewTop = stageY + imageHeight / 2.0 + margin;
+   
+   // Calculate tile range
+   int tileXMin = (int)floor(viewLeft / tileSize);
+   int tileXMax = (int)floor(viewRight / tileSize);
+   int tileYMin = (int)floor(viewBottom / tileSize);
+   int tileYMax = (int)floor(viewTop / tileSize);
+   
+   // Generate beads for all visible tiles
+   for (int tileY = tileYMin; tileY <= tileYMax; ++tileY)
    {
-      Bead bead;
-      // Generate positions in world coordinates centered around current stage position
-      bead.worldX = centerX - worldWidth/2.0 + (double)std::rand() / RAND_MAX * worldWidth;
-      bead.worldY = centerY - worldHeight/2.0 + (double)std::rand() / RAND_MAX * worldHeight;
-      bead.intensityFactor = 0.8 + 0.4 * (double)std::rand() / RAND_MAX;  // 80-120%
-      bead.sizeFactor = 0.8 + 0.4 * (double)std::rand() / RAND_MAX;       // 80-120%
-      beads_.push_back(bead);
+      for (int tileX = tileXMin; tileX <= tileXMax; ++tileX)
+      {
+         GenerateBeadsForTile(tileX, tileY, beads_);
+      }
    }
    
    beadsGenerated_ = true;
@@ -805,16 +856,13 @@ void CDemoCamera::GenerateBeadsImage(ImgBuffer& img, double exposure)
    unsigned char* pBuf = const_cast<unsigned char*>(img.GetPixels());
    memset(pBuf, 0, img.Height() * img.Width() * img.Depth() * ((nComponents_ > 1) ? nComponents_ : 1));
    
-   // Generate bead positions if needed
-   if (!beadsGenerated_)
-   {
-      GenerateBeadPositions();
-   }
-   
    // Get current XY and Z positions
    double stageX, stageY;
    GetCurrentXYPosition(stageX, stageY);
    double zPos = GetCurrentZPosition();
+   
+   // Regenerate beads for current view (always regenerate since stage may have moved)
+   GenerateBeadPositions();
    
    // Calculate blur (no cap)
    double blurRadius = blurRate_ * std::abs(zPos);
