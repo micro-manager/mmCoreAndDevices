@@ -2010,7 +2010,6 @@ public:
       if (ret == DEVICE_OK) {
          xPos_ = x_um;
          yPos_ = y_um;
-         this->OnXYStagePositionChanged(xPos_, yPos_);
       }
       return ret;
    }
@@ -2036,7 +2035,6 @@ public:
       if (ret == DEVICE_OK) {
          xPos_ = xPos;
          yPos_ = yPos;
-         this->OnXYStagePositionChanged(xPos_, yPos_);
       }
       return ret;
    }
