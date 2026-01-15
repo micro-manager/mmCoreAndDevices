@@ -38,6 +38,7 @@ extern const char* g_PixelType_32bit;
 extern const char* g_Sine_Wave;
 extern const char* g_Norm_Noise;
 extern const char* g_Color_Test;
+extern const char* g_Beads;
 
 /**
 * Generate a synthetic test image based on the current mode
@@ -47,7 +48,12 @@ void CDemoCamera::GenerateSyntheticImage(ImgBuffer& img, double exp)
 
    MMThreadGuard g(imgPixelsLock_);
 
-   if (mode_ == MODE_NOISE)
+   if (mode_ == MODE_BEADS)
+   {
+      GenerateBeadsImage(img, exp);
+      return;
+   }
+   else if (mode_ == MODE_NOISE)
    {
       double max = 1 << GetBitDepth();
       int offset = 10;
@@ -641,4 +647,198 @@ double CDemoCamera::GaussDistributedValue(double mean, double std)
    double x = u * tmp;
 
    return mean + std * x;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Bead mode implementation
+///////////////////////////////////////////////////////////////////////////////
+
+void CDemoCamera::GenerateBeadPositions()
+{
+   beads_.clear();
+   
+   // Use seeded random for reproducible positions
+   std::srand(12345);
+   
+   // Demo 1px = 1um. Image is typically 512x512.
+   double pixelSizeUm = 1.0;
+   // Generate in an area 2x larger than FOV to have higher density
+   double worldWidth = 512.0 * pixelSizeUm * 2.0; 
+   double worldHeight = 512.0 * pixelSizeUm * 2.0;
+   
+   // Get current stage position to center the bead field around it
+   double centerX, centerY;
+   GetCurrentXYPosition(centerX, centerY);
+   
+   for (int i = 0; i < beadDensity_; ++i)
+   {
+      Bead bead;
+      // Generate positions in world coordinates centered around current stage position
+      bead.worldX = centerX - worldWidth/2.0 + (double)std::rand() / RAND_MAX * worldWidth;
+      bead.worldY = centerY - worldHeight/2.0 + (double)std::rand() / RAND_MAX * worldHeight;
+      bead.intensityFactor = 0.8 + 0.4 * (double)std::rand() / RAND_MAX;  // 80-120%
+      bead.sizeFactor = 0.8 + 0.4 * (double)std::rand() / RAND_MAX;       // 80-120%
+      beads_.push_back(bead);
+   }
+   
+   beadsGenerated_ = true;
+}
+
+double CDemoCamera::GetCurrentZPosition()
+{
+   // Try "Z" label first (Micro-Manager default for demo)
+   MM::Device* pStage = GetDevice("Z");
+   if (!pStage)
+      pStage = GetDevice(g_StageDeviceName);
+      
+   if (!pStage)
+      return 0.0;
+   
+   // Get the position property
+   char pos[MM::MaxStrLength];
+   int ret = pStage->GetProperty(MM::g_Keyword_Position, pos);
+   if (ret != DEVICE_OK)
+      return 0.0;
+      
+   return atof(pos);
+}
+
+void CDemoCamera::GetCurrentXYPosition(double& x, double& y)
+{
+   x = 0.0;
+   y = 0.0;
+   
+   // Try "XY" label first (Micro-Manager default for demo)
+   MM::Device* pXYStage = GetDevice("XY");
+   if (!pXYStage)
+      pXYStage = GetDevice(g_XYStageDeviceName);
+      
+   if (!pXYStage)
+      return;
+   
+   // Get XY stage interface
+   MM::XYStage* pStage = dynamic_cast<MM::XYStage*>(pXYStage);
+   if (!pStage)
+      return;
+   
+   // Get position
+   pStage->GetPositionUm(x, y);
+}
+
+void CDemoCamera::RenderBeadToImage(ImgBuffer& img, const Bead& bead, double blurRadius, double stageX, double stageY)
+{
+   unsigned width = img.Width();
+   unsigned height = img.Height();
+   unsigned depth = img.Depth();
+   
+   // Convert world coordinates to screen coordinates
+   // User said 1px = 1um
+   double pixelSizeUm = 1.0;
+   double screenX = (bead.worldX - stageX) / pixelSizeUm + width / 2.0;
+   double screenY = (bead.worldY - stageY) / pixelSizeUm + height / 2.0;
+   
+   // Total sigma is the sum of base size and defocus blur (root sum of squares for convolutions)
+   double effectiveBaseSize = beadSize_ * bead.sizeFactor;
+   double totalSigma = sqrt(effectiveBaseSize * effectiveBaseSize + blurRadius * blurRadius);
+   if (totalSigma < 0.5) totalSigma = 0.5;
+   
+   double twoSigmaSq = 2.0 * totalSigma * totalSigma;
+   
+   // Render within 4-sigma radius
+   int renderRadius = (int)(4.0 * totalSigma) + 1;
+   
+   int xMin = std::max(0, (int)(screenX - renderRadius));
+   int xMax = std::min((int)width - 1, (int)(screenX + renderRadius));
+   int yMin = std::max(0, (int)(screenY - renderRadius));
+   int yMax = std::min((int)height - 1, (int)(screenY + renderRadius));
+   
+   // Get max pixel value for current bit depth
+   double maxValue = (depth == 1) ? 255.0 : 
+                     (depth == 2) ? 65535.0 : 
+                     (depth == 4 && nComponents_ == 1) ? 1.0 : 255.0;
+   
+   double amplitude = maxValue * bead.intensityFactor * beadBrightness_ * g_IntensityFactor_;
+   
+   for (int y = yMin; y <= yMax; ++y)
+   {
+      for (int x = xMin; x <= xMax; ++x)
+      {
+         double dx = x - screenX;
+         double dy = y - screenY;
+         double distSq = dx * dx + dy * dy;
+         
+         double value = amplitude * exp(-distSq / twoSigmaSq);
+         
+         unsigned char* pBuf = const_cast<unsigned char*>(img.GetPixels());
+         unsigned long pixelIndex = (y * width + x);
+         
+         if (depth == 1)  // 8-bit
+         {
+            unsigned long idx = pixelIndex * depth;
+            pBuf[idx] = (unsigned char)std::min(255.0, (double)pBuf[idx] + value);
+         }
+         else if (depth == 2)  // 16-bit
+         {
+            unsigned short* pShort = (unsigned short*)pBuf;
+            pShort[pixelIndex] = (unsigned short)std::min(65535.0, (double)pShort[pixelIndex] + value);
+         }
+         else if (depth == 4 && nComponents_ == 1)  // 32-bit float
+         {
+            float* pFloat = (float*)pBuf;
+            pFloat[pixelIndex] = std::min(1.0f, pFloat[pixelIndex] + (float)value);
+         }
+         else if (depth == 4 && nComponents_ == 4)  // 32-bit RGB - render to green channel
+         {
+            unsigned long idx = pixelIndex * 4;
+            pBuf[idx + 1] = (unsigned char)std::min(255.0, (double)pBuf[idx + 1] + value);
+         }
+      }
+   }
+}
+
+void CDemoCamera::GenerateBeadsImage(ImgBuffer& img, double exposure)
+{
+   if (img.Height() == 0 || img.Width() == 0 || img.Depth() == 0)
+      return;
+   
+   // Clear image to dark background
+   unsigned char* pBuf = const_cast<unsigned char*>(img.GetPixels());
+   memset(pBuf, 0, img.Height() * img.Width() * img.Depth() * ((nComponents_ > 1) ? nComponents_ : 1));
+   
+   // Generate bead positions if needed
+   if (!beadsGenerated_)
+   {
+      GenerateBeadPositions();
+   }
+   
+   // Get current XY and Z positions
+   double stageX, stageY;
+   GetCurrentXYPosition(stageX, stageY);
+   double zPos = GetCurrentZPosition();
+   
+   // Calculate blur (no cap)
+   double blurRadius = blurRate_ * std::abs(zPos);
+   
+   // User said 1px = 1um
+   double pixelSizeUm = 1.0;
+   
+   // Render each bead
+   for (const auto& bead : beads_)
+   {
+      // Convert world coordinates to screen coordinates for visibility check
+      double screenX = (bead.worldX - stageX) / pixelSizeUm + img.Width() / 2.0;
+      double screenY = (bead.worldY - stageY) / pixelSizeUm + img.Height() / 2.0;
+      
+      // Total sigma is sum of base size and blur
+      double effectiveBaseSize = beadSize_ * bead.sizeFactor;
+      double totalSigma = sqrt(effectiveBaseSize * effectiveBaseSize + blurRadius * blurRadius);
+      
+      // Only render beads that might be visible (with some margin for blur)
+      double margin = totalSigma * 4.0;
+      if (screenX >= -margin && screenX < img.Width() + margin &&
+          screenY >= -margin && screenY < img.Height() + margin)
+      {
+         RenderBeadToImage(img, bead, blurRadius, stageX, stageY);
+      }
+   }
 }
