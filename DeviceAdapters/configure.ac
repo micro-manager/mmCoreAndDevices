@@ -643,6 +643,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    Prior
    PriorLegacy
    QCam
+   RappLasers
    Sapphire
    Scientifica
    ScionCam
