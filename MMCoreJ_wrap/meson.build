@@ -28,13 +28,17 @@ fs = import('fs')
 
 swig = find_program('swig', native: true)
 
-mmcore_proj = subproject(
-    'mmcore',
-    default_options: {
-        'default_library': 'static',
-        'tests': 'disabled',
-    },
-)
+javadoc_from_doxygen = get_option('javadoc_from_doxygen')
+
+mmcore_options = {
+    'default_library': 'static',
+    'tests': 'disabled',
+}
+if javadoc_from_doxygen
+    mmcore_options += {'docs': 'enabled'}
+endif
+
+mmcore_proj = subproject('mmcore', default_options: mmcore_options)
 mmcore_dep = mmcore_proj.get_variable('mmcore_dep')
 
 jni_dep = dependency('jni', version: '>= 1.8.0', modules: ['jvm'])
@@ -89,6 +93,17 @@ foreach src : swig_gen_java_source_names
     swig_gen_java_sources += swig_gen_java_src_dir / src
 endforeach
 
+doxygen_html_dir_arg = []
+mmcore_docs_dep = []
+if javadoc_from_doxygen
+    mmcore_docs_target = mmcore_proj.get_variable('mmcore_docs_target')
+    mmcore_docs_dep = [mmcore_docs_target]
+    doxygen_html_dir_arg = [
+        '--doxygen-html-dir',
+        meson.project_build_root() / 'subprojects/mmcore/docs/apidoc/html',
+    ]
+endif
+
 swig_gen = custom_target(
     'swig-mmcorej',
     input: 'MMCoreJ.i',
@@ -97,12 +112,14 @@ swig_gen = custom_target(
         'MMCoreJ_swig_wrap.h',    # @OUTPUT1@, swig_gen[1]
         swig_gen_java_source_names,
     ],
+    depends: mmcore_docs_dep,
     depfile: 'MMCoreJ_swig_wrap.d',
     # Run via wrapper script because outdir needs to pre-exist.
     command: [
         import('python').find_installation(),
         files('scripts/run_swig.py'),
         '--outdir', '@OUTDIR@' / swig_gen_java_src_dir,
+        doxygen_html_dir_arg,
         '--',
         swig,
         '-c++',
