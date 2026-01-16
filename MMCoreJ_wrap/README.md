@@ -32,12 +32,43 @@ native library.
 
 ## Native Library Loading
 
-MMCoreJ requires a native library (`MMCoreJ_wrap`) to interface with MMCore.
-The library is loaded automatically when the `CMMCore` class is first accessed.
+MMCoreJ requires a native library containing the C++ MMCore. The library is
+loaded automatically when the `CMMCore` class is first accessed.
 
-### Search Order
+There is a "modern" and "legacy" search order for the native library. The
+modern way can be used when MMCoreJ is built by Meson + Maven; when it fails,
+loading falls back to the legacy search order. (As of this writing, MMStudio
+still uses the legacy method.)
 
-The native library is located in the following order:
+### Modern Search Order (for Meson build)
+
+**Library file names:**
+
+- **Linux**: `libmmcorej.so`
+- **macOS**: `libmmcorej.dylib`
+- **Windows**: `mmcorej.dll`
+
+The native library `mmcorej` is located in the following order:
+
+1. **JAR resource extraction**: The library is extracted from JAR resources at
+   `/natives/<os>/<arch>/` where `<os>` is `linux`, `macos`, or `windows` and
+   `<arch>` is `arm64` or `x86_64`. These are provided as "natives" classifier
+   JARs (e.g., `MMCoreJ-<version>-natives-macos-arm64.jar`).
+
+2. **System library path**: If not found as a JAR resource, `java.library.path`
+   is searched.
+
+If the above fails, the legacy loading mechanism is used (see below).
+
+### Legacy Search Order
+
+**Library file names:**
+
+- **Linux**: `libMMCoreJ_wrap.so`
+- **macOS**: `libMMCoreJ_wrap.jnilib` or `.dylib`
+- **Windows**: `MMCoreJ_wrap.dll`
+
+The legacy loading mechanism searches for `MMCoreJ_wrap` as follows:
 
 1. **System property path**: If `mmcorej.library.path` is set, the library is
    loaded exclusively from that directory (no fallback to other locations).
@@ -57,11 +88,3 @@ The native library is located in the following order:
    (Autoconf/Automake build only).
 
 4. **System default**: `java.library.path` is used as a last resort.
-
-### Library File Names
-
-The library file name is platform-dependent:
-
-- **macOS**: `libMMCoreJ_wrap.jnilib` or `libMMCoreJ_wrap.dylib`
-- **Windows**: `MMCoreJ_wrap.dll`
-- **Linux**: `libMMCoreJ_wrap.so`

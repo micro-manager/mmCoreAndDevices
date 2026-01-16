@@ -197,9 +197,6 @@
       }
 
       if (loaded) {
-         // TODO If the library is already loaded, we still want to make sure
-         // that it was loaded from the right copy. The Core now has this
-         // information, so we should check it.
          logLibraryLoading("Already loaded");
          return true;
       }
@@ -253,6 +250,20 @@
    // Load the MMCoreJ_wrap native library.
    static {
       logLibraryLoading("Start loading...");
+
+      // New-style loading (extract from JAR, fall back to java.library.path,
+      // both with 'mmcorej').
+      if (!checkIfAlreadyLoaded()) {
+         try {
+            NativeLibraryLoader.load("mmcorej");
+            logLibraryLoading("Loaded 'mmcorej' library");
+         }
+         catch (UnsatisfiedLinkError e) {
+            logLibraryLoading("Falling back to 'MMCoreJ_wrap' loading mode...");
+         }
+      }
+
+      // Legacy loading ('MMCoreJ_wrap')
       if (!checkIfAlreadyLoaded()) {
          // The most reliable method for locating (the correct copy of)
          // MMCoreJ_wrap is to look in the single path given as a Java system
