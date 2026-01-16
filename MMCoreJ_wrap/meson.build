@@ -54,7 +54,6 @@ foreach abspath : swig_include_dirs
     )
 endforeach
 
-# TODO Add check to ensure we don't miss any
 swig_gen_java_source_names = [
     'ActionType.java',
     'BooleanVector.java',
