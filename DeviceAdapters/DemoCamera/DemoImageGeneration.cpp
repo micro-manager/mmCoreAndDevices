@@ -783,7 +783,7 @@ void CDemoCamera::RenderBeadToImage(ImgBuffer& img, const Bead& bead, double blu
    unsigned depth = img.Depth();
    
    // Convert world coordinates to screen coordinates
-   // User said 1px = 1um
+   // 1px = 1um
    double pixelSizeUm = 1.0;
    double screenX = (bead.worldX - stageX) / pixelSizeUm + width / 2.0;
    double screenY = (bead.worldY - stageY) / pixelSizeUm + height / 2.0;
@@ -867,7 +867,7 @@ void CDemoCamera::GenerateBeadsImage(ImgBuffer& img, double exposure)
    // Calculate blur (no cap)
    double blurRadius = blurRate_ * std::abs(zPos);
    
-   // User said 1px = 1um
+   // 1px = 1um
    double pixelSizeUm = 1.0;
    
    // Render each bead
@@ -884,7 +884,7 @@ void CDemoCamera::GenerateBeadsImage(ImgBuffer& img, double exposure)
       // Only render beads that might be visible (with some margin for blur)
       double margin = totalSigma * 4.0;
       if (screenX >= -margin && screenX < img.Width() + margin &&
-          screenY >= -margin && screenY < img.Height() + margin)
+         screenY >= -margin && screenY < img.Height() + margin)
       {
          RenderBeadToImage(img, bead, blurRadius, stageX, stageY);
       }
