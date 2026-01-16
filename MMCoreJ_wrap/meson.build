@@ -141,7 +141,7 @@ swig_gen_cpp_sources = [swig_gen[0], swig_gen[1]]
 # macOS, even though they are loaded by dlopen() (other platforms don't have
 # this distinction). So we use shared_library(), not shared_module().
 shared_library(
-    'MMCoreJ_wrap',
+    'mmcorej',
     swig_gen_cpp_sources,
     dependencies: [
         jni_dep,

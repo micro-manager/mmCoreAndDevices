@@ -64,7 +64,7 @@
              architecture, you only need to set natives.arch.
         -->
         <natives.classifier>natives-${natives.os}-${natives.arch}</natives.classifier>
-        <native.library.name>${native.library.prefix}MMCoreJ_wrap${native.library.suffix}</native.library.name>
+        <native.library.name>${native.library.prefix}mmcorej${native.library.suffix}</native.library.name>
         <native.library.path>${meson.build.dir}/${native.library.name}</native.library.path>
 
         <!-- Set to true to skip natives JAR and build only the main JAR. -->
