@@ -803,10 +803,8 @@ void CDemoCamera::RenderBeadToImage(ImgBuffer& img, const Bead& bead, double blu
    int yMin = std::max(0, (int)(screenY - renderRadius));
    int yMax = std::min((int)height - 1, (int)(screenY + renderRadius));
    
-   // Get max pixel value for current bit depth
-   double maxValue = (depth == 1) ? 255.0 : 
-                     (depth == 2) ? 65535.0 : 
-                     (depth == 4 && nComponents_ == 1) ? 1.0 : 255.0;
+   // Use fixed maxValue of 255 regardless of bit depth. Users can scale brightness with beadBrightness param.
+   double maxValue = 255.0;
    
    double amplitude = maxValue * bead.intensityFactor * beadBrightness_ * g_IntensityFactor_;
    

@@ -392,7 +392,7 @@ int CDemoCamera::Initialize()
    pAct = new CPropertyAction(this, &CDemoCamera::OnBeadBrightness);
    nRet = CreateFloatProperty("BeadBrightness", beadBrightness_, false, pAct);
    assert(nRet == DEVICE_OK);
-   SetPropertyLimits("BeadBrightness", 0.5, 2.0);
+   SetPropertyLimits("BeadBrightness", 0.125, 8.0);
    
    pAct = new CPropertyAction(this, &CDemoCamera::OnBlurRate);
    nRet = CreateFloatProperty("BlurRate", blurRate_, false, pAct);
