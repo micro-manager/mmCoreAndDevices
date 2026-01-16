@@ -58,8 +58,9 @@
                 <!-- IDE/editor files -->
                 <exclude>.vscode/**</exclude>
                 <exclude>.idea/**</exclude>
-                <!-- Meson wrap lock -->
+                <!-- Meson wraps -->
                 <exclude>subprojects/.wraplock</exclude>
+                <exclude>subprojects/packagecache/**</exclude>
                 <exclude>**/.meson-subproject-wrap-hash.txt</exclude>
             </excludes>
         </fileSet>

@@ -1,10 +1,11 @@
-name: MMDevice/MMCore experimental Meson build & tests
+name: MMDevice/MMCore/MMCoreJ Meson build & tests
 
 on:
   pull_request:
     paths:
       - MMDevice/**
       - MMCore/**
+      - MMCoreJ_wrap/**
       - .github/workflows/ci-mmdevice-mmcore.yml
   push:
     branches:
@@ -12,6 +13,7 @@ on:
     paths:
       - MMDevice/**
       - MMCore/**
+      - MMCoreJ_wrap/**
       - .github/workflows/ci-mmdevice-mmcore.yml
 
 concurrency:
@@ -76,3 +78,109 @@ jobs:
           cd MMCore
           meson setup builddir --buildtype debug -Dcpp_std=${{ matrix.cppstd }}
           meson test -C builddir --print-errorlogs
+
+  mmcorej-natives:
+    name: mmcorej-${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: linux-x86_64
+          - os: windows-2025
+            name: windows-x86_64
+            cxx: cl
+          - os: macos-15
+            name: macos-arm64
+            deployment_target: "11.0"
+          - os: macos-15
+            name: macos-x86_64
+            meson_cross_args: --cross-file=scripts/meson-cross-macos-x86_64.txt
+            jdk_arch: x86_64
+            deployment_target: "10.15"
+    env:
+      CXX: ${{ matrix.cxx }}
+      CJDK_ARCH: ${{ matrix.jdk_arch }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: 3.14
+      - run: |
+          uv tool install cjdk
+          uv tool install meson
+          uv tool install ninja
+          uv tool install 'swig<4'
+      - name: Build in manylinux container
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: |
+          docker run --rm -v "${{ github.workspace }}"/MMCoreJ_wrap:/work \
+            -w /work \
+            quay.io/pypa/manylinux_2_28_x86_64 \
+            bash scripts/build_jni_linux.sh
+      - name: Build (non-Linux)
+        if: "!startsWith(matrix.os, 'ubuntu-')"
+        shell: bash
+        run: |
+          cp -R MMDevice MMCoreJ_wrap/subprojects/mmdevice
+          cp -R MMCore MMCoreJ_wrap/subprojects/mmcore
+          cd MMCoreJ_wrap
+          export JAVA_HOME=$(cjdk -j zulu:8 java-home)
+          export PATH="$JAVA_HOME/bin:$PATH"
+          meson setup builddir --vsenv --buildtype=release \
+            ${{ matrix.meson_cross_args }}
+          meson compile -C builddir
+      - name: Check SWIG-generated sources are correct in meson.build
+        run: |
+          cd MMCoreJ_wrap
+          uv run --no-project scripts/verify_swig_gensrc.py builddir
+      - name: Package & test (non-Windows)
+        if: "!startsWith(matrix.os, 'windows-')"
+        run: |
+          cd MMCoreJ_wrap
+          cjdk -j zulu:8 exec -- mvn verify
+      - name: Package & test (Windows)
+        if: startsWith(matrix.os, 'windows-')
+        run: |
+          cd MMCoreJ_wrap
+          cjdk -j zulu:8 exec -- mvn.cmd verify
+      - uses: actions/upload-artifact@v6
+        with:
+          name: mmcorej-natives-${{ matrix.name }}
+          path: MMCoreJ_wrap/target/MMCoreJ-*-natives-*.jar
+
+  mmcorej-java:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: 3.14
+      - run: |
+          uv tool install cjdk
+          uv tool install meson
+          uv tool install ninja
+          uv tool install 'swig<4'
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+      - run: |
+          cp -R MMDevice MMCoreJ_wrap/subprojects/mmdevice
+          cp -R MMCore MMCoreJ_wrap/subprojects/mmcore
+          cd MMCoreJ_wrap
+          export JAVA_HOME=$(cjdk -j zulu:8 java-home)
+          export PATH="$JAVA_HOME/bin:$PATH"
+          meson setup builddir -Djavadoc_from_doxygen=true
+          meson compile -C builddir
+          cjdk -j zulu:8 exec -- mvn package \
+            -Dskip.natives=true -DskipTests=true
+      - name: Verify full sources JAR
+        run: |
+          cd MMCoreJ_wrap
+          ./scripts/verify-full-sources-jar.sh target/MMCoreJ-*-full-sources.jar
+      - uses: actions/upload-artifact@v6
+        with:
+          name: mmcorej-java
+          path: MMCoreJ_wrap/target/MMCoreJ-*.jar
