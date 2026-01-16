@@ -24,6 +24,7 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
+#include <atomic>
 #include <string>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -156,11 +157,10 @@ public:
 
 private:
    RappLaser& device_;
-   bool stop_;
+   std::atomic<bool> stop_;
 
-   PollingThread& operator=(const PollingThread&) {
-      return *this;
-   }
+   PollingThread(const PollingThread&) = delete;
+   PollingThread& operator=(const PollingThread&) = delete;
 };
 
 #endif // _RAPPLASERS_H_

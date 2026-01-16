@@ -227,6 +227,7 @@ int RappLaser::Shutdown()
       if (pollingThread_)
       {
          pollingThread_->Stop();
+         pollingThread_->wait();
          delete pollingThread_;
          pollingThread_ = 0;
       }
