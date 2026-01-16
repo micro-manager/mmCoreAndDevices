@@ -118,6 +118,8 @@ public:
 
    bool IsContinuousFocusDrive() const {return false;}
 
+   int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
    // action interface
    // ----------------
    int OnPort     (MM::PropertyBase* pProp, MM::ActionType eAct);

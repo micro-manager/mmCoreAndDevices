@@ -58,6 +58,8 @@ public:
 
    virtual bool IsContinuousFocusDrive() const;
 
+   int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
    // action interface
    // ----------------
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -109,6 +111,8 @@ public:
    virtual int IsXYStageSequenceable(bool& isSequenceable) const;
 
    virtual bool IsContinuousFocusDrive() const;
+
+   int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 
    // action interface
    // ----------------

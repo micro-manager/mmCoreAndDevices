@@ -80,6 +80,8 @@ public:
     int IsStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
     bool IsContinuousFocusDrive() const {return false;}
 
+    int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
     // action interface
     // ----------------
     int OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct);

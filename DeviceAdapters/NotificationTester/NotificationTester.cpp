@@ -395,6 +395,11 @@ public:
    bool IsContinuousFocusDrive() const final {
       return false;
    }
+
+   int UsesOnStagePositionChanged(bool& result) const final {
+      result = true;
+      return DEVICE_OK;
+   }
 };
 
 template <typename ProcModel>
@@ -608,6 +613,11 @@ public:
 
    int IsXYStageSequenceable(bool& flag) const final {
       flag = false;
+      return DEVICE_OK;
+   }
+
+   int UsesOnXYStagePositionChanged(bool& result) const final {
+      result = true;
       return DEVICE_OK;
    }
 };

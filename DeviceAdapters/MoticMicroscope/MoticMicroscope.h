@@ -128,6 +128,8 @@ public:
 
 	virtual int IsXYStageSequenceable(bool& isSequenceable) const;
 
+	int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
 	void EventHandler(int eventId, int data);
 private:
 	int _init;
@@ -165,6 +167,8 @@ public:
 	virtual int IsStageSequenceable(bool& isSequenceable) const;
 
 	virtual bool IsContinuousFocusDrive() const;
+
+	int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 
 	void EventHandler(int eventId, int data);
 private:
