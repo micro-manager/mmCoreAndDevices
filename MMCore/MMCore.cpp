@@ -4450,15 +4450,30 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 
    std::string binningValue = pCamera->GetProperty(MM::g_Keyword_Binning);
 
-   // Parse the binning value - handle both integer ("2") and NxN ("2x2") formats
    if (binningValue.empty())
    {
       throw CMMError("Binning property returned empty value");
    }
 
-   // atoi() naturally handles both formats - it parses until it hits non-digit
-   // "2" -> 2, "2x2" -> 2, "4x4" -> 4
-   int binning = atoi(binningValue.c_str());
+   // Parse the binning value - handle both integer ("2") and NxN ("2x2") formats
+   int binning;
+   size_t xPos = binningValue.find('x');
+   if (xPos != std::string::npos)
+   {
+      // NxN format - parse both parts and verify they match
+      int binX = atoi(binningValue.c_str());
+      int binY = atoi(binningValue.c_str() + xPos + 1);
+      if (binX != binY)
+      {
+         throw CMMError("Asymmetric binning not supported: " + binningValue);
+      }
+      binning = binX;
+   }
+   else
+   {
+      // Integer format
+      binning = atoi(binningValue.c_str());
+   }
 
    if (binning < 1 || binning > 100)
    {
@@ -4530,8 +4545,16 @@ void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMM
       {
          currentValue = pCamera->GetProperty(MM::g_Keyword_Binning);
          // If current value contains 'x' and looks like NxN format, use that
-         if (!currentValue.empty() && currentValue.find('x') != std::string::npos)
+         size_t xPos = currentValue.find('x');
+         if (!currentValue.empty() && xPos != std::string::npos)
          {
+            // Validate that the current value has symmetric binning
+            int binX = atoi(currentValue.c_str());
+            int binY = atoi(currentValue.c_str() + xPos + 1);
+            if (binX != binY)
+            {
+               throw CMMError("Asymmetric binning not supported: " + currentValue);
+            }
             useNxNFormat = true;
          }
       }
