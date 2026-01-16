@@ -130,7 +130,7 @@
       }
 
       if (useStdErr) {
-         System.err.println("Load " + NATIVE_LIBRARY_NAME + ": " + message);
+         System.err.println("MMCoreJ native library loading: " + message);
       }
    }
 
@@ -197,7 +197,6 @@
       }
 
       if (loaded) {
-         logLibraryLoading("Already loaded");
          return true;
       }
       return false;
