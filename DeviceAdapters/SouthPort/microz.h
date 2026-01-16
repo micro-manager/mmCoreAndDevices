@@ -53,6 +53,8 @@ public:
 
 	bool IsContinuousFocusDrive() const;
 
+	int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
 	// Sequence functions
 	int IsStageSequenceable(bool& isSequenceable) const;
 	int GetStageSequenceMaxLength(long& nrEvents) const;

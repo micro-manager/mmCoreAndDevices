@@ -251,6 +251,7 @@ public:
 	bool IsContinuousFocusDrive() const {return DEVICE_OK;}
 	bool SupportsDeviceDetection(void){return DEVICE_OK;}
 	MM::DeviceDetectionStatus DetectDevice(void);
+	int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 
 private:
 

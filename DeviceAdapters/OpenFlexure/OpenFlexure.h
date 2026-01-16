@@ -123,6 +123,8 @@ public:
 	int GetLimitsUm(double& xMin, double& xMax, double& yMin, double& yMax);
 	int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
 
+	int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
 	bool Busy() { return false; }
 	void GetName(char*) const;
 
@@ -165,6 +167,9 @@ public:
 	int GetLimits(double& lower, double& upper) { return DEVICE_UNSUPPORTED_COMMAND;} // nah 
 	int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false;  return DEVICE_OK;}
 	bool IsContinuousFocusDrive() const  { return false; }
+
+	int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
 	bool Busy() { return false; }
 
 	// Helper functions

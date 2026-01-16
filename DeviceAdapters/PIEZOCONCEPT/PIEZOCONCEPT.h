@@ -119,6 +119,8 @@ public:
    int GetStageSequenceMaxLength(long& nrEvents) const
    { nrEvents = 0; return DEVICE_OK; }
 
+   int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
 private:
    double stepSizeUm_;
    double pos_um_;
@@ -181,6 +183,8 @@ public:
    int Move(double /*vx*/, double /*vy*/) { return DEVICE_OK; }
 
    int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
+
+   int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 
    int OnXStageMinPos(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnXStageMaxPos(MM::PropertyBase* pProp, MM::ActionType eAct);

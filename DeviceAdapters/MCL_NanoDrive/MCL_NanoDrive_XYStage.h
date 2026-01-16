@@ -46,6 +46,8 @@ public:
 	virtual double GetStepSizeYUm();
 	virtual int IsXYStageSequenceable(bool& isSequenceable) const;
 
+	int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
 	// Action interface
 	int OnLowerLimitX(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnUpperLimitX(MM::PropertyBase* pProp, MM::ActionType eAct);
