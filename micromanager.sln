@@ -24,6 +24,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NikonTE2000", "DeviceAdapte
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Prior", "DeviceAdapters\Prior\Prior.vcxproj", "{A7148F42-8EE8-48B4-BFC9-F61AB8A3800D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RappLasers", "DeviceAdapters\RappLasers\RappLasers.vcxproj", "{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DTOpenLayer", "DeviceAdapters\DTOpenLayer\DTOpenLayer.vcxproj", "{D29861C1-D0A2-44EB-BAD9-3808165609D8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Andor", "DeviceAdapters\Andor\Andor.vcxproj", "{91CCB72B-852D-47D8-82FA-0E19A300A025}"
@@ -574,6 +576,10 @@ Global
 		{A7148F42-8EE8-48B4-BFC9-F61AB8A3800D}.Debug|x64.Build.0 = Debug|x64
 		{A7148F42-8EE8-48B4-BFC9-F61AB8A3800D}.Release|x64.ActiveCfg = Release|x64
 		{A7148F42-8EE8-48B4-BFC9-F61AB8A3800D}.Release|x64.Build.0 = Release|x64
+		{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}.Debug|x64.ActiveCfg = Debug|x64
+		{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}.Debug|x64.Build.0 = Debug|x64
+		{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}.Release|x64.ActiveCfg = Release|x64
+		{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}.Release|x64.Build.0 = Release|x64
 		{D29861C1-D0A2-44EB-BAD9-3808165609D8}.Debug|x64.ActiveCfg = Debug|x64
 		{D29861C1-D0A2-44EB-BAD9-3808165609D8}.Debug|x64.Build.0 = Debug|x64
 		{D29861C1-D0A2-44EB-BAD9-3808165609D8}.Release|x64.ActiveCfg = Release|x64
