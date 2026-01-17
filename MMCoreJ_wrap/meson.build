@@ -44,7 +44,6 @@ mmcore_dep = mmcore_proj.get_variable('mmcore_dep')
 jni_dep = dependency('jni', version: '>= 1.8.0', modules: ['jvm'])
 
 threads_dep = dependency('threads')
-dl_dep = dependency('dl', required: false)
 
 swig_include_dirs = mmcore_proj.get_variable('swig_include_dirs')
 swig_incdir_args = []
@@ -144,7 +143,6 @@ shared_library(
     'mmcorej',
     swig_gen_cpp_sources,
     dependencies: [
-        dl_dep,
         jni_dep,
         mmcore_dep,
         threads_dep,
