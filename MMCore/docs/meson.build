@@ -22,7 +22,7 @@ doxyfile = configure_file(
 
 doc_install_dir = get_option('datadir') / 'doc' / meson.project_name()
 
-custom_target(
+mmcore_docs_target = custom_target(
     'docs',
     command: [doxygen, '-q', doxyfile],
     output: ['apidoc'],
