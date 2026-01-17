@@ -120,6 +120,8 @@ jobs:
       - name: Build in manylinux container
         if: startsWith(matrix.os, 'ubuntu-')
         run: |
+          cp -R MMDevice MMCoreJ_wrap/subprojects/mmdevice
+          cp -R MMCore MMCoreJ_wrap/subprojects/mmcore
           docker run --rm -v "${{ github.workspace }}"/MMCoreJ_wrap:/work \
             -w /work \
             quay.io/pypa/manylinux_2_28_x86_64 \
