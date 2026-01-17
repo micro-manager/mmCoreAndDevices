@@ -134,7 +134,8 @@ jobs:
           export JAVA_HOME=$(cjdk -j zulu:8 java-home)
           export PATH="$JAVA_HOME/bin:$PATH"
           meson setup builddir --vsenv --buildtype=release \
-            ${{ matrix.meson_cross_args }}
+            ${{ matrix.meson_cross_args }} \
+            -Dmmdevice:tests=disabled -Dmmcore:tests=disabled
           meson compile -C builddir
       - name: Check SWIG-generated sources are correct in meson.build
         run: |
@@ -176,7 +177,8 @@ jobs:
           cd MMCoreJ_wrap
           export JAVA_HOME=$(cjdk -j zulu:8 java-home)
           export PATH="$JAVA_HOME/bin:$PATH"
-          meson setup builddir -Djavadoc_from_doxygen=true
+          meson setup builddir -Djavadoc_from_doxygen=true \
+            -Dmmdevice:tests=disabled -Dmmcore:tests=disabled
           meson compile -C builddir
           cjdk -j zulu:8 exec -- mvn package \
             -Dskip.natives=true -DskipTests=true

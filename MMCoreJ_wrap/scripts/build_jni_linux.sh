@@ -9,5 +9,6 @@ yum install -y java-1.8.0-openjdk-devel
 export PATH="/opt/python/cp314-cp314/bin:$PATH"
 pip install meson ninja 'swig<4'
 
-meson setup builddir --buildtype=release
+meson setup builddir --buildtype=release \
+    -Dmmdevice:tests=disabled -Dmmcore:tests=disabled
 meson compile -C builddir
