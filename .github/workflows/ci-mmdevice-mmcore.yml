@@ -20,6 +20,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CJDK_HIDE_PROGRESS_BARS: '1'
+  MAVEN_ARGS: '--batch-mode --no-transfer-progress'
+
 jobs:
   test:
     strategy:
