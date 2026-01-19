@@ -38,7 +38,7 @@
 
 #include "LaserDriver.h"
 #include "LaserStateProperty.h"
-#include "EnumerationProperty.h"
+#include "CustomizableEnumerationProperty.h"
 #include "NoShutterCommandLegacyFix.h"
 
 using namespace std;
@@ -62,10 +62,10 @@ Gen5Laser::Gen5Laser( const std::string& wavelength, LaserDriver* driver ) :
     CreateLaserStateProperty();
     //CreateLaserOnOffProperty();
     CreateShutterProperty();
-    CreateRunModeProperty();
-    CreatePowerSetpointProperty();
+    CreateRunmodeProperty();
+    CreateCpPowerSetpointProperty();
     CreatePowerReadingProperty();
-    CreateCurrentSetpointProperty( "gartn?", "sartn" );
+    CreateCcCurrentSetpointProperty( "gartn?", "sartn" );
     CreateCurrentReadingProperty();
 }
 
@@ -73,37 +73,39 @@ void Gen5Laser::CreateLaserStateProperty()
 {
     if ( IsInCdrhMode() ) {
 
-        laserStateProperty_ = new LaserStateProperty( Property::String, "Gen5Laser State", laserDriver_, "gom?" );
+        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Gen5Laser State", laserDriver_, "gom?" );
     
-        laserStateProperty_->RegisterState( "0", "Off", false );
-        laserStateProperty_->RegisterState( "1", "Waiting for Temperatures", false );
-        laserStateProperty_->RegisterState( "2", "Waiting for Key", false );
-        laserStateProperty_->RegisterState( "3", "Warming Up", false );
-        laserStateProperty_->RegisterState( "4", "Completed", true );
-        laserStateProperty_->RegisterState( "5", "Fault", false );
-        laserStateProperty_->RegisterState( "6", "Aborted", false );
-        laserStateProperty_->RegisterState( "7", "Waiting for Remote", false );
-        laserStateProperty_->RegisterState( "8", "Standby", false );
+        laserStatePropertyOld_->RegisterState( "0", "Off", false );
+        laserStatePropertyOld_->RegisterState( "1", "Waiting for Temperatures", false );
+        laserStatePropertyOld_->RegisterState( "2", "Waiting for Key", false );
+        laserStatePropertyOld_->RegisterState( "3", "Warming Up", false );
+        laserStatePropertyOld_->RegisterState( "4", "Completed", true );
+        laserStatePropertyOld_->RegisterState( "5", "Fault", false );
+        laserStatePropertyOld_->RegisterState( "6", "Aborted", false );
+        laserStatePropertyOld_->RegisterState( "7", "Waiting for Remote", false );
+        laserStatePropertyOld_->RegisterState( "8", "Standby", false );
 
     } else {
 
-        laserStateProperty_ = new LaserStateProperty( Property::String, "Gen5Laser State", laserDriver_, "l?" );
+        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Gen5Laser State", laserDriver_, "l?" );
 
-        laserStateProperty_->RegisterState( "0", "Off", true );
-        laserStateProperty_->RegisterState( "1", "On", true );
+        laserStatePropertyOld_->RegisterState( "0", "Off", true );
+        laserStatePropertyOld_->RegisterState( "1", "On", true );
     }
 
-    RegisterPublicProperty( laserStateProperty_ );
+    laserStatePropertyOld_->SetCaching( false );
+
+    RegisterPublicProperty( laserStatePropertyOld_ );
 }
 
-void Gen5Laser::CreateRunModeProperty()
+void Gen5Laser::CreateRunmodeProperty()
 {
-    EnumerationProperty* property;
+    CustomizableEnumerationProperty* property;
 
     if ( IsShutterCommandSupported() || !IsInCdrhMode() ) {
-        property = new EnumerationProperty( "Run Mode", laserDriver_, "gam?" );
+        property = new CustomizableEnumerationProperty( "Runmode", laserDriver_, "gam?" );
     } else {
-        property = new legacy::no_shutter_command::LaserRunModeProperty( "Run Mode", laserDriver_, "gam?", this, "gartn?", "sartn" );
+        property = new legacy::no_shutter_command::LaserRunModeProperty( "Runmode", laserDriver_, "gam?", this, "gartn?", "sartn" );
     }
     
     property->SetCaching( false );

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       Mld06Laser.h
+// FILE:       LysaLaser.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,31 +34,53 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2025)
 //
 
-#ifndef __COBOLT__MLD06_LASER_H
-#define __COBOLT__MLD06_LASER_H
+#ifndef __COBOLT__LYSA_LASER_H
+#define __COBOLT__LYSA_LASER_H
 
 #include "Laser.h"
+
+class StaticStringProperty;
 
 NAMESPACE_COBOLT_BEGIN
 
 class LaserDriver;
+class DeviceProperty;
 
-enum class LaserSeries06 { Mld, MldM };
-
-class Mld06Laser : public Laser
+class LysaLaser : public Laser
 {
 public:
 
-    Mld06Laser( const LaserSeries06 laserSeries, const std::string& wavelength, LaserDriver* device );
-    virtual void CreatePowerSetpointProperty() override;
-    virtual void CreateAnalogImpedanceProperty() override;
+    LysaLaser( const std::string& name, const std::string& wavelength, LaserDriver* device );
+
+    virtual void CreateShutterProperty() override;
+    virtual bool IsShutterEnabled() const override;
 
 protected:
 
+    void CreateClearFaultProperty();
+    void CreateRestartProperty();
+    void CreateAbortProperty();
     void CreateLaserStateProperty();
-    void CreateRunModeProperty();
+    void CreateFaultProperty();
+    virtual void CreateCurrentReadingProperty() override;
+    virtual void CreatePowerReadingProperty() override;
+    virtual void CreateCcCurrentSetpointProperty() override;
+    virtual void CreateCpPowerSetpointProperty() override;
+    void CreateRunmodeProperty();
+
+    void CreatePmPowerSetpointProperty() override;
+    void CreateCmCurrentHighSetpointProperty();
+    void CreatePmDigitalModulationProperty();
+    void CreatePmAnalogModulationProperty();
+    void CreateCmDigitalModulationProperty();
+    void CreateCmAnalogModulationProperty();
+
+    virtual void CreateAnalogImpedanceProperty() override;
+    void CreateModulationInputVoltageMaxProperty();
+
+    DeviceProperty* laserStateProperty_;
 };
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__MLD06_LASER_H
+#endif // #ifndef __COBOLT__LYSA_LASER_H

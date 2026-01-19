@@ -37,13 +37,13 @@
 #ifndef __COBOLT__LASER_SHUTTER_PROPERTY_H
 #define __COBOLT__LASER_SHUTTER_PROPERTY_H
 
-#include "EnumerationProperty.h"
+#include "CustomizableEnumerationProperty.h"
 
 NAMESPACE_COBOLT_BEGIN
 
 class Laser;
 
-class LaserShutterProperty : public EnumerationProperty
+class LaserShutterProperty : public CustomizableEnumerationProperty
 {
 public:
 

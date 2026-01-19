@@ -43,7 +43,7 @@ const std::string LaserShutterProperty::Value_Open = "open";
 const std::string LaserShutterProperty::Value_Closed = "closed";
 
 LaserShutterProperty::LaserShutterProperty( const std::string& name, LaserDriver* laserDriver, Laser* laser ) :
-    EnumerationProperty( name, laserDriver, "N/A" ),
+    CustomizableEnumerationProperty( name, laserDriver, "N/A" ),
     laser_( laser ),
     isOpen_( false )
 {
@@ -53,7 +53,7 @@ LaserShutterProperty::LaserShutterProperty( const std::string& name, LaserDriver
 
 LaserShutterProperty::LaserShutterProperty( const std::string& name, LaserDriver* laserDriver, Laser* laser,
     const std::string& closeCommand, const std::string& openCommand ) :
-    EnumerationProperty( name, laserDriver, "N/A" ),
+    CustomizableEnumerationProperty( name, laserDriver, "N/A" ),
     laser_( laser ),
     isOpen_( false )
 {
@@ -78,7 +78,7 @@ int LaserShutterProperty::SetValue( const std::string& value )
         return return_code::property_not_settable_in_current_state;
     }
 
-    int returnCode = EnumerationProperty::SetValue( value );
+    int returnCode = CustomizableEnumerationProperty::SetValue( value );
 
     if ( returnCode == return_code::ok ) {
         isOpen_ = ( value == Value_Open );

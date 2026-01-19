@@ -39,13 +39,13 @@
 NAMESPACE_COBOLT_BEGIN
 
 StaticStringProperty::StaticStringProperty( const std::string& name, const std::string& value ) :
-    Property( Property::String, name ),
+    Property( Property::Stereotype::String, name ),
     value_( value )
 {}
 
 Property::Stereotype StaticStringProperty::GetStereotype() const
 {
-    return String;
+    return Stereotype::String;
 }
 
 int StaticStringProperty::GetValue( std::string& string ) const

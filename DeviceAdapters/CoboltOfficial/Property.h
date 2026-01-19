@@ -70,7 +70,7 @@ class Property
 {
 public:
 
-    enum Stereotype { String, Float, Integer };
+    enum class Stereotype { String, Float, Integer };
     
     static void ResetIdGenerator()
     {

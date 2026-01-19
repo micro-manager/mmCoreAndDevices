@@ -38,7 +38,7 @@
 
 #include "LaserDriver.h"
 #include "LaserStateProperty.h"
-#include "EnumerationProperty.h"
+#include "CustomizableEnumerationProperty.h"
 #include "NoShutterCommandLegacyFix.h"
 
 using namespace std;
@@ -62,50 +62,51 @@ OldMld06Laser::OldMld06Laser( const std::string& wavelength, LaserDriver* driver
     CreateLaserStateProperty();
     //CreateLaserOnOffProperty();
     CreateShutterProperty();
-    CreateRunModeProperty();
-    CreatePowerSetpointProperty();
+    CreateRunmodeProperty();
+    CreateCpPowerSetpointProperty();
     CreatePowerReadingProperty();
-    CreateCurrentSetpointProperty();
+    CreateCcCurrentSetpointProperty();
     CreateCurrentReadingProperty();
     CreateDigitalModulationProperty();
-    CreateAnalogModulationFlagProperty();
+    CreateAnalogModulationProperty();
     CreateAnalogImpedanceProperty();
-    CreateModulationPowerSetpointProperty();
+    CreatePmPowerSetpointProperty();
 }
 
 void OldMld06Laser::CreateLaserStateProperty()
 {
     if ( IsInCdrhMode() ) {
 
-        laserStateProperty_ = new LaserStateProperty( Property::String, "OldMld06Laser State", laserDriver_, "gom?" );
+        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Laser State", laserDriver_, "gom?" );
     
-        laserStateProperty_->RegisterState( "0", "Off", false );
-        laserStateProperty_->RegisterState( "1", "Waiting for Key", false );
-        laserStateProperty_->RegisterState( "2", "Completed", true );
-        laserStateProperty_->RegisterState( "3", "Completed (On/Off Modulation)", true );
-        laserStateProperty_->RegisterState( "4", "Completed (Modulation)", true );
-        laserStateProperty_->RegisterState( "5", "Fault", false );
-        laserStateProperty_->RegisterState( "6", "Aborted", false );
+        laserStatePropertyOld_->RegisterState( "0", "Off", false );
+        laserStatePropertyOld_->RegisterState( "1", "Waiting for Key", false );
+        laserStatePropertyOld_->RegisterState( "2", "Completed", true );
+        laserStatePropertyOld_->RegisterState( "3", "Completed (On/Off Modulation)", true );
+        laserStatePropertyOld_->RegisterState( "4", "Completed (Modulation)", true );
+        laserStatePropertyOld_->RegisterState( "5", "Fault", false );
+        laserStatePropertyOld_->RegisterState( "6", "Aborted", false );
 
     } else {
 
-        laserStateProperty_ = new LaserStateProperty( Property::String, "OldMld06Laser State", laserDriver_, "l?" );
+        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Laser State", laserDriver_, "l?" );
 
-        laserStateProperty_->RegisterState( "0", "Off", true );
-        laserStateProperty_->RegisterState( "1", "On", true );
+        laserStatePropertyOld_->RegisterState( "0", "Off", true );
+        laserStatePropertyOld_->RegisterState( "1", "On", true );
     }
 
-    RegisterPublicProperty( laserStateProperty_ );
+    laserStatePropertyOld_->SetCaching( false );
+    RegisterPublicProperty( laserStatePropertyOld_ );
 }
 
-void OldMld06Laser::CreateRunModeProperty()
+void OldMld06Laser::CreateRunmodeProperty()
 {
-    EnumerationProperty* property;
+    CustomizableEnumerationProperty* property;
 
     if ( IsShutterCommandSupported() || !IsInCdrhMode() ) {
-        property = new EnumerationProperty( "Run Mode", laserDriver_, "gam?" );
+        property = new CustomizableEnumerationProperty( "Runmode", laserDriver_, "gam?" );
     } else {
-        property = new legacy::no_shutter_command::LaserRunModeProperty( "Run Mode", laserDriver_, "gam?", this, "gdsn?", "sdsn" );
+        property = new legacy::no_shutter_command::LaserRunModeProperty( "Runmode", laserDriver_, "gam?", this, "gdsn?", "sdsn" );
     }
     
     property->SetCaching( false );

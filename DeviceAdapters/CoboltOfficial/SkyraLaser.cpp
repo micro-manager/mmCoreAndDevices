@@ -41,8 +41,8 @@
 //#include "ImmutableEnumerationProperty.h"
 #include "LaserStateProperty.h"
 //#include "MutableDeviceProperty.h"
-#include "EnumerationProperty.h"
-#include "NumericProperty.h"
+#include "CustomizableEnumerationProperty.h"
+#include "MutableNumericProperty.h"
 //#include "LaserShutterProperty.h"
 #include "NoShutterCommandLegacyFix.h"
 
@@ -88,12 +88,12 @@ void SkyraLaser::CreateLineActivationProperty( const int line )
 
 void SkyraLaser::CreateWavelengthProperty( const int line )
 {
-    RegisterPublicProperty( new DeviceProperty( Property::String, MakeLineName( line ) + " Wavelength", laserDriver_, MakeLineCommand( "glw?", line ) ) );
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, MakeLineName( line ) + " Wavelength", laserDriver_, MakeLineCommand( "glw?", line ) ) );
 }
 
-void SkyraLaser::CreateCurrentSetpointProperty( const int line )
+void SkyraLaser::CreateCcCurrentSetpointProperty( const int line )
 {
-    MutableDeviceProperty* property = new NumericProperty<double>( MakeLineName( line ) + " Current Setpoint [" + currentUnit_ + "]",
+    MutableDeviceProperty* property = new MutableNumericProperty<double>( MakeLineName( line ) + " Current Setpoint [" + currentUnit_ + "]",
         laserDriver_, MakeLineCommand( "glc?", line ), MakeLineCommand( "slc", line ), 0.0f, MaxCurrentSetpoint( line ) );
     
     RegisterPublicProperty( property );
@@ -101,31 +101,31 @@ void SkyraLaser::CreateCurrentSetpointProperty( const int line )
 
 void SkyraLaser::CreateCurrentReadingProperty( const int line )
 {
-    DeviceProperty* property = new DeviceProperty( Property::Float, MakeLineName( line ) + " Measured Current [" + currentUnit_ + "]",
+    DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, MakeLineName( line ) + " Current Reading [" + currentUnit_ + "]",
         laserDriver_, MakeLineCommand( "i?", line ) );
     property->SetCaching( false );
     RegisterPublicProperty( property );
 }
 
-void SkyraLaser::CreatePowerSetpointProperty( const int line )
+void SkyraLaser::CreateCpPowerSetpointProperty( const int line )
 {
     std::string maxPowerSetpointResponse;
     if ( laserDriver_->SendCommand( MakeLineCommand( "gmlp?", line ), &maxPowerSetpointResponse ) != return_code::ok ) {
 
-        Logger::Instance()->LogError( "SkyraLaser::CreatePowerSetpointProperty(): Failed to retrieve max power sepoint" );
+        Logger::Instance()->LogError( "SkyraLaser::CreateCpPowerSetpointProperty(): Failed to retrieve max power sepoint" );
         return;
     }
 
     const double maxPowerSetpoint = atof( maxPowerSetpointResponse.c_str() );
     
-    MutableDeviceProperty* property = new NumericProperty<double>( MakeLineName( line ) + " Power Setpoint [" + powerUnit_ + "]",
+    MutableDeviceProperty* property = new MutableNumericProperty<double>( MakeLineName( line ) + " Power Setpoint [" + powerUnit_ + "]",
         laserDriver_, MakeLineCommand( "glp?", line ), MakeLineCommand( "slp", line ), 0.0f, maxPowerSetpoint );
     RegisterPublicProperty( property );
 }
 
 void SkyraLaser::CreatePowerReadingProperty( const int line )
 {
-    DeviceProperty* property = new DeviceProperty( Property::String, MakeLineName( line ) + " Power Reading [" + powerUnit_ + "]",
+    DeviceProperty* property = new DeviceProperty( Property::Stereotype::String, MakeLineName( line ) + " Power Reading [" + powerUnit_ + "]",
         laserDriver_, MakeLineCommand( "pa?", line ) );
     property->SetCaching( false );
     RegisterPublicProperty( property );
@@ -133,7 +133,7 @@ void SkyraLaser::CreatePowerReadingProperty( const int line )
 
 void SkyraLaser::CreateDigitalModulationEnabledProperty( const int line )
 {
-    EnumerationProperty* property = new EnumerationProperty( MakeLineName( line ) + " Digital Modulation", laserDriver_, MakeLineCommand( "gdmes?", line ) );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( MakeLineName( line ) + " Digital Modulation", laserDriver_, MakeLineCommand( "gdmes?", line ) );
 
     property->RegisterEnumerationItem( "0", MakeLineCommand( "sdmes 0", line ), EnumerationItem_Disabled );
     property->RegisterEnumerationItem( "1", MakeLineCommand( "sdmes 1", line ), EnumerationItem_Enabled );
@@ -143,7 +143,7 @@ void SkyraLaser::CreateDigitalModulationEnabledProperty( const int line )
 
 void SkyraLaser::CreateAnalogModulationEnabledProperty( const int line )
 {
-    EnumerationProperty* property = new EnumerationProperty( MakeLineName( line ) + " Analog Modulation", laserDriver_, MakeLineCommand( "games?", line ) );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( MakeLineName( line ) + " Analog Modulation", laserDriver_, MakeLineCommand( "games?", line ) );
 
     property->RegisterEnumerationItem( "0", MakeLineCommand( "sames 0", line ), EnumerationItem_Disabled );
     property->RegisterEnumerationItem( "1", MakeLineCommand( "sames 1", line ), EnumerationItem_Enabled );
@@ -155,27 +155,28 @@ void SkyraLaser::CreateLaserStateProperty()
 {
     if ( IsInCdrhMode() ) {
 
-        laserStateProperty_ = new LaserStateProperty( Property::String, "Laser State", laserDriver_, "gom?" );
+        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Laser State", laserDriver_, "gom?" );
 
-        laserStateProperty_->RegisterState( "0", "Off",                 false );
-        laserStateProperty_->RegisterState( "1", "Waiting for TEC",     false );
-        laserStateProperty_->RegisterState( "2", "Waiting for Key",     false );
-        laserStateProperty_->RegisterState( "3", "Warming Up",          false );
-        laserStateProperty_->RegisterState( "4", "Completed",           true );
-        laserStateProperty_->RegisterState( "5", "Fault",               false );
-        laserStateProperty_->RegisterState( "6", "Aborted",             false );
-        laserStateProperty_->RegisterState( "7", "Waiting for Remote",  false );
-        laserStateProperty_->RegisterState( "8", "Standby",             false );
+        laserStatePropertyOld_->RegisterState( "0", "Off",                 false );
+        laserStatePropertyOld_->RegisterState( "1", "Waiting for TEC",     false );
+        laserStatePropertyOld_->RegisterState( "2", "Waiting for Key",     false );
+        laserStatePropertyOld_->RegisterState( "3", "Warming Up",          false );
+        laserStatePropertyOld_->RegisterState( "4", "Completed",           true );
+        laserStatePropertyOld_->RegisterState( "5", "Fault",               false );
+        laserStatePropertyOld_->RegisterState( "6", "Aborted",             false );
+        laserStatePropertyOld_->RegisterState( "7", "Waiting for Remote",  false );
+        laserStatePropertyOld_->RegisterState( "8", "Standby",             false );
 
     } else {
 
-        laserStateProperty_ = new LaserStateProperty( Property::String, "Laser State", laserDriver_, "l?" );
+        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Laser State", laserDriver_, "l?" );
 
-        laserStateProperty_->RegisterState( "0", "Off",                 true );
-        laserStateProperty_->RegisterState( "1", "On",                  true );
+        laserStatePropertyOld_->RegisterState( "0", "Off",                 true );
+        laserStatePropertyOld_->RegisterState( "1", "On",                  true );
     }
 
-    RegisterPublicProperty( laserStateProperty_ );
+    laserStatePropertyOld_->SetCaching( false );
+    RegisterPublicProperty( laserStatePropertyOld_ );
 }
 
 void SkyraLaser::CreateShutterProperty()
@@ -189,9 +190,9 @@ void SkyraLaser::CreateShutterProperty()
     RegisterPublicProperty( shutter_ );
 }
 
-void SkyraLaser::CreateRunModeProperty( const int line )
+void SkyraLaser::CreateRunmodeProperty( const int line )
 {
-    EnumerationProperty* property = new EnumerationProperty( MakeLineName( line ) + " Run Mode", laserDriver_, MakeLineCommand( "gam?", line ) );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( MakeLineName( line ) + " Runmode", laserDriver_, MakeLineCommand( "gam?", line ) );
     property->SetCaching( false );
 
     property->RegisterEnumerationItem( "0", MakeLineCommand( "ecc", line ), EnumerationItem_RunMode_ConstantCurrent );
@@ -203,7 +204,7 @@ void SkyraLaser::CreateRunModeProperty( const int line )
 
 void SkyraLaser::CreateModulationCurrentLowSetpointProperty( const int line )
 {
-    MutableDeviceProperty* property = new NumericProperty<double>( MakeLineName( line ) + " Modulation Low Current Setpoint [" + currentUnit_ + "]",
+    MutableDeviceProperty* property = new MutableNumericProperty<double>( MakeLineName( line ) + " Modulation Low Current Setpoint [" + currentUnit_ + "]",
         laserDriver_, MakeLineCommand( "glth?", line ), MakeLineCommand( "slth", line ), 0.0f, MaxCurrentSetpoint( line ) );
 
     RegisterPublicProperty( property );
@@ -211,7 +212,7 @@ void SkyraLaser::CreateModulationCurrentLowSetpointProperty( const int line )
 
 void SkyraLaser::CreateModulationCurrentHighSetpointProperty( const int line )
 {
-    MutableDeviceProperty* property = new NumericProperty<double>( MakeLineName( line ) + " Modulation High Current Setpoint [" + currentUnit_ + "]",
+    MutableDeviceProperty* property = new MutableNumericProperty<double>( MakeLineName( line ) + " Modulation High Current Setpoint [" + currentUnit_ + "]",
         laserDriver_, MakeLineCommand( "gmc?", line ), MakeLineCommand( "smc", line ), 0.0f, MaxCurrentSetpoint( line ) );
 
     RegisterPublicProperty( property );
@@ -231,10 +232,10 @@ void SkyraLaser::CreateLineSpecificProperties( const int line )
 {
     CreateLineActivationProperty( line );
     CreateWavelengthProperty( line );
-    CreateRunModeProperty( line );
-    CreatePowerSetpointProperty( line );
+    CreateRunmodeProperty( line );
+    CreateCpPowerSetpointProperty( line );
     CreatePowerReadingProperty( line );
-    CreateCurrentSetpointProperty( line );
+    CreateCcCurrentSetpointProperty( line );
     CreateCurrentReadingProperty( line );
     CreateModulationCurrentHighSetpointProperty( line );
     CreateAnalogModulationEnabledProperty( line );

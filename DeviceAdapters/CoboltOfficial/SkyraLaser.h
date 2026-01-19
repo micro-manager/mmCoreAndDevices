@@ -58,9 +58,9 @@ protected:
 
     void CreateLineActivationProperty( const int line );
     void CreateWavelengthProperty( const int line );
-    void CreateCurrentSetpointProperty( const int line );
+    void CreateCcCurrentSetpointProperty( const int line );
     void CreateCurrentReadingProperty( const int line );
-    void CreatePowerSetpointProperty( const int line );
+    void CreateCpPowerSetpointProperty( const int line );
     void CreatePowerReadingProperty( const int line );
     void CreateDigitalModulationEnabledProperty( const int line );
     void CreateAnalogModulationEnabledProperty( const int line );
@@ -68,7 +68,7 @@ protected:
     void CreateLaserStateProperty();
 
     void CreateShutterProperty();
-    void CreateRunModeProperty( const int line );
+    void CreateRunmodeProperty( const int line );
 
     void CreateModulationCurrentLowSetpointProperty( const int line );
     void CreateModulationCurrentHighSetpointProperty( const int line );

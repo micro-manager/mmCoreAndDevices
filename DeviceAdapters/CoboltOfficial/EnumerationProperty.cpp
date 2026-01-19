@@ -39,49 +39,56 @@
 
 NAMESPACE_COBOLT_BEGIN
 
-EnumerationProperty::EnumerationProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand ) :
-    MutableDeviceProperty( Property::String, name, laserDriver, getCommand )
-{}
+EnumerationProperty::EnumerationProperty( const std::string& name, LaserDriver* laserDriver, const std::string& commandName ) :
+    MutableDeviceProperty( Property::Stereotype::String, name, laserDriver, commandName + "?" ),
+    commandName_( commandName )
+{
+    std::string response;
+    laserDriver_->SendCommand( commandName + "? options", &response );
+
+    const char* cstr = response.c_str();
+    do {
+        if ( *cstr == ' ' ) {
+            continue;
+        }
+
+        const char* begin = cstr;
+
+        while ( *cstr != ',' && *cstr ) {
+            cstr++;
+        }
+
+        enumerationItems_.push_back( std::string( begin, cstr ) );
+
+    } while ( *cstr++ != 0 );
+}
 
 int EnumerationProperty::IntroduceToGuiEnvironment( GuiEnvironment* environment )
 {
-    for ( enumeration_items_t::const_iterator enumerationItem = enumerationItems_.begin();
+    for ( std::vector<std::string>::const_iterator enumerationItem = enumerationItems_.begin();
           enumerationItem != enumerationItems_.end();
           enumerationItem++ ) {
 
-        const int returnCode = environment->RegisterAllowedGuiPropertyValue( GetName(), enumerationItem->name );
+        const int returnCode = environment->RegisterAllowedGuiPropertyValue( GetName(), *enumerationItem );
         if ( returnCode != return_code::ok ) {
             return returnCode;
         }
 
         Logger::Instance()->LogMessage( "EnumerationProperty[ " + GetName() + " ]::IntroduceToGuiEnvironment(): Registered valid value '" +
-            enumerationItem->name + "' in GUI.", true );
+            *enumerationItem + "' in GUI.", true );
     }
 
     return return_code::ok;
 }
 
-void EnumerationProperty::RegisterEnumerationItem( const std::string& deviceValue, const std::string& setCommand, const std::string& name )
-{
-    Logger::Instance()->LogMessage( "EnumerationProperty[ " + GetName() + " ]::RegisterEnumerationItem( { '" + 
-        deviceValue + "' , '" + setCommand + "', '" + name + "' } )", true );
-
-    EnumerationItem enumerationItem = { deviceValue, setCommand, name };
-
-    enumerationItems_.push_back( enumerationItem );
-}
-
 int EnumerationProperty::GetValue( std::string& string ) const
 {
-    std::string deviceValue;
-    Parent::GetValue( deviceValue );
+    Parent::GetValue( string );
 
-    string = ResolveEnumerationItem( deviceValue );
-    
-    if ( string == "" ) {
+    if ( string == "<undefined>" ) {
 
         SetToUnknownValue( string );
-        Logger::Instance()->LogError( "EnumerationProperty[" + GetName() + "]::GetValue( ... ): No matching GUI value found for command value '" + deviceValue + "'" );
+        Logger::Instance()->LogError( "EnumerationProperty[" + GetName() + "]::GetValue( ... ): Got '<undefined>' as a value" );
         return return_code::error; // Not 'invalid_value', as the cause is not the user.
     }
 
@@ -90,12 +97,12 @@ int EnumerationProperty::GetValue( std::string& string ) const
 
 int EnumerationProperty::SetValue( const std::string& enumerationItemName )
 {
-    for ( enumeration_items_t::const_iterator enumerationItem = enumerationItems_.begin();
+    for ( std::vector<std::string>::const_iterator enumerationItem = enumerationItems_.begin();
           enumerationItem != enumerationItems_.end();
           enumerationItem++ ) {
 
-        if ( enumerationItemName == enumerationItem->name ) {
-            return laserDriver_->SendCommand( enumerationItem->setCommand );
+        if ( enumerationItemName == *enumerationItem ) {
+            return laserDriver_->SendCommand( commandName_ + " " + enumerationItemName );
         }
     }
 
@@ -105,44 +112,16 @@ int EnumerationProperty::SetValue( const std::string& enumerationItemName )
 
 bool EnumerationProperty::IsValidValue( const std::string& enumerationItemName )
 {
-    return ( ResolveDeviceValue( enumerationItemName ) != "" );
-}
-
-/**
- * \brief Translates value in MM GUI to value on device. Returns empty string if resolving failed.
- */
-std::string EnumerationProperty::ResolveDeviceValue( const std::string& guiValue ) const
-{
-    for ( enumeration_items_t::const_iterator enumerationItem = enumerationItems_.begin();
+    for ( std::vector<std::string>::const_iterator enumerationItem = enumerationItems_.begin();
         enumerationItem != enumerationItems_.end();
         enumerationItem++ ) {
 
-        if ( guiValue == enumerationItem->name ) {
-            return enumerationItem->deviceValue;
+        if ( enumerationItemName == *enumerationItem ) {
+            return true;
         }
     }
 
-    return "";
-}
-
-/**
- * \brief Translates value on device to value in MM GUI. Returns empty string if resolving failed.
- */
-std::string EnumerationProperty::ResolveEnumerationItem( const std::string& deviceValue ) const
-{
-    std::string enumerationItemName;
-
-    for ( enumeration_items_t::const_iterator enumerationItem = enumerationItems_.begin();
-        enumerationItem != enumerationItems_.end();
-        enumerationItem++ ) {
-
-        if ( enumerationItem->deviceValue == deviceValue ) {
-            enumerationItemName = enumerationItem->name;
-            break;
-        }
-    }
-
-    return enumerationItemName;
+    return false;
 }
 
 NAMESPACE_COBOLT_END

@@ -54,7 +54,7 @@ public:
 protected: 
     
     void CreateLaserStateProperty();
-    void CreateRunModeProperty();
+    void CreateRunmodeProperty();
 };
 
 NAMESPACE_COBOLT_END

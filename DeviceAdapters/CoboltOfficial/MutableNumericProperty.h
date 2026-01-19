@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       ImmutableEnumerationProperty.cpp
+// FILE:       Property.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,60 +34,61 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
 //
 
-#include "ImmutableEnumerationProperty.h"
-#include "Laser.h"
+#ifndef __COBOLT__MUTABLE_NUMERIC_PROPERTY_H
+#define __COBOLT__MUTABLE_NUMERIC_PROPERTY_H
+
+#include "MutableDeviceProperty.h"
 
 NAMESPACE_COBOLT_BEGIN
- 
-ImmutableEnumerationProperty::ImmutableEnumerationProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand ) :
-    DeviceProperty( Property::Stereotype::String, name, laserDriver, getCommand )
-{}
 
-void ImmutableEnumerationProperty::RegisterEnumerationItem( const std::string& deviceValue, const std::string& name )
+template <typename T>
+class MutableNumericProperty : public MutableDeviceProperty
 {
-    Logger::Instance()->LogMessage( "ImmutableEnumerationProperty[ " + GetName() + " ]::RegisterEnumerationItem( { '" + 
-        deviceValue + "', '" + name + "' } )", true );
+public:
 
-    EnumerationItem enumerationItem = { deviceValue, name };
+    MutableNumericProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand, const std::string& setCommandBase, const T min, const T max ) :
+        MutableDeviceProperty( ResolveStereotype<T>(), name, laserDriver, getCommand ),
+        setCommandBase_( setCommandBase ),
+        min_( min ),
+        max_( max )
+    {}
 
-    enumerationItems_.push_back( enumerationItem );
-}
-
-int ImmutableEnumerationProperty::GetValue( std::string& string ) const
-{
-    std::string deviceValue;
-    Parent::GetValue( deviceValue );
-
-    string = ResolveEnumerationItem( deviceValue );
-    
-    if ( string == "" ) {
-
-        SetToUnknownValue( string );
-        Logger::Instance()->LogError( "ImmutableEnumerationProperty[" + GetName() + "]::GetValue( ... ): No matching GUI value found for command value '" + deviceValue + "'" );
-        return return_code::error;
+    virtual int IntroduceToGuiEnvironment( GuiEnvironment* environment )
+    {
+        return environment->RegisterAllowedGuiPropertyRange( GetName(), min_, max_ );
     }
 
-    return return_code::ok;
-}
+    virtual int SetValue( const std::string& value )
+    {
+        if ( !IsValidValue( value ) ) {
 
-/**
- * \brief Translates value on device to value in MM GUI. Returns empty string if resolving failed.
- */
-std::string ImmutableEnumerationProperty::ResolveEnumerationItem( const std::string& deviceValue ) const
-{
-    std::string enumerationItemName;
-
-    for ( enumeration_items_t::const_iterator enumerationItem = enumerationItems_.begin();
-        enumerationItem != enumerationItems_.end();
-        enumerationItem++ ) {
-
-        if ( enumerationItem->deviceValue == deviceValue ) {
-            enumerationItemName = enumerationItem->name;
-            break;
+            Logger::Instance()->LogError( "MutableNumericProperty[" + GetName() + "]::SetValue( ... ): Invalid value '" + value + "'" );
+            return return_code::invalid_value;
         }
+
+        return laserDriver_->SendCommand( setCommandBase_ + " " + value );
+    }
+    
+protected:
+
+    bool IsValidValue( const std::string& value ) const
+    {
+        T numericValue = (T) atof( value.c_str() );
+        return ( min_ <= numericValue && numericValue <= max_ );
     }
 
-    return enumerationItemName;
-}
+private:
+
+    template <typename S>   static Property::Stereotype ResolveStereotype();
+    template <>             static Property::Stereotype ResolveStereotype<int>() { return Property::Stereotype::Integer; }
+    template <>             static Property::Stereotype ResolveStereotype<double>() { return Property::Stereotype::Float; }
+    
+    std::string setCommandBase_;
+
+    T min_;
+    T max_;
+}; 
 
 NAMESPACE_COBOLT_END
+
+#endif // #ifndef __COBOLT__MUTABLE_NUMERIC_PROPERTY_H

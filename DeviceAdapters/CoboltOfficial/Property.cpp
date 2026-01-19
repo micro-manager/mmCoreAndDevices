@@ -114,9 +114,9 @@ void Property::SetToUnknownValue( std::string& string ) const
 void Property::SetToUnknownValue( GuiProperty& guiProperty ) const
 {
     switch ( GetStereotype() ) {
-        case Float:   guiProperty.Set( "0" ); break;
-        case Integer: guiProperty.Set( "0" ); break;
-        case String:  guiProperty.Set( "Unknown" ); break;
+        case Stereotype::Float:   guiProperty.Set( "0" ); break;
+        case Stereotype::Integer: guiProperty.Set( "0" ); break;
+        case Stereotype::String:  guiProperty.Set( "Unknown" ); break;
     }
 }
 

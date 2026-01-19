@@ -356,9 +356,9 @@ MM::PropertyType CoboltOfficial::ResolvePropertyType( const cobolt::Property::St
 {
     switch ( stereotype ) {
 
-        case Property::Float:   return MM::Float;
-        case Property::Integer: return MM::Integer;
-        case Property::String:  return MM::String;
+        case Property::Stereotype::Float:   return MM::Float;
+        case Property::Stereotype::Integer: return MM::Integer;
+        case Property::Stereotype::String:  return MM::String;
     }
 
     return MM::Undef;

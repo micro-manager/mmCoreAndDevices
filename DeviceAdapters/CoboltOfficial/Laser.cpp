@@ -35,6 +35,7 @@
 //
 
 #include <assert.h>
+#include <algorithm>
 #include "Laser.h"
 #include "Logger.h"
 
@@ -44,8 +45,8 @@
 #include "ImmutableEnumerationProperty.h"
 #include "LaserStateProperty.h"
 #include "MutableDeviceProperty.h"
-#include "EnumerationProperty.h"
-#include "NumericProperty.h"
+#include "CustomizableEnumerationProperty.h"
+#include "MutableNumericProperty.h"
 #include "LaserShutterProperty.h"
 #include "NoShutterCommandLegacyFix.h"
 
@@ -74,7 +75,7 @@ Laser::Laser( const std::string& name, LaserDriver* driver ) :
     laserDriver_( driver ),
     currentUnit_( "?" ),
     powerUnit_( "?" ),
-    laserStateProperty_( NULL ),
+    laserStatePropertyOld_( NULL ),
     laserOnOffProperty_( NULL ),
     shutter_( NULL )
 {
@@ -142,9 +143,9 @@ bool Laser::IsShutterEnabled() const
         // Always enabled if open:
         return ( laserOnOffProperty_->GetValue() == EnumerationItem_On );
 
-    } else if ( laserStateProperty_ != NULL ) {
+    } else if ( laserStatePropertyOld_ != NULL ) {
         
-        return ( laserStateProperty_->AllowsShutter() );
+        return ( laserStatePropertyOld_->AllowsShutter() );
     }
     
     Logger::Instance()->LogError( "Laser::IsShutterEnabled(): Expected properties were not initialized" );
@@ -182,6 +183,14 @@ Laser::PropertyIterator Laser::GetPropertyIteratorEnd()
     return properties_.end();
 }
 
+void Laser::CreatePropertyGroup( const std::string& groupName )
+{
+    std::string groupNameUpper = groupName;
+    std::transform( groupNameUpper.begin(), groupNameUpper.end(), groupNameUpper.begin(), ::toupper );
+    RegisterPublicProperty( new StaticStringProperty( " ", " " ));
+    RegisterPublicProperty( new StaticStringProperty( "--- " + groupNameUpper + " ---", " "));
+}
+
 void Laser::CreateNameProperty()
 {
     RegisterPublicProperty( new StaticStringProperty( "Name", this->GetName() ) );
@@ -189,7 +198,7 @@ void Laser::CreateNameProperty()
 
 void Laser::CreateModelProperty()
 {
-    RegisterPublicProperty( new DeviceProperty( Property::String, "Model", laserDriver_, "glm?") );
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Model", laserDriver_, "glm?") );
 }
 
 void Laser::CreateWavelengthProperty( const std::string& wavelength)
@@ -209,12 +218,12 @@ void Laser::CreateKeyswitchProperty()
 
 void Laser::CreateSerialNumberProperty()
 {
-    RegisterPublicProperty( new DeviceProperty( Property::String, "Serial Number", laserDriver_, "gsn?") );
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Serial Number", laserDriver_, "gsn?") );
 }
 
 void Laser::CreateFirmwareVersionProperty()
 {
-    RegisterPublicProperty( new DeviceProperty( Property::String, "Firmware Version", laserDriver_, "gfv?") );
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Firmware Version", laserDriver_, "gfv?") );
 }
 
 void Laser::CreateAdapterVersionProperty()
@@ -224,20 +233,20 @@ void Laser::CreateAdapterVersionProperty()
 
 void Laser::CreateOperatingHoursProperty()
 {
-    RegisterPublicProperty( new DeviceProperty( Property::String, "Operating Hours", laserDriver_, "hrs?") );
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Operating Hours", laserDriver_, "hrs?") );
 }
 
-void Laser::CreateCurrentSetpointProperty()
+void Laser::CreateCcCurrentSetpointProperty()
 {
-    CreateCurrentSetpointProperty( "gdsn?", "sdsn" );
+    CreateCcCurrentSetpointProperty( "gdsn?", "sdsn" );
 }
 
-void Laser::CreateCurrentSetpointProperty( const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand )
+void Laser::CreateCcCurrentSetpointProperty( const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand )
 {
     MutableDeviceProperty* property;
    
     if ( IsShutterCommandSupported() || !IsInCdrhMode() ) {
-        property = new NumericProperty<double>( "Current Setpoint [" + currentUnit_ + "]", laserDriver_, "glc?", "slc", 0.0f, MaxCurrentSetpoint() );
+        property = new MutableNumericProperty<double>( "Current Setpoint [" + currentUnit_ + "]", laserDriver_, "glc?", "slc", 0.0f, MaxCurrentSetpoint() );
     } else {
         property = new legacy::no_shutter_command::LaserCurrentProperty(
             "Current Setpoint [" + currentUnit_ + "]",
@@ -256,27 +265,27 @@ void Laser::CreateCurrentSetpointProperty( const std::string& getPersistedDataCo
 
 void Laser::CreateCurrentReadingProperty()
 {
-    DeviceProperty* property = new DeviceProperty( Property::Float, "Measured Current [" + currentUnit_ + "]", laserDriver_, "i?" );
+    DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Current Reading [" + currentUnit_ + "]", laserDriver_, "i?" );
     property->SetCaching( false );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreatePowerSetpointProperty()
+void Laser::CreateCpPowerSetpointProperty()
 {
-    MutableDeviceProperty* property = new NumericProperty<double>( "Power Setpoint [" + powerUnit_ + "]", laserDriver_, "glp?", "slp", 0.0f, MaxPowerSetpoint() );
+    MutableDeviceProperty* property = new MutableNumericProperty<double>( "Power Setpoint [" + powerUnit_ + "]", laserDriver_, "glp?", "slp", 0.0f, MaxPowerSetpoint() );
     RegisterPublicProperty( property );
 }
 
 void Laser::CreatePowerReadingProperty()
 {
-    DeviceProperty* property = new DeviceProperty( Property::String, "Power Reading [" + powerUnit_ + "]", laserDriver_, "pa?" );
+    DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Power Reading [" + powerUnit_ + "]", laserDriver_, "pa?" );
     property->SetCaching( false );
     RegisterPublicProperty( property );
 }
 
 void Laser::CreateLaserOnOffProperty()
 {
-    EnumerationProperty* property = new EnumerationProperty( "Laser Status", laserDriver_, "l?" );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Laser Status", laserDriver_, "l?" );
 
     property->RegisterEnumerationItem( "0", "abort", EnumerationItem_Off );
     property->RegisterEnumerationItem( "1", "restart", EnumerationItem_On );
@@ -304,37 +313,37 @@ void Laser::CreateShutterProperty()
 
 void Laser::CreateDigitalModulationProperty()
 {
-    EnumerationProperty* property = new EnumerationProperty( "Digital Modulation", laserDriver_, "gdmes?" );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Digital Modulation", laserDriver_, "gdmes?" );
     property->RegisterEnumerationItem( "0", "sdmes 0", EnumerationItem_Disabled );
     property->RegisterEnumerationItem( "1", "sdmes 1", EnumerationItem_Enabled );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateAnalogModulationFlagProperty()
+void Laser::CreateAnalogModulationProperty()
 {
-    EnumerationProperty* property = new EnumerationProperty( "Analog Modulation", laserDriver_,  "games?" );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Modulation", laserDriver_,  "games?" );
     property->RegisterEnumerationItem( "0", "sames 0", EnumerationItem_Disabled );
     property->RegisterEnumerationItem( "1", "sames 1", EnumerationItem_Enabled );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateModulationPowerSetpointProperty()
+void Laser::CreatePmPowerSetpointProperty()
 {
     std::string maxModulationPowerSetpointResponse;
     if ( laserDriver_->SendCommand( "gmlp?", &maxModulationPowerSetpointResponse ) != return_code::ok ) {
 
-        Logger::Instance()->LogError( "Laser::CreatePowerSetpointProperty(): Failed to retrieve max power sepoint" );
+        Logger::Instance()->LogError( "Laser::CreateCpPowerSetpointProperty(): Failed to retrieve max power sepoint" );
         return;
     }
     
     const double maxModulationPowerSetpoint = atof( maxModulationPowerSetpointResponse.c_str() );
     
-    RegisterPublicProperty( new NumericProperty<double>( "Modulation Power Setpoint", laserDriver_, "glmp?", "slmp", 0, maxModulationPowerSetpoint ) );
+    RegisterPublicProperty( new MutableNumericProperty<double>( "Modulation Power Setpoint", laserDriver_, "glmp?", "slmp", 0, maxModulationPowerSetpoint ) );
 }
 
 void Laser::CreateAnalogImpedanceProperty()
 {
-    EnumerationProperty* property = new EnumerationProperty( "Analog Impedance", laserDriver_, "galis?" );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Impedance", laserDriver_, "galis?" );
     
     property->RegisterEnumerationItem( "0", "salis 0", "1 kOhm" );
     property->RegisterEnumerationItem( "1", "salis 1", "50 Ohm" );
@@ -345,20 +354,20 @@ void Laser::CreateAnalogImpedanceProperty()
 void Laser::CreateModulationCurrentLowSetpointProperty()
 {
     MutableDeviceProperty* property;
-    property = new NumericProperty<double>( "Modulation Low Current Setpoint [" + currentUnit_ + "]", laserDriver_, "glth?", "slth", 0.0f, MaxCurrentSetpoint() );
+    property = new MutableNumericProperty<double>( "Modulation Low Current Setpoint [" + currentUnit_ + "]", laserDriver_, "glth?", "slth", 0.0f, MaxCurrentSetpoint() );
     RegisterPublicProperty( property );
 }
 
 void Laser::CreateModulationCurrentHighSetpointProperty()
 {
     MutableDeviceProperty* property;
-    property = new NumericProperty<double>( "Modulation Low Current Setpoint [" + currentUnit_ + "]", laserDriver_, "gmc?", "smc", 0.0f, MaxCurrentSetpoint() );
+    property = new MutableNumericProperty<double>( "Modulation Low Current Setpoint [" + currentUnit_ + "]", laserDriver_, "gmc?", "smc", 0.0f, MaxCurrentSetpoint() );
     RegisterPublicProperty( property );
 }
 
 void Laser::CreateModulationHighPowerSetpointProperty()
 {
-    MutableDeviceProperty* property = new NumericProperty<double>( "Modulation Power Setpoint [" + powerUnit_ + "]", laserDriver_, "glmp?", "slmp", 0.0f, MaxPowerSetpoint() );
+    MutableDeviceProperty* property = new MutableNumericProperty<double>( "Modulation Power Setpoint [" + powerUnit_ + "]", laserDriver_, "glmp?", "slmp", 0.0f, MaxPowerSetpoint() );
     RegisterPublicProperty( property );
 }
 

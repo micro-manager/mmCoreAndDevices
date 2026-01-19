@@ -37,9 +37,9 @@
 #ifndef __COBOLT__NO_SHUTTER_COMMAND_LEGACY_FIX_H
 #define __COBOLT__NO_SHUTTER_COMMAND_LEGACY_FIX_H
 
-#include "EnumerationProperty.h"
+#include "CustomizableEnumerationProperty.h"
 #include "LaserShutterProperty.h"
-#include "NumericProperty.h"
+#include "MutableNumericProperty.h"
 #include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
@@ -171,9 +171,9 @@ namespace legacy
             const std::string _setPersistedDataCommand;
         };
 
-        class LaserCurrentProperty : public NumericProperty<double>
+        class LaserCurrentProperty : public MutableNumericProperty<double>
         {
-            typedef NumericProperty<double> Parent;
+            typedef MutableNumericProperty<double> Parent;
 
         public:
 
@@ -188,7 +188,7 @@ namespace legacy
                 const std::string& getPersistedDataCommand,
                 const std::string& setPersistedDataCommand
             ) :
-                NumericProperty<double>( name, laserDriver, getCommand, setCommandBase, min, max ),
+                MutableNumericProperty<double>( name, laserDriver, getCommand, setCommandBase, min, max ),
                 laser_( laser ),
                 laserStatePersistence_( laserDriver, getPersistedDataCommand, setPersistedDataCommand )
             {}
@@ -233,9 +233,9 @@ namespace legacy
             PersistedLaserState laserStatePersistence_;
         };
          
-        class LaserRunModeProperty : public EnumerationProperty
+        class LaserRunModeProperty : public CustomizableEnumerationProperty
         {
-            typedef EnumerationProperty Parent;
+            typedef CustomizableEnumerationProperty Parent;
 
         public:
             
@@ -247,7 +247,7 @@ namespace legacy
                 const std::string& getPersistedDataCommand,
                 const std::string& setPersistedDataCommand
             ) :
-                EnumerationProperty( name, laserDriver, getCommand ),
+                CustomizableEnumerationProperty( name, laserDriver, getCommand ),
                 laser_( laser ),
                 laserStatePersistence_( laserDriver, getPersistedDataCommand, setPersistedDataCommand )
             {
@@ -332,7 +332,7 @@ namespace legacy
 
         class LaserShutterPropertyOem : public cobolt::LaserShutterProperty
         {
-            typedef EnumerationProperty Parent;
+            typedef CustomizableEnumerationProperty Parent;
 
         public:
 
@@ -358,9 +358,9 @@ namespace legacy
 
         namespace skyra
         {
-            class LineActivationProperty : public EnumerationProperty
+            class LineActivationProperty : public CustomizableEnumerationProperty
             {
-                typedef EnumerationProperty Parent;
+                typedef CustomizableEnumerationProperty Parent;
 
             public:
 
@@ -368,7 +368,7 @@ namespace legacy
                 static const std::string Value_Inactive;
 
                 LineActivationProperty( const int line, const std::string& name, LaserDriver* laserDriver, Laser* laser ) :
-                    EnumerationProperty( name, laserDriver, std::to_string( (long long) line ) + "gla?" ),
+                    CustomizableEnumerationProperty( name, laserDriver, std::to_string( (long long) line ) + "gla?" ),
                     userValue_( "" ),
                     laser_( laser )
                 {

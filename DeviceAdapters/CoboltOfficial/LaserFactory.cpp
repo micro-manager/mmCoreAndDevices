@@ -40,8 +40,7 @@
 
 #include "LaserDriver.h"
 
-#include "Dpl06Laser.h"
-#include "Mld06Laser.h"
+#include "LysaLaser.h"
 #include "OldDpl06Laser.h"
 #include "OldMld06Laser.h"
 #include "Gen5Laser.h"
@@ -52,8 +51,8 @@
 //#include "ImmutableEnumerationProperty.h"
 //#include "LaserStateProperty.h"
 //#include "MutableDeviceProperty.h"
-//#include "EnumerationProperty.h"
-//#include "NumericProperty.h"
+//#include "CustomizableEnumerationProperty.h"
+//#include "MutableNumericProperty.h"
 //#include "LaserShutterProperty.h"
 //#include "NoShutterCommandLegacyFix.h"
 
@@ -63,7 +62,7 @@ using namespace cobolt;
 Laser* LaserFactory::Create( LaserDriver* driver )
 {
     assert( driver != NULL );
-    
+
     std::string firmwareVersion;
     if ( driver->SendCommand( "gfv?", &firmwareVersion ) != return_code::ok ) {
         Logger::Instance()->LogMessage( "Failed to retrieve firmware number (gfv?).", false );
@@ -72,60 +71,60 @@ Laser* LaserFactory::Create( LaserDriver* driver )
 
     std::string modelString;
     if ( driver->SendCommand( "glm?", &modelString ) != return_code::ok ) {
-        Logger::Instance()->LogMessage("Failed to retrieve model number (glm?).", false );
+        Logger::Instance()->LogMessage( "Failed to retrieve model number (glm?).", false );
         return NULL;
     }
-    
+
     Logger::Instance()->LogMessage( "Detected laser with firmware version '" + firmwareVersion + "' and model number '" + modelString + "'.", false );
 
     std::vector<std::string> modelTokens;
     DecomposeModelString( modelString, modelTokens );
     std::string wavelength = "Unknown";
-    
+
     if ( modelTokens.size() > 0 ) {
-        wavelength = std::to_string( (long long) atoi( modelTokens[ 0 ].c_str() ) ); // TODO: Verify this, modelTokens[ 0 ] seems to use wrong index for wavelength...
+        wavelength = std::to_string( (long long)atoi( modelTokens[ 0 ].c_str() ) ); // TODO: Verify this, modelTokens[ 0 ] seems to use wrong index for wavelength...
     }
 
     Laser* laser;
 
-    if ( firmwareVersion.find("/1005.") != std::string::npos || // Old fw version format
-         firmwareVersion.find("BOB-1005") != std::string::npos ) { // New fw version format
+    if ( firmwareVersion.find( "/1005." ) != std::string::npos || // Old lysa fw version format
+         firmwareVersion.find( "BOB-1005" ) != std::string::npos ) { // New lysa fw version format
 
-        Logger::Instance()->LogMessage("Instantiating the 12V 06-DPL driver...", false);
-        laser = new Dpl06Laser( wavelength, driver );
+        Logger::Instance()->LogMessage( "Instantiating the 12V 06-DPL driver...", false );
+        laser = new LysaLaser( "06-DPL Laser", wavelength, driver);
 
-    } else if (firmwareVersion.find("/1004.") != std::string::npos || // Old fw version format
-        firmwareVersion.find("CAP-1004") != std::string::npos) { // New fw version format
+    } else if ( firmwareVersion.find( "/1004." ) != std::string::npos || // Old lysa fw version format
+                firmwareVersion.find( "CAP-1004" ) != std::string::npos ) { // New lysa fw version format
 
-        Logger::Instance()->LogMessage("Instantiating the 12V 06-MLD driver...", false);
-        laser = new Mld06Laser( LaserSeries06::Mld, wavelength, driver );
+        Logger::Instance()->LogMessage( "Instantiating the 12V 06-MLD driver...", false );
+        laser = new LysaLaser( "06-MLD Laser", wavelength, driver );
 
-    } else if ( firmwareVersion.find("IMP-1011") != std::string::npos) {
+    } else if ( firmwareVersion.find( "IMP-1011" ) != std::string::npos ) {
 
-        Logger::Instance()->LogMessage("Instantiating the 12V 06-MLDM driver...", false);
-        laser = new Mld06Laser( LaserSeries06::MldM, wavelength, driver );
+        Logger::Instance()->LogMessage( "Instantiating the 12V 06-MLDM driver...", false );
+        laser = new LysaLaser( "06-MLDM Laser", wavelength, driver );
 
-    } else if ( modelString.find("-06-51-") != std::string::npos ||
-                modelString.find("-06-53-") != std::string::npos ||
-                modelString.find("-06-57-") != std::string::npos ||
-                modelString.find("-06-91-") != std::string::npos ||
-                modelString.find("-06-93-") != std::string::npos ||
-                modelString.find("-06-97-") != std::string::npos ) {
+    } else if ( modelString.find( "-06-51-" ) != std::string::npos ||
+        modelString.find( "-06-53-" ) != std::string::npos ||
+        modelString.find( "-06-57-" ) != std::string::npos ||
+        modelString.find( "-06-91-" ) != std::string::npos ||
+        modelString.find( "-06-93-" ) != std::string::npos ||
+        modelString.find( "-06-97-" ) != std::string::npos ) {
 
         Logger::Instance()->LogMessage( "Instantiating the 5V 06-DPL driver...", false );
         laser = new OldDpl06Laser( wavelength, driver );
 
     } else if ( modelString.find( "-06-01-" ) != std::string::npos ||
-                modelString.find( "-06-03-" ) != std::string::npos ) {
-        
+        modelString.find( "-06-03-" ) != std::string::npos ) {
+
         Logger::Instance()->LogMessage( "Instantiating the 5V 06-MLD driver...", false );
         laser = new OldMld06Laser( "06-MLD", driver );
 
     } else if ( modelString.find( "-05-01-" ) != std::string::npos ||
-                 modelString.find( "-05-03-" ) != std::string::npos ||
-                 modelString.find( "-05-41-" ) != std::string::npos ) {
+        modelString.find( "-05-03-" ) != std::string::npos ||
+        modelString.find( "-05-41-" ) != std::string::npos ) {
 
-        Logger::Instance()->LogMessage("Instantiating the 05-laser driver...", false);
+        Logger::Instance()->LogMessage( "Instantiating the 05-laser driver...", false );
         laser = new Gen5Laser( wavelength, driver );
 
     } else if ( firmwareVersion.find( "9.001" ) != std::string::npos ) {
@@ -138,7 +137,7 @@ Laser* LaserFactory::Create( LaserDriver* driver )
 
             submodelString = "";
 
-            if ( driver->SendCommand( std::to_string( (long long) i + 1 ) + "glm?", &submodelString ) != return_code::ok ) {
+            if ( driver->SendCommand( std::to_string( (long long)i + 1 ) + "glm?", &submodelString ) != return_code::ok ) {
                 return NULL;
             }
 
@@ -157,19 +156,19 @@ Laser* LaserFactory::Create( LaserDriver* driver )
 
     } else {
 
-        Logger::Instance()->LogMessage("Unknown laser, instantiating a generic driver...", false);
+        Logger::Instance()->LogMessage( "Unknown laser, instantiating a generic driver...", false );
 
         laser = new Laser( "Unknown", driver );
     }
-    
+
     Logger::Instance()->LogMessage( "Instantiated driver for laser '" + laser->GetName() + "'.", true );
-    
+
     if ( laser->IsShutterEnabled() ) {
         laser->SetShutterOpen( false );
     }
-    
+
     Property::ResetIdGenerator();
-    
+
     return laser;
 }
 

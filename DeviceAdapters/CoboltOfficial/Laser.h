@@ -68,7 +68,7 @@ public:
     void SetOn( const bool );
     void SetShutterOpen( const bool );
 
-    bool IsShutterEnabled() const;
+    virtual bool IsShutterEnabled() const;
     
     bool IsShutterOpen() const;
 
@@ -87,6 +87,8 @@ protected:
     /// ###
     /// Property Generators
 
+    void CreatePropertyGroup( const std::string& groupName );
+
     virtual void CreateNameProperty();
     virtual void CreateModelProperty();
     virtual void CreateWavelengthProperty( const std::string& wavelength );
@@ -96,18 +98,18 @@ protected:
     virtual void CreateAdapterVersionProperty();
      
     virtual void CreateOperatingHoursProperty();
-    virtual void CreateCurrentSetpointProperty();
-    virtual void CreateCurrentSetpointProperty( const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand );
+    virtual void CreateCcCurrentSetpointProperty();
+    virtual void CreateCcCurrentSetpointProperty( const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand );
     virtual void CreateCurrentReadingProperty();
-    virtual void CreatePowerSetpointProperty();
+    virtual void CreateCpPowerSetpointProperty();
     virtual void CreatePowerReadingProperty();
     
     virtual void CreateLaserOnOffProperty();
     virtual void CreateShutterProperty();
     virtual void CreateDigitalModulationProperty();
-    virtual void CreateAnalogModulationFlagProperty();
+    virtual void CreateAnalogModulationProperty();
      
-    virtual void CreateModulationPowerSetpointProperty();
+    virtual void CreatePmPowerSetpointProperty();
     virtual void CreateAnalogImpedanceProperty();
      
     virtual void CreateModulationCurrentLowSetpointProperty();
@@ -128,7 +130,7 @@ protected:
     static const std::string EnumerationItem_RunMode_ConstantPower;
     static const std::string EnumerationItem_RunMode_Modulation;
 
-    bool IsShutterCommandSupported() const;
+    virtual bool IsShutterCommandSupported() const;
     bool IsInCdrhMode() const;
 
     void RegisterPublicProperty( Property* );
@@ -145,7 +147,7 @@ protected:
     std::string currentUnit_;
     std::string powerUnit_;
 
-    LaserStateProperty* laserStateProperty_;
+    LaserStateProperty* laserStatePropertyOld_;
     MutableDeviceProperty* laserOnOffProperty_;
     LaserShutterProperty* shutter_;
 };

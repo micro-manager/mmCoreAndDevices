@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       NumericProperty.cpp
+// FILE:       MutableNumericProperty.cpp
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,7 +34,7 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
 //
 
-#include "NumericProperty.h"
+#include "MutableNumericProperty.h"
 #include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
