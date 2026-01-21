@@ -2,6 +2,7 @@
 AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS)
 deviceadapter_LTLIBRARIES = libmmgr_dal_ReflectionFocus.la
 libmmgr_dal_ReflectionFocus_la_SOURCES = \
+        ImageAnalyzers.cpp \
         ReflectionFocus.cpp \
         ReflectionFocusStage.cpp \
         ReflectionFocusModule.cpp \
