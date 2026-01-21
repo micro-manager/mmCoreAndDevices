@@ -994,6 +994,14 @@ int ReflectionFocus::SnapAndAnalyze()
       return ret;
    }
 
+   // Validate that both images have the same dimensions and depth
+   if (lightImage.Width() != darkImage.Width() ||
+       lightImage.Height() != darkImage.Height() ||
+       lightImage.Depth() != darkImage.Depth())
+   {
+      return DEVICE_ERR;  // Image dimensions don't match
+   }
+
    // Subtract darkImage from lightImage
    ImgBuffer resultImage(lightImage.Width(), lightImage.Height(), lightImage.Depth());
    const unsigned char* lightPixels = lightImage.GetPixels();
@@ -1033,9 +1041,21 @@ int ReflectionFocus::SnapAndAnalyze()
    // Default to spot 1 if no calibration data
    bool useSpot1 = true;
 
-   if (calibrationMap_.find(deviceSettings_) != calibrationMap_.end())
+   // Make a local copy of calibration data under mutex protection
+   // to avoid race conditions with property handlers
+   CalibrationData cal;
+   bool hasCalibration = false;
    {
-      CalibrationData cal = calibrationMap_[deviceSettings_];
+      std::lock_guard<std::mutex> lock(continuousFocusMutex_);
+      if (calibrationMap_.find(deviceSettings_) != calibrationMap_.end())
+      {
+         cal = calibrationMap_[deviceSettings_];
+         hasCalibration = true;
+      }
+   }
+
+   if (hasCalibration)
+   {
 
       // we refer here to higher as higher in the image, i.e. higher x or y coordinate
       bool spot1IsHigher = (x1 > x2);
@@ -1240,6 +1260,16 @@ int ReflectionFocus::PerformCalibration()
       return ret;
    }
 
+   // Validate that both images have the same dimensions and depth
+   if (lightImage.Width() != darkImage.Width() ||
+       lightImage.Height() != darkImage.Height() ||
+       lightImage.Depth() != darkImage.Depth())
+   {
+      shutter->SetOpen(false);
+      pStage->SetPositionUm(originalPos);
+      return DEVICE_ERR;  // Image dimensions don't match
+   }
+
    // Subtract darkImage from lightImage
    ImgBuffer resultImage(lightImage.Width(), lightImage.Height(), lightImage.Depth());
    const unsigned char* lightPixels = lightImage.GetPixels();
@@ -1328,6 +1358,16 @@ int ReflectionFocus::PerformCalibration()
          shutter->SetOpen(false);
          pStage->SetPositionUm(originalPos);
          return ret;
+      }
+
+      // Validate that both images have the same dimensions and depth
+      if (lightImageLoop.Width() != darkImageLoop.Width() ||
+          lightImageLoop.Height() != darkImageLoop.Height() ||
+          lightImageLoop.Depth() != darkImageLoop.Depth())
+      {
+         shutter->SetOpen(false);
+         pStage->SetPositionUm(originalPos);
+         return DEVICE_ERR;  // Image dimensions don't match
       }
 
       // Subtract darkImage from lightImage
