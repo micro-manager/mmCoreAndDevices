@@ -70,6 +70,7 @@ const char* g_PixelType_32bit = "32bit";  // floating point greyscale
 const char* g_Sine_Wave = "Artificial Waves";
 const char* g_Norm_Noise = "Noise";
 const char* g_Color_Test = "Color Test Pattern";
+const char* g_Beads = "Fluorescent Beads";
 
 const char* g_PropImposedPressure = "Imposed Pressure";
 
@@ -357,6 +358,7 @@ int CDemoCamera::Initialize()
    AddAllowedValue(propName.c_str(), g_Sine_Wave);
    AddAllowedValue(propName.c_str(), g_Norm_Noise);
    AddAllowedValue(propName.c_str(), g_Color_Test);
+   AddAllowedValue(propName.c_str(), g_Beads);
 
    // Photon Conversion Factor for Noise type camera
    pAct = new CPropertyAction(this, &CDemoCamera::OnPCF);
@@ -375,6 +377,27 @@ int CDemoCamera::Initialize()
    propName = "Photon Flux";
    CreateFloatProperty(propName.c_str(), photonFlux_, false, pAct);
    SetPropertyLimits(propName.c_str(), 2.0, 5000.0);
+
+   // Bead mode properties
+   pAct = new CPropertyAction(this, &CDemoCamera::OnBeadDensity);
+   nRet = CreateIntegerProperty("BeadDensity", beadDensity_, false, pAct);
+   assert(nRet == DEVICE_OK);
+   SetPropertyLimits("BeadDensity", 10, 500);
+   
+   pAct = new CPropertyAction(this, &CDemoCamera::OnBeadSize);
+   nRet = CreateFloatProperty("BeadSize", beadSize_, false, pAct);
+   assert(nRet == DEVICE_OK);
+   SetPropertyLimits("BeadSize", 1.0, 10.0);
+   
+   pAct = new CPropertyAction(this, &CDemoCamera::OnBeadBrightness);
+   nRet = CreateFloatProperty("BeadBrightness", beadBrightness_, false, pAct);
+   assert(nRet == DEVICE_OK);
+   SetPropertyLimits("BeadBrightness", 0.125, 8.0);
+   
+   pAct = new CPropertyAction(this, &CDemoCamera::OnBlurRate);
+   nRet = CreateFloatProperty("BlurRate", blurRate_, false, pAct);
+   assert(nRet == DEVICE_OK);
+   SetPropertyLimits("BlurRate", 0.1, 1.0);
 
    // Simulate application crash
    pAct = new CPropertyAction(this, &CDemoCamera::OnCrash);
@@ -571,6 +594,10 @@ int CDemoCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
       roiX_ = x;
       roiY_ = y;
    }
+   
+   // Regenerate beads for new ROI
+   beadsGenerated_ = false;
+   
    return DEVICE_OK;
 }
 
@@ -1726,6 +1753,9 @@ int CDemoCamera::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
          case MODE_COLOR_TEST:
             val = g_Color_Test;
             break;
+         case MODE_BEADS:
+            val = g_Beads;
+            break;
          default:
             val = g_Sine_Wave;
             break;
@@ -1742,6 +1772,11 @@ int CDemoCamera::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       else if (val == g_Color_Test)
       {
          mode_ = MODE_COLOR_TEST;
+      }
+      else if (val == g_Beads)
+      {
+         mode_ = MODE_BEADS;
+         beadsGenerated_ = false;  // Regenerate beads for new mode
       }
       else
       {
@@ -1865,6 +1900,69 @@ int CDemoCamera::ResizeImageBuffer()
 	}
 
    img_.Resize(cameraCCDXSize_/binSize_, cameraCCDYSize_/binSize_, byteDepth);
+   
+   // Regenerate beads when image size changes
+   beadsGenerated_ = false;
+   
+   return DEVICE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Bead mode property handlers
+///////////////////////////////////////////////////////////////////////////////
+
+int CDemoCamera::OnBeadDensity(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set((long)beadDensity_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      long val;
+      pProp->Get(val);
+      beadDensity_ = (int)val;
+      beadsGenerated_ = false;  // Regenerate beads
+   }
+   return DEVICE_OK;
+}
+
+int CDemoCamera::OnBeadSize(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(beadSize_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(beadSize_);
+   }
+   return DEVICE_OK;
+}
+
+int CDemoCamera::OnBeadBrightness(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(beadBrightness_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(beadBrightness_);
+   }
+   return DEVICE_OK;
+}
+
+int CDemoCamera::OnBlurRate(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(blurRate_);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      pProp->Get(blurRate_);
+   }
    return DEVICE_OK;
 }
 
