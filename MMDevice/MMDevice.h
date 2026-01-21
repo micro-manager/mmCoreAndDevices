@@ -608,7 +608,9 @@ namespace MM {
       * updates about their position.  Some adapters do so, others do not,
       * in which case the UI code should use polling.  This function signals whether
       * the device adapters uses callbacks, so that the UI knows it does not need
-      * to poll this device
+      * to poll this device. It is best practice to not change the result of this
+      * function (i.e. use a const value) as the UI will query the function 
+      * only once.
       */
       virtual int UsesOnStagePositionChanged(bool& result) const = 0;
 
@@ -723,7 +725,9 @@ namespace MM {
       * updates about their position.  Some stage adapters do so, others do not,
       * in which case the UI code can use polling.  This function signals whether
       * the device adapters uses callbacks, so that the UI knows it does not need
-      * to poll this device
+      * to poll this device. It is best practice to not change the result of this
+      * function (i.e. use a const value) as the UI will query the function 
+      * only once.
       */
       virtual int UsesOnXYStagePositionChanged(bool &result) const = 0;
 
