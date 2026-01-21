@@ -137,7 +137,7 @@ Mightex_Sirius_SLC_USB::Mightex_Sirius_SLC_USB() :
 
 	HidInit();
 
-	char ledName[64];
+	char ledName[66];
 	char devName[32];
 	char serialNum[32];
 	int dev_Handle;
@@ -150,7 +150,7 @@ Mightex_Sirius_SLC_USB::Mightex_Sirius_SLC_USB() :
 			if(HidGetDeviceName(dev_Handle, devName, sizeof(devName)) > 0)
 				if(MTUSB_LEDDriverSerialNumber(dev_Handle, serialNum, sizeof(serialNum)) > 0)
 				{
-					sprintf(ledName, "%s:%s", devName, serialNum);
+					snprintf(ledName, sizeof(ledName), "%s:%s", devName, serialNum);
 					AddAllowedValue( "Devices", ledName);
 					s_devName = ledName;
 					devNameList.push_back(s_devName);
@@ -817,7 +817,7 @@ Mightex_Sirius_BLS_USB::Mightex_Sirius_BLS_USB() :
 
 	HidInit();
 
-	char ledName[64];
+	char ledName[66];
 	char devName[32];
 	char serialNum[32];
 	int dev_Handle;
@@ -830,7 +830,7 @@ Mightex_Sirius_BLS_USB::Mightex_Sirius_BLS_USB() :
 			if(HidGetDeviceName(dev_Handle, devName, sizeof(devName)) > 0)
 				if(MTUSB_BLSDriverGetSerialNo(dev_Handle, (BYTE *)serialNum, sizeof(serialNum)) > 0)
 				{
-					sprintf(ledName, "%s:%s", devName, serialNum);
+					snprintf(ledName, sizeof(ledName), "%s:%s", devName, serialNum);
 					AddAllowedValue( "Devices", ledName);
 					s_devName = ledName;
 					devNameList.push_back(s_devName);

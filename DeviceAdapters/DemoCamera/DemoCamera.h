@@ -48,10 +48,41 @@
 #define ERR_STAGE_MOVING         106
 #define HUB_NOT_AVAILABLE        107
 
-const char* NoHubError = "Parent Hub not defined.";
+extern const char* NoHubError;
+
+// External device name constants (defined in DemoCamera.cpp)
+extern const char* g_CameraDeviceName;
+extern const char* g_WheelDeviceName;
+extern const char* g_StateDeviceName;
+extern const char* g_LightPathDeviceName;
+extern const char* g_ObjectiveDeviceName;
+extern const char* g_StageDeviceName;
+extern const char* g_XYStageDeviceName;
+extern const char* g_AutoFocusDeviceName;
+extern const char* g_ShutterDeviceName;
+extern const char* g_DADeviceName;
+extern const char* g_DA2DeviceName;
+extern const char* g_GalvoDeviceName;
+extern const char* g_MagnifierDeviceName;
 extern const char* g_PressurePumpDeviceName;
-extern const char* g_PropImposedPressure;
 extern const char* g_VolumetricPumpDeviceName;
+extern const char* g_HubDeviceName;
+extern const char* g_PropImposedPressure;
+
+// External pixel type constants (defined in DemoCamera.cpp)
+extern const char* g_PixelType_8bit;
+extern const char* g_PixelType_16bit;
+extern const char* g_PixelType_32bitRGB;
+extern const char* g_PixelType_64bitRGB;
+extern const char* g_PixelType_32bit;
+
+// External mode constants (defined in DemoCamera.cpp)
+extern const char* g_Sine_Wave;
+extern const char* g_Norm_Noise;
+extern const char* g_Color_Test;
+
+// Global intensity factor (defined in DemoCamera.cpp)
+extern double g_IntensityFactor_;
 
 enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST };
 

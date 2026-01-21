@@ -1406,7 +1406,7 @@ else if (eAct == MM::AfterSet)
 #ifdef	LOG_ENABLED
 		{
 		char msg[256];
-		sprintf(msg, "gain = %f\r\n", dvalue);
+		snprintf(msg, sizeof(msg), "gain = %f\r\n", dvalue);
 		sLogMessage(msg);
 		}
 #endif
@@ -2453,7 +2453,7 @@ char	fw_desc[40];
 char	fw_name[128];
 so.camera->camera_vendor_prefix(vendor_desc, sizeof(vendor_desc));
 so.camera->camera_product_desc(fw_desc, sizeof(fw_desc));
-sprintf(fw_name, "%s %s", vendor_desc, fw_desc);
+snprintf(fw_name, sizeof(fw_name), "%s %s", vendor_desc, fw_desc);
 
 nRet = CreateProperty(MM::g_Keyword_CameraName, fw_name, MM::String, true);
 assert(nRet == DEVICE_OK);

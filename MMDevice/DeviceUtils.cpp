@@ -122,9 +122,9 @@ std::string CDeviceUtils::HexRep(std::vector<unsigned char>  values)
 
 /**
  * Parse the string and return an array of tokens.
- * @param str - input string
- * @param tokens - output array of tokens
- * @param delimiters - a string containing a set of single-character token delimiters
+ * @param str input string
+ * @param tokens output array of tokens
+ * @param delimiters a string containing a set of single-character token delimiters
  */
 void CDeviceUtils::Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters)
 {

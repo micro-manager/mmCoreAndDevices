@@ -39,7 +39,7 @@
 #endif
 
 #include <string>
-#include <map>
+#include <vector>
 
 static const char* g_DeviceJAICam = "JAICamera";
 static const char* g_Gain = "Gain";
@@ -61,7 +61,8 @@ static const char* g_Positive = "Positive";
 static const char* g_Negative = "Negative";
 
 static const char* g_PixelType_32bitRGB = "32bitRGB";
-static const char* g_PixelType_64bitRGB = "64bitRGB";
+static const char* g_PixelType_64bitRGB_10bit = "64bitRGB-10bit";
+static const char* g_PixelType_64bitRGB_12bit = "64bitRGB-12bit";
 
 static const char* g_pv_BinH = "BinningHorizontal";
 static const char* g_pv_BinV = "BinningVertical";
@@ -72,6 +73,7 @@ static const char* g_pv_OffsetY = "OffsetY";
 static const char* g_pv_PixelFormat = "PixelFormat";
 
 static const char* g_pv_PixelFormat_BGR8 = "BGR8";
+static const char* g_pv_PixelFormat_BGR10 = "BGR10p";
 static const char* g_pv_PixelFormat_BGR12 = "BGR12p";
 
 //////////////////////////////////////////////////////////////////////////////
@@ -195,8 +197,11 @@ public:
 private:
    int ResizeImageBuffer();
 	int processPvError(const PvResult& pvr);
-	static void convert_BGR8_RGBA32(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
-	static void convert_BGR12P_RGBA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
+	static void convert_BGR8_BGRA32(const uint8_t* __restrict src, uint8_t* __restrict dest,
+			unsigned w, unsigned h, unsigned paddingX);
+	template <unsigned BitsPerComponent>
+	static void convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __restrict dest,
+			unsigned w, unsigned h, unsigned paddingX);
 	bool verifyPvFormat(const PvImage* pvimg);
 	void ClearPvBuffers();
    int GetSelectorExposure(const std::string& selector, double& expMs);
@@ -223,6 +228,7 @@ private:
 	std::string connectionId;
 	std::vector<PvBuffer*> pvBuffers;
 	std::string commonExposureSelector_;  // e.g., "Common"
+	std::vector<std::string> individualExposureSelectors_;  // e.g., {"Red", "Green", "Blue"}
 	std::string commonGainSelector_;      // e.g., "AnalogAll"
 
    friend class AcqSequenceThread;

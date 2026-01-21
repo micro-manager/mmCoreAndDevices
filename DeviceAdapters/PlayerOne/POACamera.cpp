@@ -387,7 +387,7 @@ int POACamera::Initialize()
     assert(nRet == DEVICE_OK);
 
     // CameraID(SN)
-    sprintf(cameraIDStr, "Serial number %s", camProp_.SN);
+    snprintf(cameraIDStr, sizeof(cameraIDStr), "Serial number %s", camProp_.SN);
     nRet = CreateStringProperty(MM::g_Keyword_CameraID, cameraIDStr, true);
     assert(nRet == DEVICE_OK);
 
@@ -426,15 +426,15 @@ int POACamera::Initialize()
     assert(nRet == DEVICE_OK);
 
     std::vector<std::string> binningStrVec;
-    char binStr[2];
+    char binStr[12];
     for (int i = 0; i < 8; i++) //int bins[8]; in camera property
     {
         if (camProp_.bins[i] == 0)
         {
             break;
         }
-        memset(binStr, 0, 2);
-        sprintf(binStr, "%d", camProp_.bins[i]);
+        memset(binStr, 0, sizeof(binStr));
+        snprintf(binStr, sizeof(binStr), "%d", camProp_.bins[i]);
         binningStrVec.push_back(binStr);
     }
 

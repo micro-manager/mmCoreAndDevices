@@ -72,7 +72,15 @@ int JAICamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
          pixelSize = 4;
          bitDepth = 8;
       }
-      else if ( pixelType.compare(g_PixelType_64bitRGB) == 0)
+      else if ( pixelType.compare(g_PixelType_64bitRGB_10bit) == 0)
+      {
+			PvResult pvr = genParams->SetEnumValue(g_pv_PixelFormat, g_pv_PixelFormat_BGR10);
+			if (!pvr.IsOK())
+				return processPvError(pvr);
+			pixelSize = 8;
+         bitDepth = 10;
+		}
+      else if ( pixelType.compare(g_PixelType_64bitRGB_12bit) == 0)
       {
 			PvResult pvr = genParams->SetEnumValue(g_pv_PixelFormat, g_pv_PixelFormat_BGR12);
 			if (!pvr.IsOK())
@@ -91,8 +99,10 @@ int JAICamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 		if (strcmp(val.GetAscii(), g_pv_PixelFormat_BGR8) == 0)
 			pProp->Set(g_PixelType_32bitRGB);
+		else if (strcmp(val.GetAscii(), g_pv_PixelFormat_BGR10) == 0)
+			pProp->Set(g_PixelType_64bitRGB_10bit);
 		else if (strcmp(val.GetAscii(), g_pv_PixelFormat_BGR12) == 0)
-			pProp->Set(g_PixelType_64bitRGB);
+			pProp->Set(g_PixelType_64bitRGB_12bit);
 		else
 			assert(!"Unsupported pixel type");
 
@@ -116,6 +126,18 @@ int JAICamera::OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (!pvr.IsOK())
 			return processPvError(pvr);
 		SetPropertyLimits(MM::g_Keyword_Exposure, expMinUs / 1000, expMaxUs / 1000);
+
+		// adjust individual exposure limits (if any)
+		for (const auto& selector : individualExposureSelectors_)
+		{
+			double eMinMs{}, eMaxMs{};
+			int ret = GetSelectorExposureMinMax(selector, eMinMs, eMaxMs);
+			if (ret == DEVICE_OK)
+			{
+				const std::string propName = "Exposure_" + selector;
+				SetPropertyLimits(propName.c_str(), eMinMs, eMaxMs);
+			}
+		}
 	}
 	else if (eAct == MM::BeforeGet)
 	{

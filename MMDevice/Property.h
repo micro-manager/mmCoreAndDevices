@@ -31,7 +31,8 @@
 namespace MM {
 
 /**
- * Base API for all device properties.
+ * @brief Base API for all device properties.
+ *
  * This interface is used by action functors.
  */
 class PropertyBase
@@ -69,7 +70,7 @@ public:
 };
 
 /**
- * Abstract interface to invoke specific action in the device.
+ * @brief Abstract interface to invoke specific action in the device.
  */
 class ActionFunctor
 {
@@ -79,7 +80,7 @@ public:
 };
 
 /**
- * Device action implementation.
+ * @brief Device action implementation.
  */
 template <class T>
 class Action : public ActionFunctor
@@ -97,10 +98,11 @@ public:
       { return (*pObj_.*fpt_)(pProp, eAct);};
 };
 
-/** 
- * Extended device action implementation.
+/**
+ * @brief Extended device action implementation.
+ *
  * It takes one additional long parameter which can be used as
- * a command identifier inside the command handler
+ * a command identifier inside the command handler.
  */
 template <class T>
 class ActionEx : public ActionFunctor
@@ -119,7 +121,7 @@ public:
 };
 
 /**
- * Action implementation using std::function to wrap arbitrary callables.
+ * @brief Action implementation using std::function to wrap arbitrary callables.
  *
  * (It is named "lambda" after its intended use, but can wrap any C++
  * callable.)
@@ -137,7 +139,7 @@ public:
 };
 
 /**
- * Property API with most of the Property mechanism implemented.
+ * @brief Property API with most of the Property mechanism implemented.
  */
 class Property : public PropertyBase
 {
@@ -327,7 +329,7 @@ private:
 };
 
 /**
- * String property class.
+ * @brief String property class.
  */
 class StringProperty : public Property
 {
@@ -357,7 +359,8 @@ private:
 };
 
 /**
- * Floating point property class (uses double type for value representation).
+ * @brief Floating point property class (uses double type for value
+ * representation).
  */
 class FloatProperty : public Property
 {
@@ -400,7 +403,7 @@ private:
 };
 
 /**
- * Integer property class.
+ * @brief Integer property class.
  */
 class IntegerProperty : public Property
 {
@@ -429,7 +432,7 @@ private:
 };
 
 /**
- * An array of properties supported by a device.
+ * @brief An array of properties supported by a device.
  */
 class PropertyCollection
 {

@@ -28,7 +28,7 @@
 #endif
 
 /**
- * Base class for threads in MM devices
+ * @brief Base class for threads in MM devices.
  */
 class MMDeviceThreadBase
 {
@@ -89,7 +89,7 @@ private:
 };
 
 /**
- * Critical section lock.
+ * @brief Critical section lock.
  */
 class MMThreadLock
 {

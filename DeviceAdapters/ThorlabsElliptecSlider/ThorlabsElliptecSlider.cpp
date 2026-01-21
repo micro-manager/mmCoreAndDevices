@@ -302,7 +302,7 @@ std::string ELL17_20::positionFromValue(int pos){
 	char hex_string[8]; // maximum expected size is 5
 
 	// convert to hex
-	sprintf(hex_string, "%X", pos);
+	snprintf(hex_string, sizeof(hex_string), "%X", pos);
 	
 	// get size
 	std::string s;

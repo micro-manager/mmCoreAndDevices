@@ -478,7 +478,7 @@ string Ob1Mk4::GetAllData() {
          return "ERROR";
       }
    }
-   sprintf(fullResponse, "%s:%s:%s", pingaResponse, ExtractString(trigiResponse).c_str(), ExtractString(trigoResponse).c_str());
+   snprintf(fullResponse, sizeof(fullResponse), "%s:%s:%s", pingaResponse, ExtractString(trigiResponse).c_str(), ExtractString(trigoResponse).c_str());
    LogMessage(fullResponse, false);
    return fullResponse;
 }

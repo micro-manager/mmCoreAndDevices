@@ -644,6 +644,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    PriorLegacy
    QCam
    ReflectionFocus
+   RappLasers
    Sapphire
    Scientifica
    ScionCam

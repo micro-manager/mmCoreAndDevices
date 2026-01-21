@@ -24,6 +24,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NikonTE2000", "DeviceAdapte
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Prior", "DeviceAdapters\Prior\Prior.vcxproj", "{A7148F42-8EE8-48B4-BFC9-F61AB8A3800D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RappLasers", "DeviceAdapters\RappLasers\RappLasers.vcxproj", "{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DTOpenLayer", "DeviceAdapters\DTOpenLayer\DTOpenLayer.vcxproj", "{D29861C1-D0A2-44EB-BAD9-3808165609D8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Andor", "DeviceAdapters\Andor\Andor.vcxproj", "{91CCB72B-852D-47D8-82FA-0E19A300A025}"
@@ -195,6 +197,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rapp", "DeviceAdapters\Rapp\Rapp.vcxproj", "{C613608D-C4D0-4FC2-AA44-9D0098AAFDD8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReflectionFocus", "DeviceAdapters\ReflectionFocus\ReflectionFocus.vcxproj", "{7B1F4C3E-8D9A-4E6F-B2C5-1A3D8F9E4B7C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rapp_UGA42", "DeviceAdapters\Rapp_UGA42\Rapp_UGA42.vcxproj", "{E8D7F3A2-9C45-4B67-8F12-A1B3C4D5E6F7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MarzhauserLStep", "DeviceAdapters\Marzhauser-LStep\MarzhauserLStep.vcxproj", "{5D42D76C-B076-4045-A03E-1DF101583C39}"
 EndProject
@@ -576,6 +579,10 @@ Global
 		{A7148F42-8EE8-48B4-BFC9-F61AB8A3800D}.Debug|x64.Build.0 = Debug|x64
 		{A7148F42-8EE8-48B4-BFC9-F61AB8A3800D}.Release|x64.ActiveCfg = Release|x64
 		{A7148F42-8EE8-48B4-BFC9-F61AB8A3800D}.Release|x64.Build.0 = Release|x64
+		{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}.Debug|x64.ActiveCfg = Debug|x64
+		{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}.Debug|x64.Build.0 = Debug|x64
+		{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}.Release|x64.ActiveCfg = Release|x64
+		{8F5E9A1B-72C4-4D65-9E3A-1B8D4F6E7C9A}.Release|x64.Build.0 = Release|x64
 		{D29861C1-D0A2-44EB-BAD9-3808165609D8}.Debug|x64.ActiveCfg = Debug|x64
 		{D29861C1-D0A2-44EB-BAD9-3808165609D8}.Debug|x64.Build.0 = Debug|x64
 		{D29861C1-D0A2-44EB-BAD9-3808165609D8}.Release|x64.ActiveCfg = Release|x64
@@ -920,6 +927,10 @@ Global
 		{7B1F4C3E-8D9A-4E6F-B2C5-1A3D8F9E4B7C}.Debug|x64.Build.0 = Debug|x64
 		{7B1F4C3E-8D9A-4E6F-B2C5-1A3D8F9E4B7C}.Release|x64.ActiveCfg = Release|x64
 		{7B1F4C3E-8D9A-4E6F-B2C5-1A3D8F9E4B7C}.Release|x64.Build.0 = Release|x64
+		{E8D7F3A2-9C45-4B67-8F12-A1B3C4D5E6F7}.Debug|x64.ActiveCfg = Debug|x64
+		{E8D7F3A2-9C45-4B67-8F12-A1B3C4D5E6F7}.Debug|x64.Build.0 = Debug|x64
+		{E8D7F3A2-9C45-4B67-8F12-A1B3C4D5E6F7}.Release|x64.ActiveCfg = Release|x64
+		{E8D7F3A2-9C45-4B67-8F12-A1B3C4D5E6F7}.Release|x64.Build.0 = Release|x64
 		{5D42D76C-B076-4045-A03E-1DF101583C39}.Debug|x64.ActiveCfg = Debug|x64
 		{5D42D76C-B076-4045-A03E-1DF101583C39}.Debug|x64.Build.0 = Debug|x64
 		{5D42D76C-B076-4045-A03E-1DF101583C39}.Release|x64.ActiveCfg = Release|x64

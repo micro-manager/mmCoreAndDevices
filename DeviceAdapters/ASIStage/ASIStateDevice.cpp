@@ -105,10 +105,10 @@ int StateDevice::Initialize()
 		return ret;
 	}
 
-	char pos[3];
+	char pos[12];
 	for (int i = 0; i < numPos_; i++)
 	{
-		sprintf(pos, "%d", i);
+		snprintf(pos, sizeof(pos), "%d", i);
 		AddAllowedValue(MM::g_Keyword_State, pos);
 	}
 
@@ -120,10 +120,10 @@ int StateDevice::Initialize()
 		return ret;
 	}
 
-	char state[11];
+	char state[20];
 	for (int i = 0; i < numPos_; i++)
 	{
-		sprintf(state, "Position-%d", i);
+		snprintf(state, sizeof(state), "Position-%d", i);
 		SetPositionLabel(i, state);
 	}
 

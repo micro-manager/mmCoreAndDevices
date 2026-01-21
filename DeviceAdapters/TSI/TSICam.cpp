@@ -245,7 +245,7 @@ int TsiCam::Initialize()
       uint32_t speedMHz(0);
 
 	  char Msg [80];
-	  sprintf (Msg, "Getting speed - Index (%u)", rateIdx);
+	  snprintf (Msg, sizeof(Msg), "Getting speed - Index (%u)", rateIdx);
 	  LogMessage(Msg);
 
 	  bRet = camHandle_->SetParameter(TSI_PARAM_READOUT_SPEED_INDEX, rateIdx);
@@ -317,7 +317,7 @@ int TsiCam::Initialize()
 		  uint32_t taps(0);
 
 		  char Msg [80];
-		  sprintf (Msg, "Getting taps value - Index (%u)", tapIdx);
+		  snprintf (Msg, sizeof(Msg), "Getting taps value - Index (%u)", tapIdx);
 		  LogMessage(Msg);
 
 		  bRet = camHandle_->SetParameter(TSI_PARAM_TAPS_INDEX, tapIdx);
