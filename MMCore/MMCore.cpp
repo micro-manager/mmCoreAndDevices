@@ -7321,6 +7321,34 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
    {
       os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreFocus << ',' << focus->GetLabel() << '\n';
    }
+
+   // save pixel size configurations
+   os << "# PixelSize settings" << endl;
+
+   vector<string> configs = getAvailablePixelSizeConfigs();
+   // normal group records
+   for (size_t j=0; j<configs.size(); j++)
+   {
+      Configuration c = getPixelSizeConfigData(configs[j].c_str());
+      for (size_t k=0; k<c.size(); k++)
+      {
+         PropertySetting s = c.getSetting(k);
+         os << MM::g_CFGCommand_ConfigPixelSize << ',' << configs[j] 
+            << ',' << s.getDeviceLabel() << ',' << s.getPropertyName() << ',' << s.getPropertyValue() << endl;
+      }
+      
+      os << MM::g_CFGCommand_PixelSize_um << ',' << configs[j] << ',' << getPixelSizeUmByID(configs[j].c_str()) << endl;
+
+      std::vector<double> affine = getPixelSizeAffineByID(configs[j].c_str());
+      os << MM::g_CFGCommand_PixelSizeAffine << ',' << configs[j] << ',';
+      for (size_t i = 0; i < affine.size(); ++i) {
+         os << affine[i];
+         if (i < affine.size() - 1) {
+            os << ',';
+         }
+      }
+      os << endl;
+   }
 }
 
 /**
