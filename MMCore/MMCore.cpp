@@ -4448,6 +4448,13 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
       throw CMMError("Camera does not support binning property");
    }
 
+   MM::PropertyType propType = pCamera->GetPropertyType(MM::g_Keyword_Binning);
+
+   if (propType == MM::Float)
+   {
+      throw CMMError("Binning property has Float type, which is not supported");
+   }
+
    std::string binningValue = pCamera->GetProperty(MM::g_Keyword_Binning);
 
    if (binningValue.empty())
@@ -4455,26 +4462,30 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
       throw CMMError("Binning property returned empty value");
    }
 
-   // Parse the binning value - handle both integer ("2") and NxN ("2x2") formats
    int binning;
-   size_t xPos = binningValue.find('x');
-   if (xPos != std::string::npos)
+   if (propType == MM::Integer)
    {
-      // NxN format - parse both parts and verify they match
+      // Integer property - just convert directly
+      binning = atoi(binningValue.c_str());
+   }
+   else
+   {
+      // String property - expect NxN format only
+      size_t xPos = binningValue.find('x');
+      if (xPos == std::string::npos)
+      {
+         throw CMMError("Binning property is String type but value is not in NxN format: " + binningValue);
+      }
       int binX = atoi(binningValue.c_str());
       int binY = atoi(binningValue.c_str() + xPos + 1);
       if (binX != binY)
       {
-         throw CMMError("Asymmetric binning not supported: " + binningValue);
+         throw CMMError("Non-square binning not supported: " + binningValue);
       }
       binning = binX;
    }
-   else
-   {
-      // Integer format
-      binning = atoi(binningValue.c_str());
-   }
 
+   // To disallow incorrectly written camera adapters that conflate binning size with image size
    if (binning < 1 || binning > 100)
    {
       throw CMMError("Binning value out of valid range (1-100): " + binningValue);
@@ -4490,11 +4501,6 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
  */
 void CMMCore::setBinning(int binning) MMCORE_LEGACY_THROW(CMMError)
 {
-   if (binning < 1 || binning > 100)
-   {
-      throw CMMError("Binning must be between 1 and 100");
-   }
-
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
    if (!camera)
    {
@@ -4537,69 +4543,27 @@ void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMM
          throw CMMError("Camera does not support binning property");
       }
 
-      // Try to determine the format by checking the current property value
-      std::string currentValue;
-      bool useNxNFormat = false;
+      MM::PropertyType propType = pCamera->GetPropertyType(MM::g_Keyword_Binning);
 
-      try
+      if (propType == MM::Float)
       {
-         currentValue = pCamera->GetProperty(MM::g_Keyword_Binning);
-         // If current value contains 'x' and looks like NxN format, use that
-         size_t xPos = currentValue.find('x');
-         if (!currentValue.empty() && xPos != std::string::npos)
-         {
-            // Validate that the current value has symmetric binning
-            int binX = atoi(currentValue.c_str());
-            int binY = atoi(currentValue.c_str() + xPos + 1);
-            if (binX != binY)
-            {
-               throw CMMError("Asymmetric binning not supported: " + currentValue);
-            }
-            useNxNFormat = true;
-         }
-      }
-      catch (...)
-      {
-         // If we can't get current value, we'll try integer format first
+         throw CMMError("Binning property has Float type, which is not supported");
       }
 
-      // Build the property value string
       std::string binningValue;
-      if (useNxNFormat)
+      if (propType == MM::Integer)
       {
-         // NxN format: "2x2", "4x4", etc.
-         std::string binStr = CDeviceUtils::ConvertToString(binning);
-         binningValue = binStr + "x" + binStr;
+         // Integer property - use integer format
+         binningValue = CDeviceUtils::ConvertToString(binning);
       }
       else
       {
-         // Integer format: "2", "4", etc.
-         binningValue = CDeviceUtils::ConvertToString(binning);
+         // String property - use NxN format
+         std::string binStr = CDeviceUtils::ConvertToString(binning);
+         binningValue = binStr + "x" + binStr;
       }
 
-      // Try to set the property with detected format
-      try
-      {
-         pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
-      }
-      catch (const CMMError&)
-      {
-         // If it failed and we haven't tried the other format yet, try it
-         if (useNxNFormat)
-         {
-            // Tried NxN, now try integer
-            binningValue = CDeviceUtils::ConvertToString(binning);
-         }
-         else
-         {
-            // Tried integer, now try NxN
-            std::string binStr = CDeviceUtils::ConvertToString(binning);
-            binningValue = binStr + "x" + binStr;
-         }
-
-         // Try with alternate format (this will throw if it still fails)
-         pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
-      }
+      pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
 
       {
          MMThreadGuard scg(stateCacheLock_);
