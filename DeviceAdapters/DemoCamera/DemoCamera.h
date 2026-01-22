@@ -251,7 +251,7 @@ public:
    int OnBeadDensity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBeadSize(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBeadBrightness(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnBlurRate(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBeadBlurRate(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Special public DemoCamera methods
    void AddBackgroundAndNoise(ImgBuffer& img, double mean, double stdDev);
@@ -341,7 +341,7 @@ private:
    int beadDensity_ = 100;
    double beadSize_ = 2.0;
    double beadBrightness_ = 1.0;
-   double blurRate_ = 0.5;
+   double beadBlurRate_ = 0.5;
 };
 
 class MySequenceThread : public MMDeviceThreadBase
