@@ -1,141 +1,495 @@
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-   <modelVersion>4.0.0</modelVersion>
-   <groupId>org.micro-manager.mmcorej</groupId>
-   <artifactId>MMCoreJ</artifactId>
-   <packaging>jar</packaging>
-   <version>11.11.0</version>
-   <name>Micro-Manager Java Interface to MMCore</name>
-   <description>Micro-Manager is open source software for control of automated/motorized microscopes.  This specific packages provides the Java interface to the device abstractino layer (MMCore) that is written in C++ with a C-interface</description>
-   <url>http://micro-manager.org</url>
+<project
+    xmlns="https://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-   <properties>
-      <maven.compiler.source>1.8</maven.compiler.source>
-      <maven.compiler.target>1.8</maven.compiler.target>
-       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-   </properties>
+    <groupId>org.micro-manager.mmcorej</groupId>
+    <artifactId>MMCoreJ</artifactId>
+    <version>11.11.0</version>
 
-   <developers>
-      <developer>
-         <id>nenada</id>
-         <name>Nenad Amodaj</name>
-         <organization>Luminous Point</organization>
-      </developer>
-      <developer>
-         <id>marktsuchida</id>
-         <name>Mark Tsuchida</name>
-         <organization>University of Wisconsin, Madison</organization>
-      </developer>
-      <developer>
-         <id>nicost</id>
-         <name>Nico Stuurman</name>
-         <organization>UCSF/HHMI</organization>
-      </developer>
-   </developers>
+    <name>MMCore Java API</name>
+    <description>Java bindings for MMCore, the device abstraction layer of Micro-Manager, the microscope control and acquisition platform.</description>
+    <url>https://micro-manager.org</url>
 
-   <scm>
-      <url>https://github.com/micro-manager/mmCoreAndDevices</url>
-		<connection>scm:git:git://github.com/micro-manager/mmCoreAndDevices.git</connection>
-		<developerConnection>scm:git:git@github.com:micro-manager/mmCoreAndDevices.git</developerConnection>
-   </scm>
+    <licenses>
+        <license>
+            <name>LGPL-2.1</name>
+            <url>https://github.com/micro-manager/mmCoreAndDevices/blob/main/MMCoreJ_wrap/license.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
-   <licenses>
-      <license>
-         <name>LGPL-2.1</name>
-         <url>https://github.com/micro-manager/mmCoreAndDevices/blob/main/MMCoreJ_wrap/license.txt</url>
-         <distribution>repo</distribution>
-       </license>
-  </licenses>
+    <developers>
+        <developer>
+            <id>nenada</id>
+            <name>Nenad Amodaj</name>
+            <organization>Luminous Point</organization>
+        </developer>
+        <developer>
+            <id>marktsuchida</id>
+            <name>Mark Tsuchida</name>
+            <organization>University of Wisconsin–Madison</organization>
+        </developer>
+        <developer>
+            <id>nicost</id>
+            <name>Nico Stuurman</name>
+            <organization>University of California, San Francisco</organization>
+        </developer>
+    </developers>
 
-	<!--
-	    Do not use maven to build MMCoreJ.jar.  
-		The code below tries to make a valid jar in case someone 
-		does this anyways.  In no way rely on this behavior
-	-->	
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>build-helper-maven-plugin</artifactId>
-				<version>1.7</version>
-				<executions>
-					<execution>
-						<id>add-source</id>
-						<phase>generate-sources</phase>
-						<goals>
-							<goal>add-source</goal>
-						</goals>
-						<configuration>
-							<sources>
-                        <source>../build/intermediates/Swig</source>
-							</sources>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <version>3.2.1</version>
-            <executions>
-              <execution>
-                <id>attach-sources</id>
-                <goals>
-                  <goal>jar-no-fork</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.5</version>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-             <groupId>org.sonatype.plugins</groupId>
-             <artifactId>nexus-staging-maven-plugin</artifactId>
-             <version>1.6.7</version>
-             <extensions>true</extensions>
-             <configuration>
-               <serverId>ossrh</serverId>
-               <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-               <autoReleaseAfterClose>true</autoReleaseAfterClose>
-            </configuration>
-          </plugin>
-		</plugins>
-	</build>
+    <scm>
+        <url>https://github.com/micro-manager/mmCoreAndDevices</url>
+        <connection>scm:git:https://github.com/micro-manager/mmCoreAndDevices.git</connection>
+        <developerConnection>scm:git:git@github.com:micro-manager/mmCoreAndDevices.git</developerConnection>
+    </scm>
 
-   <distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-   </distributionManagement>
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+        <!-- Set to Meson build directory. -->
+        <meson.build.dir>builddir</meson.build.dir>
+
+        <!-- Native library packaging configuration.
+             Profiles are used to set the following properties based on the
+             current JVM:
+             - natives.os
+             - natives.arch
+             - native.library.prefix
+             - native.library.suffix
+             For a cross build, override all 4 of these properties from the
+             command line. If you are building for the same OS but different
+             architecture, you only need to set natives.arch.
+        -->
+        <natives.classifier>natives-${natives.os}-${natives.arch}</natives.classifier>
+        <native.library.name>${native.library.prefix}mmcorej${native.library.suffix}</native.library.name>
+        <native.library.path>${meson.build.dir}/${native.library.name}</native.library.path>
+
+        <!-- Set to true to skip natives JAR and build only the main JAR. -->
+        <skip.natives>false</skip.natives>
+
+        <junit.version>5.14.1</junit.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.6.2</version>
+                <executions>
+                    <execution>
+                        <!-- Maven version requirement
+                             (setting this simplifies the output of
+                             'mvn versions:display-plugin-updates') -->
+                        <id>enforce-maven</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>3.6.3</version>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>enforce-platform-supported</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.natives}</skip>
+                            <rules>
+                                <requireProperty>
+                                    <property>natives.os</property>
+                                    <message>
+Property natives.os is not set, probably because the OS could not be detected.
+Set natives.os to a supported value: linux, macos, windows.
+Also set native.library.prefix and native.library.suffix appropriately.
+Set -Dskip.natives=true to build only the main JAR.
+                                    </message>
+                                </requireProperty>
+                                <requireProperty>
+                                    <property>natives.arch</property>
+                                    <message>
+Property natives.arch is not set, probably because it could not be detected.
+Set natives.arch to a supported value: x86_64, arm64, or arm32.
+Set -Dskip.natives=true to build only the main JAR.
+                                    </message>
+                                </requireProperty>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>enforce-native-library-exists</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.natives}</skip>
+                            <rules>
+                                <requireFilesExist>
+                                    <files>
+                                        <file>${native.library.path}</file>
+                                    </files>
+                                    <message>
+Native library not found: ${native.library.path}
+Run the Meson build first:
+    meson setup ${meson.build.dir}
+    meson compile -C ${meson.build.dir}
+Also check that native.library.prefix and native.library.suffix are correct.
+Or set -Dskip.natives=true to build only the main JAR.
+                                    </message>
+                                </requireFilesExist>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>enforce-generated-sources-exist</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireFilesExist>
+                                    <files>
+                                        <file>${meson.build.dir}/generated-java/mmcorej/CMMCore.java</file>
+                                    </files>
+                                    <message>
+Generated Java sources not found: ${meson.build.dir}/generated-java/mmcorej/*.java
+Run the Meson build first:
+    meson setup ${meson.build.dir}
+    meson compile -C ${meson.build.dir}
+                                    </message>
+                                </requireFilesExist>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Non-standard location for SWIG-generated sources -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${meson.build.dir}/generated-java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Source JAR (Java sources only but includes generated sources;
+                 good for IDEs to pull) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.4.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Full source JAR (A full source distribution including mmcore
+                 and mmdevice, but excluding generated sources) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <executions>
+                    <execution>
+                        <id>full-sources-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/full-sources.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Javadoc JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.12.0</version>
+                <configuration>
+                    <!-- TODO Remove this warning suppression -->
+                    <doclint>none</doclint>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Clean natives staging to remove stale libraries from previous
+                 builds -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>clean-natives-staging</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}/natives-staging</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Stage native library for packaging -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.4.0</version>
+                <executions>
+                    <execution>
+                        <id>stage-native-library</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.natives}</skip>
+                            <outputDirectory>${project.build.directory}/natives-staging/natives/${natives.os}/${natives.arch}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${meson.build.dir}</directory>
+                                    <includes>
+                                        <include>${native.library.name}</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Package natives JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>natives-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <skipIfEmpty>true</skipIfEmpty>
+                            <classifier>${natives.classifier}</classifier>
+                            <classesDirectory>${project.build.directory}/natives-staging</classesDirectory>
+                            <includes>
+                                <include>natives/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Remove build-specific elements from published POM (probably
+                 less confusing to consumers) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.7.3</version>
+                <configuration>
+                    <flattenMode>oss</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Unit tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+            </plugin>
+
+            <!-- Integration tests (run after packaging) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <skip>${skip.natives}</skip>
+                    <additionalClasspathElements>
+                        <additionalClasspathElement>
+                            ${project.build.directory}/${project.artifactId}-${project.version}-${natives.classifier}.jar
+                        </additionalClasspathElement>
+                    </additionalClasspathElements>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- OS mapping profiles -->
+        <profile>
+            <id>natives-os-linux</id>
+            <activation>
+                <os><name>Linux</name></os>
+            </activation>
+            <properties>
+                <natives.os>linux</natives.os>
+                <native.library.prefix>lib</native.library.prefix>
+                <native.library.suffix>.so</native.library.suffix>
+            </properties>
+        </profile>
+        <profile>
+            <id>natives-os-macos</id>
+            <activation>
+                <os><family>mac</family></os>
+            </activation>
+            <properties>
+                <natives.os>macos</natives.os>
+                <native.library.prefix>lib</native.library.prefix>
+                <native.library.suffix>.dylib</native.library.suffix>
+            </properties>
+        </profile>
+        <profile>
+            <id>natives-os-windows</id>
+            <activation>
+                <os><family>windows</family></os>
+            </activation>
+            <properties>
+                <natives.os>windows</natives.os>
+                <native.library.prefix></native.library.prefix>
+                <native.library.suffix>.dll</native.library.suffix>
+            </properties>
+        </profile>
+
+        <!-- Architecture mapping profiles -->
+        <profile>
+            <!-- x86_64 is usually 'amd64' -->
+            <id>natives-arch-amd64</id>
+            <activation>
+                <os><arch>amd64</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>x86_64</natives.arch>
+            </properties>
+        </profile>
+        <profile>
+            <!-- But JDK on Intel macOS usually has 'x86_64' -->
+            <id>natives-arch-x86_64</id>
+            <activation>
+                <os><arch>x86_64</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>x86_64</natives.arch>
+            </properties>
+        </profile>
+        <profile>
+            <!-- 64-bit ARM is almost always 'aarch64' -->
+            <id>natives-arch-aarch64</id>
+            <activation>
+                <os><arch>aarch64</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>arm64</natives.arch>
+            </properties>
+        </profile>
+        <profile>
+            <!-- 32-bit ARM is most often 'arm' -->
+            <id>natives-arch-arm</id>
+            <activation>
+                <os><arch>arm</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>arm32</natives.arch>
+            </properties>
+        </profile>
+        <profile>
+            <!-- 32-bit ARM on Raspberry Pi 2-4 is usually 'armv7l' -->
+            <id>natives-arch-armv7l</id>
+            <activation>
+                <os><arch>armv7l</arch></os>
+            </activation>
+            <properties>
+                <natives.arch>arm32</natives.arch>
+            </properties>
+        </profile>
+    </profiles>
 </project>
-

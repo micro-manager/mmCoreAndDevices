@@ -16,6 +16,9 @@ EXCLUDE_SYMBOLS        = internal std
 EXTRACT_ALL            = YES
 RECURSIVE              = YES
 
+# Changing this changes the HTML file names; stick to what we had
+CASE_SENSE_NAMES       = NO
+
 CLASS_GRAPH            = TEXT
 COLLABORATION_GRAPH    = NO
 GROUP_GRAPHS           = NO
