@@ -394,10 +394,10 @@ int CDemoCamera::Initialize()
    assert(nRet == DEVICE_OK);
    SetPropertyLimits("BeadBrightness", 0.125, 8.0);
    
-   pAct = new CPropertyAction(this, &CDemoCamera::OnBlurRate);
-   nRet = CreateFloatProperty("BlurRate", blurRate_, false, pAct);
+   pAct = new CPropertyAction(this, &CDemoCamera::OnBeadBlurRate);
+   nRet = CreateFloatProperty("BeadBlurRate", beadBlurRate_, false, pAct);
    assert(nRet == DEVICE_OK);
-   SetPropertyLimits("BlurRate", 0.1, 1.0);
+   SetPropertyLimits("BeadBlurRate", 0.1, 1.0);
 
    // Simulate application crash
    pAct = new CPropertyAction(this, &CDemoCamera::OnCrash);
@@ -1953,15 +1953,15 @@ int CDemoCamera::OnBeadBrightness(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CDemoCamera::OnBlurRate(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CDemoCamera::OnBeadBlurRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(blurRate_);
+      pProp->Set(beadBlurRate_);
    }
    else if (eAct == MM::AfterSet)
    {
-      pProp->Get(blurRate_);
+      pProp->Get(beadBlurRate_);
    }
    return DEVICE_OK;
 }

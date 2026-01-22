@@ -863,7 +863,7 @@ void CDemoCamera::GenerateBeadsImage(ImgBuffer& img, double exposure)
    GenerateBeadPositions();
    
    // Calculate blur (no cap)
-   double blurRadius = blurRate_ * std::abs(zPos);
+   double blurRadius = beadBlurRate_ * std::abs(zPos);
    
    // 1px = 1um
    double pixelSizeUm = 1.0;
