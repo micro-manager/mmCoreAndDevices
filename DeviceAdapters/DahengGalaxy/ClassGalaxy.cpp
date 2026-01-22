@@ -338,7 +338,6 @@ int ClassGalaxy::Initialize()
             gain_ = 8, gainMax_ = 8, gainMin_ = 0;
             offset_ = 0, offsetMin_ = 0, offsetMax_ = 8;
 
-            binningFactor_ = "1";
             reverseX_ = "0"; reverseY_ = "0";
             sensorReadoutMode_ = "Undefined";
             setAcqFrm_ = "";
@@ -355,8 +354,8 @@ int ClassGalaxy::Initialize()
            // CIntFeaturePointer BinningVertical = m_objFeatureControlPtr->GetIntFeature("BinningVertical");
 
            pAct = new CPropertyAction(this, &ClassGalaxy::OnBinning);
-           binningFactor_.assign(CDeviceUtils::ConvertToString((long)BinningHorizontal->GetValue()));
-           ret = CreateProperty(MM::g_Keyword_Binning, binningFactor_.c_str(), MM::String, false, pAct);
+           ret = CreateIntegerProperty(MM::g_Keyword_Binning, (long)BinningHorizontal->GetValue(), false, pAct);
+
            //assumed that BinningHorizontal and BinningVertical allow same steps
            bool Isgrabbing = m_objStreamFeatureControlPtr->GetBoolFeature("StreamIsGrabbing")->GetValue();
            if (Isgrabbing)
@@ -370,7 +369,7 @@ int ClassGalaxy::Initialize()
               try
               {
                  BinningHorizontal->SetValue(i);
-                 AddAllowedValue(MM::g_Keyword_Binning, std::to_string(i).c_str());
+                 AddAllowedValue(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString( (long) BinningHorizontal->GetValue()));
               }
               catch (CGalaxyException&)
               {
@@ -388,7 +387,7 @@ int ClassGalaxy::Initialize()
         else 
         { // Hardware does not support binning, Micro-Manager still likes this as a property
            pAct = new CPropertyAction(this, &ClassGalaxy::OnBinning);
-           ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, true, pAct);
+           ret = CreateIntegerProperty(MM::g_Keyword_Binning, 1, true, pAct);
            AddAllowedValue(MM::g_Keyword_Binning, "1");
         }
 
@@ -1088,15 +1087,14 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
        bool Isgrabbing = StopGrabbing();
        try
        {
-           pProp->Get(binningFactor_);
-           int64_t val = std::atoi(binningFactor_.c_str());
-           BinningHorizontal->SetValue(val);
-           BinningVertical->SetValue(val);
-           if (Isgrabbing)
-           {
-              StartGrabbing();
-           }
-           pProp->Set(binningFactor_.c_str());
+          long val;
+          pProp->Get(val);
+          BinningHorizontal->SetValue(val);
+          BinningVertical->SetValue(val);
+          if (Isgrabbing)
+          {
+             StartGrabbing();
+          }
        }
        catch (CGalaxyException& e)
        {
@@ -1112,7 +1110,6 @@ int ClassGalaxy::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
           if (m_objDevicePtr->GetRemoteFeatureControl()->IsImplemented("BinningHorizontal"))
           {
              CIntFeaturePointer BinningHorizontal = m_objFeatureControlPtr->GetIntFeature("BinningHorizontal");
-             binningFactor_ = CDeviceUtils::ConvertToString((long)BinningHorizontal->GetValue());
              pProp->Set((long)BinningHorizontal->GetValue());
           }
           else
