@@ -4410,6 +4410,9 @@ double CMMCore::getExposure(const char* label) MMCORE_LEGACY_THROW(CMMError)
 /**
  * Returns the current binning setting of the camera.
  * Binning values in "NxN" format (e.g., "2x2") are parsed to return the integer factor (e.g., 2).
+ * Properties of type Integer will be converted directly.
+ * Properties of type String are expected to be in "NxN" format or a single integer string.
+ *
  * @return the binning factor (1-100)
  */
 int CMMCore::getBinning() MMCORE_LEGACY_THROW(CMMError)
@@ -4433,6 +4436,9 @@ int CMMCore::getBinning() MMCORE_LEGACY_THROW(CMMError)
 /**
  * Returns the current binning setting of the specified camera.
  * Binning values in "NxN" format (e.g., "2x2") are parsed to return the integer factor (e.g., 2).
+ * Properties of type Integer will be converted directly.
+ * Properties of type String are expected to be in "NxN" format or a single integer string.
+ *
  * @param label  the camera device label
  * @return the binning factor (1-100)
  */
@@ -4474,15 +4480,18 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
       size_t xPos = binningValue.find('x');
       if (xPos == std::string::npos)
       {
-         throw CMMError("Binning property is String type but value is not in NxN format: " + binningValue);
+         binning = atoi(binningValue.c_str());
       }
-      int binX = atoi(binningValue.c_str());
-      int binY = atoi(binningValue.c_str() + xPos + 1);
-      if (binX != binY)
+      else
       {
-         throw CMMError("Non-square binning not supported: " + binningValue);
+         int binX = atoi(binningValue.c_str());
+         int binY = atoi(binningValue.c_str() + xPos + 1);
+         if (binX != binY)
+         {
+            throw CMMError("Non-square binning not supported: " + binningValue);
+         }
+         binning = binX;
       }
-      binning = binX;
    }
 
    // To disallow incorrectly written camera adapters that conflate binning size with image size
@@ -4496,7 +4505,7 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Sets the binning setting of the camera.
- * Automatically handles both integer ("2") and "NxN" ("2x2") property formats.
+ * Automatically handles both Integer ("N") and String ("NxN" or "N") property formats.
  * @param binning the binning factor (1-100)
  */
 void CMMCore::setBinning(int binning) MMCORE_LEGACY_THROW(CMMError)
@@ -4519,7 +4528,7 @@ void CMMCore::setBinning(int binning) MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Sets the binning setting of the specified camera.
- * Automatically handles both integer ("2") and "NxN" ("2x2") property formats.
+ * Automatically handles both Integer ("N") and String ("NxN" or "N") property formats.
  * @param label  the camera device label
  * @param binning the binning factor (1-100)
  */
@@ -4556,11 +4565,28 @@ void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMM
          // Integer property - use integer format
          binningValue = CDeviceUtils::ConvertToString(binning);
       }
-      else
+      else // propType == MM::String
       {
-         // String property - use NxN format
          std::string binStr = CDeviceUtils::ConvertToString(binning);
-         binningValue = binStr + "x" + binStr;
+         // check if the camera uses NxN format
+         std::string testValue = "";
+         // try AllowedValues first, actual value as fallback
+         try
+         {
+            testValue = pCamera->GetPropertyValueAt(MM::g_Keyword_Binning, 0);
+         } 
+         catch (CMMError) {
+            testValue = pCamera->GetProperty(MM::g_Keyword_Binning);
+         }
+         size_t xPos = binningValue.find('x');
+         if (xPos == std::string::npos) // single integer format
+         {
+            binningValue = binStr;
+         }
+         else // NxN format
+         {
+            binningValue = binStr + "x" + binStr;
+         }
       }
 
       pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
