@@ -4456,10 +4456,6 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 
    MM::PropertyType propType = pCamera->GetPropertyType(MM::g_Keyword_Binning);
 
-   if (propType == MM::Float)
-   {
-      throw CMMError("Binning property has Float type, which is not supported");
-   }
 
    std::string binningValue = pCamera->GetProperty(MM::g_Keyword_Binning);
 
@@ -4468,13 +4464,13 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
       throw CMMError("Binning property returned empty value");
    }
 
-   int binning;
+   int binning = 1;
    if (propType == MM::Integer)
    {
       // Integer property - just convert directly
       binning = atoi(binningValue.c_str());
    }
-   else
+   else if (propType == MM::String)
    {
       // String property - expect NxN format only
       size_t xPos = binningValue.find('x');
@@ -4493,6 +4489,10 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
          binning = binX;
       }
    }
+   else if (propType == MM::Float)
+   {
+      throw CMMError("Binning property has Float type, which is not supported");
+   }
 
    // To disallow incorrectly written camera adapters that conflate binning size with image size
    if (binning < 1 || binning > 100)
@@ -4501,6 +4501,88 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
    }
 
    return binning;
+}
+
+std::vector<int> CMMCore::getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMError)
+{
+   std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
+   if (!camera)
+   {
+      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
+   }
+   else
+   {
+      std::string cameraName;
+      {
+         mmi::DeviceModuleLockGuard guard(camera);
+         cameraName = camera->GetLabel();
+      }
+      return getAllowedBinningValues(cameraName.c_str());
+   }
+}
+
+std::vector<int> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGACY_THROW(CMMError)
+{
+   std::shared_ptr<mmi::CameraInstance> pCamera =
+      deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
+
+   {
+      mmi::DeviceModuleLockGuard guard(pCamera);
+      LOG_DEBUG(coreLogger_) << "Getting allowed binning values for camera: " << label;
+
+      if (!pCamera->HasProperty(MM::g_Keyword_Binning))
+      {
+         throw CMMError("Camera does not support binning property");
+      }
+
+      MM::PropertyType propType = pCamera->GetPropertyType(MM::g_Keyword_Binning);
+
+      std::vector<int> result = std::vector<int>();
+      if (propType == MM::Integer)
+      {
+         // Integer property - use integer format
+         int nrValues = pCamera->GetNumberOfPropertyValues(MM::g_Keyword_Binning);
+         for (int j = 0; j < nrValues; j++)
+         {
+            std::string valStr = pCamera->GetPropertyValueAt(MM::g_Keyword_Binning, j);
+            int val = atoi(valStr.c_str());
+            result.push_back(val);
+         }
+         return result;
+      }
+      else if (propType == MM::String)
+      {
+         // String property - expect NxN format or single integer
+         int nrValues = pCamera->GetNumberOfPropertyValues(MM::g_Keyword_Binning);
+         for (int j = 0; j < nrValues; j++)
+         {
+            std::string valStr = pCamera->GetPropertyValueAt(MM::g_Keyword_Binning, j);
+            size_t xPos = valStr.find('x');
+            int binning;
+            if (xPos == std::string::npos)
+            {
+               binning = atoi(valStr.c_str());
+               result.push_back(binning);
+            }
+            else
+            {
+               int binX = atoi(valStr.c_str());
+               int binY = atoi(valStr.c_str() + xPos + 1);
+               // ignore non-square binning options rather than throwing error
+               if (binX == binY)
+               {
+                  result.push_back(binX);
+               }
+            }
+         }
+         return result;
+      }
+      else if (propType == MM::Float)
+      {
+         throw CMMError("Binning property has Float type, which is not supported");
+      }
+      throw CMMError("Unknown error getting allowed binning values");
+   }
 }
 
 /**
@@ -4554,10 +4636,6 @@ void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMM
 
       MM::PropertyType propType = pCamera->GetPropertyType(MM::g_Keyword_Binning);
 
-      if (propType == MM::Float)
-      {
-         throw CMMError("Binning property has Float type, which is not supported");
-      }
 
       std::string binningValue;
       if (propType == MM::Integer)
@@ -4565,7 +4643,7 @@ void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMM
          // Integer property - use integer format
          binningValue = CDeviceUtils::ConvertToString(binning);
       }
-      else // propType == MM::String
+      else if (propType == MM::String)
       {
          std::string binStr = CDeviceUtils::ConvertToString(binning);
          // check if the camera uses NxN format
@@ -4587,6 +4665,10 @@ void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMM
          {
             binningValue = binStr + "x" + binStr;
          }
+      }
+      else if (propType == MM::Float)
+      {
+         throw CMMError("Binning property has Float type, which is not supported");
       }
 
       pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);

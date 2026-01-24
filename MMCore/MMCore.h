@@ -396,6 +396,8 @@ public:
 
    int getBinning() MMCORE_LEGACY_THROW(CMMError);
    int getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError);
+   std::vector<int> getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMError);
+   std::vector<int> getAllowedBinningValues(const char* label) MMCORE_LEGACY_THROW(CMMError);
    void setBinning(int binning) MMCORE_LEGACY_THROW(CMMError);
    void setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMMError);
 
