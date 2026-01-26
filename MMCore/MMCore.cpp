@@ -4415,7 +4415,7 @@ double CMMCore::getExposure(const char* label) MMCORE_LEGACY_THROW(CMMError)
  *
  * @return the binning factor (1-100)
  */
-int CMMCore::getBinning() MMCORE_LEGACY_THROW(CMMError)
+long CMMCore::getBinning() MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
    if (!camera)
@@ -4442,7 +4442,7 @@ int CMMCore::getBinning() MMCORE_LEGACY_THROW(CMMError)
  * @param label  the camera device label
  * @return the binning factor (1-100)
  */
-int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
+long CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
@@ -4464,7 +4464,7 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
       throw CMMError("Binning property returned empty value");
    }
 
-   int binning = 1;
+   long binning = 1;
    if (propType == MM::Integer)
    {
       // Integer property - just convert directly
@@ -4503,7 +4503,7 @@ int CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
    return binning;
 }
 
-std::vector<int> CMMCore::getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMError)
+std::vector<long> CMMCore::getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
    if (!camera)
@@ -4521,7 +4521,7 @@ std::vector<int> CMMCore::getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMError
    }
 }
 
-std::vector<int> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGACY_THROW(CMMError)
+std::vector<long> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> pCamera =
       deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
@@ -4537,7 +4537,7 @@ std::vector<int> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGA
 
       MM::PropertyType propType = pCamera->GetPropertyType(MM::g_Keyword_Binning);
 
-      std::vector<int> result = std::vector<int>();
+      std::vector<long> result = std::vector<long>();
       if (propType == MM::Integer)
       {
          // Integer property - use integer format
@@ -4545,7 +4545,7 @@ std::vector<int> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGA
          for (int j = 0; j < nrValues; j++)
          {
             std::string valStr = pCamera->GetPropertyValueAt(MM::g_Keyword_Binning, j);
-            int val = atoi(valStr.c_str());
+            long val = atoi(valStr.c_str());
             result.push_back(val);
          }
          return result;
@@ -4558,7 +4558,7 @@ std::vector<int> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGA
          {
             std::string valStr = pCamera->GetPropertyValueAt(MM::g_Keyword_Binning, j);
             size_t xPos = valStr.find('x');
-            int binning;
+            long binning;
             if (xPos == std::string::npos)
             {
                binning = atoi(valStr.c_str());
@@ -4566,8 +4566,8 @@ std::vector<int> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGA
             }
             else
             {
-               int binX = atoi(valStr.c_str());
-               int binY = atoi(valStr.c_str() + xPos + 1);
+               long binX = atoi(valStr.c_str());
+               long binY = atoi(valStr.c_str() + xPos + 1);
                // ignore non-square binning options rather than throwing error
                if (binX == binY)
                {
@@ -4590,7 +4590,7 @@ std::vector<int> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGA
  * Automatically handles both Integer ("N") and String ("NxN" or "N") property formats.
  * @param binning the binning factor (1-100)
  */
-void CMMCore::setBinning(int binning) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::setBinning(long binning) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
    if (!camera)
@@ -4614,7 +4614,7 @@ void CMMCore::setBinning(int binning) MMCORE_LEGACY_THROW(CMMError)
  * @param label  the camera device label
  * @param binning the binning factor (1-100)
  */
-void CMMCore::setBinning(const char* label, int binning) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::setBinning(const char* label, long binning) MMCORE_LEGACY_THROW(CMMError)
 {
    if (binning < 1 || binning > 100)
    {
