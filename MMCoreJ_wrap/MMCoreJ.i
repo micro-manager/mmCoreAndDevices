@@ -21,8 +21,9 @@
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 06/07/2005
 
-#if SWIG_VERSION < 0x020000 || SWIG_VERSION >= 0x040000
-#error SWIG 2.x or 3.x is currently required to build MMCoreJ
+// Different SWIG major versions can produce incompatible Java APIs.
+#if SWIG_VERSION < 0x040000 || SWIG_VERSION >= 0x050000
+#error "SWIG 4.x is required to build MMCoreJ"
 #endif
 
 #define MMDEVICE_CLIENT_BUILD
@@ -612,7 +613,6 @@
 // Map all exception objects coming from C++ level
 // generic Java Exception
 //
-%rename(eql) operator=;
 
 // CMMError used by MMCore
 %typemap(throws, throws="java.lang.Exception") CMMError {
@@ -641,8 +641,16 @@
 // We've translated exceptions to java.lang.Exception, so don't wrap the unused
 // C++ exception classes.
 %ignore CMMError;
+%ignore MetadataError;
 %ignore MetadataKeyError;
 %ignore MetadataIndexError;
+
+// Hide methods that take istringstream, which is not usable from Java
+%ignore Metadata::readLine;
+%ignore MetadataTag::ReadLine;
+%ignore MetadataTag::Restore;
+%ignore MetadataArrayTag::Restore;
+%ignore MetadataSingleTag::Restore;
 
 
 %typemap(javaimports) CMMCore %{
@@ -946,6 +954,16 @@
 
 // instantiate STL mappings
 
+// SWIG 4 changed the std::vector wrappers and (among other things) removed
+// the constructor overload taking (Java) long, which creates a vector of the
+// requested number of empty/default elements. Since all of the element types
+// that we wrap vector for are default-constructible, we can add back this
+// overload.
+// See the 2019-02-28 entry in https://www.swig.org/Release/CHANGES.
+%extend std::vector {
+   vector(size_type count) { return new std::vector<T>(count); }
+}
+
 namespace std {
 	%typemap(javaimports) vector<char> %{
 		import java.lang.Iterable;
@@ -974,10 +992,6 @@ namespace std {
                   throw new NoSuchElementException();
                }
             }
-
-            public void remove() throws UnsupportedOperationException {
-               throw new UnsupportedOperationException();
-            }
          };
       }
 
@@ -985,11 +999,11 @@ namespace std {
          if (0==size())
             return new Character[0];
 
-         Character ints[] = new Character[(int) size()];
+         Character cs[] = new Character[(int) size()];
          for (int i=0; i<size(); ++i) {
-            ints[i] = get(i);
+            cs[i] = get(i);
          }
-         return ints;
+         return cs;
       }
    %}
    
@@ -1025,10 +1039,6 @@ namespace std {
                   throw new NoSuchElementException();
                }
             }
-
-            public void remove() throws UnsupportedOperationException {
-               throw new UnsupportedOperationException();
-            }
          };
       }
 
@@ -1036,11 +1046,11 @@ namespace std {
          if (0==size())
             return new Integer[0];
 
-         Integer ints[] = new Integer[(int) size()];
+         Integer is[] = new Integer[(int) size()];
          for (int i=0; i<size(); ++i) {
-            ints[i] = get(i);
+            is[i] = get(i);
          }
-         return ints;
+         return is;
       }
    %}
    
@@ -1071,10 +1081,6 @@ namespace std {
                   throw new NoSuchElementException();
                }
             }
-
-            public void remove() throws UnsupportedOperationException {
-               throw new UnsupportedOperationException();
-            }
          };
       }
 
@@ -1082,11 +1088,11 @@ namespace std {
          if (0==size())
             return new Double[0];
 
-         Double ints[] = new Double[(int) size()];
+         Double ds[] = new Double[(int) size()];
          for (int i=0; i<size(); ++i) {
-            ints[i] = get(i);
+            ds[i] = get(i);
          }
-         return ints;
+         return ds;
       }
    %}
 
@@ -1119,10 +1125,6 @@ namespace std {
 					throw new NoSuchElementException();
 					}
 				}
-					
-				public void remove() throws UnsupportedOperationException {
-					throw new UnsupportedOperationException();
-				}		
 			};
 		}
 		
@@ -1138,57 +1140,6 @@ namespace std {
 		}
 		
 	%}
-	
-   
-
-	%typemap(javaimports) vector<bool> %{
-		import java.lang.Iterable;
-		import java.util.Iterator;
-		import java.util.NoSuchElementException;
-		import java.lang.UnsupportedOperationException;
-	%}
-	
-	%typemap(javainterfaces) vector<bool> %{ Iterable<Boolean>%}
-	
-	%typemap(javacode) vector<bool> %{
-	
-		public Iterator<Boolean> iterator() {
-			return new Iterator<Boolean>() {
-			
-				private int i_=0;
-			
-				public boolean hasNext() {
-					return (i_<size());
-				}
-				
-				public Boolean next() throws NoSuchElementException {
-					if (hasNext()) {
-						++i_;
-						return get(i_-1);
-					} else {
-					throw new NoSuchElementException();
-					}
-				}
-					
-				public void remove() throws UnsupportedOperationException {
-					throw new UnsupportedOperationException();
-				}		
-			};
-		}
-		
-		public Boolean[] toArray() {
-			if (0==size())
-				return new Boolean[0];
-			
-			Boolean strs[] = new Boolean[(int) size()];
-			for (int i=0; i<size(); ++i) {
-				strs[i] = get(i);
-			}
-			return strs;
-		}
-		
-	%}
-	
 
 	%typemap(javaimports) vector<unsigned> %{
 		import java.lang.Iterable;
@@ -1217,10 +1168,6 @@ namespace std {
                   throw new NoSuchElementException();
                }
             }
-
-            public void remove() throws UnsupportedOperationException {
-               throw new UnsupportedOperationException();
-            }
          };
       }
 
@@ -1228,11 +1175,11 @@ namespace std {
          if (0==size())
             return new Long[0];
 
-         Long ints[] = new Long[(int) size()];
+         Long ls[] = new Long[(int) size()];
          for (int i=0; i<size(); ++i) {
-            ints[i] = get(i);
+            ls[i] = get(i);
          }
-         return ints;
+         return ls;
       }
    %}
 
@@ -1243,14 +1190,7 @@ namespace std {
     %template(LongVector)   vector<long>;
     %template(DoubleVector) vector<double>;
     %template(StrVector)    vector<string>;
-    %template(BooleanVector)    vector<bool>;
     %template(UnsignedVector) vector<unsigned>;
-    %template(pair_ss)      pair<string, string>;
-    %template(StrMap)       map<string, string>;
-
-
-
-
 }
 
 
