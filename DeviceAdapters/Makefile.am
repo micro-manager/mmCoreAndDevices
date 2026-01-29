@@ -185,6 +185,7 @@ SUBDIRS = \
 	PrecisExcite \
 	Prior \
 	PriorLegacy \
+	RappLasers \
 	Sapphire \
 	Scientifica \
 	SerialManager \

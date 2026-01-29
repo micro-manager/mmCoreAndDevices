@@ -119,6 +119,7 @@ static const char* g_Keyword_LimitBitMap = "Limit Bitmap";
 static const char* g_Keyword_EntranceMicroSteps = "Entrance Microsteps";
 static const char* g_Keyword_ExitMicroSteps = "Exit Microsteps";
 static const char* g_Keyword_FocusMicroSteps = "Focus Microsteps";
+static const char* g_Keyword_SwapEntranceAndExitAxes = "Swap Entrance And Exit Mirrors";
 
 // Common
 static const char* g_Keyword_Handle = "Handle";

@@ -19,6 +19,7 @@ License:	Distributed under the BSD license.
 #define     INVALID_VELOCITY        -10
 #define		INVALID_LOCATION		-11
 
+#pragma pack(push, 1)
 struct EncoderValues
 {
 	double m1PositionMm;
@@ -31,18 +32,13 @@ struct EncoderValues
 	double m8PositionMm;
 };
 
-struct MMTState
+struct MotorizedMicromirrorTirf
 {
 	// Tracked by the Micro-Drive
 	int limitSwitchesFound;
-	int m1LS1Steps;
-	int m1LS2Steps;
-	int m2LS1Steps;
-	int m2LS2Steps;
-	int m3LS1Steps;
-	int m3LS2Steps;
-	int m4LS1Steps;
-	int m4LS2Steps;
+	int entranceLimitSteps;
+	int exitLimitSteps;
+	int finalFocusingMirrorLimitSteps;
 	// Can be saved to the Micro-Drive
 	int epiFound;
 	int focusFound;
@@ -52,6 +48,7 @@ struct MMTState
 	int tirfAIRSteps;
 	int epiToTirfSteps;
 };
+#pragma pack(pop)
 
 #ifdef __cplusplus
 	extern"C" {
@@ -131,7 +128,7 @@ struct MMTState
 	MICRODRIVE_API int  MCL_MDEncodersPresent(
 		unsigned char* encoderBitmap,
 		int handle);
-	MICRODRIVE_API int  MCL_MMTGetState(MMTState *mmt, int handle);
+	MICRODRIVE_API int  MCL_MMTGetState(MotorizedMicromirrorTirf* mmt, int handle);
 	MICRODRIVE_API int  MCL_MMTSetState(int mmtStateType, int mmtStateValue, int handle);
 
 

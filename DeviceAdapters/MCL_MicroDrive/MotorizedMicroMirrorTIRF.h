@@ -43,6 +43,10 @@ public:
 	void GetName(char* pszName) const;
 
 	// Action Interface
+	int OnEntranceAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExitAxis(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnEntranceStepSize(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExitStepSize(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLimitBitmap(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnEntranceMicroSteps(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnExitMicroSteps(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -62,7 +66,7 @@ public:
 	int OnFocusStepCount(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTirfStepCount(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnEpiToTIRFStepCount(MM::PropertyBase* pProp, MM::ActionType eAct);
-	
+	int OnSwapEntranceAndExit(MM::PropertyBase* pProp, MM::ActionType eAct);	
 
 private:
 	//Initialization
@@ -83,6 +87,7 @@ private:
 	int entranceAxis_;
 	int exitAxis_;
 	int focusAxis_;
+	bool swapEntranceAndExitMirrors_;
 
 	double entranceStepSize_;
 	double exitStepSize_;

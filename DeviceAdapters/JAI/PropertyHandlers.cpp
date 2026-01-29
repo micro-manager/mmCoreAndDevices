@@ -126,6 +126,18 @@ int JAICamera::OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 		if (!pvr.IsOK())
 			return processPvError(pvr);
 		SetPropertyLimits(MM::g_Keyword_Exposure, expMinUs / 1000, expMaxUs / 1000);
+
+		// adjust individual exposure limits (if any)
+		for (const auto& selector : individualExposureSelectors_)
+		{
+			double eMinMs{}, eMaxMs{};
+			int ret = GetSelectorExposureMinMax(selector, eMinMs, eMaxMs);
+			if (ret == DEVICE_OK)
+			{
+				const std::string propName = "Exposure_" + selector;
+				SetPropertyLimits(propName.c_str(), eMinMs, eMaxMs);
+			}
+		}
 	}
 	else if (eAct == MM::BeforeGet)
 	{

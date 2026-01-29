@@ -98,6 +98,7 @@ mmcore_lib = static_library(
     dependencies: [
         mmdevice_dep,
         dependency('threads'),
+        dependency('dl', required: false),
     ],
     gnu_symbol_visibility: 'inlineshidden',
     cpp_args: [
