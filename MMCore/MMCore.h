@@ -394,6 +394,13 @@ public:
    double getExposure() MMCORE_LEGACY_THROW(CMMError);
    double getExposure(const char* label) MMCORE_LEGACY_THROW(CMMError);
 
+   long getBinning() MMCORE_LEGACY_THROW(CMMError);
+   long getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError);
+   std::vector<long> getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMError);
+   std::vector<long> getAllowedBinningValues(const char* label) MMCORE_LEGACY_THROW(CMMError);
+   void setBinning(long binning) MMCORE_LEGACY_THROW(CMMError);
+   void setBinning(const char* label, long binning) MMCORE_LEGACY_THROW(CMMError);
+
    void snapImage() MMCORE_LEGACY_THROW(CMMError);
    void* getImage() MMCORE_LEGACY_THROW(CMMError);
    void* getImage(unsigned numChannel) MMCORE_LEGACY_THROW(CMMError);
