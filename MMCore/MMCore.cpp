@@ -4489,9 +4489,9 @@ long CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
          binning = binX;
       }
    }
-   else if (propType == MM::Float)
+   else
    {
-      throw CMMError("Binning property has Float type, which is not supported");
+      throw CMMError("Binning property has type other than integer or string, which is not supported");
    }
 
    // To disallow incorrectly written camera adapters that conflate binning size with image size
@@ -4577,11 +4577,10 @@ std::vector<long> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEG
          }
          return result;
       }
-      else if (propType == MM::Float)
+      else
       {
-         throw CMMError("Binning property has Float type, which is not supported");
+         throw CMMError("Binning property has type other than integer or string, which is not supported");
       }
-      throw CMMError("Unknown error getting allowed binning values");
    }
 }
 
@@ -4666,9 +4665,9 @@ void CMMCore::setBinning(const char* label, long binning) MMCORE_LEGACY_THROW(CM
             binningValue = binStr + "x" + binStr;
          }
       }
-      else if (propType == MM::Float)
+      else
       {
-         throw CMMError("Binning property has Float type, which is not supported");
+         throw CMMError("Binning property has type other than integer or string, which is not supported");
       }
 
       pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
