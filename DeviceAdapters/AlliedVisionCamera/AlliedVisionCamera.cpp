@@ -434,8 +434,15 @@ double AlliedVisionCamera::GetExposure() const
 
 void AlliedVisionCamera::SetExposure(double exp_ms)
 {
-    SetProperty(m_exposureFeatureName.c_str(), CDeviceUtils::ConvertToString(exp_ms * MS_TO_US));
-    GetCoreCallback()->OnExposureChanged(this, exp_ms);
+    int err = SetProperty(m_exposureFeatureName.c_str(), CDeviceUtils::ConvertToString(exp_ms * MS_TO_US));
+    if (err != DEVICE_OK)
+    {
+        LOG_ERROR(err, "Failed to set exposure");
+        return;
+    }
+
+    double actualExposure = GetExposure();
+    GetCoreCallback()->OnExposureChanged(this, actualExposure);
 }
 
 int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
