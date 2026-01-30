@@ -348,8 +348,6 @@ public:
 
    bool IsContinuousFocusDrive() const {return false;}
 
-   int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
-
    int OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDACNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnUpperLimit(MM::PropertyBase* pProp, MM::ActionType eAct);

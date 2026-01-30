@@ -51,8 +51,6 @@ public:
 	virtual int SendStageSequence();
 	virtual bool IsContinuousFocusDrive() const;
 
-	int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
-
 	// Action interface
 	int OnLowerLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnUpperLimit(MM::PropertyBase* pProp, MM::ActionType eAct);

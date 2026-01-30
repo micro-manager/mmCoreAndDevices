@@ -228,7 +228,6 @@ public:
 	double GetStepSizeYUm() { return stepSize_umY_; }
 
 	int IsXYStageSequenceable(bool& isSequenceable) const	{isSequenceable = false; return DEVICE_OK;	}
-	int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 	MM::DeviceDetectionStatus DetectDevice(void);
 protected:
 	// check controller

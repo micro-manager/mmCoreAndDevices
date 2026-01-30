@@ -32,10 +32,6 @@ public:
     bool IsContinuousFocusDrive() const override {
         return true;
     }
-    int UsesOnStagePositionChanged(bool& result) const override {
-        result = true;
-        return DEVICE_OK;
-    }
 protected:
     double StepSizeUm() const;
     double origin_ = 0.0;
@@ -123,7 +119,7 @@ public:
     }
 
     int UsesOnXYStagePositionChanged(bool& result) const override {
-        result = true;
+        result = false;
         return DEVICE_OK;
     }
 

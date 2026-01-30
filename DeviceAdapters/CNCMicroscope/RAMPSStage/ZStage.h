@@ -66,8 +66,6 @@ class RAMPSZStage : public CStageBase<RAMPSZStage>
 
   bool IsContinuousFocusDrive() const;
 
-  int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
-
   // action interface
   // ----------------
   int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);

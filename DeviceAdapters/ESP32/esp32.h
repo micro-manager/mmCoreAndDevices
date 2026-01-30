@@ -325,8 +325,6 @@ public:
         nrEvents = 0; return DEVICE_OK;
     }
 
-    int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
-
 private:
     double stepSizeUm_;
     double pos_um_;

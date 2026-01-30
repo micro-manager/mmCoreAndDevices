@@ -66,8 +66,6 @@ class RAMPSXYStage : public CXYStageBase<RAMPSXYStage>
 
   int IsXYStageSequenceable(bool& isSequenceable) const;
 
-  int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
-
   // action interface
   // ----------------
   int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
