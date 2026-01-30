@@ -509,7 +509,9 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
 
 int AlliedVisionCamera::GetROI(unsigned &x, unsigned &y, unsigned &xSize, unsigned &ySize)
 {
-    std::map<const char *, unsigned> fields = { { g_OffsetX, x }, { g_OffsetY, y }, { g_Width, xSize }, { g_Height, ySize } };
+    std::map<const char *, unsigned *> fields = { 
+        { g_OffsetX, &x }, { g_OffsetY, &y }, { g_Width, &xSize }, { g_Height, &ySize } 
+    };
 
     VmbError_t err = VmbErrorSuccess;
     for (auto &field : fields)
@@ -521,7 +523,7 @@ int AlliedVisionCamera::GetROI(unsigned &x, unsigned &y, unsigned &xSize, unsign
             LOG_ERROR(err, "Error while getting ROI!");
             break;
         }
-        field.second = atoi(value.data());
+        *field.second = atoi(value.data());
     }
 
     return err;
