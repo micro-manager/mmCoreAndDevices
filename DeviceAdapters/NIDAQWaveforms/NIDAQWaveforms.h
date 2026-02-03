@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 class IDAQDevice;
 
@@ -37,10 +38,13 @@ public:
 	bool Busy() { return false; };
 
 	// Action handlers
-	int OnAdapterType(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnChannelEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	bool initialized_;
-	std::string daqAdapterType_;
+	std::string deviceName_;
+	std::vector<std::string> availableChannels_;
+	std::vector<std::string> enabledChannels_;
 	std::unique_ptr<IDAQDevice> daq_;
 };

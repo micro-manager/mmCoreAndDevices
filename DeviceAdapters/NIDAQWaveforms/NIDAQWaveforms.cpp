@@ -73,18 +73,24 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 NIDAQWaveforms::NIDAQWaveforms() :
-	// Parameter values before hardware synchronization
 	initialized_ (false),
-	daqAdapterType_("Mock")
+	deviceName_("")
 {
-	// call the base class method to set-up default error codes/messages
 	InitializeDefaultErrorMessages();
 
-	// Pre-init property: DAQ Adapter Type
-	CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnAdapterType);
-	CreateStringProperty("DAQ Adapter Type", "Mock", false, pAct, true);
-	AddAllowedValue("DAQ Adapter Type", "Mock");
-	AddAllowedValue("DAQ Adapter Type", "NIDAQmx");
+	// Create DAQ adapter for device discovery
+	// Toggle between Mock and NIDAQmx by commenting/uncommenting:
+	daq_ = std::make_unique<MockDAQAdapter>();
+	// daq_ = std::make_unique<NIDAQmxAdapter>();
+
+	// Pre-init property: Device
+	std::vector<std::string> devices = daq_->getDeviceNames();
+	CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnDevice);
+	std::string defaultDevice = devices.empty() ? "" : devices[0];
+	deviceName_ = defaultDevice;
+	CreateStringProperty("Device", defaultDevice.c_str(), false, pAct, true);
+	for (const auto& dev : devices)
+		AddAllowedValue("Device", dev.c_str());
 }
 
 /**
@@ -122,20 +128,12 @@ int NIDAQWaveforms::Initialize()
 	if (initialized_)
 		return DEVICE_OK;
 
-	// Create DAQ device based on pre-init property selection
-	if (daqAdapterType_ == "NIDAQmx")
-		daq_ = std::make_unique<NIDAQmxAdapter>();
-	else
-		daq_ = std::make_unique<MockDAQAdapter>();
-
 	// set read-only properties
 	// ------------------------
-	// Name
 	int nRet = CreateStringProperty(MM::g_Keyword_Name, g_DeviceName, true);
 	if (DEVICE_OK != nRet)
 		return nRet;
 
-	// Description
 	nRet = CreateStringProperty(
 		MM::g_Keyword_Description,
 		g_DeviceDescription,
@@ -144,19 +142,28 @@ int NIDAQWaveforms::Initialize()
 	if (DEVICE_OK != nRet)
 		return nRet;
 
-	// DAQ Adapter (read-only, mirrors pre-init selection)
-	nRet = CreateStringProperty("DAQ Adapter", daqAdapterType_.c_str(), true);
-	if (DEVICE_OK != nRet)
+	// Discover available AO channels for the selected device
+	availableChannels_ = daq_->getAnalogOutputChannels(deviceName_);
+
+	// Create enable/disable property for each channel
+	for (const auto& channel : availableChannels_)
+	{
+		std::string propName = channel + " Enabled";
+		CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnChannelEnabled);
+		nRet = CreateStringProperty(propName.c_str(), "No", false, pAct);
+		if (DEVICE_OK != nRet)
+			return nRet;
+		AddAllowedValue(propName.c_str(), "No");
+		AddAllowedValue(propName.c_str(), "Yes");
+	}
+
+	// synchronize all properties
+	nRet = UpdateStatus();
+	if (nRet != DEVICE_OK)
 		return nRet;
 
-    // synchronize all properties
-    // --------------------------
-    int ret = UpdateStatus();
-    if (ret != DEVICE_OK)
-       return ret;
-
-    initialized_ = true;
-    return DEVICE_OK;
+	initialized_ = true;
+	return DEVICE_OK;
 }
 
 /**
@@ -180,15 +187,34 @@ int NIDAQWaveforms::Shutdown()
 // Action handlers
 /////////////////////////////////////////////
 
-int NIDAQWaveforms::OnAdapterType(MM::PropertyBase* pProp, MM::ActionType eAct)
+int NIDAQWaveforms::OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(daqAdapterType_.c_str());
+		pProp->Set(deviceName_.c_str());
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(daqAdapterType_);
+		pProp->Get(deviceName_);
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnChannelEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	
+	if (eAct == MM::AfterSet)
+	{
+		// Rebuild the list of enabled channels from properties
+		enabledChannels_.clear();
+		for (const auto& channel : availableChannels_)
+		{
+			std::string propName = channel + " Enabled";
+			char value[MM::MaxStrLength];
+			GetProperty(propName.c_str(), value);
+			if (std::string(value) == "Yes")
+				enabledChannels_.push_back(channel);
+		}
 	}
 	return DEVICE_OK;
 }
