@@ -80,4 +80,21 @@ public:
     /// Resets the device state to allow reconfiguration. Call this before
     /// setting up a new waveform configuration.
     virtual void clearTasks() = 0;
+
+    // =========================================================================
+    // Discovery methods
+    // =========================================================================
+
+    /// Get list of available DAQ devices in the system.
+    ///
+    /// @return Vector of device names (e.g., "Dev1", "Dev2")
+    virtual std::vector<std::string> getDeviceNames() const = 0;
+
+    /// Get list of analog output channels for a device.
+    ///
+    /// @param deviceName The device to query (e.g., "Dev1")
+    /// @return Vector of channel names (e.g., "Dev1/ao0", "Dev1/ao1")
+    virtual std::vector<std::string> getAnalogOutputChannels(
+        const std::string& deviceName
+    ) const = 0;
 };

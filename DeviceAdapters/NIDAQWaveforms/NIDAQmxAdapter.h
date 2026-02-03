@@ -42,4 +42,19 @@ public:
     void start() override {}
     void stop() override {}
     void clearTasks() override {}
+
+    std::vector<std::string> getDeviceNames() const override
+    {
+        // TODO: Implement using DAQmxGetSysDevNames()
+        return {};
+    }
+
+    std::vector<std::string> getAnalogOutputChannels(
+        const std::string& deviceName
+    ) const override
+    {
+        // TODO: Implement using DAQmxGetDevAOPhysicalChans()
+        (void)deviceName;
+        return {};
+    }
 };

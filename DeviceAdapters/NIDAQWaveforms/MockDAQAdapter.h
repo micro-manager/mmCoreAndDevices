@@ -42,4 +42,20 @@ public:
     void start() override {}
     void stop() override {}
     void clearTasks() override {}
+
+    std::vector<std::string> getDeviceNames() const override
+    {
+        return {"MockDev1", "MockDev2"};
+    }
+
+    std::vector<std::string> getAnalogOutputChannels(
+        const std::string& deviceName
+    ) const override
+    {
+        if (deviceName == "MockDev1")
+            return {"MockDev1/ao0", "MockDev1/ao1", "MockDev1/ao2", "MockDev1/ao3"};
+        else if (deviceName == "MockDev2")
+            return {"MockDev2/ao0", "MockDev2/ao1"};
+        return {};
+    }
 };
