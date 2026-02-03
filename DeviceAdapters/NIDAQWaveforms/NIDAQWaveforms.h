@@ -19,6 +19,11 @@
 
 #include "DeviceBase.h"
 
+#include <memory>
+#include <string>
+
+class IDAQDevice;
+
 class NIDAQWaveforms : public CGenericBase<NIDAQWaveforms>
 {
 public:
@@ -31,7 +36,11 @@ public:
 	void GetName(char* name) const;
 	bool Busy() { return false; };
 
+	// Action handlers
+	int OnAdapterType(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 private:
-	// MM API
 	bool initialized_;
+	std::string daqAdapterType_;
+	std::unique_ptr<IDAQDevice> daq_;
 };
