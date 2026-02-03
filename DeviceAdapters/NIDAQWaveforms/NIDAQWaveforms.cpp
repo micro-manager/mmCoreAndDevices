@@ -16,6 +16,8 @@
 //
 
 #include "NIDAQWaveforms.h"
+#include "MockDAQAdapter.h"
+#include "NIDAQmxAdapter.h"
 #include "ModuleInterface.h"
 
 using namespace std;
@@ -72,10 +74,17 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 */
 NIDAQWaveforms::NIDAQWaveforms() :
 	// Parameter values before hardware synchronization
-	initialized_ (false)
+	initialized_ (false),
+	daqAdapterType_("Mock")
 {
 	// call the base class method to set-up default error codes/messages
 	InitializeDefaultErrorMessages();
+
+	// Pre-init property: DAQ Adapter Type
+	CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnAdapterType);
+	CreateStringProperty("DAQ Adapter Type", "Mock", false, pAct, true);
+	AddAllowedValue("DAQ Adapter Type", "Mock");
+	AddAllowedValue("DAQ Adapter Type", "NIDAQmx");
 }
 
 /**
@@ -113,6 +122,12 @@ int NIDAQWaveforms::Initialize()
 	if (initialized_)
 		return DEVICE_OK;
 
+	// Create DAQ device based on pre-init property selection
+	if (daqAdapterType_ == "NIDAQmx")
+		daq_ = std::make_unique<NIDAQmxAdapter>();
+	else
+		daq_ = std::make_unique<MockDAQAdapter>();
+
 	// set read-only properties
 	// ------------------------
 	// Name
@@ -126,6 +141,11 @@ int NIDAQWaveforms::Initialize()
 		g_DeviceDescription,
 		true
 	);
+	if (DEVICE_OK != nRet)
+		return nRet;
+
+	// DAQ Adapter (read-only, mirrors pre-init selection)
+	nRet = CreateStringProperty("DAQ Adapter", daqAdapterType_.c_str(), true);
 	if (DEVICE_OK != nRet)
 		return nRet;
 
@@ -147,6 +167,7 @@ int NIDAQWaveforms::Initialize()
 */
 int NIDAQWaveforms::Shutdown()
 {
+   daq_.reset();
    initialized_ = false;
    return DEVICE_OK;
 }
@@ -158,3 +179,16 @@ int NIDAQWaveforms::Shutdown()
 /////////////////////////////////////////////
 // Action handlers
 /////////////////////////////////////////////
+
+int NIDAQWaveforms::OnAdapterType(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(daqAdapterType_.c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(daqAdapterType_);
+	}
+	return DEVICE_OK;
+}

@@ -84,6 +84,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IDAQDevice.h" />
+    <ClInclude Include="MockDAQAdapter.h" />
+    <ClInclude Include="NIDAQmxAdapter.h" />
     <ClInclude Include="NIDAQWaveforms.h" />
   </ItemGroup>
   <ItemGroup>

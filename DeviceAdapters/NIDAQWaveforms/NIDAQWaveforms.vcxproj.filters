@@ -12,6 +12,15 @@
     <ClInclude Include="NIDAQWaveforms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="IDAQDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MockDAQAdapter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NIDAQmxAdapter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NIDAQWaveforms.cpp">
