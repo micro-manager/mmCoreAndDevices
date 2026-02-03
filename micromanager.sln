@@ -197,6 +197,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rapp", "DeviceAdapters\Rapp\Rapp.vcxproj", "{C613608D-C4D0-4FC2-AA44-9D0098AAFDD8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReflectionFocus", "DeviceAdapters\ReflectionFocus\ReflectionFocus.vcxproj", "{7B1F4C3E-8D9A-4E6F-B2C5-1A3D8F9E4B7C}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rapp_UGA42", "DeviceAdapters\Rapp_UGA42\Rapp_UGA42.vcxproj", "{E8D7F3A2-9C45-4B67-8F12-A1B3C4D5E6F7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MarzhauserLStep", "DeviceAdapters\Marzhauser-LStep\MarzhauserLStep.vcxproj", "{5D42D76C-B076-4045-A03E-1DF101583C39}"
@@ -527,7 +528,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openUC2", "DeviceAdapters\O
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PriorPureFocus", "DeviceAdapters\PriorPureFocus\PriorPureFocus.vcxproj", "{BF5D938C-60E9-400E-8BBB-D9D2C058B4FC}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CairnOptoSpinUCSF", "DeviceAdapters\CairnOptoSpinUCSF\CairnOptoSpinUCSF.vcxproj", "{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CairnOptoSpinUCSF", "DeviceAdapters\CairnOptoSpinUCSF\CairnOptoSpinUCSF.vcxproj", "{ED59AB6E-B1BC-40C5-BFFE-7A79C0F15834}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NIDAQWaveforms", "DeviceAdapters\NIDAQWaveforms\NIDAQWaveforms.vcxproj", "{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1587,10 +1590,14 @@ Global
 		{BF5D938C-60E9-400E-8BBB-D9D2C058B4FC}.Debug|x64.Build.0 = Debug|x64
 		{BF5D938C-60E9-400E-8BBB-D9D2C058B4FC}.Release|x64.ActiveCfg = Release|x64
 		{BF5D938C-60E9-400E-8BBB-D9D2C058B4FC}.Release|x64.Build.0 = Release|x64
-		{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}.Debug|x64.ActiveCfg = Debug|x64
-		{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}.Debug|x64.Build.0 = Debug|x64
-		{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}.Release|x64.ActiveCfg = Release|x64
-		{ed59ab6e-b1bc-40c5-bffe-7a79c0f15834}.Release|x64.Build.0 = Release|x64
+		{ED59AB6E-B1BC-40C5-BFFE-7A79C0F15834}.Debug|x64.ActiveCfg = Debug|x64
+		{ED59AB6E-B1BC-40C5-BFFE-7A79C0F15834}.Debug|x64.Build.0 = Debug|x64
+		{ED59AB6E-B1BC-40C5-BFFE-7A79C0F15834}.Release|x64.ActiveCfg = Release|x64
+		{ED59AB6E-B1BC-40C5-BFFE-7A79C0F15834}.Release|x64.Build.0 = Release|x64
+		{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}.Debug|x64.ActiveCfg = Debug|x64
+		{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}.Debug|x64.Build.0 = Debug|x64
+		{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}.Release|x64.ActiveCfg = Release|x64
+		{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
