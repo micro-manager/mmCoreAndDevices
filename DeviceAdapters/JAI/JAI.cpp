@@ -750,24 +750,13 @@ int JAICamera::SnapImage()
 		return ERR_STREAM_OPEN_FAILED;
 
 	// create smart pointer to clean up stream when function exits
-	std::shared_ptr<PvStream> camStream(pvStream, [](PvStream *s) { PvStream::Free(s); }); // deleter 
+	std::shared_ptr<PvStream> camStream(pvStream, [](PvStream *s) { s->Close(); PvStream::Free(s); });
 
 	uint32_t payloadSize = camera->GetPayloadSize();
 
-	// setup camera buffers
-	const int numBufs = 1;
-	ClearPvBuffers();
-	for (int i = 0; i < numBufs; i++)
-	{
-		// Create new buffer object
-		PvBuffer *lBuffer = new PvBuffer;
-		pvBuffers.push_back(lBuffer);
-
-		// Have the new buffer object allocate payload memory
-		lBuffer->Alloc(payloadSize);
-
-		camStream->QueueBuffer(lBuffer);
-	}
+	PvBuffer lBuffer;
+	lBuffer.Alloc(payloadSize);
+	camStream->QueueBuffer(&lBuffer);
 
 	// Reset stream statistics
 	pvr = camStream->GetParameters()->ExecuteCommand("Reset");
@@ -835,9 +824,7 @@ int JAICamera::SnapImage()
 	{
 		return processPvError(pvr);
 	}
-	camStream->Close();
 
-	ClearPvBuffers();
 	return DEVICE_OK;
 }
 
