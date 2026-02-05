@@ -84,11 +84,15 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 NIDAQWaveforms::NIDAQWaveforms() :
 	initialized_(false),
 	deviceName_(""),
-	aotfBlankingVoltage_(0.0)
+	aotfBlankingVoltage_(0.0),
+	samplingRateHz_(50000.0)
 {
 	InitializeDefaultErrorMessages();
 
 	// Register custom error messages
+	SetErrorText(ERR_INSUFFICIENT_AO_CHANNELS,
+		"The selected device must have at least 4 analog output channels. "
+		"Please select a device with more AO channels.");
 	SetErrorText(ERR_DUPLICATE_CHANNEL_MAPPING,
 		"A hardware channel can only be mapped to one semantic channel. "
 		"Please ensure each AO channel is used only once.");
@@ -225,6 +229,20 @@ void NIDAQWaveforms::UpdateChannelAllowedValues()
 	}
 }
 
+int NIDAQWaveforms::ValidateMinimumChannels()
+{
+	const size_t minimumChannels = 4;
+
+	if (availableChannels_.size() < minimumChannels)
+	{
+		LogMessage("Device has " + std::to_string(availableChannels_.size()) +
+			" AO channels, but at least " + std::to_string(minimumChannels) +
+			" are required", false);
+		return ERR_INSUFFICIENT_AO_CHANNELS;
+	}
+	return DEVICE_OK;
+}
+
 int NIDAQWaveforms::ValidateRequiredChannels()
 {
 	const std::vector<const char*> requiredChannels = {
@@ -290,6 +308,13 @@ int NIDAQWaveforms::ValidateModInConfiguration()
 int NIDAQWaveforms::CreatePostInitProperties()
 {
 	int nRet;
+
+	// Sampling Rate property
+	CPropertyAction* pActRate = new CPropertyAction(this, &NIDAQWaveforms::OnSamplingRate);
+	nRet = CreateFloatProperty("Sampling Rate (Hz)", samplingRateHz_, false, pActRate);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	SetPropertyLimits("Sampling Rate (Hz)", 1000.0, 1000000.0);
 
 	// AOTF Blanking Voltage slider (always created since AOTF Blanking is required)
 	CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnAOTFBlankingVoltage);
@@ -385,6 +410,10 @@ int NIDAQWaveforms::Initialize()
 	availableChannels_ = daq_->getAnalogOutputChannels(deviceName_);
 
 	// Validate channel configuration
+	nRet = ValidateMinimumChannels();
+	if (nRet != DEVICE_OK)
+		return nRet;
+
 	nRet = ValidateRequiredChannels();
 	if (nRet != DEVICE_OK)
 		return nRet;
@@ -582,6 +611,19 @@ int NIDAQWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		pProp->Get(modInVoltage_[semanticKey]);
 		// TODO: Apply voltage to hardware via daq_
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(samplingRateHz_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(samplingRateHz_);
 	}
 	return DEVICE_OK;
 }
