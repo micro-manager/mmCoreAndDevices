@@ -26,9 +26,10 @@
 #include <vector>
 
 // Error codes
-#define ERR_DUPLICATE_CHANNEL_MAPPING    101
-#define ERR_NO_MOD_IN_CONFIGURED         102
-#define ERR_REQUIRED_CHANNEL_NOT_SET     103
+#define ERR_INSUFFICIENT_AO_CHANNELS     101
+#define ERR_DUPLICATE_CHANNEL_MAPPING    102
+#define ERR_NO_MOD_IN_CONFIGURED         103
+#define ERR_REQUIRED_CHANNEL_NOT_SET     104
 
 class IDAQDevice;
 
@@ -61,6 +62,7 @@ public:
 	int OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	// Helper methods
@@ -69,6 +71,7 @@ private:
 	void InitializeChannelDefaults();
 	void CreateChannelPreInitProperties();
 	void UpdateChannelAllowedValues();
+	int ValidateMinimumChannels();
 	int ValidateRequiredChannels();
 	int ValidateChannelMappings();
 	int ValidateModInConfiguration();
@@ -91,4 +94,5 @@ private:
 	double aotfBlankingVoltage_;
 	std::map<std::string, bool> modInEnabled_;
 	std::map<std::string, double> modInVoltage_;
+	double samplingRateHz_;
 };
