@@ -25,6 +25,15 @@ using namespace std;
 const char* g_DeviceName = "NIDAQ Waveforms";
 const char* g_DeviceDescription = "Generates analog waveforms on a NI-DAQ device";
 
+// Semantic channel property name constants
+const char* const NIDAQWaveforms::PROP_GALVO_CHANNEL = "Galvo Waveform Channel";
+const char* const NIDAQWaveforms::PROP_CAMERA_CHANNEL = "Camera Trigger Channel";
+const char* const NIDAQWaveforms::PROP_AOTF_BLANKING_CHANNEL = "AOTF Blanking Channel";
+const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_1 = "AOTF MOD IN Channel 1";
+const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_2 = "AOTF MOD IN Channel 2";
+const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_3 = "AOTF MOD IN Channel 3";
+const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_4 = "AOTF MOD IN Channel 4";
+
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,10 +82,22 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 NIDAQWaveforms::NIDAQWaveforms() :
-	initialized_ (false),
-	deviceName_("")
+	initialized_(false),
+	deviceName_(""),
+	aotfBlankingVoltage_(0.0)
 {
 	InitializeDefaultErrorMessages();
+
+	// Register custom error messages
+	SetErrorText(ERR_DUPLICATE_CHANNEL_MAPPING,
+		"A hardware channel can only be mapped to one semantic channel. "
+		"Please ensure each AO channel is used only once.");
+	SetErrorText(ERR_NO_MOD_IN_CONFIGURED,
+		"At least one AOTF MOD IN channel must be configured. "
+		"Please select a hardware channel for at least one MOD IN.");
+	SetErrorText(ERR_REQUIRED_CHANNEL_NOT_SET,
+		"Galvo Waveform, Camera Trigger, and AOTF Blanking channels are required. "
+		"Please select a hardware channel for each.");
 
 	// Create DAQ adapter for device discovery
 	// Toggle between Mock and NIDAQmx by commenting/uncommenting:
@@ -91,6 +112,13 @@ NIDAQWaveforms::NIDAQWaveforms() :
 	CreateStringProperty("Device", defaultDevice.c_str(), false, pAct, true);
 	for (const auto& dev : devices)
 		AddAllowedValue("Device", dev.c_str());
+
+	// Discover channels for default device
+	availableChannels_ = daq_->getAnalogOutputChannels(deviceName_);
+
+	// Initialize semantic channel defaults and create pre-init properties
+	InitializeChannelDefaults();
+	CreateChannelPreInitProperties();
 }
 
 /**
@@ -104,6 +132,218 @@ NIDAQWaveforms::~NIDAQWaveforms()
 {
    if (initialized_)
       Shutdown();
+}
+
+/////////////////////////////////////////////
+// Helper methods for channel configuration
+/////////////////////////////////////////////
+
+std::vector<const char*> NIDAQWaveforms::GetSemanticChannelNames()
+{
+	return {
+		PROP_GALVO_CHANNEL,
+		PROP_CAMERA_CHANNEL,
+		PROP_AOTF_BLANKING_CHANNEL,
+		PROP_AOTF_MOD_IN_1,
+		PROP_AOTF_MOD_IN_2,
+		PROP_AOTF_MOD_IN_3,
+		PROP_AOTF_MOD_IN_4
+	};
+}
+
+std::vector<const char*> NIDAQWaveforms::GetModInChannelNames()
+{
+	return {
+		PROP_AOTF_MOD_IN_1,
+		PROP_AOTF_MOD_IN_2,
+		PROP_AOTF_MOD_IN_3,
+		PROP_AOTF_MOD_IN_4
+	};
+}
+
+void NIDAQWaveforms::InitializeChannelDefaults()
+{
+	for (const auto& channel : GetSemanticChannelNames())
+	{
+		channelMapping_[channel] = "None";
+		minVoltage_[channel] = -10.0;
+		maxVoltage_[channel] = 10.0;
+	}
+}
+
+void NIDAQWaveforms::CreateChannelPreInitProperties()
+{
+	for (const auto& semanticChannel : GetSemanticChannelNames())
+	{
+		// Channel selection property (pre-init)
+		CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnChannelMapping);
+		CreateStringProperty(semanticChannel, "None", false, pAct, true);
+		AddAllowedValue(semanticChannel, "None");
+		for (const auto& hwChannel : availableChannels_)
+			AddAllowedValue(semanticChannel, hwChannel.c_str());
+
+		// Min voltage property (pre-init)
+		std::string minVoltProp = std::string(semanticChannel) + " Min Voltage";
+		CPropertyAction* pActMin = new CPropertyAction(this, &NIDAQWaveforms::OnMinVoltage);
+		CreateFloatProperty(minVoltProp.c_str(), -10.0, false, pActMin, true);
+
+		// Max voltage property (pre-init)
+		std::string maxVoltProp = std::string(semanticChannel) + " Max Voltage";
+		CPropertyAction* pActMax = new CPropertyAction(this, &NIDAQWaveforms::OnMaxVoltage);
+		CreateFloatProperty(maxVoltProp.c_str(), 10.0, false, pActMax, true);
+	}
+}
+
+void NIDAQWaveforms::UpdateChannelAllowedValues()
+{
+	for (const auto& semanticChannel : GetSemanticChannelNames())
+	{
+		ClearAllowedValues(semanticChannel);
+		AddAllowedValue(semanticChannel, "None");
+		for (const auto& hwChannel : availableChannels_)
+			AddAllowedValue(semanticChannel, hwChannel.c_str());
+
+		// Reset mapping if current value is no longer valid
+		std::string currentMapping = channelMapping_[semanticChannel];
+		if (currentMapping != "None")
+		{
+			bool found = false;
+			for (const auto& hwChannel : availableChannels_)
+			{
+				if (hwChannel == currentMapping)
+				{
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+			{
+				channelMapping_[semanticChannel] = "None";
+				SetProperty(semanticChannel, "None");
+			}
+		}
+	}
+}
+
+int NIDAQWaveforms::ValidateRequiredChannels()
+{
+	const std::vector<const char*> requiredChannels = {
+		PROP_GALVO_CHANNEL,
+		PROP_CAMERA_CHANNEL,
+		PROP_AOTF_BLANKING_CHANNEL
+	};
+
+	for (const auto& channel : requiredChannels)
+	{
+		if (channelMapping_[channel] == "None")
+		{
+			LogMessage(std::string("Required channel not set: ") + channel, false);
+			return ERR_REQUIRED_CHANNEL_NOT_SET;
+		}
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::ValidateChannelMappings()
+{
+	std::set<std::string> usedChannels;
+
+	for (const auto& semantic : GetSemanticChannelNames())
+	{
+		const std::string& hwChannel = channelMapping_[semantic];
+		if (hwChannel != "None")
+		{
+			if (usedChannels.find(hwChannel) != usedChannels.end())
+			{
+				LogMessage("Duplicate channel mapping: " + hwChannel +
+					" is assigned to multiple semantic channels", false);
+				return ERR_DUPLICATE_CHANNEL_MAPPING;
+			}
+			usedChannels.insert(hwChannel);
+		}
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::ValidateModInConfiguration()
+{
+	bool hasModIn = false;
+
+	for (const auto& modIn : GetModInChannelNames())
+	{
+		if (channelMapping_[modIn] != "None")
+		{
+			hasModIn = true;
+			break;
+		}
+	}
+
+	if (!hasModIn)
+	{
+		LogMessage("No MOD IN channel configured", false);
+		return ERR_NO_MOD_IN_CONFIGURED;
+	}
+
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::CreatePostInitProperties()
+{
+	int nRet;
+
+	// AOTF Blanking Voltage slider (always created since AOTF Blanking is required)
+	CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnAOTFBlankingVoltage);
+	double minV = minVoltage_[PROP_AOTF_BLANKING_CHANNEL];
+	double maxV = maxVoltage_[PROP_AOTF_BLANKING_CHANNEL];
+	aotfBlankingVoltage_ = minV;
+
+	nRet = CreateFloatProperty("AOTF Blanking Voltage", aotfBlankingVoltage_, false, pAct);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	SetPropertyLimits("AOTF Blanking Voltage", minV, maxV);
+
+	// MOD IN properties (only for configured channels)
+	const std::vector<std::pair<const char*, int>> modInChannels = {
+		{PROP_AOTF_MOD_IN_1, 1},
+		{PROP_AOTF_MOD_IN_2, 2},
+		{PROP_AOTF_MOD_IN_3, 3},
+		{PROP_AOTF_MOD_IN_4, 4}
+	};
+
+	for (const auto& modIn : modInChannels)
+	{
+		const char* semanticName = modIn.first;
+		int channelNum = modIn.second;
+
+		if (channelMapping_[semanticName] != "None")
+		{
+			// Initialize state
+			modInEnabled_[semanticName] = false;
+			modInVoltage_[semanticName] = minVoltage_[semanticName];
+
+			// Enabled property
+			std::string enabledPropName = "AOTF MOD IN " + std::to_string(channelNum) + " Enabled";
+			CPropertyAction* pActEnabled = new CPropertyAction(this, &NIDAQWaveforms::OnModInEnabled);
+			nRet = CreateStringProperty(enabledPropName.c_str(), "No", false, pActEnabled);
+			if (nRet != DEVICE_OK)
+				return nRet;
+			AddAllowedValue(enabledPropName.c_str(), "No");
+			AddAllowedValue(enabledPropName.c_str(), "Yes");
+
+			// Voltage property
+			std::string voltagePropName = "AOTF MOD IN " + std::to_string(channelNum) + " Voltage";
+			CPropertyAction* pActVoltage = new CPropertyAction(this, &NIDAQWaveforms::OnModInVoltage);
+			double modMinV = minVoltage_[semanticName];
+			double modMaxV = maxVoltage_[semanticName];
+
+			nRet = CreateFloatProperty(voltagePropName.c_str(), modMinV, false, pActVoltage);
+			if (nRet != DEVICE_OK)
+				return nRet;
+			SetPropertyLimits(voltagePropName.c_str(), modMinV, modMaxV);
+		}
+	}
+
+	return DEVICE_OK;
 }
 
 /**
@@ -128,8 +368,7 @@ int NIDAQWaveforms::Initialize()
 	if (initialized_)
 		return DEVICE_OK;
 
-	// set read-only properties
-	// ------------------------
+	// Set read-only properties
 	int nRet = CreateStringProperty(MM::g_Keyword_Name, g_DeviceName, true);
 	if (DEVICE_OK != nRet)
 		return nRet;
@@ -142,22 +381,28 @@ int NIDAQWaveforms::Initialize()
 	if (DEVICE_OK != nRet)
 		return nRet;
 
-	// Discover available AO channels for the selected device
+	// Refresh available AO channels for the selected device
 	availableChannels_ = daq_->getAnalogOutputChannels(deviceName_);
 
-	// Create enable/disable property for each channel
-	for (const auto& channel : availableChannels_)
-	{
-		std::string propName = channel + " Enabled";
-		CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnChannelEnabled);
-		nRet = CreateStringProperty(propName.c_str(), "No", false, pAct);
-		if (DEVICE_OK != nRet)
-			return nRet;
-		AddAllowedValue(propName.c_str(), "No");
-		AddAllowedValue(propName.c_str(), "Yes");
-	}
+	// Validate channel configuration
+	nRet = ValidateRequiredChannels();
+	if (nRet != DEVICE_OK)
+		return nRet;
 
-	// synchronize all properties
+	nRet = ValidateChannelMappings();
+	if (nRet != DEVICE_OK)
+		return nRet;
+
+	nRet = ValidateModInConfiguration();
+	if (nRet != DEVICE_OK)
+		return nRet;
+
+	// Create post-init voltage control properties
+	nRet = CreatePostInitProperties();
+	if (nRet != DEVICE_OK)
+		return nRet;
+
+	// Synchronize all properties
 	nRet = UpdateStatus();
 	if (nRet != DEVICE_OK)
 		return nRet;
@@ -195,26 +440,148 @@ int NIDAQWaveforms::OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(deviceName_);
+		std::string newDevice;
+		pProp->Get(newDevice);
+
+		if (newDevice != deviceName_)
+		{
+			deviceName_ = newDevice;
+
+			// Rediscover channels for new device
+			availableChannels_ = daq_->getAnalogOutputChannels(deviceName_);
+
+			// Update allowed values for all semantic channel properties
+			UpdateChannelAllowedValues();
+		}
 	}
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnChannelEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
+int NIDAQWaveforms::OnChannelMapping(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	
-	if (eAct == MM::AfterSet)
+	std::string propName = pProp->GetName();
+
+	if (eAct == MM::BeforeGet)
 	{
-		// Rebuild the list of enabled channels from properties
-		enabledChannels_.clear();
-		for (const auto& channel : availableChannels_)
-		{
-			std::string propName = channel + " Enabled";
-			char value[MM::MaxStrLength];
-			GetProperty(propName.c_str(), value);
-			if (std::string(value) == "Yes")
-				enabledChannels_.push_back(channel);
-		}
+		pProp->Set(channelMapping_[propName].c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		std::string value;
+		pProp->Get(value);
+		channelMapping_[propName] = value;
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnMinVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	// Extract semantic channel name from property name (remove " Min Voltage" suffix)
+	std::string propName = pProp->GetName();
+	std::string semanticChannel = propName.substr(0, propName.length() - 12); // " Min Voltage" = 12 chars
+
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(minVoltage_[semanticChannel]);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		double value;
+		pProp->Get(value);
+		minVoltage_[semanticChannel] = value;
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnMaxVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	// Extract semantic channel name from property name (remove " Max Voltage" suffix)
+	std::string propName = pProp->GetName();
+	std::string semanticChannel = propName.substr(0, propName.length() - 12); // " Max Voltage" = 12 chars
+
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(maxVoltage_[semanticChannel]);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		double value;
+		pProp->Get(value);
+		maxVoltage_[semanticChannel] = value;
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(aotfBlankingVoltage_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(aotfBlankingVoltage_);
+		// TODO: Apply voltage to hardware via daq_
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	// Extract channel number from property name (e.g., "AOTF MOD IN 1 Enabled")
+	std::string propName = pProp->GetName();
+	char channelChar = propName[12]; // "AOTF MOD IN X" - X is at position 12
+	int channelNum = channelChar - '0';
+
+	const char* semanticKey = nullptr;
+	switch (channelNum)
+	{
+	case 1: semanticKey = PROP_AOTF_MOD_IN_1; break;
+	case 2: semanticKey = PROP_AOTF_MOD_IN_2; break;
+	case 3: semanticKey = PROP_AOTF_MOD_IN_3; break;
+	case 4: semanticKey = PROP_AOTF_MOD_IN_4; break;
+	default: return DEVICE_ERR;
+	}
+
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(modInEnabled_[semanticKey] ? "Yes" : "No");
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		std::string value;
+		pProp->Get(value);
+		modInEnabled_[semanticKey] = (value == "Yes");
+		// TODO: Apply enable state to hardware
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	// Extract channel number from property name (e.g., "AOTF MOD IN 1 Voltage")
+	std::string propName = pProp->GetName();
+	char channelChar = propName[12]; // "AOTF MOD IN X" - X is at position 12
+	int channelNum = channelChar - '0';
+
+	const char* semanticKey = nullptr;
+	switch (channelNum)
+	{
+	case 1: semanticKey = PROP_AOTF_MOD_IN_1; break;
+	case 2: semanticKey = PROP_AOTF_MOD_IN_2; break;
+	case 3: semanticKey = PROP_AOTF_MOD_IN_3; break;
+	case 4: semanticKey = PROP_AOTF_MOD_IN_4; break;
+	default: return DEVICE_ERR;
+	}
+
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(modInVoltage_[semanticKey]);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(modInVoltage_[semanticKey]);
+		// TODO: Apply voltage to hardware via daq_
 	}
 	return DEVICE_OK;
 }
