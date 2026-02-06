@@ -30,8 +30,39 @@
 #define ERR_DUPLICATE_CHANNEL_MAPPING    102
 #define ERR_NO_MOD_IN_CONFIGURED         103
 #define ERR_REQUIRED_CHANNEL_NOT_SET     104
+#define ERR_FRAME_INTERVAL_TOO_SHORT     105
+#define ERR_GALVO_VOLTAGE_OUT_OF_RANGE   106
+#define ERR_NO_MOD_IN_ENABLED            107
+#define ERR_WAVEFORM_GENERATION_FAILED   108
 
 class IDAQDevice;
+
+// Waveform parameters computed from user settings
+struct WaveformParams
+{
+	// Derived timing (milliseconds)
+	double waveformIntervalMs;      // = 2 * frameIntervalMs
+	double exposureTimeMs;          // = frameIntervalMs - readoutTimeMs
+	double parkingTimeMs;           // = readoutTimeMs * parkingFraction
+	double rampTimeMs;              // = frameIntervalMs - parkingTimeMs
+	double waveformOffsetMs;        // = parkingTimeMs + (readoutTimeMs - parkingTimeMs) / 2.0
+
+	// Sample counts (normal mode - no interleaving)
+	size_t numWaveformSamples;      // Samples in one galvo period (2 frames, must be even)
+	size_t numCounterSamples;       // = numWaveformSamples / 2 (samples per frame)
+	size_t numReadoutSamples;       // Samples in readout period
+
+	// Derived voltages
+	double waveformPpV;             // Total galvo peak-to-peak
+	double waveformAmplitudeV;      // = waveformPpV / 2
+	double waveformHighV;           // = galvoOffsetV + waveformAmplitudeV
+	double waveformLowV;            // = galvoOffsetV - waveformAmplitudeV
+
+	// Sample indices
+	size_t parkingTimeSamples;
+	size_t rampTimeSamples;
+	size_t waveformOffsetSamples;
+};
 
 class NIDAQWaveforms : public CGenericBase<NIDAQWaveforms>
 {
@@ -63,6 +94,10 @@ public:
 	int OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnParkingFraction(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	// Helper methods
@@ -76,6 +111,20 @@ private:
 	int ValidateChannelMappings();
 	int ValidateModInConfiguration();
 	int CreatePostInitProperties();
+
+	// Waveform construction
+	void ComputeWaveformParameters(WaveformParams& params) const;
+	std::vector<double> ConstructCameraWaveform(const WaveformParams& params) const;
+	std::vector<double> ConstructGalvoWaveform(const WaveformParams& params) const;
+	std::vector<double> ConstructBlankingWaveform(const WaveformParams& params) const;
+	std::vector<double> ConstructModInWaveform(const std::string& semanticChannel,
+	                                            const WaveformParams& params) const;
+
+	// DAQ configuration helpers
+	void ConfigureDAQChannels();
+	std::vector<std::string> GetEnabledModInChannels() const;
+	int GetNumEnabledModInChannels() const;
+	int ValidateWaveformParameters() const;
 
 	// State
 	bool initialized_;
@@ -95,4 +144,20 @@ private:
 	std::map<std::string, bool> modInEnabled_;
 	std::map<std::string, double> modInVoltage_;
 	double samplingRateHz_;
+
+	// Waveform timing parameters
+	double frameIntervalMs_;        // Hardcoded for now, will be intercepted from camera later
+	double readoutTimeMs_;          // Hardcoded for now, will be intercepted from camera later
+	double parkingFraction_;        // Set via property
+	double exposurePpV_;            // Set via property
+	double galvoOffsetV_;           // Set via property
+
+	// Camera trigger parameters
+	double cameraPulseVoltage_;
+
+	// Trigger configuration
+	std::string triggerSource_;     // Set via property
+
+	// Waveform state
+	bool waveformRunning_;
 };
