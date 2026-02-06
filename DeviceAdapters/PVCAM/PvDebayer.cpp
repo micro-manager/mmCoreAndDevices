@@ -24,6 +24,8 @@
 
 #include "PvDebayer.h"
 
+#include "MMDeviceConstants.h"
+
 // System
 #include <algorithm>
 #include <cassert>
