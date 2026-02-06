@@ -199,8 +199,9 @@ private:
 	double samplingRateHz_;
 
 	// Waveform timing parameters
-	double frameIntervalMs_;        // Hardcoded for now, will be intercepted from camera later
-	double readoutTimeMs_;          // Hardcoded for now, will be intercepted from camera later
+	double frameIntervalMs_;        // Set via camera exposure time when in rolling shutter mode
+	// TODO: Make the readout time property name of the physical camera settable or provide a way to specify a default value in case the camera does not have the property
+	double readoutTimeMs_;          // Read from camera property
 	double parkingFraction_;        // Set via property
 	double exposurePpV_;            // Set via property
 	double galvoOffsetV_;           // Set via property
