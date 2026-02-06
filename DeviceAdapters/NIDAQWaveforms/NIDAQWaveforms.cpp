@@ -20,6 +20,8 @@
 #include "NIDAQmxAdapter.h"
 #include "ModuleInterface.h"
 
+#include <cmath>
+
 using namespace std;
 
 const char* g_DeviceName = "NIDAQ Waveforms";
@@ -85,7 +87,15 @@ NIDAQWaveforms::NIDAQWaveforms() :
 	initialized_(false),
 	deviceName_(""),
 	aotfBlankingVoltage_(0.0),
-	samplingRateHz_(50000.0)
+	samplingRateHz_(50000.0),
+	frameIntervalMs_(50.0),
+	readoutTimeMs_(22.94),
+	parkingFraction_(0.8),
+	exposurePpV_(0.46),
+	galvoOffsetV_(-0.075),
+	cameraPulseVoltage_(5.0),
+	triggerSource_("/Dev1/PFI3"),
+	waveformRunning_(false)
 {
 	InitializeDefaultErrorMessages();
 
@@ -102,10 +112,22 @@ NIDAQWaveforms::NIDAQWaveforms() :
 	SetErrorText(ERR_REQUIRED_CHANNEL_NOT_SET,
 		"Galvo Waveform, Camera Trigger, and AOTF Blanking channels are required. "
 		"Please select a hardware channel for each.");
+	SetErrorText(ERR_FRAME_INTERVAL_TOO_SHORT,
+		"Frame interval must be greater than readout time.");
+	SetErrorText(ERR_GALVO_VOLTAGE_OUT_OF_RANGE,
+		"Galvo waveform voltage exceeds configured voltage limits.");
+	SetErrorText(ERR_NO_MOD_IN_ENABLED,
+		"At least one AOTF MOD IN channel must be enabled for waveform generation.");
+	SetErrorText(ERR_WAVEFORM_GENERATION_FAILED,
+		"Failed to generate waveforms. Check DAQ configuration.");
 
 	// Create DAQ adapter for device discovery
 	// Toggle between Mock and NIDAQmx by commenting/uncommenting:
-	daq_ = std::make_unique<MockDAQAdapter>();
+	auto mockDaq = std::make_unique<MockDAQAdapter>();
+	mockDaq->setLogger([this](const std::string& msg) {
+		LogMessage(msg, false);
+	});
+	daq_ = std::move(mockDaq);
 	// daq_ = std::make_unique<NIDAQmxAdapter>();
 
 	// Pre-init property: Device
@@ -305,6 +327,245 @@ int NIDAQWaveforms::ValidateModInConfiguration()
 	return DEVICE_OK;
 }
 
+std::vector<std::string> NIDAQWaveforms::GetEnabledModInChannels() const
+{
+	std::vector<std::string> result;
+	for (const auto& modIn : GetModInChannelNames())
+	{
+		// Check if channel is configured (mapped to hardware) and enabled
+		auto mappingIt = channelMapping_.find(modIn);
+		auto enabledIt = modInEnabled_.find(modIn);
+		if (mappingIt != channelMapping_.end() && mappingIt->second != "None" &&
+			enabledIt != modInEnabled_.end() && enabledIt->second)
+		{
+			result.push_back(modIn);
+		}
+	}
+	return result;
+}
+
+int NIDAQWaveforms::GetNumEnabledModInChannels() const
+{
+	return static_cast<int>(GetEnabledModInChannels().size());
+}
+
+int NIDAQWaveforms::ValidateWaveformParameters() const
+{
+	// Frame interval must be greater than readout time
+	if (frameIntervalMs_ <= readoutTimeMs_)
+	{
+		return ERR_FRAME_INTERVAL_TOO_SHORT;
+	}
+
+	// Calculate derived voltage parameters to check galvo range
+	double exposureTimeMs = frameIntervalMs_ - readoutTimeMs_;
+	double parkingTimeMs = readoutTimeMs_ * parkingFraction_;
+	double rampTimeMs = frameIntervalMs_ - parkingTimeMs;
+	double waveformPpV = exposurePpV_ * (rampTimeMs / exposureTimeMs);
+	double waveformAmplitudeV = waveformPpV / 2.0;
+	double waveformHighV = galvoOffsetV_ + waveformAmplitudeV;
+	double waveformLowV = galvoOffsetV_ - waveformAmplitudeV;
+
+	// Check galvo voltage is within configured limits
+	double galvoMinV = minVoltage_.at(PROP_GALVO_CHANNEL);
+	double galvoMaxV = maxVoltage_.at(PROP_GALVO_CHANNEL);
+	if (waveformHighV > galvoMaxV || waveformLowV < galvoMinV)
+	{
+		return ERR_GALVO_VOLTAGE_OUT_OF_RANGE;
+	}
+
+	return DEVICE_OK;
+}
+
+void NIDAQWaveforms::ComputeWaveformParameters(WaveformParams& params) const
+{
+	// Derived timing (milliseconds)
+	params.waveformIntervalMs = 2.0 * frameIntervalMs_;
+	params.exposureTimeMs = frameIntervalMs_ - readoutTimeMs_;
+	params.parkingTimeMs = readoutTimeMs_ * parkingFraction_;
+	params.rampTimeMs = frameIntervalMs_ - params.parkingTimeMs;
+	params.waveformOffsetMs = params.parkingTimeMs + (readoutTimeMs_ - params.parkingTimeMs) / 2.0;
+
+	// Sample counts - ensure even number of waveform samples
+	size_t rawWaveformSamples = static_cast<size_t>(
+		std::round((params.waveformIntervalMs / 1000.0) * samplingRateHz_));
+	params.numWaveformSamples = 2 * (rawWaveformSamples / 2);  // Make even
+	params.numCounterSamples = params.numWaveformSamples / 2;
+	params.numReadoutSamples = static_cast<size_t>(
+		std::round((readoutTimeMs_ / 1000.0) * samplingRateHz_));
+
+	// Derived voltages
+	params.waveformPpV = exposurePpV_ * (params.rampTimeMs / params.exposureTimeMs);
+	params.waveformAmplitudeV = params.waveformPpV / 2.0;
+	params.waveformHighV = galvoOffsetV_ + params.waveformAmplitudeV;
+	params.waveformLowV = galvoOffsetV_ - params.waveformAmplitudeV;
+
+	// Sample indices
+	params.parkingTimeSamples = static_cast<size_t>(
+		std::round((params.parkingTimeMs / 1000.0) * samplingRateHz_));
+	params.rampTimeSamples = params.numCounterSamples - params.parkingTimeSamples;
+	params.waveformOffsetSamples = static_cast<size_t>(
+		std::round((params.waveformOffsetMs / 1000.0) * samplingRateHz_));
+}
+
+std::vector<double> NIDAQWaveforms::ConstructCameraWaveform(const WaveformParams& params) const
+{
+	std::vector<double> waveform(params.numWaveformSamples, 0.0);
+
+	// Camera trigger: 5% duty cycle pulse at the start of each frame
+	size_t pulseWidth = params.numWaveformSamples / 20;  // 5% of waveform period
+
+	// First pulse at t=0
+	for (size_t i = 0; i < pulseWidth && i < params.numWaveformSamples; ++i)
+	{
+		waveform[i] = cameraPulseVoltage_;
+	}
+
+	// Second pulse at t=frameInterval (start of second frame)
+	size_t secondPulseStart = params.numCounterSamples;
+	for (size_t i = 0; i < pulseWidth && (secondPulseStart + i) < params.numWaveformSamples; ++i)
+	{
+		waveform[secondPulseStart + i] = cameraPulseVoltage_;
+	}
+
+	return waveform;
+}
+
+std::vector<double> NIDAQWaveforms::ConstructGalvoWaveform(const WaveformParams& params) const
+{
+	std::vector<double> waveform(params.numWaveformSamples, 0.0);
+
+	// First frame: ramp up then park at high
+	// Ramp from low to high
+	for (size_t i = 0; i < params.rampTimeSamples; ++i)
+	{
+		double t = static_cast<double>(i) / static_cast<double>(params.rampTimeSamples);
+		waveform[i] = params.waveformLowV + t * params.waveformPpV;
+	}
+	// Park at high
+	for (size_t i = params.rampTimeSamples; i < params.numCounterSamples; ++i)
+	{
+		waveform[i] = params.waveformHighV;
+	}
+
+	// Second frame: ramp down then park at low
+	size_t frameOffset = params.numCounterSamples;
+	// Ramp from high to low
+	for (size_t i = 0; i < params.rampTimeSamples; ++i)
+	{
+		double t = static_cast<double>(i) / static_cast<double>(params.rampTimeSamples);
+		waveform[frameOffset + i] = params.waveformHighV - t * params.waveformPpV;
+	}
+	// Park at low
+	for (size_t i = params.rampTimeSamples; i < params.numCounterSamples; ++i)
+	{
+		waveform[frameOffset + i] = params.waveformLowV;
+	}
+
+	// Apply waveform offset by rolling the array
+	if (params.waveformOffsetSamples > 0 && params.waveformOffsetSamples < params.numWaveformSamples)
+	{
+		std::vector<double> shifted(params.numWaveformSamples);
+		for (size_t i = 0; i < params.numWaveformSamples; ++i)
+		{
+			size_t newIdx = (i + params.waveformOffsetSamples) % params.numWaveformSamples;
+			shifted[newIdx] = waveform[i];
+		}
+		waveform = std::move(shifted);
+	}
+
+	return waveform;
+}
+
+std::vector<double> NIDAQWaveforms::ConstructBlankingWaveform(const WaveformParams& params) const
+{
+	std::vector<double> waveform(params.numWaveformSamples, 0.0);
+
+	// Blanking is high during exposure period (after readout) of each frame
+	// Frame 1: from numReadoutSamples to numCounterSamples
+	for (size_t i = params.numReadoutSamples; i < params.numCounterSamples; ++i)
+	{
+		waveform[i] = aotfBlankingVoltage_;
+	}
+
+	// Frame 2: from numCounterSamples + numReadoutSamples to end
+	size_t frame2Start = params.numCounterSamples + params.numReadoutSamples;
+	for (size_t i = frame2Start; i < params.numWaveformSamples; ++i)
+	{
+		waveform[i] = aotfBlankingVoltage_;
+	}
+
+	return waveform;
+}
+
+std::vector<double> NIDAQWaveforms::ConstructModInWaveform(
+	const std::string& semanticChannel,
+	const WaveformParams& params) const
+{
+	std::vector<double> waveform(params.numWaveformSamples, 0.0);
+
+	// Get voltage for this MOD IN channel
+	auto voltageIt = modInVoltage_.find(semanticChannel);
+	if (voltageIt == modInVoltage_.end())
+	{
+		return waveform;  // Return zeros if channel not found
+	}
+	double voltage = voltageIt->second;
+
+	// Normal mode: all enabled channels output simultaneously on every frame
+	// Output during exposure period (after readout) of each frame
+
+	// Frame 1: from numReadoutSamples to numCounterSamples
+	for (size_t i = params.numReadoutSamples; i < params.numCounterSamples; ++i)
+	{
+		waveform[i] = voltage;
+	}
+
+	// Frame 2: from numCounterSamples + numReadoutSamples to end
+	size_t frame2Start = params.numCounterSamples + params.numReadoutSamples;
+	for (size_t i = frame2Start; i < params.numWaveformSamples; ++i)
+	{
+		waveform[i] = voltage;
+	}
+
+	return waveform;
+}
+
+void NIDAQWaveforms::ConfigureDAQChannels()
+{
+	// Clear any existing configuration
+	daq_->clearTasks();
+
+	// Add channels in order: Camera, Galvo, Blanking, then enabled MOD INs
+
+	// Camera channel
+	std::string cameraHw = channelMapping_.at(PROP_CAMERA_CHANNEL);
+	double cameraMinV = minVoltage_.at(PROP_CAMERA_CHANNEL);
+	double cameraMaxV = maxVoltage_.at(PROP_CAMERA_CHANNEL);
+	daq_->addAnalogOutputChannel(cameraHw, cameraMinV, cameraMaxV);
+
+	// Galvo channel
+	std::string galvoHw = channelMapping_.at(PROP_GALVO_CHANNEL);
+	double galvoMinV = minVoltage_.at(PROP_GALVO_CHANNEL);
+	double galvoMaxV = maxVoltage_.at(PROP_GALVO_CHANNEL);
+	daq_->addAnalogOutputChannel(galvoHw, galvoMinV, galvoMaxV);
+
+	// Blanking channel
+	std::string blankingHw = channelMapping_.at(PROP_AOTF_BLANKING_CHANNEL);
+	double blankingMinV = minVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
+	double blankingMaxV = maxVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
+	daq_->addAnalogOutputChannel(blankingHw, blankingMinV, blankingMaxV);
+
+	// Enabled MOD IN channels (in order: 1, 2, 3, 4)
+	for (const auto& modInChannel : GetEnabledModInChannels())
+	{
+		std::string modInHw = channelMapping_.at(modInChannel);
+		double modInMinV = minVoltage_.at(modInChannel);
+		double modInMaxV = maxVoltage_.at(modInChannel);
+		daq_->addAnalogOutputChannel(modInHw, modInMinV, modInMaxV);
+	}
+}
+
 int NIDAQWaveforms::CreatePostInitProperties()
 {
 	int nRet;
@@ -367,6 +628,32 @@ int NIDAQWaveforms::CreatePostInitProperties()
 			SetPropertyLimits(voltagePropName.c_str(), modMinV, modMaxV);
 		}
 	}
+
+	// Waveform timing properties
+	CPropertyAction* pActParking = new CPropertyAction(this, &NIDAQWaveforms::OnParkingFraction);
+	nRet = CreateFloatProperty("Parking Fraction", parkingFraction_, false, pActParking);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	SetPropertyLimits("Parking Fraction", 0.0, 1.0);
+
+	CPropertyAction* pActExposureV = new CPropertyAction(this, &NIDAQWaveforms::OnExposureVoltage);
+	nRet = CreateFloatProperty("Exposure Voltage (Vpp)", exposurePpV_, false, pActExposureV);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	// Limits based on galvo voltage range
+	double galvoRange = maxVoltage_[PROP_GALVO_CHANNEL] - minVoltage_[PROP_GALVO_CHANNEL];
+	SetPropertyLimits("Exposure Voltage (Vpp)", 0.0, galvoRange);
+
+	CPropertyAction* pActGalvoOffset = new CPropertyAction(this, &NIDAQWaveforms::OnGalvoOffset);
+	nRet = CreateFloatProperty("Galvo Offset (V)", galvoOffsetV_, false, pActGalvoOffset);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	SetPropertyLimits("Galvo Offset (V)", minVoltage_[PROP_GALVO_CHANNEL], maxVoltage_[PROP_GALVO_CHANNEL]);
+
+	CPropertyAction* pActTrigger = new CPropertyAction(this, &NIDAQWaveforms::OnTriggerSource);
+	nRet = CreateStringProperty("Trigger Source", triggerSource_.c_str(), false, pActTrigger);
+	if (nRet != DEVICE_OK)
+		return nRet;
 
 	return DEVICE_OK;
 }
@@ -624,6 +911,58 @@ int NIDAQWaveforms::OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 	else if (eAct == MM::AfterSet)
 	{
 		pProp->Get(samplingRateHz_);
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnParkingFraction(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(parkingFraction_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(parkingFraction_);
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(exposurePpV_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(exposurePpV_);
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(galvoOffsetV_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(galvoOffsetV_);
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(triggerSource_.c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(triggerSource_);
 	}
 	return DEVICE_OK;
 }
