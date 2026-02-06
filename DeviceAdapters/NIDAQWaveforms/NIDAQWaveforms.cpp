@@ -26,6 +26,8 @@ using namespace std;
 
 const char* g_DeviceName = "NIDAQ Waveforms";
 const char* g_DeviceDescription = "Generates analog waveforms on a NI-DAQ device";
+const char* g_Undefined = "Undefined";
+const char* g_PhysicalCamera = "Physical Camera";
 
 // Semantic channel property name constants
 const char* const NIDAQWaveforms::PROP_GALVO_CHANNEL = "Galvo Waveform Channel";
@@ -45,7 +47,7 @@ const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_4 = "AOTF MOD IN Channel 4";
  */
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_DeviceName, MM::GenericDevice, "NIDAQ Waveforms");
+   RegisterDevice(g_DeviceName, MM::CameraDevice, "NIDAQ Waveforms");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -120,6 +122,10 @@ NIDAQWaveforms::NIDAQWaveforms() :
 		"At least one AOTF MOD IN channel must be enabled for waveform generation.");
 	SetErrorText(ERR_WAVEFORM_GENERATION_FAILED,
 		"Failed to generate waveforms. Check DAQ configuration.");
+	SetErrorText(ERR_NO_PHYSICAL_CAMERA,
+		"No physical camera selected. Please select a camera in the Physical Camera property.");
+	SetErrorText(ERR_INVALID_CAMERA,
+		"The selected physical camera is invalid or not loaded.");
 
 	// Create DAQ adapter for device discovery
 	// Toggle between Mock and NIDAQmx by commenting/uncommenting:
@@ -655,6 +661,12 @@ int NIDAQWaveforms::CreatePostInitProperties()
 	if (nRet != DEVICE_OK)
 		return nRet;
 
+	// Binning property (required by MMCore for camera devices)
+	CPropertyAction* pActBinning = new CPropertyAction(this, &NIDAQWaveforms::OnBinning);
+	nRet = CreateIntegerProperty(MM::g_Keyword_Binning, 1, false, pActBinning);
+	if (nRet != DEVICE_OK)
+		return nRet;
+
 	return DEVICE_OK;
 }
 
@@ -692,6 +704,32 @@ int NIDAQWaveforms::Initialize()
 	);
 	if (DEVICE_OK != nRet)
 		return nRet;
+
+	// Enumerate loaded camera devices (excluding self)
+	availableCameras_.clear();
+	availableCameras_.push_back(g_Undefined);
+	char deviceName[MM::MaxStrLength];
+	unsigned int deviceIterator = 0;
+	for (;;)
+	{
+		GetLoadedDeviceOfType(MM::CameraDevice, deviceName, deviceIterator++);
+		if (strlen(deviceName) > 0)
+		{
+			MM::Device* camera = GetDevice(deviceName);
+			if (camera && (this != camera))
+				availableCameras_.push_back(std::string(deviceName));
+		}
+		else
+			break;
+	}
+
+	// Create Physical Camera property
+	CPropertyAction* pActCamera = new CPropertyAction(this, &NIDAQWaveforms::OnPhysicalCamera);
+	nRet = CreateStringProperty(g_PhysicalCamera, g_Undefined, false, pActCamera);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	for (const auto& cam : availableCameras_)
+		AddAllowedValue(g_PhysicalCamera, cam.c_str());
 
 	// Refresh available AO channels for the selected device
 	availableChannels_ = daq_->getAnalogOutputChannels(deviceName_);
@@ -773,6 +811,48 @@ int NIDAQWaveforms::OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int NIDAQWaveforms::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(physicalCameraName_.c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		std::string cameraName;
+		pProp->Get(cameraName);
+
+		if (cameraName != physicalCameraName_)
+		{
+			physicalCameraName_ = cameraName;
+
+			// Sync timing parameters from the new camera
+			if (physicalCameraName_ != g_Undefined)
+			{
+				MM::Camera* camera = GetPhysicalCamera();
+				if (camera)
+				{
+					// Sync frame interval from camera's current exposure
+					frameIntervalMs_ = camera->GetExposure();
+					QueryReadoutTime();
+
+					// TODO: How to handle an invalid exposure time that causes frame interval < readout time?
+					BuildAndWriteWaveforms();
+				}
+			}
+		}
+	}
+	return DEVICE_OK;
+}
+
+MM::Camera* NIDAQWaveforms::GetPhysicalCamera() const
+{
+	if (physicalCameraName_.empty() || physicalCameraName_ == g_Undefined)
+		return nullptr;
+
+	return static_cast<MM::Camera*>(GetDevice(physicalCameraName_.c_str()));
+}
+
 int NIDAQWaveforms::OnChannelMapping(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::string propName = pProp->GetName();
@@ -837,7 +917,16 @@ int NIDAQWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionTyp
 	else if (eAct == MM::AfterSet)
 	{
 		pProp->Get(aotfBlankingVoltage_);
-		// TODO: Apply voltage to hardware via daq_
+		// Rebuild waveforms if initialized and camera is selected
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			BuildAndWriteWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
 	}
 	return DEVICE_OK;
 }
@@ -868,7 +957,16 @@ int NIDAQWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
 		std::string value;
 		pProp->Get(value);
 		modInEnabled_[semanticKey] = (value == "Yes");
-		// TODO: Apply enable state to hardware
+		// Rebuild waveforms if initialized and camera is selected
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			BuildAndWriteWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
 	}
 	return DEVICE_OK;
 }
@@ -897,7 +995,16 @@ int NIDAQWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 	else if (eAct == MM::AfterSet)
 	{
 		pProp->Get(modInVoltage_[semanticKey]);
-		// TODO: Apply voltage to hardware via daq_
+		// Rebuild waveforms if initialized and camera is selected
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			BuildAndWriteWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
 	}
 	return DEVICE_OK;
 }
@@ -911,6 +1018,16 @@ int NIDAQWaveforms::OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 	else if (eAct == MM::AfterSet)
 	{
 		pProp->Get(samplingRateHz_);
+		// Rebuild waveforms if initialized and camera is selected
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			BuildAndWriteWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
 	}
 	return DEVICE_OK;
 }
@@ -924,6 +1041,16 @@ int NIDAQWaveforms::OnParkingFraction(MM::PropertyBase* pProp, MM::ActionType eA
 	else if (eAct == MM::AfterSet)
 	{
 		pProp->Get(parkingFraction_);
+		// Rebuild waveforms if initialized and camera is selected
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			BuildAndWriteWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
 	}
 	return DEVICE_OK;
 }
@@ -937,6 +1064,16 @@ int NIDAQWaveforms::OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eA
 	else if (eAct == MM::AfterSet)
 	{
 		pProp->Get(exposurePpV_);
+		// Rebuild waveforms if initialized and camera is selected
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			BuildAndWriteWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
 	}
 	return DEVICE_OK;
 }
@@ -950,6 +1087,16 @@ int NIDAQWaveforms::OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 	else if (eAct == MM::AfterSet)
 	{
 		pProp->Get(galvoOffsetV_);
+		// Rebuild waveforms if initialized and camera is selected
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			BuildAndWriteWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
 	}
 	return DEVICE_OK;
 }
@@ -965,4 +1112,355 @@ int NIDAQWaveforms::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct
 		pProp->Get(triggerSource_);
 	}
 	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set((long)GetBinning());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		long binning;
+		pProp->Get(binning);
+		int ret = SetBinning((int)binning);
+		if (ret != DEVICE_OK)
+			return ret;
+	}
+	return DEVICE_OK;
+}
+
+/////////////////////////////////////////////
+// Camera wrapper helpers
+/////////////////////////////////////////////
+
+int NIDAQWaveforms::QueryReadoutTime()
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+
+	// Try to get Timing-ReadoutTimeNs property from camera
+	char value[MM::MaxStrLength];
+	int ret = camera->GetProperty("Timing-ReadoutTimeNs", value);
+	if (ret == DEVICE_OK)
+	{
+		double readoutTimeNs = atof(value);
+		readoutTimeMs_ = readoutTimeNs / 1e6;  // Convert ns to ms
+	}
+	else
+	{
+		// Log warning - using default readout time
+		LogMessage("Warning: Could not read 'Timing-ReadoutTimeNs' from camera. "
+		           "Using default readout time: " + std::to_string(readoutTimeMs_) + " ms", false);
+	}
+
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::BuildAndWriteWaveforms()
+{
+	// Validate parameters
+	int ret = ValidateWaveformParameters();
+	if (ret != DEVICE_OK)
+		return ret;
+
+	// Compute waveform parameters
+	WaveformParams params;
+	ComputeWaveformParameters(params);
+
+	// Configure DAQ channels
+	ConfigureDAQChannels();
+
+	// Construct individual waveforms
+	auto cameraWave = ConstructCameraWaveform(params);
+	auto galvoWave = ConstructGalvoWaveform(params);
+	auto blankingWave = ConstructBlankingWaveform(params);
+
+	// Build row-major interleaved data
+	size_t numChannels = 3 + GetNumEnabledModInChannels();
+	size_t samplesPerChannel = params.numWaveformSamples;
+	std::vector<double> data(numChannels * samplesPerChannel);
+
+	// Copy waveforms to data array (row-major order)
+	std::copy(cameraWave.begin(), cameraWave.end(), data.begin());
+	std::copy(galvoWave.begin(), galvoWave.end(), data.begin() + samplesPerChannel);
+	std::copy(blankingWave.begin(), blankingWave.end(), data.begin() + 2 * samplesPerChannel);
+
+	size_t channelIdx = 3;
+	for (const auto& modIn : GetEnabledModInChannels())
+	{
+		auto modInWave = ConstructModInWaveform(modIn, params);
+		std::copy(modInWave.begin(), modInWave.end(), data.begin() + channelIdx * samplesPerChannel);
+		++channelIdx;
+	}
+
+	// Configure timing and write to DAQ
+	daq_->configureTiming(samplingRateHz_, samplesPerChannel, triggerSource_);
+	daq_->writeAnalogOutput(data, numChannels, samplesPerChannel);
+
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::StartWaveformOutput()
+{
+	daq_->start();
+	waveformRunning_ = true;
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::StopWaveformOutput()
+{
+	daq_->stop();
+	waveformRunning_ = false;
+	return DEVICE_OK;
+}
+
+/////////////////////////////////////////////
+// Camera API - Pass-through methods
+/////////////////////////////////////////////
+
+const unsigned char* NIDAQWaveforms::GetImageBuffer()
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetImageBuffer() : nullptr;
+}
+
+const unsigned char* NIDAQWaveforms::GetImageBuffer(unsigned channelNr)
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetImageBuffer(channelNr) : nullptr;
+}
+
+unsigned NIDAQWaveforms::GetImageWidth() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetImageWidth() : 0;
+}
+
+unsigned NIDAQWaveforms::GetImageHeight() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetImageHeight() : 0;
+}
+
+unsigned NIDAQWaveforms::GetImageBytesPerPixel() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetImageBytesPerPixel() : 0;
+}
+
+unsigned NIDAQWaveforms::GetBitDepth() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetBitDepth() : 0;
+}
+
+long NIDAQWaveforms::GetImageBufferSize() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetImageBufferSize() : 0;
+}
+
+double NIDAQWaveforms::GetExposure() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetExposure() : 0.0;
+}
+
+void NIDAQWaveforms::SetExposure(double exp)
+{
+	// Store frame interval (MM exposure = frame interval in rolling shutter mode)
+	frameIntervalMs_ = exp;
+
+	// Pass through to physical camera
+	MM::Camera* camera = GetPhysicalCamera();
+	if (camera)
+		camera->SetExposure(exp);
+
+	// Query updated readout time from camera
+	QueryReadoutTime();
+
+	// Build waveforms with new timing (always rebuild when exposure changes)
+	// If currently running, stop first, then rebuild and restart
+	bool wasRunning = waveformRunning_;
+	if (wasRunning)
+		StopWaveformOutput();
+
+	int ret = BuildAndWriteWaveforms();
+	if (ret != DEVICE_OK)
+	{
+		LogMessage("SetExposure: Failed to build waveforms (error " +
+		           std::to_string(ret) + ")", false);
+		return;
+	}
+
+	if (wasRunning)
+		StartWaveformOutput();
+}
+
+int NIDAQWaveforms::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+	return camera->SetROI(x, y, xSize, ySize);
+}
+
+int NIDAQWaveforms::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+	return camera->GetROI(x, y, xSize, ySize);
+}
+
+int NIDAQWaveforms::ClearROI()
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+	return camera->ClearROI();
+}
+
+int NIDAQWaveforms::GetBinning() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetBinning() : 1;
+}
+
+int NIDAQWaveforms::SetBinning(int binSize)
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+	return camera->SetBinning(binSize);
+}
+
+int NIDAQWaveforms::IsExposureSequenceable(bool& isSequenceable) const
+{
+	isSequenceable = false;
+	return DEVICE_OK;
+}
+
+unsigned NIDAQWaveforms::GetNumberOfComponents() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetNumberOfComponents() : 1;
+}
+
+unsigned NIDAQWaveforms::GetNumberOfChannels() const
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->GetNumberOfChannels() : 1;
+}
+
+int NIDAQWaveforms::GetChannelName(unsigned channel, char* name)
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+	{
+		CDeviceUtils::CopyLimitedString(name, "");
+		return DEVICE_OK;
+	}
+	return camera->GetChannelName(channel, name);
+}
+
+bool NIDAQWaveforms::IsCapturing()
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	return camera ? camera->IsCapturing() : false;
+}
+
+/////////////////////////////////////////////
+// Camera API - Acquisition methods
+/////////////////////////////////////////////
+
+int NIDAQWaveforms::SnapImage()
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+
+	// Waveforms already built in SetExposure(), just start output
+	int ret = StartWaveformOutput();
+	if (ret != DEVICE_OK)
+		return ret;
+
+	// Call physical camera's SnapImage (blocks until exposure done)
+	ret = camera->SnapImage();
+
+	// Stop DAQ waveforms
+	StopWaveformOutput();
+
+	return ret;
+}
+
+int NIDAQWaveforms::PrepareSequenceAcqusition()
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+
+	return camera->PrepareSequenceAcqusition();
+}
+
+int NIDAQWaveforms::StartSequenceAcquisition(double interval)
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+
+	// Waveforms already built in SetExposure(), just start output
+	int ret = StartWaveformOutput();
+	if (ret != DEVICE_OK)
+		return ret;
+
+	// Start camera sequence acquisition
+	ret = camera->StartSequenceAcquisition(interval);
+	if (ret != DEVICE_OK)
+	{
+		StopWaveformOutput();
+		return ret;
+	}
+
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return ERR_NO_PHYSICAL_CAMERA;
+
+	// Waveforms already built in SetExposure(), just start output
+	int ret = StartWaveformOutput();
+	if (ret != DEVICE_OK)
+		return ret;
+
+	// Start camera sequence acquisition
+	ret = camera->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
+	if (ret != DEVICE_OK)
+	{
+		StopWaveformOutput();
+		return ret;
+	}
+
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::StopSequenceAcquisition()
+{
+	MM::Camera* camera = GetPhysicalCamera();
+
+	// Stop camera first
+	int ret = DEVICE_OK;
+	if (camera)
+		ret = camera->StopSequenceAcquisition();
+
+	// Then stop waveforms
+	StopWaveformOutput();
+
+	return ret;
 }
