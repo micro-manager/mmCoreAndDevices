@@ -34,6 +34,8 @@
 #define ERR_GALVO_VOLTAGE_OUT_OF_RANGE   106
 #define ERR_NO_MOD_IN_ENABLED            107
 #define ERR_WAVEFORM_GENERATION_FAILED   108
+#define ERR_NO_PHYSICAL_CAMERA           109
+#define ERR_INVALID_CAMERA               110
 
 class IDAQDevice;
 
@@ -64,7 +66,7 @@ struct WaveformParams
 	size_t waveformOffsetSamples;
 };
 
-class NIDAQWaveforms : public CGenericBase<NIDAQWaveforms>
+class NIDAQWaveforms : public CCameraBase<NIDAQWaveforms>
 {
 public:
 	NIDAQWaveforms();
@@ -74,7 +76,45 @@ public:
 	int Initialize();
 	int Shutdown();
 	void GetName(char* name) const;
-	bool Busy() { return false; };
+	bool Busy() { return false; }
+
+	// Camera API - Image acquisition
+	int SnapImage();
+	const unsigned char* GetImageBuffer();
+	const unsigned char* GetImageBuffer(unsigned channelNr);
+
+	// Camera API - Image properties
+	unsigned GetImageWidth() const;
+	unsigned GetImageHeight() const;
+	unsigned GetImageBytesPerPixel() const;
+	unsigned GetBitDepth() const;
+	long GetImageBufferSize() const;
+
+	// Camera API - Exposure
+	double GetExposure() const;
+	void SetExposure(double exp);
+
+	// Camera API - ROI
+	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
+	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
+	int ClearROI();
+
+	// Camera API - Binning
+	int GetBinning() const;
+	int SetBinning(int binSize);
+
+	// Camera API - Sequence acquisition
+	int PrepareSequenceAcqusition();  // Note: MM API typo preserved
+	int StartSequenceAcquisition(double interval);
+	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+	int StopSequenceAcquisition();
+	bool IsCapturing();
+
+	// Camera API - Additional methods
+	int IsExposureSequenceable(bool& isSequenceable) const;
+	unsigned GetNumberOfComponents() const;
+	unsigned GetNumberOfChannels() const;
+	int GetChannelName(unsigned channel, char* name);
 
 	// Semantic channel property name constants
 	static const char* const PROP_GALVO_CHANNEL;
@@ -87,6 +127,7 @@ public:
 
 	// Action handlers
 	int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnChannelMapping(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnMinVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnMaxVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -98,6 +139,7 @@ public:
 	int OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	// Helper methods
@@ -126,11 +168,22 @@ private:
 	int GetNumEnabledModInChannels() const;
 	int ValidateWaveformParameters() const;
 
+	// Camera wrapper helpers
+	MM::Camera* GetPhysicalCamera() const;
+	int QueryReadoutTime();
+	int BuildAndWriteWaveforms();
+	int StartWaveformOutput();
+	int StopWaveformOutput();
+
 	// State
 	bool initialized_;
 	std::string deviceName_;
 	std::vector<std::string> availableChannels_;
 	std::unique_ptr<IDAQDevice> daq_;
+
+	// Camera wrapper state
+	std::string physicalCameraName_;
+	std::vector<std::string> availableCameras_;
 
 	// Channel mappings (semantic name -> hardware channel)
 	std::map<std::string, std::string> channelMapping_;
