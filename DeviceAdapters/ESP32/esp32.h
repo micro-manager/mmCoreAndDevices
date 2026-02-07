@@ -389,6 +389,8 @@ public:
 
     int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
 
+    int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
     int OnXStageMinPos(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnXStageMaxPos(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnYStageMinPos(MM::PropertyBase* pProp, MM::ActionType eAct);
