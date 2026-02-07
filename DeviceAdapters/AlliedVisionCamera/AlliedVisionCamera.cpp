@@ -446,6 +446,7 @@ double AlliedVisionCamera::GetExposure() const
 
 void AlliedVisionCamera::SetExposure(double exp_ms)
 {
+    UpdateProperty(m_exposureFeatureName.c_str());
     int err = SetProperty(m_exposureFeatureName.c_str(), CDeviceUtils::ConvertToString(exp_ms * MS_TO_US));
     if (err != DEVICE_OK)
     {
@@ -465,6 +466,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
 
     std::function<VmbError_t(unsigned)> setOffsetXProperty = [this](long x)
     {
+        UpdateProperty(g_OffsetX);
         auto err = SetProperty(g_OffsetX, CDeviceUtils::ConvertToString(x));
         if (err)
         {
@@ -474,6 +476,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
     };
     std::function<VmbError_t(unsigned)> setOffsetYProperty = [this](long y)
     {
+        UpdateProperty(g_OffsetY);
         auto err = SetProperty(g_OffsetY, CDeviceUtils::ConvertToString(y));
         if (err)
         {
@@ -483,6 +486,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
     };
     std::function<VmbError_t(unsigned)> setWidthProperty = [this](long xSize)
     {
+        UpdateProperty(g_Width);
         auto err = SetProperty(g_Width, CDeviceUtils::ConvertToString(xSize));
         if (err)
         {
@@ -492,6 +496,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
     };
     std::function<VmbError_t(unsigned)> setHeightProperty = [this](long ySize)
     {
+        UpdateProperty(g_Height);
         auto err = SetProperty(g_Height, CDeviceUtils::ConvertToString(ySize));
         if (err)
         {
