@@ -531,7 +531,7 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
    char label[MM::MaxStrLength];
    GetLabel(label);
    Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
    std::string serializedMD(md.Serialize());
 
    const unsigned char* bytes = 0;

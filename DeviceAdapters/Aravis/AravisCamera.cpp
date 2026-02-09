@@ -167,13 +167,13 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
     ArvBufferUpdate(cb_arv_buffer);
 
     // Image metadata.
-    md.put(MM::g_Keyword_Metadata_CameraLabel, "");
-    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)img_buffer_width));
-    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)img_buffer_height));
-    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(counter));
-    md.put(MM::g_Keyword_Metadata_Exposure, exposure_time);
-    md.put(MM::g_Keyword_PixelType, pixel_type);
-    
+    md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, "");
+    md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)img_buffer_width));
+    md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)img_buffer_height));
+    md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(counter));
+    md.PutImageTag(MM::g_Keyword_Metadata_Exposure, exposure_time);
+    md.PutImageTag(MM::g_Keyword_PixelType, pixel_type);
+
     // Pass data to MM.
     int ret = GetCoreCallback()->InsertImage(this,
 					     img_buffer,

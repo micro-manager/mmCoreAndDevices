@@ -232,7 +232,7 @@ int CPyCamera::InsertImage()
     char label[MM::MaxStrLength];
     this->GetLabel(label);
     Metadata md;
-    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+    md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
     auto buffer = GetImageBuffer();
     if (!buffer)
         return DEVICE_ERR;

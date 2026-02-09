@@ -479,7 +479,7 @@ int QSICameraAdapter::InsertImage()
   // Assemble metadata
   this->GetLabel( label );
   
-  metadata.put(MM::g_Keyword_Metadata_CameraLabel, label );
+  metadata.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label );
 
   pSerializedMetadata =  metadata.Serialize().c_str();
 

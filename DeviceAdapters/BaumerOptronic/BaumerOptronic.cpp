@@ -2269,7 +2269,7 @@ int CBaumerOptronic::SendImageToCore()
    char label[MM::MaxStrLength];
    this->GetLabel(label);
    Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
    int err = WaitForImageAndCopyToBuffer();
    if (err != DEVICE_OK)

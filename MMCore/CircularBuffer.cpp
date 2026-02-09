@@ -248,7 +248,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int wid
       }
 
       // insert image number. 
-      md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageNumbers_[cameraName]));
+      md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageNumbers_[cameraName]));
       ++imageNumbers_[cameraName];
    }
 

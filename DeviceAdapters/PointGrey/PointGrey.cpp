@@ -1327,18 +1327,18 @@ int PointGrey::InsertImage(Image* pImg)
 
 	// Important:  metadata about the image are generated here:
 	Metadata md;
-	md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
-   md.put(g_CameraTime, CDeviceUtils::ConvertToString(timeStamp.getMsec()));
-	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   md.put("FrameCounter", frameCounter); // framecounter is always 0 for me
-	//md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-	//md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+	md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
+   md.PutImageTag(g_CameraTime, CDeviceUtils::ConvertToString(timeStamp.getMsec()));
+	md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   md.PutImageTag("FrameCounter", frameCounter); // framecounter is always 0 for me
+	//md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+	//md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 	
 	imageCounter_++;
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);
-	md.put(MM::g_Keyword_Binning, buf);
+	md.PutImageTag(MM::g_Keyword_Binning, buf);
 
    unsigned int w = pImg->GetCols();
    unsigned int h = pImg->GetRows();
