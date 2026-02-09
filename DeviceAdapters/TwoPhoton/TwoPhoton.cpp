@@ -1019,30 +1019,22 @@ int BitFlowCamera::LiveThread::svc()
       MM::MMTime timestamp = cam_->GetCurrentMMTime();
       Metadata md;
 
-      MetadataSingleTag mstElapsed(MM::g_Keyword_Elapsed_Time_ms, label, true);
       MM::MMTime elapsed = timestamp - cam_->startTime_;
-      mstElapsed.SetValue(CDeviceUtils::ConvertToString(elapsed.getMsec()));
-	  md.SetTag(mstElapsed);
+      md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+         CDeviceUtils::ConvertToString(elapsed.getMsec()));
 
-	  MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-	  mstCount.SetValue(CDeviceUtils::ConvertToString(imageCounter_));
-	  md.SetTag(mstCount);
-
+	  md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber,
+        CDeviceUtils::ConvertToString(imageCounter_));
 
 	  // insert all channels
 	  for (unsigned i=0; i<cam_->GetNumberOfChannels(); i++)
 	  {
 		  char buf[MM::MaxStrLength];
-		  MetadataSingleTag mstChannel(MM::g_Keyword_CameraChannelIndex, label, true);
 		  snprintf(buf, MM::MaxStrLength, "%d", i);
-		  mstChannel.SetValue(buf);
-		  md.SetTag(mstChannel);
+		  md.PutImageTag(MM::g_Keyword_CameraChannelIndex, buf);
 
-		  MetadataSingleTag mstChannelName(MM::g_Keyword_CameraChannelName, label, true);
 		  cam_->GetChannelName(i, buf);
-		  mstChannelName.SetValue(buf);
-		  md.SetTag(mstChannelName);
-
+		  md.PutImageTag(MM::g_Keyword_CameraChannelName, buf);
 
 		  ret = cam_->GetCoreCallback()->InsertImage(cam_, cam_->GetImageBuffer(i),
 			  cam_->GetImageWidth(),

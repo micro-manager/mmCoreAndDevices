@@ -2112,20 +2112,15 @@ int Universal::PushImage()
    }
 
    // create metadata
-   char label[MM::MaxStrLength];
-   GetLabel(label);
-
    MM::MMTime timestamp = GetCurrentMMTime();
    Metadata md;
 
-   MetadataSingleTag mstElapsed(MM::g_Keyword_Elapsed_Time_ms, label, true);
    MM::MMTime elapsed = timestamp - startTime_;
-   mstElapsed.SetValue(CDeviceUtils::ConvertToString(elapsed.getMsec()));
-   md.SetTag(mstElapsed);
+   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+      CDeviceUtils::ConvertToString(elapsed.getMsec()));
 
-   MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-   mstCount.SetValue(CDeviceUtils::ConvertToString(imageCounter_++));
-   md.SetTag(mstCount);
+   md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber,
+      CDeviceUtils::ConvertToString(imageCounter_++));
 
    double actualInterval = elapsed.getMsec() / imageCounter_;
    SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval)); 
