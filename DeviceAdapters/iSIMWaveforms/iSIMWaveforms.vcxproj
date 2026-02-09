@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}</ProjectGuid>
+    <ProjectGuid>{D176BC58-E00D-43FB-9471-56C383233974}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MPBLaser</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
@@ -93,10 +93,10 @@
     <ClInclude Include="IDAQDevice.h" />
     <ClInclude Include="MockDAQAdapter.h" />
     <ClInclude Include="NIDAQmxAdapter.h" />
-    <ClInclude Include="NIDAQWaveforms.h" />
+    <ClInclude Include="iSIMWaveforms.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NIDAQWaveforms.cpp" />
+    <ClCompile Include="iSIMWaveforms.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

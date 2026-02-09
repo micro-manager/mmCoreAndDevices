@@ -9,7 +9,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="NIDAQWaveforms.h">
+    <ClInclude Include="iSIMWaveforms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="IDAQDevice.h">
@@ -23,7 +23,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NIDAQWaveforms.cpp">
+    <ClCompile Include="iSIMWaveforms.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

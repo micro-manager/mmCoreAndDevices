@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          NIDAQWaveforms.cpp
+// FILE:          iSIMWaveforms.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Generates analog waveforms on a NI-DAQ.
-//                
+// DESCRIPTION:   Generates analog waveforms for an iSIM microscope.
+//
 // AUTHOR:        Kyle M. Douglass, https://kylemdouglass.com
 //
 // VERSION:       0.0.0
@@ -15,7 +15,7 @@
 //                Laboratory of Experimental Biophysics (LEB), 2026
 //
 
-#include "NIDAQWaveforms.h"
+#include "iSIMWaveforms.h"
 #include "MockDAQAdapter.h"
 #include "NIDAQmxAdapter.h"
 #include "ModuleInterface.h"
@@ -25,19 +25,19 @@
 
 using namespace std;
 
-const char* g_DeviceName = "NIDAQ Waveforms";
-const char* g_DeviceDescription = "Generates analog waveforms on a NI-DAQ device";
+const char* g_DeviceName = "iSIM Waveforms";
+const char* g_DeviceDescription = "Generates analog waveforms for an iSIM microscope";
 const char* g_Undefined = "Undefined";
 const char* g_PhysicalCamera = "Physical Camera";
 
 // Semantic channel property name constants
-const char* const NIDAQWaveforms::PROP_GALVO_CHANNEL = "Galvo Waveform Channel";
-const char* const NIDAQWaveforms::PROP_CAMERA_CHANNEL = "Camera Trigger Channel";
-const char* const NIDAQWaveforms::PROP_AOTF_BLANKING_CHANNEL = "AOTF Blanking Channel";
-const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_1 = "AOTF MOD IN Channel 1";
-const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_2 = "AOTF MOD IN Channel 2";
-const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_3 = "AOTF MOD IN Channel 3";
-const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_4 = "AOTF MOD IN Channel 4";
+const char* const iSIMWaveforms::PROP_GALVO_CHANNEL = "Galvo Waveform Channel";
+const char* const iSIMWaveforms::PROP_CAMERA_CHANNEL = "Camera Trigger Channel";
+const char* const iSIMWaveforms::PROP_AOTF_BLANKING_CHANNEL = "AOTF Blanking Channel";
+const char* const iSIMWaveforms::PROP_AOTF_MOD_IN_1 = "AOTF MOD IN Channel 1";
+const char* const iSIMWaveforms::PROP_AOTF_MOD_IN_2 = "AOTF MOD IN Channel 2";
+const char* const iSIMWaveforms::PROP_AOTF_MOD_IN_3 = "AOTF MOD IN Channel 3";
+const char* const iSIMWaveforms::PROP_AOTF_MOD_IN_4 = "AOTF MOD IN Channel 4";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -48,7 +48,7 @@ const char* const NIDAQWaveforms::PROP_AOTF_MOD_IN_4 = "AOTF MOD IN Channel 4";
  */
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_DeviceName, MM::CameraDevice, "NIDAQ Waveforms");
+   RegisterDevice(g_DeviceName, MM::CameraDevice, "iSIM Waveforms");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -60,7 +60,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    if (strcmp(deviceName, g_DeviceName) == 0)
    {
       // create the test device
-      return new NIDAQWaveforms();
+      return new iSIMWaveforms();
    }
 
    // ...supplied name not recognized
@@ -73,11 +73,11 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// NIDAQWaveforms implementation
+// iSIMWaveforms implementation
 // ~~~~~~~~~~~~~~~~~~~~~~~
 
 /**
-* NIDAQWaveforms constructor.
+* iSIMWaveforms constructor.
 * Setup default all variables and create device properties required to exist
 * before intialization. In this case, no such properties were required. All
 * properties will be created in the Initialize() method.
@@ -86,7 +86,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * the constructor. We should do as little as possible in the constructor and
 * perform most of the initialization in the Initialize() method.
 */
-NIDAQWaveforms::NIDAQWaveforms() :
+iSIMWaveforms::iSIMWaveforms() :
 	initialized_(false),
 	deviceName_(""),
 	aotfBlankingVoltage_(0.0),
@@ -132,16 +132,16 @@ NIDAQWaveforms::NIDAQWaveforms() :
 
 	// Create DAQ adapter for device discovery
 	// Toggle between Mock and NIDAQmx by commenting/uncommenting:
-	//auto mockDaq = std::make_unique<MockDAQAdapter>();
-	//mockDaq->setLogger([this](const std::string& msg) {
-	//	LogMessage(msg, false);
-	//});
-	//daq_ = std::move(mockDaq);
-	daq_ = std::make_unique<NIDAQmxAdapter>();
+	auto mockDaq = std::make_unique<MockDAQAdapter>();
+	mockDaq->setLogger([this](const std::string& msg) {
+		LogMessage(msg, false);
+	});
+	daq_ = std::move(mockDaq);
+	//daq_ = std::make_unique<NIDAQmxAdapter>();
 
 	// Pre-init property: Device
 	std::vector<std::string> devices = daq_->getDeviceNames();
-	CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnDevice);
+	CPropertyAction* pAct = new CPropertyAction(this, &iSIMWaveforms::OnDevice);
 	std::string defaultDevice = devices.empty() ? "" : devices[0];
 	deviceName_ = defaultDevice;
 	CreateStringProperty("Device", defaultDevice.c_str(), false, pAct, true);
@@ -156,22 +156,22 @@ NIDAQWaveforms::NIDAQWaveforms() :
 	CreateChannelPreInitProperties();
 
 	// Pre-init property: Counter Channel
-	pAct = new CPropertyAction(this, &NIDAQWaveforms::OnCounterChannel);
+	pAct = new CPropertyAction(this, &iSIMWaveforms::OnCounterChannel);
 	CreateStringProperty("Counter Channel", counterChannel_.c_str(), false, pAct, true);
 
 	// Pre-init property: Clock Source
-	pAct = new CPropertyAction(this, &NIDAQWaveforms::OnClockSource);
+	pAct = new CPropertyAction(this, &iSIMWaveforms::OnClockSource);
 	CreateStringProperty("Clock Source", clockSource_.c_str(), false, pAct, true);
 }
 
 /**
-* NIDAQWaveforms destructor.
+* iSIMWaveforms destructor.
 * If this device used as intended within the Micro-Manager system,
 * Shutdown() will be always called before the destructor. But in any case
 * we need to make sure that all resources are properly released even if
 * Shutdown() was not called.
 */
-NIDAQWaveforms::~NIDAQWaveforms()
+iSIMWaveforms::~iSIMWaveforms()
 {
    if (initialized_)
       Shutdown();
@@ -181,7 +181,7 @@ NIDAQWaveforms::~NIDAQWaveforms()
 // Helper methods for channel configuration
 /////////////////////////////////////////////
 
-std::vector<const char*> NIDAQWaveforms::GetSemanticChannelNames()
+std::vector<const char*> iSIMWaveforms::GetSemanticChannelNames()
 {
 	return {
 		PROP_GALVO_CHANNEL,
@@ -194,7 +194,7 @@ std::vector<const char*> NIDAQWaveforms::GetSemanticChannelNames()
 	};
 }
 
-std::vector<const char*> NIDAQWaveforms::GetModInChannelNames()
+std::vector<const char*> iSIMWaveforms::GetModInChannelNames()
 {
 	return {
 		PROP_AOTF_MOD_IN_1,
@@ -204,7 +204,7 @@ std::vector<const char*> NIDAQWaveforms::GetModInChannelNames()
 	};
 }
 
-void NIDAQWaveforms::InitializeChannelDefaults()
+void iSIMWaveforms::InitializeChannelDefaults()
 {
 	for (const auto& channel : GetSemanticChannelNames())
 	{
@@ -214,12 +214,12 @@ void NIDAQWaveforms::InitializeChannelDefaults()
 	}
 }
 
-void NIDAQWaveforms::CreateChannelPreInitProperties()
+void iSIMWaveforms::CreateChannelPreInitProperties()
 {
 	for (const auto& semanticChannel : GetSemanticChannelNames())
 	{
 		// Channel selection property (pre-init)
-		CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnChannelMapping);
+		CPropertyAction* pAct = new CPropertyAction(this, &iSIMWaveforms::OnChannelMapping);
 		CreateStringProperty(semanticChannel, "None", false, pAct, true);
 		AddAllowedValue(semanticChannel, "None");
 		for (const auto& hwChannel : availableChannels_)
@@ -227,17 +227,17 @@ void NIDAQWaveforms::CreateChannelPreInitProperties()
 
 		// Min voltage property (pre-init)
 		std::string minVoltProp = std::string(semanticChannel) + " Min Voltage";
-		CPropertyAction* pActMin = new CPropertyAction(this, &NIDAQWaveforms::OnMinVoltage);
+		CPropertyAction* pActMin = new CPropertyAction(this, &iSIMWaveforms::OnMinVoltage);
 		CreateFloatProperty(minVoltProp.c_str(), -10.0, false, pActMin, true);
 
 		// Max voltage property (pre-init)
 		std::string maxVoltProp = std::string(semanticChannel) + " Max Voltage";
-		CPropertyAction* pActMax = new CPropertyAction(this, &NIDAQWaveforms::OnMaxVoltage);
+		CPropertyAction* pActMax = new CPropertyAction(this, &iSIMWaveforms::OnMaxVoltage);
 		CreateFloatProperty(maxVoltProp.c_str(), 10.0, false, pActMax, true);
 	}
 }
 
-void NIDAQWaveforms::UpdateChannelAllowedValues()
+void iSIMWaveforms::UpdateChannelAllowedValues()
 {
 	for (const auto& semanticChannel : GetSemanticChannelNames())
 	{
@@ -268,7 +268,7 @@ void NIDAQWaveforms::UpdateChannelAllowedValues()
 	}
 }
 
-int NIDAQWaveforms::ValidateMinimumChannels()
+int iSIMWaveforms::ValidateMinimumChannels()
 {
 	const size_t minimumChannels = 4;
 
@@ -282,7 +282,7 @@ int NIDAQWaveforms::ValidateMinimumChannels()
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::ValidateRequiredChannels()
+int iSIMWaveforms::ValidateRequiredChannels()
 {
 	const std::vector<const char*> requiredChannels = {
 		PROP_GALVO_CHANNEL,
@@ -301,7 +301,7 @@ int NIDAQWaveforms::ValidateRequiredChannels()
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::ValidateChannelMappings()
+int iSIMWaveforms::ValidateChannelMappings()
 {
 	std::set<std::string> usedChannels;
 
@@ -322,7 +322,7 @@ int NIDAQWaveforms::ValidateChannelMappings()
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::ValidateModInConfiguration()
+int iSIMWaveforms::ValidateModInConfiguration()
 {
 	bool hasModIn = false;
 
@@ -344,7 +344,7 @@ int NIDAQWaveforms::ValidateModInConfiguration()
 	return DEVICE_OK;
 }
 
-std::vector<std::string> NIDAQWaveforms::GetEnabledModInChannels() const
+std::vector<std::string> iSIMWaveforms::GetEnabledModInChannels() const
 {
 	std::vector<std::string> result;
 	for (const auto& modIn : GetModInChannelNames())
@@ -361,12 +361,12 @@ std::vector<std::string> NIDAQWaveforms::GetEnabledModInChannels() const
 	return result;
 }
 
-int NIDAQWaveforms::GetNumEnabledModInChannels() const
+int iSIMWaveforms::GetNumEnabledModInChannels() const
 {
 	return static_cast<int>(GetEnabledModInChannels().size());
 }
 
-int NIDAQWaveforms::ValidateWaveformParameters() const
+int iSIMWaveforms::ValidateWaveformParameters() const
 {
 	// Frame interval must be greater than readout time
 	if (frameIntervalMs_ <= readoutTimeMs_)
@@ -394,7 +394,7 @@ int NIDAQWaveforms::ValidateWaveformParameters() const
 	return DEVICE_OK;
 }
 
-void NIDAQWaveforms::ComputeWaveformParameters(WaveformParams& params) const
+void iSIMWaveforms::ComputeWaveformParameters(WaveformParams& params) const
 {
 	// Derived timing (milliseconds)
 	params.waveformIntervalMs = 2.0 * frameIntervalMs_;
@@ -425,7 +425,7 @@ void NIDAQWaveforms::ComputeWaveformParameters(WaveformParams& params) const
 		std::round((params.waveformOffsetMs / 1000.0) * samplingRateHz_));
 }
 
-std::vector<double> NIDAQWaveforms::ConstructCameraWaveform(const WaveformParams& params) const
+std::vector<double> iSIMWaveforms::ConstructCameraWaveform(const WaveformParams& params) const
 {
 	std::vector<double> waveform(params.numWaveformSamples, 0.0);
 
@@ -448,7 +448,7 @@ std::vector<double> NIDAQWaveforms::ConstructCameraWaveform(const WaveformParams
 	return waveform;
 }
 
-std::vector<double> NIDAQWaveforms::ConstructGalvoWaveform(const WaveformParams& params) const
+std::vector<double> iSIMWaveforms::ConstructGalvoWaveform(const WaveformParams& params) const
 {
 	std::vector<double> waveform(params.numWaveformSamples, 0.0);
 
@@ -494,7 +494,7 @@ std::vector<double> NIDAQWaveforms::ConstructGalvoWaveform(const WaveformParams&
 	return waveform;
 }
 
-std::vector<double> NIDAQWaveforms::ConstructBlankingWaveform(const WaveformParams& params) const
+std::vector<double> iSIMWaveforms::ConstructBlankingWaveform(const WaveformParams& params) const
 {
 	std::vector<double> waveform(params.numWaveformSamples, 0.0);
 
@@ -515,7 +515,7 @@ std::vector<double> NIDAQWaveforms::ConstructBlankingWaveform(const WaveformPara
 	return waveform;
 }
 
-std::vector<double> NIDAQWaveforms::ConstructModInWaveform(
+std::vector<double> iSIMWaveforms::ConstructModInWaveform(
 	const std::string& semanticChannel,
 	const WaveformParams& params) const
 {
@@ -548,7 +548,7 @@ std::vector<double> NIDAQWaveforms::ConstructModInWaveform(
 	return waveform;
 }
 
-void NIDAQWaveforms::ConfigureDAQChannels()
+void iSIMWaveforms::ConfigureDAQChannels()
 {
 	// Clear any existing configuration
 	daq_->clearTasks();
@@ -583,19 +583,19 @@ void NIDAQWaveforms::ConfigureDAQChannels()
 	}
 }
 
-int NIDAQWaveforms::CreatePostInitProperties()
+int iSIMWaveforms::CreatePostInitProperties()
 {
 	int nRet;
 
 	// Sampling Rate property
-	CPropertyAction* pActRate = new CPropertyAction(this, &NIDAQWaveforms::OnSamplingRate);
+	CPropertyAction* pActRate = new CPropertyAction(this, &iSIMWaveforms::OnSamplingRate);
 	nRet = CreateFloatProperty("Sampling Rate (Hz)", samplingRateHz_, false, pActRate);
 	if (nRet != DEVICE_OK)
 		return nRet;
 	SetPropertyLimits("Sampling Rate (Hz)", 1000.0, 1000000.0);
 
 	// AOTF Blanking Voltage slider (always created since AOTF Blanking is required)
-	CPropertyAction* pAct = new CPropertyAction(this, &NIDAQWaveforms::OnAOTFBlankingVoltage);
+	CPropertyAction* pAct = new CPropertyAction(this, &iSIMWaveforms::OnAOTFBlankingVoltage);
 	double minV = minVoltage_[PROP_AOTF_BLANKING_CHANNEL];
 	double maxV = maxVoltage_[PROP_AOTF_BLANKING_CHANNEL];
 	aotfBlankingVoltage_ = minV;
@@ -626,7 +626,7 @@ int NIDAQWaveforms::CreatePostInitProperties()
 
 			// Enabled property
 			std::string enabledPropName = "AOTF MOD IN " + std::to_string(channelNum) + " Enabled";
-			CPropertyAction* pActEnabled = new CPropertyAction(this, &NIDAQWaveforms::OnModInEnabled);
+			CPropertyAction* pActEnabled = new CPropertyAction(this, &iSIMWaveforms::OnModInEnabled);
 			nRet = CreateStringProperty(enabledPropName.c_str(), "No", false, pActEnabled);
 			if (nRet != DEVICE_OK)
 				return nRet;
@@ -635,7 +635,7 @@ int NIDAQWaveforms::CreatePostInitProperties()
 
 			// Voltage property
 			std::string voltagePropName = "AOTF MOD IN " + std::to_string(channelNum) + " Voltage";
-			CPropertyAction* pActVoltage = new CPropertyAction(this, &NIDAQWaveforms::OnModInVoltage);
+			CPropertyAction* pActVoltage = new CPropertyAction(this, &iSIMWaveforms::OnModInVoltage);
 			double modMinV = minVoltage_[semanticName];
 			double modMaxV = maxVoltage_[semanticName];
 
@@ -647,13 +647,13 @@ int NIDAQWaveforms::CreatePostInitProperties()
 	}
 
 	// Waveform timing properties
-	CPropertyAction* pActParking = new CPropertyAction(this, &NIDAQWaveforms::OnParkingFraction);
+	CPropertyAction* pActParking = new CPropertyAction(this, &iSIMWaveforms::OnParkingFraction);
 	nRet = CreateFloatProperty("Parking Fraction", parkingFraction_, false, pActParking);
 	if (nRet != DEVICE_OK)
 		return nRet;
 	SetPropertyLimits("Parking Fraction", 0.0, 1.0);
 
-	CPropertyAction* pActExposureV = new CPropertyAction(this, &NIDAQWaveforms::OnExposureVoltage);
+	CPropertyAction* pActExposureV = new CPropertyAction(this, &iSIMWaveforms::OnExposureVoltage);
 	nRet = CreateFloatProperty("Exposure Voltage (Vpp)", exposurePpV_, false, pActExposureV);
 	if (nRet != DEVICE_OK)
 		return nRet;
@@ -661,19 +661,19 @@ int NIDAQWaveforms::CreatePostInitProperties()
 	double galvoRange = maxVoltage_[PROP_GALVO_CHANNEL] - minVoltage_[PROP_GALVO_CHANNEL];
 	SetPropertyLimits("Exposure Voltage (Vpp)", 0.0, galvoRange);
 
-	CPropertyAction* pActGalvoOffset = new CPropertyAction(this, &NIDAQWaveforms::OnGalvoOffset);
+	CPropertyAction* pActGalvoOffset = new CPropertyAction(this, &iSIMWaveforms::OnGalvoOffset);
 	nRet = CreateFloatProperty("Galvo Offset (V)", galvoOffsetV_, false, pActGalvoOffset);
 	if (nRet != DEVICE_OK)
 		return nRet;
 	SetPropertyLimits("Galvo Offset (V)", minVoltage_[PROP_GALVO_CHANNEL], maxVoltage_[PROP_GALVO_CHANNEL]);
 
-	CPropertyAction* pActTrigger = new CPropertyAction(this, &NIDAQWaveforms::OnTriggerSource);
+	CPropertyAction* pActTrigger = new CPropertyAction(this, &iSIMWaveforms::OnTriggerSource);
 	nRet = CreateStringProperty("Trigger Source", triggerSource_.c_str(), false, pActTrigger);
 	if (nRet != DEVICE_OK)
 		return nRet;
 
 	// Binning property (required by MMCore for camera devices)
-	CPropertyAction* pActBinning = new CPropertyAction(this, &NIDAQWaveforms::OnBinning);
+	CPropertyAction* pActBinning = new CPropertyAction(this, &iSIMWaveforms::OnBinning);
 	nRet = CreateIntegerProperty(MM::g_Keyword_Binning, 1, false, pActBinning);
 	if (nRet != DEVICE_OK)
 		return nRet;
@@ -685,7 +685,7 @@ int NIDAQWaveforms::CreatePostInitProperties()
 * Obtains device name.
 * Required by the MM::Device API.
 */
-void NIDAQWaveforms::GetName(char* name) const
+void iSIMWaveforms::GetName(char* name) const
 {
    // We just return the name we use for referring to this
    // device adapter.
@@ -698,7 +698,7 @@ void NIDAQWaveforms::GetName(char* name) const
 * Device properties are typically created here as well.
 * Required by the MM::Device API.
 */
-int NIDAQWaveforms::Initialize()
+int iSIMWaveforms::Initialize()
 {
 	if (initialized_)
 		return DEVICE_OK;
@@ -735,7 +735,7 @@ int NIDAQWaveforms::Initialize()
 	}
 
 	// Create Physical Camera property
-	CPropertyAction* pActCamera = new CPropertyAction(this, &NIDAQWaveforms::OnPhysicalCamera);
+	CPropertyAction* pActCamera = new CPropertyAction(this, &iSIMWaveforms::OnPhysicalCamera);
 	nRet = CreateStringProperty(g_PhysicalCamera, g_Undefined, false, pActCamera);
 	if (nRet != DEVICE_OK)
 		return nRet;
@@ -782,7 +782,7 @@ int NIDAQWaveforms::Initialize()
 * Shutdown() may be called multiple times in a row.
 * Required by the MM::Device API.
 */
-int NIDAQWaveforms::Shutdown()
+int iSIMWaveforms::Shutdown()
 {
    daq_.reset();
    initialized_ = false;
@@ -797,7 +797,7 @@ int NIDAQWaveforms::Shutdown()
 // Action handlers
 /////////////////////////////////////////////
 
-int NIDAQWaveforms::OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -822,7 +822,7 @@ int NIDAQWaveforms::OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -856,7 +856,7 @@ int NIDAQWaveforms::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAc
 	return DEVICE_OK;
 }
 
-MM::Camera* NIDAQWaveforms::GetPhysicalCamera() const
+MM::Camera* iSIMWaveforms::GetPhysicalCamera() const
 {
 	if (physicalCameraName_.empty() || physicalCameraName_ == g_Undefined)
 		return nullptr;
@@ -864,7 +864,7 @@ MM::Camera* NIDAQWaveforms::GetPhysicalCamera() const
 	return static_cast<MM::Camera*>(GetDevice(physicalCameraName_.c_str()));
 }
 
-int NIDAQWaveforms::OnChannelMapping(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnChannelMapping(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	std::string propName = pProp->GetName();
 
@@ -881,7 +881,7 @@ int NIDAQWaveforms::OnChannelMapping(MM::PropertyBase* pProp, MM::ActionType eAc
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnMinVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnMinVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	// Extract semantic channel name from property name (remove " Min Voltage" suffix)
 	std::string propName = pProp->GetName();
@@ -900,7 +900,7 @@ int NIDAQWaveforms::OnMinVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnMaxVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnMaxVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	// Extract semantic channel name from property name (remove " Max Voltage" suffix)
 	std::string propName = pProp->GetName();
@@ -919,7 +919,7 @@ int NIDAQWaveforms::OnMaxVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -942,7 +942,7 @@ int NIDAQWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionTyp
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	// Extract channel number from property name (e.g., "AOTF MOD IN 1 Enabled")
 	std::string propName = pProp->GetName();
@@ -982,7 +982,7 @@ int NIDAQWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	// Extract channel number from property name (e.g., "AOTF MOD IN 1 Voltage")
 	std::string propName = pProp->GetName();
@@ -1020,7 +1020,7 @@ int NIDAQWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1043,7 +1043,7 @@ int NIDAQWaveforms::OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnParkingFraction(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnParkingFraction(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1066,7 +1066,7 @@ int NIDAQWaveforms::OnParkingFraction(MM::PropertyBase* pProp, MM::ActionType eA
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1089,7 +1089,7 @@ int NIDAQWaveforms::OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eA
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1112,7 +1112,7 @@ int NIDAQWaveforms::OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1125,7 +1125,7 @@ int NIDAQWaveforms::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnCounterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnCounterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1138,7 +1138,7 @@ int NIDAQWaveforms::OnCounterChannel(MM::PropertyBase* pProp, MM::ActionType eAc
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnClockSource(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnClockSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1151,7 +1151,7 @@ int NIDAQWaveforms::OnClockSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
+int iSIMWaveforms::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
@@ -1172,7 +1172,7 @@ int NIDAQWaveforms::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 // Camera wrapper helpers
 /////////////////////////////////////////////
 
-int NIDAQWaveforms::QueryReadoutTime()
+int iSIMWaveforms::QueryReadoutTime()
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1196,7 +1196,7 @@ int NIDAQWaveforms::QueryReadoutTime()
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::BuildAndWriteWaveforms()
+int iSIMWaveforms::BuildAndWriteWaveforms()
 {
 	// Validate parameters
 	int ret = ValidateWaveformParameters();
@@ -1247,7 +1247,7 @@ int NIDAQWaveforms::BuildAndWriteWaveforms()
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::StartWaveformOutput()
+int iSIMWaveforms::StartWaveformOutput()
 {
 	try
 	{
@@ -1262,7 +1262,7 @@ int NIDAQWaveforms::StartWaveformOutput()
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::StopWaveformOutput()
+int iSIMWaveforms::StopWaveformOutput()
 {
 	try
 	{
@@ -1280,55 +1280,55 @@ int NIDAQWaveforms::StopWaveformOutput()
 // Camera API - Pass-through methods
 /////////////////////////////////////////////
 
-const unsigned char* NIDAQWaveforms::GetImageBuffer()
+const unsigned char* iSIMWaveforms::GetImageBuffer()
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetImageBuffer() : nullptr;
 }
 
-const unsigned char* NIDAQWaveforms::GetImageBuffer(unsigned channelNr)
+const unsigned char* iSIMWaveforms::GetImageBuffer(unsigned channelNr)
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetImageBuffer(channelNr) : nullptr;
 }
 
-unsigned NIDAQWaveforms::GetImageWidth() const
+unsigned iSIMWaveforms::GetImageWidth() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetImageWidth() : 0;
 }
 
-unsigned NIDAQWaveforms::GetImageHeight() const
+unsigned iSIMWaveforms::GetImageHeight() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetImageHeight() : 0;
 }
 
-unsigned NIDAQWaveforms::GetImageBytesPerPixel() const
+unsigned iSIMWaveforms::GetImageBytesPerPixel() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetImageBytesPerPixel() : 0;
 }
 
-unsigned NIDAQWaveforms::GetBitDepth() const
+unsigned iSIMWaveforms::GetBitDepth() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetBitDepth() : 0;
 }
 
-long NIDAQWaveforms::GetImageBufferSize() const
+long iSIMWaveforms::GetImageBufferSize() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetImageBufferSize() : 0;
 }
 
-double NIDAQWaveforms::GetExposure() const
+double iSIMWaveforms::GetExposure() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetExposure() : 0.0;
 }
 
-void NIDAQWaveforms::SetExposure(double exp)
+void iSIMWaveforms::SetExposure(double exp)
 {
 	// Store frame interval (MM exposure = frame interval in rolling shutter mode)
 	frameIntervalMs_ = exp;
@@ -1359,7 +1359,7 @@ void NIDAQWaveforms::SetExposure(double exp)
 		StartWaveformOutput();
 }
 
-int NIDAQWaveforms::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
+int iSIMWaveforms::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1367,7 +1367,7 @@ int NIDAQWaveforms::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySiz
 	return camera->SetROI(x, y, xSize, ySize);
 }
 
-int NIDAQWaveforms::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
+int iSIMWaveforms::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1375,7 +1375,7 @@ int NIDAQWaveforms::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& 
 	return camera->GetROI(x, y, xSize, ySize);
 }
 
-int NIDAQWaveforms::ClearROI()
+int iSIMWaveforms::ClearROI()
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1383,13 +1383,13 @@ int NIDAQWaveforms::ClearROI()
 	return camera->ClearROI();
 }
 
-int NIDAQWaveforms::GetBinning() const
+int iSIMWaveforms::GetBinning() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetBinning() : 1;
 }
 
-int NIDAQWaveforms::SetBinning(int binSize)
+int iSIMWaveforms::SetBinning(int binSize)
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1397,25 +1397,25 @@ int NIDAQWaveforms::SetBinning(int binSize)
 	return camera->SetBinning(binSize);
 }
 
-int NIDAQWaveforms::IsExposureSequenceable(bool& isSequenceable) const
+int iSIMWaveforms::IsExposureSequenceable(bool& isSequenceable) const
 {
 	isSequenceable = false;
 	return DEVICE_OK;
 }
 
-unsigned NIDAQWaveforms::GetNumberOfComponents() const
+unsigned iSIMWaveforms::GetNumberOfComponents() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetNumberOfComponents() : 1;
 }
 
-unsigned NIDAQWaveforms::GetNumberOfChannels() const
+unsigned iSIMWaveforms::GetNumberOfChannels() const
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->GetNumberOfChannels() : 1;
 }
 
-int NIDAQWaveforms::GetChannelName(unsigned channel, char* name)
+int iSIMWaveforms::GetChannelName(unsigned channel, char* name)
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1426,7 +1426,7 @@ int NIDAQWaveforms::GetChannelName(unsigned channel, char* name)
 	return camera->GetChannelName(channel, name);
 }
 
-bool NIDAQWaveforms::IsCapturing()
+bool iSIMWaveforms::IsCapturing()
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	return camera ? camera->IsCapturing() : false;
@@ -1436,7 +1436,7 @@ bool NIDAQWaveforms::IsCapturing()
 // Camera API - Acquisition methods
 /////////////////////////////////////////////
 
-int NIDAQWaveforms::SnapImage()
+int iSIMWaveforms::SnapImage()
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1456,7 +1456,7 @@ int NIDAQWaveforms::SnapImage()
 	return ret;
 }
 
-int NIDAQWaveforms::PrepareSequenceAcqusition()
+int iSIMWaveforms::PrepareSequenceAcqusition()
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1465,7 +1465,7 @@ int NIDAQWaveforms::PrepareSequenceAcqusition()
 	return camera->PrepareSequenceAcqusition();
 }
 
-int NIDAQWaveforms::StartSequenceAcquisition(double interval)
+int iSIMWaveforms::StartSequenceAcquisition(double interval)
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1487,7 +1487,7 @@ int NIDAQWaveforms::StartSequenceAcquisition(double interval)
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+int iSIMWaveforms::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
@@ -1509,7 +1509,7 @@ int NIDAQWaveforms::StartSequenceAcquisition(long numImages, double interval_ms,
 	return DEVICE_OK;
 }
 
-int NIDAQWaveforms::StopSequenceAcquisition()
+int iSIMWaveforms::StopSequenceAcquisition()
 {
 	MM::Camera* camera = GetPhysicalCamera();
 

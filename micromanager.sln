@@ -532,6 +532,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CairnOptoSpinUCSF", "Device
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NIDAQWaveforms", "DeviceAdapters\NIDAQWaveforms\NIDAQWaveforms.vcxproj", "{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iSIMWaveforms", "DeviceAdapters\iSIMWaveforms\iSIMWaveforms.vcxproj", "{D176BC58-E00D-43FB-9471-56C383233974}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1598,6 +1600,10 @@ Global
 		{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}.Debug|x64.Build.0 = Debug|x64
 		{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}.Release|x64.ActiveCfg = Release|x64
 		{290C8F13-FA6A-4CC5-82CD-A64E340D47AF}.Release|x64.Build.0 = Release|x64
+		{D176BC58-E00D-43FB-9471-56C383233974}.Debug|x64.ActiveCfg = Debug|x64
+		{D176BC58-E00D-43FB-9471-56C383233974}.Debug|x64.Build.0 = Debug|x64
+		{D176BC58-E00D-43FB-9471-56C383233974}.Release|x64.ActiveCfg = Release|x64
+		{D176BC58-E00D-43FB-9471-56C383233974}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
