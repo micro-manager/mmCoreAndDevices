@@ -1256,15 +1256,15 @@ int CABSCamera::InsertImage()
 
   // Important: metadata about the image are generated here:
   Metadata md;
-  md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-  md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-  md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( imageCounter_ ));
-  md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) GetImageWidth()));
-  md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) GetImageHeight()));
+  md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+  md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+  md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( imageCounter_ ));
+  md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) GetImageWidth()));
+  md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) GetImageHeight()));
 
   char buf[MM::MaxStrLength];
   GetProperty(MM::g_Keyword_Binning, buf);
-  md.put(MM::g_Keyword_Binning, buf);
+  md.PutImageTag(MM::g_Keyword_Binning, buf);
 
   const unsigned char* pI = GetImageBuffer();
   unsigned int w = GetImageWidth();

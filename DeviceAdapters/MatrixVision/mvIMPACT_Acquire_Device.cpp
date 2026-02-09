@@ -967,12 +967,12 @@ int mvIMPACT_Acquire_Device::InsertImage( void )
    Metadata md;
    char label[MM::MaxStrLength];
    GetLabel( label );
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label );
+   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label );
    MM::MMTime timeStamp = readoutStartTime_;
-   md.put( MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString( ( timeStamp - sequenceStartTime_ ).getMsec() ) );
-   md.put( MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( static_cast<long>( pCurrentRequest_->infoFrameID.read() ) ) );
-   md.put( MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( pCurrentRequest_->imageOffsetX.read() ) );
-   md.put( MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( pCurrentRequest_->imageOffsetY.read() ) );
+   md.PutImageTag( MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString( ( timeStamp - sequenceStartTime_ ).getMsec() ) );
+   md.PutImageTag( MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( static_cast<long>( pCurrentRequest_->infoFrameID.read() ) ) );
+   md.PutImageTag( MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( pCurrentRequest_->imageOffsetX.read() ) );
+   md.PutImageTag( MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( pCurrentRequest_->imageOffsetY.read() ) );
    const unsigned char* pI = GetImageBuffer();
    const unsigned int w = GetImageWidth();
    const unsigned int h = GetImageHeight();

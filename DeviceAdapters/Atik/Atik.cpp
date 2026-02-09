@@ -880,7 +880,7 @@ int Atik::InsertImage()
 	// Important:  metadata about the image are generated here:
 	Metadata md;
 
-	md.put(MM::g_Keyword_Metadata_CameraLabel, "Atik SDK Camera");
+	md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, "Atik SDK Camera");
 
 	string serialised = md.Serialize();
 

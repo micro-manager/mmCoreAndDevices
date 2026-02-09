@@ -5875,7 +5875,7 @@ int CRaptorEPIX::InsertImage()
    // Copy the metadata inserted by other processes:
    std::vector<std::string> keys = metadata_.GetKeys();
 //   for (unsigned int i= 0; i < keys.size(); i++) {
-//      md.put(keys[i], metadata_.GetSingleTag(keys[i].c_str()).GetValue().c_str());
+//      md.PutImageTag(keys[i], metadata_.GetSingleTag(keys[i].c_str()).GetValue().c_str());
 //   }
 
    for (unsigned int i= 0; i < keys.size(); i++) {
@@ -5883,14 +5883,14 @@ int CRaptorEPIX::InsertImage()
       md.PutTag(mst.GetName(), mst.GetDevice(), mst.GetValue());
    }
 */
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   //md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
-   md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   //md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(fieldCount_));
-   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
-   //md.put("FieldCount", CDeviceUtils::ConvertToString( (long) fieldCount_)); 
+   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   //md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
+   md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   //md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(fieldCount_));
+   md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   //md.PutImageTag("FieldCount", CDeviceUtils::ConvertToString( (long) fieldCount_)); 
  
 	MetadataSingleTag mst1("Interval Wait Time", label, true);
 	mst1.SetValue(CDeviceUtils::ConvertToString(myIntervalWaitTime_*1000.0));
@@ -5941,7 +5941,7 @@ int CRaptorEPIX::InsertImage()
    char buf[MM::MaxStrLength];
    //GetProperty(MM::g_Keyword_Binning, buf);
    sprintf_s(buf, MM::MaxStrLength, "%ld", binSize_);
-   md.put(MM::g_Keyword_Binning, buf);
+   md.PutImageTag(MM::g_Keyword_Binning, buf);
 
    MMThreadGuard g(imgPixelsLock_);
 

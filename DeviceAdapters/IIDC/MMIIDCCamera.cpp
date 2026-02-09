@@ -2076,7 +2076,7 @@ MMIIDCCamera::ProcessedSequenceCallback(const void* pixels,
 
    char label[MM::MaxStrLength];
    GetLabel(label);
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
 #ifndef _WIN32
    // The Windows CMU backend does not provide a valid timestamp (the field
@@ -2085,7 +2085,7 @@ MMIIDCCamera::ProcessedSequenceCallback(const void* pixels,
    // pretty accurate.
    double timestampMs = ComputeRelativeTimestampMs(timestampUs);
 
-   md.put(MM::g_Keyword_Elapsed_Time_ms,
+   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
          CDeviceUtils::ConvertToString(timestampMs));
 #endif
 

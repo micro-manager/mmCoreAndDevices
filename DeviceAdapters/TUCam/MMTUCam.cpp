@@ -2878,20 +2878,20 @@ int CMMTUCam::InsertImage()
 
     // Important:  metadata about the image are generated here:
     Metadata md;
-    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+    md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+    md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+    md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+    md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
     imageCounter_++;
 
 //     char buf[MM::MaxStrLength];
 //     GetProperty(MM::g_Keyword_Binning, buf);
-//     md.put(MM::g_Keyword_Binning, buf);
+//     md.PutImageTag(MM::g_Keyword_Binning, buf);
 
     char szTemp[256] = {0};
     snprintf(szTemp, sizeof(szTemp), "%.3f", m_fCurTemp);
-    md.put("Temperature", szTemp); 
+    md.PutImageTag("Temperature", szTemp); 
     
     MMThreadGuard g(imgPixelsLock_);
 

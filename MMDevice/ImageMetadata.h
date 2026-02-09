@@ -385,6 +385,7 @@ public:
     * Deprecated name. Equivalent to PutImageTag.
     */
    template <class anytype>
+   MMDEVICE_DEPRECATED
    void put(std::string key, anytype value)
    {
       PutImageTag(key, value);

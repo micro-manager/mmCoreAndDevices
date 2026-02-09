@@ -905,8 +905,8 @@ int Pixelink::InsertImage()
 
 	Metadata md;
 	//md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
-	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-	md.put("FrameCounter", frameCounter);
+	md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+	md.PutImageTag("FrameCounter", frameCounter);
 
 	return GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize().c_str(), false);
 }

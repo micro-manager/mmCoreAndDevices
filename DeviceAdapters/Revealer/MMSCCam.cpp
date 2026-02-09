@@ -658,9 +658,9 @@ int SCCamera::InsertImage()
     this->GetLabel(label);
 
     Metadata md;
-    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-    //md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) xoffset_));
-    //md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) yoffset_)); 
+    md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+    //md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) xoffset_));
+    //md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) yoffset_)); 
     MMThreadGuard g(imgPixelsLock_);
 	const unsigned char* data = GetImageBuffer();
 

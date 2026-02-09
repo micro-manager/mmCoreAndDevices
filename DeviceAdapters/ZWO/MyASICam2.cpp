@@ -1147,11 +1147,11 @@ int CMyASICam::InsertImage()
 
 	// Important:  metadata about the image are generated here:
 	Metadata md;
-	md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+	md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);
-	md.put(MM::g_Keyword_Binning, buf);
+	md.PutImageTag(MM::g_Keyword_Binning, buf);
 
 	//   MMThreadGuard g(imgPixelsLock_);
 

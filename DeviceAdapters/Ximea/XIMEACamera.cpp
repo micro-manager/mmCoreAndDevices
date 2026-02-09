@@ -796,17 +796,17 @@ int XimeaCamera::InsertImage()
 	// Important:  metadata about the image are generated here:
 	Metadata md;
 	double exp_time = (double)image.GetExpTime() / 1000;
-	md.put(MM::g_Keyword_Metadata_Exposure, CDeviceUtils::ConvertToString(exp_time));
-	md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-	md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)roiX_));
-	md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)roiY_));
-	md.put(MM::g_Keyword_Gain, CDeviceUtils::ConvertToString(image.GetGain()));
+	md.PutImageTag(MM::g_Keyword_Metadata_Exposure, CDeviceUtils::ConvertToString(exp_time));
+	md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+	md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+	md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)roiX_));
+	md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)roiY_));
+	md.PutImageTag(MM::g_Keyword_Gain, CDeviceUtils::ConvertToString(image.GetGain()));
 	imageCounter_++;
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);
-	md.put(MM::g_Keyword_Binning, buf);
+	md.PutImageTag(MM::g_Keyword_Binning, buf);
 
 	MMThreadGuard g(imgPixelsLock_);
 	const unsigned char* pI = GetImageBuffer();

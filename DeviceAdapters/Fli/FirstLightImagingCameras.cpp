@@ -217,9 +217,9 @@ void FirstLightImagingCameras::imageReceived(const uint8_t* image)
 	Metadata md;
 	char label[MM::MaxStrLength];
 	GetLabel(label);
-	md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-	md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)w));
-	md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)h));
+	md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+	md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)w));
+	md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)h));
 
 	MM::Core* core = GetCoreCallback();
 

@@ -2161,12 +2161,12 @@ int CTIScamera::PushImage()
  
    // Important:  metadata about the image are generated here:
    Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   md.put(MM::g_Keyword_Binning, binSize_);
-   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   md.PutImageTag(MM::g_Keyword_Binning, binSize_);
+   md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
    MetadataSingleTag mst(MM::g_Keyword_Elapsed_Time_ms, label, true);
    mst.SetValue(CDeviceUtils::ConvertToString(timeStamp.getMsec()));
@@ -2184,12 +2184,12 @@ int CTIScamera::PushImage()
    // Copy the metadata inserted by other processes:
    std::vector<std::string> keys = GetTagKeys();
    for (unsigned int i= 0; i < keys.size(); i++) {
-      md.put(keys[i], GetTagValue(keys[i].c_str()).c_str());
+      md.PutImageTag(keys[i], GetTagValue(keys[i].c_str()).c_str());
    }
 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
-   md.put(MM::g_Keyword_Binning, buf);
+   md.PutImageTag(MM::g_Keyword_Binning, buf);
 
    imageCounter_++;
 
