@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          NIDAQWaveforms.h
+// FILE:          iSIMWaveforms.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Generates analog waveforms on a NI-DAQ.
-//                
+// DESCRIPTION:   Generates analog waveforms for an iSIM microscope.
+//
 // AUTHOR:        Kyle M. Douglass, https://kylemdouglass.com
 //
 // VERSION:       0.0.0
@@ -66,11 +66,11 @@ struct WaveformParams
 	size_t waveformOffsetSamples;
 };
 
-class NIDAQWaveforms : public CCameraBase<NIDAQWaveforms>
+class iSIMWaveforms : public CCameraBase<iSIMWaveforms>
 {
 public:
-	NIDAQWaveforms();
-	~NIDAQWaveforms();
+	iSIMWaveforms();
+	~iSIMWaveforms();
 
 	// MMDevice API
 	int Initialize();
