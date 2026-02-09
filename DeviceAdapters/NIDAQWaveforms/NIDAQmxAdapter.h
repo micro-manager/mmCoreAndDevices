@@ -17,6 +17,8 @@
 
 #include "IDAQDevice.h"
 
+#include <NIDAQmx.h>
+
 /// NIDAQmx-based DAQ device for real hardware.
 class NIDAQmxAdapter : public IDAQDevice
 {
