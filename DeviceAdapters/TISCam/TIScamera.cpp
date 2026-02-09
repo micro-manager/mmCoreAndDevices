@@ -2180,13 +2180,6 @@ int CTIScamera::PushImage()
    mstB.SetValue(CDeviceUtils::ConvertToString(binSize_));      
    md.SetTag(mstB);
 
-
-   // Copy the metadata inserted by other processes:
-   std::vector<std::string> keys = GetTagKeys();
-   for (unsigned int i= 0; i < keys.size(); i++) {
-      md.PutImageTag(keys[i], GetTagValue(keys[i].c_str()).c_str());
-   }
-
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
    md.PutImageTag(MM::g_Keyword_Binning, buf);

@@ -5707,12 +5707,6 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
       this->GetLabel(label);
       MM::MMTime tEnd = GetCurrentMMTime();
 
-      // Copy the metadata inserted by other processes:
-      std::vector<std::string> keys = GetTagKeys();
-      for (unsigned int j = 0; j < keys.size(); j++) {
-         md.PutImageTag(keys[j], GetTagValue(keys[j].c_str()).c_str());
-      }
-      
       MetadataSingleTag mstSRRFFrameTime(SRRFControl_->GetSRRFFrameTimeMetadataName(), label, true);
       mstSRRFFrameTime.SetValue(CDeviceUtils::ConvertToString((tEnd - startSRRFImageTime_).getMsec()));
       md.SetTag(mstSRRFFrameTime);
@@ -5725,11 +5719,6 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
       this->GetLabel(label);
 
       MM::MMTime timestamp = this->GetCurrentMMTime();
-      // Copy the metadata inserted by other processes:
-      std::vector<std::string> keys = GetTagKeys();
-      for (unsigned int j = 0; j < keys.size(); j++) {
-         md.PutImageTag(keys[j], GetTagValue(keys[j].c_str()).c_str());
-      }
 
       //These append md tag name to label of device; transient props appear per image.  All in .txt file with stack.
       //Plan of attack...
