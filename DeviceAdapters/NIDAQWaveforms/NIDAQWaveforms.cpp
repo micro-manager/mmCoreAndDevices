@@ -21,6 +21,7 @@
 #include "ModuleInterface.h"
 
 #include <cmath>
+#include <stdexcept>
 
 using namespace std;
 
@@ -97,6 +98,8 @@ NIDAQWaveforms::NIDAQWaveforms() :
 	galvoOffsetV_(-0.075),
 	cameraPulseVoltage_(5.0),
 	triggerSource_("/Dev1/PFI3"),
+	counterChannel_("Dev1/ctr1"),
+	clockSource_("/Dev1/Ctr1InternalOutput"),
 	waveformRunning_(false)
 {
 	InitializeDefaultErrorMessages();
@@ -151,6 +154,14 @@ NIDAQWaveforms::NIDAQWaveforms() :
 	// Initialize semantic channel defaults and create pre-init properties
 	InitializeChannelDefaults();
 	CreateChannelPreInitProperties();
+
+	// Pre-init property: Counter Channel
+	pAct = new CPropertyAction(this, &NIDAQWaveforms::OnCounterChannel);
+	CreateStringProperty("Counter Channel", counterChannel_.c_str(), false, pAct, true);
+
+	// Pre-init property: Clock Source
+	pAct = new CPropertyAction(this, &NIDAQWaveforms::OnClockSource);
+	CreateStringProperty("Clock Source", clockSource_.c_str(), false, pAct, true);
 }
 
 /**
@@ -1114,6 +1125,32 @@ int NIDAQWaveforms::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct
 	return DEVICE_OK;
 }
 
+int NIDAQWaveforms::OnCounterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(counterChannel_.c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(counterChannel_);
+	}
+	return DEVICE_OK;
+}
+
+int NIDAQWaveforms::OnClockSource(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(clockSource_.c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(clockSource_);
+	}
+	return DEVICE_OK;
+}
+
 int NIDAQWaveforms::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
@@ -1170,9 +1207,6 @@ int NIDAQWaveforms::BuildAndWriteWaveforms()
 	WaveformParams params;
 	ComputeWaveformParameters(params);
 
-	// Configure DAQ channels
-	ConfigureDAQChannels();
-
 	// Construct individual waveforms
 	auto cameraWave = ConstructCameraWaveform(params);
 	auto galvoWave = ConstructGalvoWaveform(params);
@@ -1196,23 +1230,48 @@ int NIDAQWaveforms::BuildAndWriteWaveforms()
 		++channelIdx;
 	}
 
-	// Configure timing and write to DAQ
-	daq_->configureTiming(samplingRateHz_, samplesPerChannel, triggerSource_);
-	daq_->writeAnalogOutput(data, numChannels, samplesPerChannel);
+	// Configure DAQ and write waveforms
+	try
+	{
+		ConfigureDAQChannels();
+		daq_->configureTiming(samplingRateHz_, samplesPerChannel, triggerSource_,
+		                      counterChannel_, clockSource_);
+		daq_->writeAnalogOutput(data, numChannels, samplesPerChannel);
+	}
+	catch (const std::runtime_error& e)
+	{
+		LogMessage(std::string("DAQ error: ") + e.what(), false);
+		return ERR_WAVEFORM_GENERATION_FAILED;
+	}
 
 	return DEVICE_OK;
 }
 
 int NIDAQWaveforms::StartWaveformOutput()
 {
-	daq_->start();
+	try
+	{
+		daq_->start();
+	}
+	catch (const std::runtime_error& e)
+	{
+		LogMessage(std::string("DAQ start error: ") + e.what(), false);
+		return ERR_WAVEFORM_GENERATION_FAILED;
+	}
 	waveformRunning_ = true;
 	return DEVICE_OK;
 }
 
 int NIDAQWaveforms::StopWaveformOutput()
 {
-	daq_->stop();
+	try
+	{
+		daq_->stop();
+	}
+	catch (const std::runtime_error& e)
+	{
+		LogMessage(std::string("DAQ stop error: ") + e.what(), false);
+	}
 	waveformRunning_ = false;
 	return DEVICE_OK;
 }
