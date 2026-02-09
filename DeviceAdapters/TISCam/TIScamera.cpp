@@ -189,8 +189,6 @@ currentExpMS_(12.34), //ms
    roiXSize_(0),
    roiYSize_(0),
 
-   sequenceStartTime_(0),
-
    interval_ms_ (0),
    seqThread_(0),
 
@@ -1383,8 +1381,6 @@ int CTIScamera::StartSequenceAcquisition(long numImages, double interval_ms, boo
    GetCoreCallback()->InitializeImageBuffer(1, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
 
    // start thread
-   sequenceStartTime_ = GetCurrentMMTime();
-   imageCounter_ = 0;
    sequenceLength_ = numImages;
 
    seqThread_->SetLength(numImages);
@@ -1396,13 +1392,6 @@ int CTIScamera::StartSequenceAcquisition(long numImages, double interval_ms, boo
    LogMessage("Acquisition thread started");
 
    return DEVICE_OK;
-}
-
-
-
-int CTIScamera::RestartSequenceAcquisition()
-{
-   return StartSequenceAcquisition(sequenceLength_ - imageCounter_, interval_ms_, stopOnOverflow_);
 }
 
 
@@ -2155,38 +2144,20 @@ Waits for new image and inserts it into the circular buffer
 ==============================================================================*/
 int CTIScamera::PushImage()
 {
-   MM::MMTime timeStamp = this->GetCurrentMMTime();
    char label[MM::MaxStrLength];
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
    Metadata md;
    md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
    md.PutImageTag(MM::g_Keyword_Binning, binSize_);
    md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
-
-   MetadataSingleTag mst(MM::g_Keyword_Elapsed_Time_ms, label, true);
-   mst.SetValue(CDeviceUtils::ConvertToString(timeStamp.getMsec()));
-   md.SetTag(mst);
-
-   MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-   mstCount.SetValue(CDeviceUtils::ConvertToString(imageCounter_));      
-   md.SetTag(mstCount);
-
-   MetadataSingleTag mstB(MM::g_Keyword_Binning, label, true);
-   mstB.SetValue(CDeviceUtils::ConvertToString(binSize_));      
-   md.SetTag(mstB);
 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
    md.PutImageTag(MM::g_Keyword_Binning, buf);
 
-   imageCounter_++;
-
-	
 //   MMThreadGuard g(imgPixelsLock_);
 
 //   DriverGuard dg(this);

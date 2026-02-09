@@ -4215,7 +4215,7 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
 
         // The time elapsed since start of the acquisition until current frame readout
         // Now added by MM automatically, no need to do it here.
-        // md.PutTag(MM::g_Keyword_Elapsed_Time_ms, deviceLabel_, CDeviceUtils::ConvertToString(elapsedTimeMsec));
+        // md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(elapsedTimeMsec));
 
         const double actualInterval = elapsedTimeMsec / imagesInserted_;
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval)); 
