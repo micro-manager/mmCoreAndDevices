@@ -132,12 +132,12 @@ NIDAQWaveforms::NIDAQWaveforms() :
 
 	// Create DAQ adapter for device discovery
 	// Toggle between Mock and NIDAQmx by commenting/uncommenting:
-	auto mockDaq = std::make_unique<MockDAQAdapter>();
-	mockDaq->setLogger([this](const std::string& msg) {
-		LogMessage(msg, false);
-	});
-	daq_ = std::move(mockDaq);
-	// daq_ = std::make_unique<NIDAQmxAdapter>();
+	//auto mockDaq = std::make_unique<MockDAQAdapter>();
+	//mockDaq->setLogger([this](const std::string& msg) {
+	//	LogMessage(msg, false);
+	//});
+	//daq_ = std::move(mockDaq);
+	daq_ = std::make_unique<NIDAQmxAdapter>();
 
 	// Pre-init property: Device
 	std::vector<std::string> devices = daq_->getDeviceNames();
