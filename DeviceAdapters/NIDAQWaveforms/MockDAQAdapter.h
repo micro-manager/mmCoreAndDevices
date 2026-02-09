@@ -52,7 +52,9 @@ public:
     void configureTiming(
         double sampleRateHz,
         size_t samplesPerChannel,
-        const std::string& triggerSource
+        const std::string& triggerSource,
+        const std::string& counterChannel,
+        const std::string& clockSource
     ) override
     {
         if (logger_)
@@ -60,7 +62,9 @@ public:
             std::ostringstream oss;
             oss << "[MockDAQ] configureTiming: sampleRate=" << sampleRateHz
                 << " Hz, samplesPerChannel=" << samplesPerChannel
-                << ", trigger=" << triggerSource;
+                << ", trigger=" << triggerSource
+                << ", counter=" << counterChannel
+                << ", clockSource=" << clockSource;
             logger_(oss.str());
         }
     }

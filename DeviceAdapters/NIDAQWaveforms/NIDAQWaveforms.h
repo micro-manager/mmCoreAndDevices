@@ -139,6 +139,8 @@ public:
 	int OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnCounterChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnClockSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
@@ -209,8 +211,10 @@ private:
 	// Camera trigger parameters
 	double cameraPulseVoltage_;
 
-	// Trigger configuration
+	// Trigger and counter configuration
 	std::string triggerSource_;     // Set via property
+	std::string counterChannel_;    // e.g., "Dev1/ctr1"
+	std::string clockSource_;       // e.g., "/Dev1/Ctr1InternalOutput"
 
 	// Waveform state
 	bool waveformRunning_;

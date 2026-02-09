@@ -42,15 +42,21 @@ public:
     /// Configure timing and trigger settings.
     ///
     /// Sets up the sample clock rate and external trigger for retriggerable
-    /// waveform output. The implementation handles internal clocking details.
+    /// waveform output. The implementation handles internal clocking details
+    /// such as dividing samplesPerChannel for counter-based clocking.
     ///
     /// @param sampleRateHz Output sample rate in Hz
-    /// @param samplesPerChannel Number of samples per channel per trigger
+    /// @param samplesPerChannel Number of samples per channel in the waveform buffer
     /// @param triggerSource External trigger terminal (e.g., "/Dev1/PFI3")
+    /// @param counterChannel Counter channel for clock generation (e.g., "Dev1/ctr1")
+    /// @param clockSource Terminal providing the sample clock to the AO task
+    ///        (e.g., "/Dev1/Ctr1InternalOutput")
     virtual void configureTiming(
         double sampleRateHz,
         size_t samplesPerChannel,
-        const std::string& triggerSource
+        const std::string& triggerSource,
+        const std::string& counterChannel,
+        const std::string& clockSource
     ) = 0;
 
     /// Write waveform data to all configured channels.
