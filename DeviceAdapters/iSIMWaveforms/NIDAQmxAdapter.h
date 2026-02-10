@@ -72,7 +72,8 @@ public:
         size_t samplesPerChannel,
         const std::string& triggerSource,
         const std::string& counterChannel,
-        const std::string& clockSource
+        const std::string& clockSource,
+        size_t counterSamplesPerTrigger = 0
     ) override
     {
         // --- Counter task setup ---
@@ -91,13 +92,16 @@ public:
             0.5
         ));
 
-        // Counter produces half the waveform samples per trigger (one frame).
-        // Each external trigger advances the AO output by one frame; two
-        // triggers complete one full galvo period (the 2-frame waveform).
+        // Counter produces a burst of clock pulses per trigger.
+        // Default (counterSamplesPerTrigger == 0): one frame per trigger
+        // (samplesPerChannel / 2 for a 2-frame buffer).
+        size_t counterSamples = (counterSamplesPerTrigger > 0)
+            ? counterSamplesPerTrigger
+            : samplesPerChannel / 2;
         checkError(DAQmxCfgImplicitTiming(
             counterTask_,
             DAQmx_Val_FiniteSamps,
-            static_cast<uInt64>(samplesPerChannel / 2)
+            static_cast<uInt64>(counterSamples)
         ));
 
         // Trigger counter on rising edge of external trigger

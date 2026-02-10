@@ -21,6 +21,7 @@
 #include "ModuleInterface.h"
 
 #include <cmath>
+#include <mutex>
 #include <stdexcept>
 
 using namespace std;
@@ -29,6 +30,12 @@ const char* g_DeviceName = "iSIM Waveforms";
 const char* g_DeviceDescription = "Generates analog waveforms for an iSIM microscope";
 const char* g_Undefined = "Undefined";
 const char* g_PhysicalCamera = "Physical Camera";
+const char* g_IllumDeviceName = "iSIM Illumination Selector";
+const char* g_IllumDeviceDesc = "Selects which AOTF MOD IN channel is active for each frame";
+
+// Module-level shared pointer for cross-device communication
+static iSIMWaveforms* g_camera = nullptr;
+static std::mutex g_cameraMutex;
 
 // Semantic channel property name constants
 const char* const iSIMWaveforms::PROP_GALVO_CHANNEL = "Galvo Waveform Channel";
@@ -48,7 +55,8 @@ const char* const iSIMWaveforms::PROP_AOTF_MOD_IN_4 = "AOTF MOD IN Channel 4";
  */
 MODULE_API void InitializeModuleData()
 {
-   RegisterDevice(g_DeviceName, MM::CameraDevice, "iSIM Waveforms");
+   RegisterDevice(g_DeviceName, MM::CameraDevice, g_DeviceDescription);
+   RegisterDevice(g_IllumDeviceName, MM::StateDevice, g_IllumDeviceDesc);
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -56,14 +64,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    if (deviceName == 0)
       return 0;
 
-   // decide which device class to create based on the deviceName parameter
    if (strcmp(deviceName, g_DeviceName) == 0)
-   {
-      // create the test device
       return new iSIMWaveforms();
-   }
 
-   // ...supplied name not recognized
+   if (strcmp(deviceName, g_IllumDeviceName) == 0)
+      return new iSIMIlluminationSelector();
+
    return 0;
 }
 
@@ -100,7 +106,8 @@ iSIMWaveforms::iSIMWaveforms() :
 	triggerSource_("/Dev1/PFI3"),
 	counterChannel_("Dev1/ctr1"),
 	clockSource_("/Dev1/Ctr1InternalOutput"),
-	waveformRunning_(false)
+	waveformRunning_(false),
+	currentIlluminationState_(0)
 {
 	InitializeDefaultErrorMessages();
 
@@ -772,6 +779,11 @@ int iSIMWaveforms::Initialize()
 	if (nRet != DEVICE_OK)
 		return nRet;
 
+	{
+		std::lock_guard<std::mutex> lock(g_cameraMutex);
+		g_camera = this;
+	}
+
 	initialized_ = true;
 	return DEVICE_OK;
 }
@@ -784,6 +796,11 @@ int iSIMWaveforms::Initialize()
 */
 int iSIMWaveforms::Shutdown()
 {
+   {
+      std::lock_guard<std::mutex> lock(g_cameraMutex);
+      g_camera = nullptr;
+   }
+
    daq_.reset();
    initialized_ = false;
    return DEVICE_OK;
@@ -848,7 +865,7 @@ int iSIMWaveforms::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct
 					QueryReadoutTime();
 
 					// TODO: How to handle an invalid exposure time that causes frame interval < readout time?
-					BuildAndWriteWaveforms();
+					RebuildWaveforms();
 				}
 			}
 		}
@@ -934,7 +951,7 @@ int iSIMWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType
 			bool wasRunning = waveformRunning_;
 			if (wasRunning)
 				StopWaveformOutput();
-			BuildAndWriteWaveforms();
+			RebuildWaveforms();
 			if (wasRunning)
 				StartWaveformOutput();
 		}
@@ -974,7 +991,7 @@ int iSIMWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
 			bool wasRunning = waveformRunning_;
 			if (wasRunning)
 				StopWaveformOutput();
-			BuildAndWriteWaveforms();
+			RebuildWaveforms();
 			if (wasRunning)
 				StartWaveformOutput();
 		}
@@ -1012,7 +1029,7 @@ int iSIMWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 			bool wasRunning = waveformRunning_;
 			if (wasRunning)
 				StopWaveformOutput();
-			BuildAndWriteWaveforms();
+			RebuildWaveforms();
 			if (wasRunning)
 				StartWaveformOutput();
 		}
@@ -1035,7 +1052,7 @@ int iSIMWaveforms::OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 			bool wasRunning = waveformRunning_;
 			if (wasRunning)
 				StopWaveformOutput();
-			BuildAndWriteWaveforms();
+			RebuildWaveforms();
 			if (wasRunning)
 				StartWaveformOutput();
 		}
@@ -1058,7 +1075,7 @@ int iSIMWaveforms::OnParkingFraction(MM::PropertyBase* pProp, MM::ActionType eAc
 			bool wasRunning = waveformRunning_;
 			if (wasRunning)
 				StopWaveformOutput();
-			BuildAndWriteWaveforms();
+			RebuildWaveforms();
 			if (wasRunning)
 				StartWaveformOutput();
 		}
@@ -1081,7 +1098,7 @@ int iSIMWaveforms::OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eAc
 			bool wasRunning = waveformRunning_;
 			if (wasRunning)
 				StopWaveformOutput();
-			BuildAndWriteWaveforms();
+			RebuildWaveforms();
 			if (wasRunning)
 				StartWaveformOutput();
 		}
@@ -1104,7 +1121,7 @@ int iSIMWaveforms::OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 			bool wasRunning = waveformRunning_;
 			if (wasRunning)
 				StopWaveformOutput();
-			BuildAndWriteWaveforms();
+			RebuildWaveforms();
 			if (wasRunning)
 				StartWaveformOutput();
 		}
@@ -1347,7 +1364,7 @@ void iSIMWaveforms::SetExposure(double exp)
 	if (wasRunning)
 		StopWaveformOutput();
 
-	int ret = BuildAndWriteWaveforms();
+	int ret = RebuildWaveforms();
 	if (ret != DEVICE_OK)
 	{
 		LogMessage("SetExposure: Failed to build waveforms (error " +
@@ -1522,4 +1539,438 @@ int iSIMWaveforms::StopSequenceAcquisition()
 	StopWaveformOutput();
 
 	return ret;
+}
+
+/////////////////////////////////////////////
+// Illumination sequencing methods
+/////////////////////////////////////////////
+
+long iSIMWaveforms::GetNumIlluminationStates() const
+{
+	return static_cast<long>(GetEnabledModInChannels().size());
+}
+
+std::vector<std::string> iSIMWaveforms::GetIlluminationStateLabels() const
+{
+	return GetEnabledModInChannels();
+}
+
+int iSIMWaveforms::SetIlluminationState(long state)
+{
+	long numStates = GetNumIlluminationStates();
+	if (state < 0 || state >= numStates)
+		return DEVICE_UNKNOWN_POSITION;
+
+	currentIlluminationState_ = state;
+	illuminationSequence_ = { state };
+
+	if (initialized_ && GetPhysicalCamera())
+	{
+		bool wasRunning = waveformRunning_;
+		if (wasRunning)
+			StopWaveformOutput();
+		int ret = RebuildWaveforms();
+		if (ret != DEVICE_OK)
+			return ret;
+		if (wasRunning)
+			StartWaveformOutput();
+	}
+
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::ClearIlluminationControl()
+{
+	illuminationSequence_.clear();
+
+	if (initialized_ && GetPhysicalCamera())
+	{
+		bool wasRunning = waveformRunning_;
+		if (wasRunning)
+			StopWaveformOutput();
+		int ret = RebuildWaveforms();
+		if (ret != DEVICE_OK)
+			return ret;
+		if (wasRunning)
+			StartWaveformOutput();
+	}
+
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::SetIlluminationSequence(const std::vector<long>& sequence)
+{
+	long numStates = GetNumIlluminationStates();
+	for (long state : sequence)
+	{
+		if (state < 0 || state >= numStates)
+			return DEVICE_UNKNOWN_POSITION;
+	}
+	illuminationSequence_ = sequence;
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::StartIlluminationSequence()
+{
+	if (illuminationSequence_.empty())
+		return ERR_WAVEFORM_GENERATION_FAILED;
+
+	// Rebuild waveforms with the multi-frame interleaved pattern.
+	// Do NOT start DAQ output — the camera's StartSequenceAcquisition will do that.
+	bool wasRunning = waveformRunning_;
+	if (wasRunning)
+		StopWaveformOutput();
+
+	int ret = RebuildWaveforms();
+	if (ret != DEVICE_OK)
+		return ret;
+
+	if (wasRunning)
+		StartWaveformOutput();
+
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::StopIlluminationSequence()
+{
+	// Restore single-state interleaved mode
+	illuminationSequence_ = { currentIlluminationState_ };
+
+	bool wasRunning = waveformRunning_;
+	if (wasRunning)
+		StopWaveformOutput();
+
+	int ret = RebuildWaveforms();
+	if (ret != DEVICE_OK)
+		return ret;
+
+	if (wasRunning)
+		StartWaveformOutput();
+
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::RebuildWaveforms()
+{
+	if (!illuminationSequence_.empty())
+		return BuildAndWriteInterleavedWaveforms();
+	else
+		return BuildAndWriteWaveforms();
+}
+
+int iSIMWaveforms::BuildAndWriteInterleavedWaveforms()
+{
+	if (illuminationSequence_.empty())
+		return ERR_WAVEFORM_GENERATION_FAILED;
+
+	int ret = ValidateWaveformParameters();
+	if (ret != DEVICE_OK)
+		return ret;
+
+	WaveformParams params;
+	ComputeWaveformParameters(params);
+
+	// Buffer sizing: LCM(2, seqLen) frames
+	size_t seqLen = illuminationSequence_.size();
+	size_t numGalvoIntervals = (seqLen % 2 == 0) ? seqLen / 2 : seqLen;
+	size_t totalFrames = numGalvoIntervals * 2;
+	size_t samplesPerChannel = numGalvoIntervals * params.numWaveformSamples;
+
+	// Build base 2-frame waveforms and tile them
+	auto cameraBase = ConstructCameraWaveform(params);
+	auto galvoBase = ConstructGalvoWaveform(params);
+
+	std::vector<double> cameraWave(samplesPerChannel);
+	std::vector<double> galvoWave(samplesPerChannel);
+	for (size_t g = 0; g < numGalvoIntervals; ++g)
+	{
+		std::copy(cameraBase.begin(), cameraBase.end(),
+		          cameraWave.begin() + g * params.numWaveformSamples);
+		std::copy(galvoBase.begin(), galvoBase.end(),
+		          galvoWave.begin() + g * params.numWaveformSamples);
+	}
+
+	// Build blanking waveform: high during every frame's exposure period
+	std::vector<double> blankingWave(samplesPerChannel, 0.0);
+	for (size_t frame = 0; frame < totalFrames; ++frame)
+	{
+		size_t frameStart = frame * params.numCounterSamples;
+		size_t exposureStart = frameStart + params.numReadoutSamples;
+		size_t frameEnd = frameStart + params.numCounterSamples;
+		for (size_t i = exposureStart; i < frameEnd && i < samplesPerChannel; ++i)
+			blankingWave[i] = aotfBlankingVoltage_;
+	}
+
+	// Build per-channel MOD IN waveforms
+	auto enabledModIns = GetEnabledModInChannels();
+	size_t numModIns = enabledModIns.size();
+	std::vector<std::vector<double>> modInWaves(
+		numModIns, std::vector<double>(samplesPerChannel, 0.0));
+
+	for (size_t frame = 0; frame < totalFrames; ++frame)
+	{
+		size_t seqIdx = frame % seqLen;
+		long stateIdx = illuminationSequence_[seqIdx];
+
+		if (stateIdx >= 0 && stateIdx < static_cast<long>(numModIns))
+		{
+			const std::string& channelName = enabledModIns[stateIdx];
+			auto voltageIt = modInVoltage_.find(channelName);
+			double voltage = (voltageIt != modInVoltage_.end())
+				? voltageIt->second : 0.0;
+
+			size_t frameStart = frame * params.numCounterSamples;
+			size_t exposureStart = frameStart + params.numReadoutSamples;
+			size_t frameEnd = frameStart + params.numCounterSamples;
+			for (size_t i = exposureStart; i < frameEnd && i < samplesPerChannel; ++i)
+				modInWaves[stateIdx][i] = voltage;
+		}
+	}
+
+	// Assemble row-major data: Camera, Galvo, Blanking, MOD IN 1..N
+	size_t numChannels = 3 + numModIns;
+	std::vector<double> data(numChannels * samplesPerChannel);
+
+	std::copy(cameraWave.begin(), cameraWave.end(), data.begin());
+	std::copy(galvoWave.begin(), galvoWave.end(),
+	          data.begin() + samplesPerChannel);
+	std::copy(blankingWave.begin(), blankingWave.end(),
+	          data.begin() + 2 * samplesPerChannel);
+	for (size_t ch = 0; ch < numModIns; ++ch)
+	{
+		std::copy(modInWaves[ch].begin(), modInWaves[ch].end(),
+		          data.begin() + (3 + ch) * samplesPerChannel);
+	}
+
+	// Configure DAQ and write
+	try
+	{
+		ConfigureDAQChannels();
+		daq_->configureTiming(samplingRateHz_, samplesPerChannel,
+		                      triggerSource_, counterChannel_, clockSource_,
+		                      params.numCounterSamples);
+		daq_->writeAnalogOutput(data, numChannels, samplesPerChannel);
+	}
+	catch (const std::runtime_error& e)
+	{
+		LogMessage(std::string("DAQ error (interleaved): ") + e.what(), false);
+		return ERR_WAVEFORM_GENERATION_FAILED;
+	}
+
+	return DEVICE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// iSIMIlluminationSelector implementation
+///////////////////////////////////////////////////////////////////////////////
+
+iSIMIlluminationSelector::iSIMIlluminationSelector() :
+	initialized_(false),
+	currentState_(0),
+	numPositions_(0),
+	sequenceRunning_(false)
+{
+	InitializeDefaultErrorMessages();
+
+	SetErrorText(ERR_NO_MOD_IN_ENABLED,
+		"No AOTF MOD IN channels are enabled. "
+		"Enable at least one MOD IN on the iSIM Waveforms device.");
+}
+
+iSIMIlluminationSelector::~iSIMIlluminationSelector()
+{
+	if (initialized_)
+		Shutdown();
+}
+
+void iSIMIlluminationSelector::GetName(char* name) const
+{
+	CDeviceUtils::CopyLimitedString(name, g_IllumDeviceName);
+}
+
+unsigned long iSIMIlluminationSelector::GetNumberOfPositions() const
+{
+	return static_cast<unsigned long>(numPositions_);
+}
+
+int iSIMIlluminationSelector::Initialize()
+{
+	if (initialized_)
+		return DEVICE_OK;
+
+	// Access the camera device via static pointer
+	iSIMWaveforms* camera = nullptr;
+	{
+		std::lock_guard<std::mutex> lock(g_cameraMutex);
+		camera = g_camera;
+	}
+	if (!camera)
+	{
+		LogMessage("iSIM Waveforms device must be initialized before the "
+		           "Illumination Selector", false);
+		return DEVICE_ERR;
+	}
+
+	// Query the current illumination states from the camera device
+	numPositions_ = camera->GetNumIlluminationStates();
+	if (numPositions_ == 0)
+		return ERR_NO_MOD_IN_ENABLED;
+
+	// Create "State" property with action handler
+	CPropertyAction* pAct = new CPropertyAction(this,
+		&iSIMIlluminationSelector::OnState);
+	int ret = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
+	if (ret != DEVICE_OK)
+		return ret;
+	SetPropertyLimits(MM::g_Keyword_State, 0,
+		static_cast<double>(numPositions_ - 1));
+
+	// Create "Label" property with the base class OnLabel handler
+	pAct = new CPropertyAction(this, &CStateBase::OnLabel);
+	ret = CreateStringProperty(MM::g_Keyword_Label, "", false, pAct);
+	if (ret != DEVICE_OK)
+		return ret;
+
+	// Set up position labels from the camera's enabled MOD IN channels
+	auto labels = camera->GetIlluminationStateLabels();
+	for (long i = 0; i < static_cast<long>(labels.size()); ++i)
+		SetPositionLabel(i, labels[i].c_str());
+
+	// Tell camera that illumination is now state-controlled
+	ret = camera->SetIlluminationState(0);
+	if (ret != DEVICE_OK)
+		return ret;
+
+	initialized_ = true;
+	return DEVICE_OK;
+}
+
+int iSIMIlluminationSelector::Shutdown()
+{
+	if (sequenceRunning_)
+	{
+		iSIMWaveforms* camera = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(g_cameraMutex);
+			camera = g_camera;
+		}
+		if (camera)
+			camera->StopIlluminationSequence();
+		sequenceRunning_ = false;
+	}
+
+	// Restore all-MOD-INs-active behavior
+	{
+		iSIMWaveforms* camera = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(g_cameraMutex);
+			camera = g_camera;
+		}
+		if (camera)
+			camera->ClearIlluminationControl();
+	}
+
+	initialized_ = false;
+	return DEVICE_OK;
+}
+
+int iSIMIlluminationSelector::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(currentState_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		if (sequenceRunning_)
+			return DEVICE_ERR;
+
+		long state;
+		pProp->Get(state);
+		if (state < 0 || state >= numPositions_)
+			return DEVICE_UNKNOWN_POSITION;
+
+		iSIMWaveforms* camera = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(g_cameraMutex);
+			camera = g_camera;
+		}
+		if (!camera)
+			return DEVICE_ERR;
+
+		int ret = camera->SetIlluminationState(state);
+		if (ret != DEVICE_OK)
+			return ret;
+
+		currentState_ = state;
+	}
+	else if (eAct == MM::IsSequenceable)
+	{
+		pProp->SetSequenceable(MAX_SEQUENCE_LENGTH);
+	}
+	else if (eAct == MM::AfterLoadSequence)
+	{
+		if (sequenceRunning_)
+			return DEVICE_ERR;
+
+		std::vector<std::string> sequence = pProp->GetSequence();
+		if (sequence.empty())
+			return DEVICE_ERR;
+
+		// Parse string sequence into state indices
+		std::vector<long> stateSequence;
+		stateSequence.reserve(sequence.size());
+		for (const auto& s : sequence)
+		{
+			long state = std::stol(s);
+			if (state < 0 || state >= numPositions_)
+				return DEVICE_UNKNOWN_POSITION;
+			stateSequence.push_back(state);
+		}
+
+		// Forward to camera device
+		iSIMWaveforms* camera = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(g_cameraMutex);
+			camera = g_camera;
+		}
+		if (!camera)
+			return DEVICE_ERR;
+
+		return camera->SetIlluminationSequence(stateSequence);
+	}
+	else if (eAct == MM::StartSequence)
+	{
+		iSIMWaveforms* camera = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(g_cameraMutex);
+			camera = g_camera;
+		}
+		if (!camera)
+			return DEVICE_ERR;
+
+		int ret = camera->StartIlluminationSequence();
+		if (ret != DEVICE_OK)
+			return ret;
+
+		sequenceRunning_ = true;
+	}
+	else if (eAct == MM::StopSequence)
+	{
+		sequenceRunning_ = false;
+
+		iSIMWaveforms* camera = nullptr;
+		{
+			std::lock_guard<std::mutex> lock(g_cameraMutex);
+			camera = g_camera;
+		}
+		if (!camera)
+			return DEVICE_ERR;
+
+		int ret = camera->StopIlluminationSequence();
+		if (ret != DEVICE_OK)
+			return ret;
+	}
+
+	return DEVICE_OK;
 }

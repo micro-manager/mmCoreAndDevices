@@ -21,6 +21,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
@@ -125,6 +126,15 @@ public:
 	static const char* const PROP_AOTF_MOD_IN_3;
 	static const char* const PROP_AOTF_MOD_IN_4;
 
+	// Illumination sequencing interface (called by iSIMIlluminationSelector)
+	int SetIlluminationState(long state);
+	int ClearIlluminationControl();
+	int SetIlluminationSequence(const std::vector<long>& sequence);
+	int StartIlluminationSequence();
+	int StopIlluminationSequence();
+	std::vector<std::string> GetIlluminationStateLabels() const;
+	long GetNumIlluminationStates() const;
+
 	// Action handlers
 	int OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -169,6 +179,10 @@ private:
 	std::vector<std::string> GetEnabledModInChannels() const;
 	int GetNumEnabledModInChannels() const;
 	int ValidateWaveformParameters() const;
+
+	// Interleaved waveform construction
+	int BuildAndWriteInterleavedWaveforms();
+	int RebuildWaveforms();
 
 	// Camera wrapper helpers
 	MM::Camera* GetPhysicalCamera() const;
@@ -218,4 +232,41 @@ private:
 
 	// Waveform state
 	bool waveformRunning_;
+
+	// Illumination sequencing state
+	std::vector<long> illuminationSequence_;  // Non-empty = Interleaved mode
+	long currentIlluminationState_;           // Current state in software-timed MDA
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// iSIMIlluminationSelector
+// Sequenceable state device for multi-channel interleaved imaging.
+// Each state represents a single AOTF MOD IN channel being active.
+///////////////////////////////////////////////////////////////////////////////
+
+class iSIMIlluminationSelector : public CStateDeviceBase<iSIMIlluminationSelector>
+{
+public:
+	iSIMIlluminationSelector();
+	~iSIMIlluminationSelector();
+
+	// MMDevice API
+	int Initialize();
+	int Shutdown();
+	void GetName(char* name) const;
+	bool Busy() { return false; }
+
+	// CStateDeviceBase required override
+	unsigned long GetNumberOfPositions() const;
+
+	// Action handlers
+	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+	bool initialized_;
+	long currentState_;
+	long numPositions_;
+	bool sequenceRunning_;
+
+	static const long MAX_SEQUENCE_LENGTH = 1024;
 };
