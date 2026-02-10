@@ -1551,25 +1551,8 @@ public:
       return DEVICE_UNSUPPORTED_COMMAND;
    }
 
-protected:
-   /////////////////////////////////////////////
-   // utility methods for use by derived classes
-   // //////////////////////////////////////////
-
-   virtual std::vector<std::string> GetTagKeys()
-   {
-      return metadata_.GetKeys();
-   }
-
-   virtual std::string GetTagValue(const char* key)
-   {
-      return metadata_.GetSingleTag(key).GetValue();
-   }
-
 private:
-
    Metadata metadata_;
-
 };
 
 
