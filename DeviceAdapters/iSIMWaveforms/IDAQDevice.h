@@ -51,12 +51,17 @@ public:
     /// @param counterChannel Counter channel for clock generation (e.g., "Dev1/ctr1")
     /// @param clockSource Terminal providing the sample clock to the AO task
     ///        (e.g., "/Dev1/Ctr1InternalOutput")
+    /// @param counterSamplesPerTrigger Number of counter pulses per trigger.
+    ///        If 0 (default), uses samplesPerChannel/2 (one frame per trigger
+    ///        for a 2-frame buffer). Set explicitly when the AO buffer holds
+    ///        more than one galvo period (e.g., for interleaved sequencing).
     virtual void configureTiming(
         double sampleRateHz,
         size_t samplesPerChannel,
         const std::string& triggerSource,
         const std::string& counterChannel,
-        const std::string& clockSource
+        const std::string& clockSource,
+        size_t counterSamplesPerTrigger = 0
     ) = 0;
 
     /// Write waveform data to all configured channels.

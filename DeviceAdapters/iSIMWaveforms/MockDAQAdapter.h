@@ -54,7 +54,8 @@ public:
         size_t samplesPerChannel,
         const std::string& triggerSource,
         const std::string& counterChannel,
-        const std::string& clockSource
+        const std::string& clockSource,
+        size_t counterSamplesPerTrigger = 0
     ) override
     {
         if (logger_)
@@ -64,7 +65,8 @@ public:
                 << " Hz, samplesPerChannel=" << samplesPerChannel
                 << ", trigger=" << triggerSource
                 << ", counter=" << counterChannel
-                << ", clockSource=" << clockSource;
+                << ", clockSource=" << clockSource
+                << ", counterSamplesPerTrigger=" << counterSamplesPerTrigger;
             logger_(oss.str());
         }
     }
