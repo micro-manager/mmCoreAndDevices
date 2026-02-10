@@ -368,6 +368,21 @@ std::vector<std::string> iSIMWaveforms::GetEnabledModInChannels() const
 	return result;
 }
 
+std::vector<std::string> iSIMWaveforms::GetConfiguredModInChannels() const
+{
+	std::vector<std::string> result;
+	for (const auto& modIn : GetModInChannelNames())
+	{
+		// Check if channel has a hardware mapping assigned
+		auto mappingIt = channelMapping_.find(modIn);
+		if (mappingIt != channelMapping_.end() && mappingIt->second != "None")
+		{
+			result.push_back(modIn);
+		}
+	}
+	return result;
+}
+
 int iSIMWaveforms::GetNumEnabledModInChannels() const
 {
 	return static_cast<int>(GetEnabledModInChannels().size());
@@ -580,8 +595,13 @@ void iSIMWaveforms::ConfigureDAQChannels()
 	double blankingMaxV = maxVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
 	daq_->addAnalogOutputChannel(blankingHw, blankingMinV, blankingMaxV);
 
-	// Enabled MOD IN channels (in order: 1, 2, 3, 4)
-	for (const auto& modInChannel : GetEnabledModInChannels())
+	// MOD IN channels (in order: 1, 2, 3, 4)
+	// In Interleaved mode, configure all mapped channels (sequence may
+	// reference any of them). In Normal mode, only configure enabled ones.
+	auto modInChannels = illuminationSequence_.empty()
+		? GetEnabledModInChannels()
+		: GetConfiguredModInChannels();
+	for (const auto& modInChannel : modInChannels)
 	{
 		std::string modInHw = channelMapping_.at(modInChannel);
 		double modInMinV = minVoltage_.at(modInChannel);
@@ -1547,12 +1567,12 @@ int iSIMWaveforms::StopSequenceAcquisition()
 
 long iSIMWaveforms::GetNumIlluminationStates() const
 {
-	return static_cast<long>(GetEnabledModInChannels().size());
+	return static_cast<long>(GetConfiguredModInChannels().size());
 }
 
 std::vector<std::string> iSIMWaveforms::GetIlluminationStateLabels() const
 {
-	return GetEnabledModInChannels();
+	return GetConfiguredModInChannels();
 }
 
 int iSIMWaveforms::SetIlluminationState(long state)
@@ -1701,9 +1721,9 @@ int iSIMWaveforms::BuildAndWriteInterleavedWaveforms()
 			blankingWave[i] = aotfBlankingVoltage_;
 	}
 
-	// Build per-channel MOD IN waveforms
-	auto enabledModIns = GetEnabledModInChannels();
-	size_t numModIns = enabledModIns.size();
+	// Build per-channel MOD IN waveforms (all configured, not just enabled)
+	auto configuredModIns = GetConfiguredModInChannels();
+	size_t numModIns = configuredModIns.size();
 	std::vector<std::vector<double>> modInWaves(
 		numModIns, std::vector<double>(samplesPerChannel, 0.0));
 
@@ -1714,7 +1734,7 @@ int iSIMWaveforms::BuildAndWriteInterleavedWaveforms()
 
 		if (stateIdx >= 0 && stateIdx < static_cast<long>(numModIns))
 		{
-			const std::string& channelName = enabledModIns[stateIdx];
+			const std::string& channelName = configuredModIns[stateIdx];
 			auto voltageIt = modInVoltage_.find(channelName);
 			double voltage = (voltageIt != modInVoltage_.end())
 				? voltageIt->second : 0.0;
@@ -1813,8 +1833,6 @@ int iSIMIlluminationSelector::Initialize()
 
 	// Query the current illumination states from the camera device
 	numPositions_ = camera->GetNumIlluminationStates();
-	if (numPositions_ == 0)
-		return ERR_NO_MOD_IN_ENABLED;
 
 	// Create "State" property with action handler
 	CPropertyAction* pAct = new CPropertyAction(this,
@@ -1822,8 +1840,6 @@ int iSIMIlluminationSelector::Initialize()
 	int ret = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
 	if (ret != DEVICE_OK)
 		return ret;
-	SetPropertyLimits(MM::g_Keyword_State, 0,
-		static_cast<double>(numPositions_ - 1));
 
 	// Create "Label" property with the base class OnLabel handler
 	pAct = new CPropertyAction(this, &CStateBase::OnLabel);
@@ -1831,15 +1847,27 @@ int iSIMIlluminationSelector::Initialize()
 	if (ret != DEVICE_OK)
 		return ret;
 
-	// Set up position labels from the camera's enabled MOD IN channels
-	auto labels = camera->GetIlluminationStateLabels();
-	for (long i = 0; i < static_cast<long>(labels.size()); ++i)
-		SetPositionLabel(i, labels[i].c_str());
+	if (numPositions_ > 0)
+	{
+		SetPropertyLimits(MM::g_Keyword_State, 0,
+			static_cast<double>(numPositions_ - 1));
 
-	// Tell camera that illumination is now state-controlled
-	ret = camera->SetIlluminationState(0);
-	if (ret != DEVICE_OK)
-		return ret;
+		// Set up position labels from the camera's enabled MOD IN channels
+		auto labels = camera->GetIlluminationStateLabels();
+		for (long i = 0; i < static_cast<long>(labels.size()); ++i)
+			SetPositionLabel(i, labels[i].c_str());
+
+		// Tell camera that illumination is now state-controlled
+		ret = camera->SetIlluminationState(0);
+		if (ret != DEVICE_OK)
+			return ret;
+	}
+	else
+	{
+		LogMessage("No AOTF MOD IN channels are enabled. The Illumination "
+		           "Selector will have no positions until MOD IN channels "
+		           "are enabled on the iSIM Waveforms device.", false);
+	}
 
 	initialized_ = true;
 	return DEVICE_OK;

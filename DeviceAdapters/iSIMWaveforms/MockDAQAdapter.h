@@ -123,7 +123,13 @@ private:
     ) const override
     {
         if (deviceName == "MockDev1")
-            return {"MockDev1/ao0", "MockDev1/ao1", "MockDev1/ao2", "MockDev1/ao3"};
+            return {
+                "MockDev1/ao0",
+                "MockDev1/ao1",
+                "MockDev1/ao2",
+                "MockDev1/ao3",
+                "MockDev1/ao4"
+            };
         else if (deviceName == "MockDev2")
             return {"MockDev2/ao0", "MockDev2/ao1"};
         return {};

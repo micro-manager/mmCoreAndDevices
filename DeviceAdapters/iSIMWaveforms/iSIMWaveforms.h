@@ -177,6 +177,7 @@ private:
 	// DAQ configuration helpers
 	void ConfigureDAQChannels();
 	std::vector<std::string> GetEnabledModInChannels() const;
+	std::vector<std::string> GetConfiguredModInChannels() const;
 	int GetNumEnabledModInChannels() const;
 	int ValidateWaveformParameters() const;
 
