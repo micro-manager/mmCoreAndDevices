@@ -27,13 +27,28 @@ const char* g_DeviceNameArduinoSwitch = "Arduino-Switch";
 const char* g_DeviceNameArduinoShutter = "Arduino-Shutter";
 const char* g_DeviceNameArduinoDA1 = "Arduino-DAC1";
 const char* g_DeviceNameArduinoDA2 = "Arduino-DAC2";
+const char* g_DeviceNameArduinoDA3 = "Arduino-DAC3";
+const char* g_DeviceNameArduinoDA4 = "Arduino-DAC4";
+const char* g_DeviceNameArduinoDA5 = "Arduino-DAC5";
+const char* g_DeviceNameArduinoDA6 = "Arduino-DAC6";
+const char* g_DeviceNameArduinoDA7 = "Arduino-DAC7";
+const char* g_DeviceNameArduinoDA8 = "Arduino-DAC8";
 const char* g_DeviceNameArduinoInput = "Arduino-Input";
+
+const char* g_DeviceNameArduinoDAChannels[] = {
+   nullptr,  // index 0 unused (channels are 1-based)
+   g_DeviceNameArduinoDA1, g_DeviceNameArduinoDA2,
+   g_DeviceNameArduinoDA3, g_DeviceNameArduinoDA4,
+   g_DeviceNameArduinoDA5, g_DeviceNameArduinoDA6,
+   g_DeviceNameArduinoDA7, g_DeviceNameArduinoDA8,
+};
+const int g_MaxDAChannels = 8;
 const char* g_DeviceNameArduinoMagnifier = "Arduino-Magnifier";
 
 
 // Global info about the state of the Arduino.  This should be folded into a class
 const int g_Min_MMVersion = 1;
-const int g_Max_MMVersion = 4;
+const int g_Max_MMVersion = 5;
 // version of the firmware code
 const char* g_versionProp = "Version";
 // space to provide more information about the firmware.  
@@ -54,8 +69,12 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DeviceNameArduinoHub, MM::HubDevice, "Hub (required)");
    RegisterDevice(g_DeviceNameArduinoSwitch, MM::StateDevice, "Digital out 8-bit");
    RegisterDevice(g_DeviceNameArduinoShutter, MM::ShutterDevice, "Shutter");
-   RegisterDevice(g_DeviceNameArduinoDA1, MM::SignalIODevice, "DAC channel 1");
-   RegisterDevice(g_DeviceNameArduinoDA2, MM::SignalIODevice, "DAC channel 2");
+   for (int i = 1; i <= g_MaxDAChannels; i++)
+   {
+      std::ostringstream desc;
+      desc << "DAC channel " << i;
+      RegisterDevice(g_DeviceNameArduinoDAChannels[i], MM::SignalIODevice, desc.str().c_str());
+   }
    RegisterDevice(g_DeviceNameArduinoInput, MM::GenericDevice, "ADC");
    RegisterDevice(g_DeviceNameArduinoMagnifier, MM::MagnifierDevice, "Magnifier(needs ADC)");
 }
@@ -77,15 +96,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    {
       return new CArduinoShutter;
    }
-   else if (strcmp(deviceName, g_DeviceNameArduinoDA1) == 0)
+   for (int i = 1; i <= g_MaxDAChannels; i++)
    {
-      return new CArduinoDA(1); // channel 1
+      if (strcmp(deviceName, g_DeviceNameArduinoDAChannels[i]) == 0)
+         return new CArduinoDA(i);
    }
-   else if (strcmp(deviceName, g_DeviceNameArduinoDA2) == 0)
-   {
-      return new CArduinoDA(2); // channel 2
-   }
-   else if (strcmp(deviceName, g_DeviceNameArduinoInput) == 0)
+   if (strcmp(deviceName, g_DeviceNameArduinoInput) == 0)
    {
       return new CArduinoInput;
    }
@@ -109,6 +125,8 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 CArduinoHub::CArduinoHub() :
    initialized_ (false),
    maxNumPatterns_(12),
+   numDAChannels_(2),
+   numDigitalPins_(6),
    version_(0),
    extendedVersion_(0),
    magnifier_(0),
@@ -329,6 +347,57 @@ int CArduinoHub::Initialize()
       maxNumPatterns_ = tmp;
    }
 
+   if (version_ >= 5)
+   {
+      // Query number of DA channels (command 34)
+      unsigned char command[1];
+      command[0] = 34;
+
+      ret = WriteToComPortH((const unsigned char*) command, 1);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      MM::MMTime startTime = GetCurrentMMTime();
+      const unsigned int nrBytes = 2;
+      unsigned long bytesRead = 0;
+      unsigned char answer[nrBytes] = { 0, 0 };
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+         unsigned long br;
+         ret = ReadFromComPortH(answer + bytesRead, nrBytes - bytesRead, br);
+         if (ret != DEVICE_OK)
+            return ret;
+         bytesRead += br;
+      }
+
+      if (answer[0] != 34)
+         return ERR_COMMUNICATION;
+
+      numDAChannels_ = answer[1];
+
+      // Query number of digital output pins (command 35)
+      command[0] = 35;
+
+      ret = WriteToComPortH((const unsigned char*) command, 1);
+      if (ret != DEVICE_OK)
+         return ret;
+
+      startTime = GetCurrentMMTime();
+      bytesRead = 0;
+      unsigned char answer2[nrBytes] = { 0, 0 };
+      while ((bytesRead < nrBytes) && ( (GetCurrentMMTime() - startTime).getMsec() < 250)) {
+         unsigned long br;
+         ret = ReadFromComPortH(answer2 + bytesRead, nrBytes - bytesRead, br);
+         if (ret != DEVICE_OK)
+            return ret;
+         bytesRead += br;
+      }
+
+      if (answer2[0] != 35)
+         return ERR_COMMUNICATION;
+
+      numDigitalPins_ = answer2[1];
+   }
+
    pAct = new CPropertyAction(this, &CArduinoHub::OnExtendedVersion);
    std::ostringstream seversion;
    seversion << extendedVersion_;
@@ -356,8 +425,8 @@ int CArduinoHub::DetectInstalledDevices()
       peripherals.push_back(g_DeviceNameArduinoShutter);
       peripherals.push_back(g_DeviceNameArduinoInput);
       peripherals.push_back(g_DeviceNameArduinoMagnifier);
-      peripherals.push_back(g_DeviceNameArduinoDA1);
-      peripherals.push_back(g_DeviceNameArduinoDA2);
+      for (unsigned i = 1; i <= numDAChannels_ && i <= (unsigned)g_MaxDAChannels; i++)
+         peripherals.push_back(g_DeviceNameArduinoDAChannels[i]);
       for (size_t i=0; i < peripherals.size(); i++) 
       {
          MM::Device* pDev = ::CreateDevice(peripherals[i].c_str());
@@ -512,9 +581,11 @@ int CArduinoSwitch::Initialize()
    hub_->GetLabel(hubLabel);
    SetParentID(hubLabel); // for backward comp.
 
+   numPos_ = 1L << hub_->GetNumDigitalPins();
+
    // set property list
    // -----------------
-   
+
    // create positions and labels
    const int bufSize = 65;
    char buf[bufSize];
@@ -620,7 +691,7 @@ int CArduinoSwitch::WriteToPort(long value)
 
    const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
-   value = 63 & value;
+   value = ((1L << hub_->GetNumDigitalPins()) - 1) & value;
    if (hub_->IsLogicInverted())
       value = ~value;
 
@@ -665,7 +736,7 @@ int CArduinoSwitch::LoadSequence(unsigned size, unsigned char* seq)
       {
          unsigned char value = seq[i];
 
-         value = 63 & value;
+         value = ((1L << hub_->GetNumDigitalPins()) - 1) & value;
          if (hub_->IsLogicInverted())
             value = ~value;
 
@@ -1145,7 +1216,10 @@ CArduinoDA::CArduinoDA(int channel) :
    CPropertyAction* pAct = new CPropertyAction(this, &CArduinoDA::OnMaxVolt);
    CreateProperty("MaxVolt", "5.0", MM::Float, false, pAct, true);
 
-   name_ = channel_ == 1 ? g_DeviceNameArduinoDA1 : g_DeviceNameArduinoDA2;
+   if (channel_ >= 1 && channel_ <= g_MaxDAChannels)
+      name_ = g_DeviceNameArduinoDAChannels[channel_];
+   else
+      name_ = g_DeviceNameArduinoDA1;
 
    // Description
    int nRet = CreateProperty(MM::g_Keyword_Description, "Arduino DAC driver", MM::String, true);
@@ -1180,9 +1254,11 @@ int CArduinoDA::Initialize()
    hub->GetLabel(hubLabel);
    SetParentID(hubLabel); // for backward comp.
 
+   maxChannel_ = hub->GetNumDAChannels();
+
    // set property list
    // -----------------
-   
+
    // State
    // -----
    CPropertyAction* pAct = new CPropertyAction (this, &CArduinoDA::OnVolts);
@@ -1460,7 +1536,7 @@ int CArduinoShutter::WriteToPort(long value)
 {
    const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
-   value = 63 & value;
+   value = ((1L << hub_->GetNumDigitalPins()) - 1) & value;
    if (hub_->IsLogicInverted())
       value = ~value;
 
@@ -1533,6 +1609,8 @@ CArduinoInput::CArduinoInput() :
    hub_(0),
    mThread_(0),
    pin_(0),
+   startPin_(0),
+   endPin_(5),
    name_(g_DeviceNameArduinoInput)
 {
    std::string errorText = "To use the Input function you need firmware version 2 or higher";
@@ -1608,14 +1686,14 @@ int CArduinoInput::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
-   int start = 0;
-   int end = 5;
+   startPin_ = 0;
+   endPin_ = 5;
    if (strcmp("All", pins_) != 0) {
-      start = pin_;
-      end = pin_;
+      startPin_ = pin_;
+      endPin_ = pin_;
    }
 
-   for (long i=start; i <=end; i++) 
+   for (long i=startPin_; i <=endPin_; i++) 
    {
       CPropertyActionEx *pExAct = new CPropertyActionEx(this, &CArduinoInput::OnAnalogInput, i);
       std::ostringstream os;
@@ -1686,6 +1764,46 @@ int CArduinoInput::ReportStateChange(long newState)
    std::ostringstream os;
    os << newState;
    return OnPropertyChanged("DigitalInput", os.str().c_str());
+}
+
+
+int CArduinoInput::GetAnalogInput(long channel, long* value)
+{
+   const std::lock_guard<std::mutex> lock(hub_->GetLock());
+
+   unsigned char command[2] = { 41, (unsigned char) channel };
+
+   int ret = hub_->WriteToComPortH((const unsigned char*) command, 2);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   unsigned char answer[4];
+   ret = ReadNBytes(hub_, 4, answer);
+   if (ret != DEVICE_OK)
+      return ret;
+
+   if (answer[0] != 41)
+      return ERR_COMMUNICATION;
+   if (answer[1] != channel)
+      return ERR_COMMUNICATION;
+
+   int tmp = answer[2];
+   tmp = tmp << 8;
+   tmp = tmp | answer[3];
+
+   *value = (long) tmp;
+
+   return DEVICE_OK;
+}
+
+
+int CArduinoInput::ReportAnalogStateChange(long channel, long value)
+{
+   std::ostringstream propName;
+   propName << "AnalogInput" << channel;
+   std::ostringstream os;
+   os << value;
+   return OnPropertyChanged(propName.str().c_str(), os.str().c_str());
 }
 
 
@@ -1923,6 +2041,8 @@ ArduinoInputMonitorThread::ArduinoInputMonitorThread(CArduinoInput& aInput) :
    state_(0),
    aInput_(aInput)
 {
+   for (int i = 0; i < 6; i++)
+      analogState_[i] = 0;
 }
 
 ArduinoInputMonitorThread::~ArduinoInputMonitorThread()
@@ -1931,7 +2051,7 @@ ArduinoInputMonitorThread::~ArduinoInputMonitorThread()
    wait();
 }
 
-int ArduinoInputMonitorThread::svc() 
+int ArduinoInputMonitorThread::svc()
 {
    while (!stop_)
    {
@@ -1943,11 +2063,28 @@ int ArduinoInputMonitorThread::svc()
          return ret;
       }
 
-      if (state != state_) 
+      if (state != state_)
       {
          aInput_.ReportStateChange(state);
          state_ = state;
       }
+
+      for (int i = aInput_.GetStartPin(); i <= aInput_.GetEndPin(); i++)
+      {
+         long analogValue;
+         ret = aInput_.GetAnalogInput(i, &analogValue);
+         if (ret != DEVICE_OK)
+         {
+            stop_ = true;
+            return ret;
+         }
+         if (analogValue != analogState_[i])
+         {
+            aInput_.ReportAnalogStateChange(i, analogValue);
+            analogState_[i] = analogValue;
+         }
+      }
+
       CDeviceUtils::SleepMs(500);
    }
    return DEVICE_OK;

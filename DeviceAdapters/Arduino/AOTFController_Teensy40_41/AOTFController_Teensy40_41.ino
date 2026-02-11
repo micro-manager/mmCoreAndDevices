@@ -1,21 +1,29 @@
-// Firmware code for the Teensy 3.5/3.6 compatible with the
+// Firmware code for the Teensy 4.0/4.1 (ARM Cortex-M7, 600MHz) compatible with the
 // standard MM Arduino device adapter.
-// Based on code by Bonno Medens (which was based on code by Nico Stuurman, who wrote this code)
+// Based on AOTFController_Teensy35_36 by Bonno Medens (which was based on code
+// by Nico Stuurman, who wrote this code).
+//
+// Teensy 4.0/4.1 lacks the built-in DAC present on Teensy 3.5/3.6.
+// All 8 analog output channels use PWM (pins 1-8).
 //
 // Pin assignments:
-//   Pin  2:     trigger input
-//   A21, A22:   analog outputs (true DAC, channels 0-1)
-//   Pins 3-8:   analog outputs (PWM, channels 2-7)
+//   Pin  0:     trigger input
+//   Pins 1-8:   analog (PWM) outputs
 //   Pins 9-16:  digital outputs
-//   Pins 17-22: analog inputs
+//   Pins 17-22: analog inputs (A3-A8)
+
+
+#if !defined(__IMXRT1062__)
+#error "This firmware is for Teensy 4.0/4.1. Use AOTFController_Teensy35_36 for Teensy 3.5/3.6."
+#endif
 
 
 /*
  * First, a serial command can directly set the digital output patern
- * 
- * Second, a series of patterns can be stored in the arduino and a trigger on pin 2 
+ *
+ * Second, a series of patterns can be stored in the arduino and a trigger on pin 0
  *    wil trigger the consecutive pattern (trigger mode).
- *    
+ *
  * Third, intervals between consecutive patterns can be specified and paterns will be
  * generated at these specified time points (timed trigger mode).
  */
@@ -26,20 +34,20 @@
  */
 
 /* Set digital output command: 1p
- *  Where p is the desired digital pattern. 
- *  
+ *  Where p is the desired digital pattern.
+ *
  *  Controller will return 1 to indicate succesfull execution.
  */
 
 /* Get Digital output command: 2
- *  
+ *
  *  Controller will return 2p. Where p is the current digital output pattern
  */
 
 /* Digital output command 3xvv
  *    Where x is the ouput channel and vv is the output in
  *    a 12-bit significant number.
- *    
+ *
  *    Controller will return 3xvv
  */
 
@@ -50,26 +58,26 @@
  *    Where x is the number of the pattern (currrently, 12 patterns can be stored).
  *    and d is the digital pattern to be stored at that position. Note that x should be
  *    real number (i.e., not ASCI encoded). See 50 for a faster way to load sequences.
- *    
+ *
  *    Controller will return 5xd
  */
 
 /* Set the Number of digital patterns to be used: 6x
  *   Where x indicates how many digital patterns will be used (up to SEQUENCEMAXLENGTH
- *   patterns maximum).  In triggered mode, after reaching this many triggers, 
+ *   patterns maximum).  In triggered mode, after reaching this many triggers,
  *   the controller will re-start the sequence with the first pattern.
- *   
+ *
  *   Controller will return 6x
 */
 
 /* Skip tirgger: 7x
  *    Where x indicates how many digital change events on the trigger input pin
  *    will be ignored.
- *    
+ *
  *    Controller will respond with 7x
  */
 
-/* Start trigger mode: 8 
+/* Start trigger mode: 8
  *    Controller will return 8 to indicate start of trigger mode
  *    Stop triggered at 9. Trigger mode will supersede (but not stop)
  *    blanking mode (if it was active)
@@ -83,24 +91,24 @@
 /* Set time interval for timed trigger mode: 10xtt
  *    Where x is the number interval (currently 12 intervals can be stored)
  *    and tt is the interval (in ms) in Arduino unsigned int format.
- *    
+ *
  *    Controller will return 11x
  */
 
 /* Sets how often the timed pattern will be repeated 11x
  *    This value will be used in timed-trigger mode and sets how often the ouput
  *    pattern will be repeated.
- *    
+ *
  *    Controller will return 11x
  */
 
 /* Starts timed trigger mode: 12
  *    In timed trigger mode, digital patterns as with function 5 will appear on the
- *    output pins with intervals (in ms) as set with function 10. After the number of 
+ *    output pins with intervals (in ms) as set with function 10. After the number of
  *    patterns set with function 6, the pattern will be repeated for the number of times
  *    set with function 11. Any input character (which will be processed) will stop
  *    the pattern generation
- *    
+ *
  *    Controller will return 12.
  */
 
@@ -108,13 +116,13 @@
  *    In blanking mode, zeroes will be written on the output pins when the trigger pin
  *    is low, when the trigger pin is high, the pattern set with command 1 will be
  *    applied to the output pins.
- *    
+ *
  *    Controller will return 20
  */
 
 /* Stop blanking mode: 21
  *    Stopts blanking mode
- *    
+ *
  *    Controller returns 21
  */
 
@@ -173,7 +181,8 @@
 
 unsigned int version_ = 5;  // Change from 3 > 4: Make SequenceLength Configurable.  5: report capabilities.
 
-const int SEQUENCELENGTH = 10000;  // This number can be increased until you run out of memory
+// Teensy 4.0/4.1 has 1MB RAM; increase from 10,000 to 40,000 (~120KB)
+const int SEQUENCELENGTH = 40000;
 byte triggerPattern_[SEQUENCELENGTH];
 unsigned int triggerDelay_[SEQUENCELENGTH];
 uint32_t patternLength_ = 0;
@@ -192,7 +201,7 @@ boolean triggerState_ = false;
 byte realCurrentPattern_ = 0;
 byte pindAlt = 0;
 
-// New additions for use of internal DAC
+// New additions for use of PWM analog output
 // Default Channel power
 const unsigned int ch1Power = 4095;
 const unsigned int ch2Power = 4095;
@@ -209,18 +218,17 @@ const unsigned int PWMresolution = 12;
 
 
 
-// Pin assignment summary:
-//   Pin  2:     trigger input
-//   A21, A22:   analog outputs (true DAC, channels 0-1)
-//   Pins 3-8:   analog outputs (PWM, channels 2-7)
+// Pin assignment summary (active low/high depends on protocol command):
+//   Pin  0:     trigger input
+//   Pins 1-8:   analog (PWM) outputs
 //   Pins 9-16:  digital outputs
-//   Pins 17-22: analog inputs (A3-A8 on Teensy 3.5/3.6)
+//   Pins 17-21: analog inputs (A3-A7 on Teensy 4.x)
 
 // Trigger input
-const uint8_t inPin_ = 2;
+const uint8_t inPin_ = 0;
 
-// Analog output channels (channels 0-1 are DAC, 2-7 are PWM)
-const uint8_t aos[8] = { A21, A22, 3, 4, 5, 6, 7, 8 };
+// Analog output channels (all PWM on Teensy 4.0/4.1)
+const uint8_t aos[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
 
 // Digital output pins
 const uint8_t dos[8] = { 9, 10, 11, 12, 13, 14, 15, 16 };
@@ -238,10 +246,8 @@ void setup() {
 
   pinMode(inPin_, INPUT);
 
-  //pinMode(ch1, OUTPUT);     is disabled with DAC blanking for SAMD boards
-  //pinMode(ch2, OUTPUT);     is disabled with DAC blanking for SAMD boards
-
-  for (uint8_t i = 2; i < 8; i++) {
+  // All 8 channels are PWM on Teensy 4.0/4.1 (no DAC), so all need pinMode
+  for (uint8_t i = 0; i < 8; i++) {
     pinMode(aos[i], OUTPUT);
     analogWrite(aos[i], 0);
   }
@@ -256,11 +262,12 @@ void setup() {
     pinMode(ais[i], INPUT);
   }
 
-  // New for PWM for more information https://www.pjrc.com/teensy/td_pulse.html
+  // Set PWM resolution and frequency for all analog output pins
+  // Teensy 4.0/4.1 FlexPWM has more independent timer groups than Teensy 3.5/3.6 FTM
   analogWriteResolution(PWMresolution);  // Sets PWM resolution to 12 bits
-  analogWriteFrequency(3, freq);         // Sets PWM frequency of pins 3 and 4
-  analogWriteFrequency(5, freq);         // Sets PWM frequency of pins 5 and 6
-  analogWriteFrequency(7, freq);         // Sets PWM frequency of pins 7 and 8
+  for (uint8_t i = 0; i < 8; i++) {
+    analogWriteFrequency(aos[i], freq);
+  }
 
   for (unsigned int i = 0; i < SEQUENCELENGTH; i++) {
     triggerPattern_[i] = 0;
@@ -612,4 +619,3 @@ void writeDigitalPattern(byte pattern) {
     digitalWriteFast(dos[i], bitRead(pattern, i));
   }
 }
-
