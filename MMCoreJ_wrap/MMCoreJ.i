@@ -41,14 +41,6 @@
 // Native library loading
 //
 
-%pragma(java) jniclassimports=%{
-   import java.io.File;
-   import java.util.ArrayList;
-   import java.util.List;
-   import java.net.URL;
-   import java.net.URLDecoder;
-%}
-
 // Pull in the compile-time hard-coded paths (determined by Unix configure script)
 #ifndef MMCOREJ_LIBRARY_PATH
 %define MMCOREJ_LIBRARY_PATH "" %enddef
@@ -57,238 +49,36 @@
 %constant char *LIBRARY_PATH = MMCOREJ_LIBRARY_PATH;
 
 %pragma(java) jniclasscode=%{
-   private static class FijiPaths {
-      private static String URLtoFilePath(URL url) throws Exception {
-         // We need to get rid of multiple protocols (jar: and file:)
-         // and end up with an file path correct on every platform.
-         // The following lines seem to work, though it's ugly:
-         String url1 = URLDecoder.decode(url.getPath(), "UTF-8");
-         String url2 = URLDecoder.decode(new URL(url1).getPath(), "UTF-8");
-         return new File(url2).getAbsolutePath();
-      }
-
-      private static String getJarPath() {
-         String classFile = "/mmcorej/CMMCore.class";
-         try {
-            String path = URLtoFilePath(CMMCore.class.getResource(classFile));
-            int bang = path.indexOf('!');
-            if (bang >= 0)
-               path = path.substring(0, bang);
-            return path;
-         } catch (Exception e) {
-            return "";
-         }
-      }
-
-      private static String getPlatformString() {
-         String osName = System.getProperty("os.name");
-         String osArch = System.getProperty("os.arch");
-         return osName.startsWith("Mac") ? "macosx" :
-            (osName.startsWith("Win") ? "win" : osName.toLowerCase()) +
-            (osArch.indexOf("64") < 0 ? "32" : "64");
-      }
-
-      public static List<File> getPaths() {
-         // Return these dirs:
-         // $MMCOREJ_JAR_DIR
-         // $MMCOREJ_JAR_DIR/..
-         // $MMCOREJ_JAR_DIR/../mm/$PLATFORM
-         // $MMCOREJ_JAR_DIR/../..               # Was used by classic Micro-Manager
-         // $MMCOREJ_JAR_DIR/../../mm/$PLATFORM
-         // XXX: Which one is used by OpenSPIM?
-
-         final File jarDir = new File(getJarPath()).getParentFile();
-         final File jarDirParent = jarDir.getParentFile();
-         final File jarDirGrandParent = jarDirParent.getParentFile();
-
-         final String fijiPlatform = getPlatformString();
-         final File jarDirParentFiji = new File(new File(jarDirParent, "mm"), fijiPlatform);
-         final File jarDirGrandParentFiji = new File(new File(jarDirGrandParent, "mm"), fijiPlatform);
-
-         final List<File> searchPaths = new ArrayList<File>();
-         searchPaths.add(jarDir);
-         searchPaths.add(jarDirParent);
-         searchPaths.add(jarDirParentFiji);
-         searchPaths.add(jarDirGrandParent);
-         searchPaths.add(jarDirGrandParentFiji);
-         return searchPaths;
-      }
-   }
-
-   private final static String MM_PROPERTY_MMCOREJ_LIB_PATH = "mmcorej.library.path";
-   private final static String MM_PROPERTY_MMCOREJ_LIB_STDERR_LOG = "mmcorej.library.loading.stderr.log";
-   private final static String NATIVE_LIBRARY_NAME = "MMCoreJ_wrap";
-
-   private static void logLibraryLoading(String message) {
-      boolean useStdErr = true;
-
-      final String useStdErrProp = System.getProperty(MM_PROPERTY_MMCOREJ_LIB_STDERR_LOG, "0");
-      if (useStdErrProp.equals("0") ||
-            useStdErrProp.equalsIgnoreCase("false") ||
-            useStdErrProp.equalsIgnoreCase("no")) {
-         useStdErr = false;
-      }
-
-      if (useStdErr) {
-         System.err.println("MMCoreJ native library loading: " + message);
-      }
-   }
-
-   private static File getPreferredLibraryPath() {
-      final String path = System.getProperty(MM_PROPERTY_MMCOREJ_LIB_PATH);
-      if (path != null && path.length() > 0)
-         return new File(path);
-      return null;
-   }
-
-   private static File getHardCodedLibraryPath() {
-      final String path = MMCoreJConstants.LIBRARY_PATH;
-      if (path != null && path.length() > 0)
-         return new File(path);
-      return null;
-   }
-
-   private static boolean isLinux() {
-      return System.getProperty("os.name").toLowerCase().startsWith("linux");
-   }
-
-   // Return false if search should be continued
-   private static boolean loadNamedNativeLibrary(File dirPath, String libraryName) {
-      final String libraryPath = new File(dirPath, libraryName).getAbsolutePath();
-      if (new File(libraryPath).exists()) {
-         logLibraryLoading("Try loading: " + libraryPath);
-         System.load(libraryPath);
-         // We let exceptions (usually UnsatisfiedLinkError) propagate, because
-         // it is a fatal error to have a library that exists but cannot be
-         // loaded.
-         logLibraryLoading("Successfully loaded: " + libraryPath);
-         return true;
-      }
-      logLibraryLoading("Skipping nonexistent candidate: " + libraryPath);
-      return false;
-   }
-
-   // Return false if search should be continued
-   private static boolean loadNativeLibrary(File dirPath) {
-      final String libraryName = System.mapLibraryName(NATIVE_LIBRARY_NAME);
-
-      // On OS X, System.mapLibraryName() can return a name with a .dylib
-      // suffix (since Java 7?). But our native library is expected to have a
-      // .jnilib suffix (traditional on OS X). Try both to be safe.
-      if (libraryName.endsWith(".dylib")) {
-         final String altLibraryName = "lib" + NATIVE_LIBRARY_NAME + ".jnilib";
-         boolean ret = loadNamedNativeLibrary(dirPath, altLibraryName);
-         if (ret) {
-            return true;
-         }
-      }
-
-      return loadNamedNativeLibrary(dirPath, libraryName);
-   }
-      
-   // Return false if search should be continued
    private static boolean checkIfAlreadyLoaded() {
-      boolean loaded = true;
       try {
          CMMCore.noop();
+      } catch (UnsatisfiedLinkError e) {
+         return false;
       }
-      catch (UnsatisfiedLinkError e) {
-         loaded = false;
-      }
-
-      if (loaded) {
-         return true;
-      }
-      return false;
+      return true;
    }
 
-   // Return false if search should be continued
-   private static boolean loadFromPathSetBySystemProperty() {
-      final File preferredPath = getPreferredLibraryPath();
-      if (preferredPath != null) {
-         logLibraryLoading("Try path given by " + MM_PROPERTY_MMCOREJ_LIB_PATH);
-         loadNativeLibrary(preferredPath);
-         return true;
-      }
-      return false;
-   }
-
-   // Return false if search should be continued
-   private static boolean loadFromHardCodedPaths() {
-      final List<File> searchPaths = new ArrayList<File>();
-
-      // Some relative paths were hard-coded for running Micro-Manager in Fiji
-      // and in the classic distribution (in which the native library is
-      // located in the grand-parent directory of the directory containing the
-      // MMCoreJ JAR). This also allows finding the native library in the same
-      // directory as the JAR.
-      searchPaths.addAll(FijiPaths.getPaths());
-
-      // On Linux, also search a compile-time hard-coded path (TODO It is odd
-      // that this is done only in the case of Linux. The build system should
-      // be modified so that it can be enabled or disabled on any Unix.)
-      if (isLinux()) {
-         final File hardCodedPath = getHardCodedLibraryPath();
-         if (hardCodedPath != null)
-            searchPaths.add(hardCodedPath);
-      }
-
-      logLibraryLoading("Will search in hard-coded paths:");
-      for (File path : searchPaths) {
-         logLibraryLoading("  " + path.getPath());
-      }
-
-      for (File path : searchPaths) {
-         if (loadNativeLibrary(path)) {
-            return true;
-         }
-      }
-      return false;
-   }
-
-   // Load the MMCoreJ_wrap native library.
    static {
-      logLibraryLoading("Start loading...");
+      LegacyLibraryLoading.logLibraryLoading("Start loading...");
 
-      // New-style loading (extract from JAR, fall back to java.library.path,
-      // both with 'mmcorej').
+      // New-style loading (extract from JAR, fall back to java.library.path)
       if (!checkIfAlreadyLoaded()) {
          try {
             NativeLibraryLoader.load("mmcorej");
-            logLibraryLoading("Loaded 'mmcorej' library");
+            LegacyLibraryLoading.logLibraryLoading("Loaded 'mmcorej' library");
          }
          catch (UnsatisfiedLinkError e) {
-            logLibraryLoading("Falling back to 'MMCoreJ_wrap' loading mode...");
+            LegacyLibraryLoading.logLibraryLoading(
+               "Falling back to 'MMCoreJ_wrap' loading mode...");
          }
       }
 
       // Legacy loading ('MMCoreJ_wrap')
       if (!checkIfAlreadyLoaded()) {
-         // The most reliable method for locating (the correct copy of)
-         // MMCoreJ_wrap is to look in the single path given as a Java system
-         // property. The launcher will typically set this property. If this
-         // property is set, other paths will not be considered.
-         if (!loadFromPathSetBySystemProperty()) {
-            // However, if the system property is not set, we search in some
-            // candidate directories in order.
-            if (!loadFromHardCodedPaths()) {
-               // Finally, if all else fails, try the system default mechanism,
-               // which will use java.library.path. This is necessary for
-               // backward compatibility, and it is also what people will
-               // generally expect.
-               logLibraryLoading("Falling back to loading using system default method");
-               try {
-                  System.loadLibrary(NATIVE_LIBRARY_NAME);
-               }
-               catch (UnsatisfiedLinkError e) {
-                  logLibraryLoading("System default loading method failed");
-               }
-            }
-         }
+         LegacyLibraryLoading.load();
       }
    }
-
-%} // jniclasscode (native library loading)
+%}
 
 
 
@@ -646,7 +436,6 @@
 
 
 %typemap(javaimports) CMMCore %{
-   import mmcorej.org.json.JSONObject;
    import java.awt.geom.Point2D;
    import java.awt.Rectangle;
    import java.util.ArrayList;
@@ -656,136 +445,17 @@
 %typemap(javacode) CMMCore %{
    private boolean includeSystemStateCache_ = true;
 
-   public boolean getIncludeSystemStateCache() { 
+   public boolean getIncludeSystemStateCache() {
       return includeSystemStateCache_;
    }
    public void setIncludeSystemStateCache(boolean state) {
       includeSystemStateCache_ = state;
    }
 
-
-   private JSONObject metadataToMap(Metadata md) {
-      JSONObject tags = new JSONObject();
-      for (String key:md.GetKeys()) {
-         try {
-            tags.put(key, md.GetSingleTag(key).GetValue());
-         } catch (Exception e) {} 
-      }
-      return tags;
-   }
-
-   private String getROITag() throws java.lang.Exception {
-      String roi = "";
-      int [] x = new int[1];
-      int [] y = new int[1];
-      int [] xSize = new int[1];
-      int [] ySize = new int[1];
-      getROI(x, y, xSize, ySize);
-      roi += x[0] + "-" + y[0] + "-" + xSize[0] + "-" + ySize[0];
-      return roi;
-   }
-
-   private String getPixelType() {
-      int depth = (int) getBytesPerPixel();
-      int numComponents = (int) getNumberOfComponents();
-      switch (depth) {
-         case 1:
-            return "GRAY8";
-         case 2:
-            return "GRAY16";
-         case 4: {
-            if (numComponents == 1)
-               return "GRAY32";
-            else
-               return "RGB32";
-            }
-         case 8:
-            return "RGB64";
-     }
-     return "";
-   }
-
-   private String getMultiCameraChannel(JSONObject tags, int cameraChannelIndex) {
-	  try {
-	  String camera = tags.getString("Core-Camera");
-	  String physCamKey = camera + "-Physical Camera " + (1 + cameraChannelIndex);
-	  if (tags.has(physCamKey)) {
-		 try {
-			return tags.getString(physCamKey);
-		 } catch (Exception e2) {
-			return null;
-		 }
-	  } else {
-		 return null;
-	  }
-	 } catch (Exception e) {
-	   return null;
-	 }
-
-   }
-
-   private TaggedImage createTaggedImage(Object pixels, Metadata md, int cameraChannelIndex) throws java.lang.Exception {
-      TaggedImage image = createTaggedImage(pixels, md);
-      JSONObject tags = image.tags;
-      
-      if (!tags.has("CameraChannelIndex")) {
-         tags.put("CameraChannelIndex", cameraChannelIndex);
-         tags.put("ChannelIndex", cameraChannelIndex);
-      }
-      if (!tags.has("Camera")) {
-         String physicalCamera = getMultiCameraChannel(tags, cameraChannelIndex);
-         if (physicalCamera != null) {
-            tags.put("Camera", physicalCamera);
-            tags.put("Channel",physicalCamera);
-         }
-      }
-      return image;
-   }
-
-   private TaggedImage createTaggedImage(Object pixels, Metadata md) throws java.lang.Exception {
-      JSONObject tags = metadataToMap(md);
-      PropertySetting setting;
-      if (includeSystemStateCache_) {
-         Configuration config = getSystemStateCache();
-         for (int i = 0; i < config.size(); ++i) {
-            setting = config.getSetting(i);
-            String key = setting.getDeviceLabel() + "-" + setting.getPropertyName();
-            String value = setting.getPropertyValue();
-             tags.put(key, value);
-         }
-      }
-      tags.put("BitDepth", getImageBitDepth());
-      tags.put("PixelSizeUm", getPixelSizeUm(true));
-      tags.put("PixelSizeAffine", getPixelSizeAffineAsString());
-      tags.put("ROI", getROITag());
-      tags.put("Width", getImageWidth());
-      tags.put("Height", getImageHeight());
-      tags.put("PixelType", getPixelType());
-      tags.put("Frame", 0);
-      tags.put("FrameIndex", 0);
-      tags.put("Position", "Default");
-      tags.put("PositionIndex", 0);
-      tags.put("Slice", 0);
-      tags.put("SliceIndex", 0);
-      String channel = getCurrentConfigFromCache(getPropertyFromCache("Core","ChannelGroup"));
-      if ((channel == null) || (channel.length() == 0)) {
-         channel = "Default";
-      }
-      tags.put("Channel", channel);
-      tags.put("ChannelIndex", 0);
-
-
-      try {
-         tags.put("Binning", getProperty(getCameraDevice(), "Binning"));
-      } catch (Exception ex) {}
-      
-      return new TaggedImage(pixels, tags);	
-   }
-
    public TaggedImage getTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getImage(cameraChannelIndex);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      return TaggedImageCreator.createTaggedImage(this, includeSystemStateCache_, pixels, md, cameraChannelIndex);
    }
 
    public TaggedImage getTaggedImage() throws java.lang.Exception {
@@ -795,9 +465,9 @@
    public TaggedImage getLastTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getLastImageMD(cameraChannelIndex, 0, md);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      return TaggedImageCreator.createTaggedImage(this, includeSystemStateCache_, pixels, md, cameraChannelIndex);
    }
-   
+
    public TaggedImage getLastTaggedImage() throws java.lang.Exception {
       return getLastTaggedImage(0);
    }
@@ -805,13 +475,13 @@
    public TaggedImage getNBeforeLastTaggedImage(long n) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = getNBeforeLastImageMD(n, md);
-      return createTaggedImage(pixels, md);
+      return TaggedImageCreator.createTaggedImage(this, includeSystemStateCache_, pixels, md);
    }
 
    public TaggedImage popNextTaggedImage(int cameraChannelIndex) throws java.lang.Exception {
       Metadata md = new Metadata();
       Object pixels = popNextImageMD(cameraChannelIndex, 0, md);
-      return createTaggedImage(pixels, md, cameraChannelIndex);
+      return TaggedImageCreator.createTaggedImage(this, includeSystemStateCache_, pixels, md, cameraChannelIndex);
    }
 
    public TaggedImage popNextTaggedImage() throws java.lang.Exception {
