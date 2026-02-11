@@ -94,6 +94,19 @@
  *   Returns: Max number of patterns as an unsigned int, 2 bytes, highbyte first
  *   Available as of version 3
  *
+ * Fast version to upload a digital sequence: 33
+ *   first 2 bytes indicate the number of bytes to be uploaded (and length of the sequence)
+ *   followed by the indicated number of bytes
+ *   Available as of version 4
+ *
+ * Get DA channel count: 34
+ *   Returns: 34 followed by 1 byte with the number of DA channels
+ *   Available as of version 5
+ *
+ * Get digital pin count: 35
+ *   Returns: 35 followed by 1 byte with the number of digital output pins
+ *   Available as of version 5
+ *
  *
  * Read digital state of analogue input pins 0-5: 40
  *   Returns raw value of PINC (two high bits are not used)
@@ -109,7 +122,23 @@
  *   Get Number of digital patterns
  */
  
-   unsigned int version_ = 3;
+   unsigned int version_ = 5;
+
+// If you have one of these DA chips attached, uncomment the appropriate define
+// #define TLV5618
+// #define TLV56x8
+
+
+  // const uint8_t numDAChannels_ = 0;  // Set to appropriate number depending on attached DA chip
+  #if defined TLV5618
+  const uint8_t numDAChannels_ = 2;
+  #elif defined TLV56x8
+  const uint8_t numDAChannels_ = 4;
+  #else
+  const uint8_t numDAChannels_ = 0;
+  #endif
+
+  const uint8_t numDigitalPins_ = 6;
    
    // pin on which to receive the trigger (2 and 3 can be used with interrupts, although this code does not use interrupts)
    int inPin_ = 2;
@@ -121,7 +150,14 @@
    // pin connected to SCLK of TLV5618
    int clockPin = 4;
    // pin connected to CS of TLV5618
+   #ifdef TLV5618
    int latchPin = 5;
+   #endif
+
+   #ifdef TLV56x8
+   int CS1 = 5;  // Used for TLV56X8
+   int CS2 = 6;  // Used for TLV56X8
+   #endif
 
    const uint16_t SEQUENCELENGTH = 256;  // Can be increased, but pay attention that there is significant memory left for local variables
    byte triggerPattern_[SEQUENCELENGTH]; 
@@ -145,7 +181,13 @@
    pinMode(inPin_, INPUT);
    pinMode (dataPin, OUTPUT);
    pinMode (clockPin, OUTPUT);
+   #ifdef TLV5618
    pinMode (latchPin, OUTPUT);
+   #endif
+   #ifdef TLV56x8
+   pinMode (CS1, OUTPUT);
+   pinMode (CS2, OUTPUT);
+   #endif
    pinMode(8, OUTPUT);
    pinMode(9, OUTPUT);
    pinMode(10, OUTPUT);
@@ -158,7 +200,13 @@
    // Turn on build-in pull-up resistors
    PORTC = PORTC | B00111111;
    
+   #ifdef TLV5618
    digitalWrite(latchPin, HIGH);   
+   #endif
+   #ifdef TLV56x8
+   digitalWrite(CS1, HIGH);
+   digitalWrite(CS2, HIGH);
+   #endif
 
    for (unsigned int i = 0; i < SEQUENCELENGTH; i++) {
       triggerPattern_[i] = 0;
@@ -230,7 +278,7 @@
        case 6:
          if (waitForSerial(timeOut_)) {
            int pL = Serial.read();
-           if ( (pL >= 0) && (pL <= 12) ) {
+           if ( (pL >= 0) && (pL <= SEQUENCELENGTH) ) {
              patternLength_ = pL;
              Serial.write( byte(6));
              Serial.write( patternLength_);
@@ -354,6 +402,46 @@
          Serial.write(lowByte(SEQUENCELENGTH));
          break;
 
+       // Faster way of uploading sequence:
+       case 33:
+         {
+           unsigned int highByte = 0;
+           unsigned int lowByte = 0;
+           unsigned int count = 0;
+           if (waitForSerial(timeOut_)) {
+             highByte = Serial.read();
+             if (waitForSerial(timeOut_)) {
+               lowByte = Serial.read();
+               highByte = highByte << 8;
+               unsigned int expectedNumPatterns = highByte | lowByte;
+               if ((expectedNumPatterns >= 0) && (expectedNumPatterns < SEQUENCELENGTH)) {
+                 while (count < expectedNumPatterns && waitForSerial(timeOut_)) {
+                   triggerPattern_[count] = Serial.read();
+                   triggerPattern_[count] = triggerPattern_[count] & B00111111;
+                   count++;
+                 }
+               }
+             }
+           }
+           patternLength_ = count;
+           Serial.write(byte(33));
+           Serial.write(highByte(count));
+           Serial.write(lowByte(count));
+         }
+         break;
+
+       // Returns the number of DA channels
+       case 34:
+         Serial.write(byte(34));
+         Serial.write(byte(numDAChannels_));
+         break;
+
+       // Returns the number of digital output pins
+       case 35:
+         Serial.write(byte(35));
+         Serial.write(byte(numDigitalPins_));
+         break;
+
        case 40:
          Serial.write( byte(40));
          Serial.write( PINC);
@@ -441,6 +529,7 @@ bool waitForSerial(unsigned long timeOut)
     return false;
  }
 
+#if defined TLV5618
 // Sets analogue output in the TLV5618
 // channel is either 0 ('A') or 1 ('B')
 // value should be between 0 and 4095 (12 bit max)
@@ -459,6 +548,58 @@ void analogueOut(int channel, byte msb, byte lsb)
   digitalWrite(clockPin, LOW);
   digitalWrite(latchPin, HIGH);
 }
+
+#elif defined TLV56x8
+// Sets analogue output in the TLV5618
+// channel is either 0 ('A') or 1 ('B')
+// value should be between 0 and 4095 (12 bit max)
+// pins should be connected as described above
+void analogueOut(int channel, byte msb, byte lsb) 
+{
+   // Select DAC
+
+    // Configure Channel
+    msb &= B00001111;
+    if (channel == 0){
+        digitalWrite(CS1, LOW);  // Activate DAC 1
+        digitalWrite(CS2, HIGH); // 
+        msb |= B10000000; // 
+        }
+    else if (channel == 1){
+        digitalWrite(CS1, LOW);  // Activate DAC 2
+        digitalWrite(CS2, HIGH); // 
+        msb &= B00001111; // 
+        }
+    // Alternative Channel Selection Logic
+    else if (channel == 2){
+        digitalWrite(CS1, HIGH);  // Activate DAC 3
+        digitalWrite(CS2, LOW); // 
+        msb |= B10000000; // 
+        }
+    else if (channel == 3){
+        digitalWrite(CS1, HIGH);  // Activate DAC 4
+        digitalWrite(CS2, LOW); //
+        msb &= B00001111; // 
+    }
+    // send data
+    shiftOut(dataPin, clockPin, MSBFIRST, msb);
+    shiftOut(dataPin, clockPin, MSBFIRST, lsb);
+
+    // End Transmission
+    digitalWrite(clockPin, HIGH);
+    digitalWrite(clockPin, LOW);
+
+    // Deactivate all DACs
+    digitalWrite(CS1, HIGH);
+    digitalWrite(CS2, HIGH);
+}
+#else
+
+void analogueOut(int channel, byte msb, byte lsb) {}; // noop
+
+#endif
+
+
 
 
 
