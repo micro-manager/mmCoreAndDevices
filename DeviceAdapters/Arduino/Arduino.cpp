@@ -29,7 +29,9 @@ const char* g_DeviceNameArduinoDA1 = "Arduino-DAC1";
 const char* g_DeviceNameArduinoDA2 = "Arduino-DAC2";
 const char* g_DeviceNameArduinoInput = "Arduino-Input";
 const char* g_DeviceNameArduinoMagnifier = "Arduino-Magnifier";
-
+// Define a new device name
+const char* g_DeviceNameArduinoDA3 = "Arduino-DAC3";
+const char* g_DeviceNameArduinoDA4 = "Arduino-DAC4";
 
 // Global info about the state of the Arduino.  This should be folded into a class
 const int g_Min_MMVersion = 1;
@@ -56,6 +58,8 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DeviceNameArduinoShutter, MM::ShutterDevice, "Shutter");
    RegisterDevice(g_DeviceNameArduinoDA1, MM::SignalIODevice, "DAC channel 1");
    RegisterDevice(g_DeviceNameArduinoDA2, MM::SignalIODevice, "DAC channel 2");
+   RegisterDevice(g_DeviceNameArduinoDA3, MM::SignalIODevice, "DAC channel 3"); // add new
+   RegisterDevice(g_DeviceNameArduinoDA4, MM::SignalIODevice, "DAC channel 4"); // add new
    RegisterDevice(g_DeviceNameArduinoInput, MM::GenericDevice, "ADC");
    RegisterDevice(g_DeviceNameArduinoMagnifier, MM::MagnifierDevice, "Magnifier(needs ADC)");
 }
@@ -84,6 +88,14 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
    else if (strcmp(deviceName, g_DeviceNameArduinoDA2) == 0)
    {
       return new CArduinoDA(2); // channel 2
+   }
+   else if (strcmp(deviceName, g_DeviceNameArduinoDA3) == 0) // add new
+   {
+      return new CArduinoDA(3); // channel 3
+   }
+   else if (strcmp(deviceName, g_DeviceNameArduinoDA4) == 0) // add new
+   {
+      return new CArduinoDA(4); // channel 4
    }
    else if (strcmp(deviceName, g_DeviceNameArduinoInput) == 0)
    {
@@ -358,6 +370,8 @@ int CArduinoHub::DetectInstalledDevices()
       peripherals.push_back(g_DeviceNameArduinoMagnifier);
       peripherals.push_back(g_DeviceNameArduinoDA1);
       peripherals.push_back(g_DeviceNameArduinoDA2);
+      peripherals.push_back(g_DeviceNameArduinoDA3);
+      peripherals.push_back(g_DeviceNameArduinoDA4);
       for (size_t i=0; i < peripherals.size(); i++) 
       {
          MM::Device* pDev = ::CreateDevice(peripherals[i].c_str());
@@ -1120,7 +1134,7 @@ CArduinoDA::CArduinoDA(int channel) :
       volts_(0.0),
       gatedVolts_(0.0),
       channel_(channel), 
-      maxChannel_(2),
+      maxChannel_(4),
       gateOpen_(true)
 {
    InitializeDefaultErrorMessages();
@@ -1145,8 +1159,25 @@ CArduinoDA::CArduinoDA(int channel) :
    CPropertyAction* pAct = new CPropertyAction(this, &CArduinoDA::OnMaxVolt);
    CreateProperty("MaxVolt", "5.0", MM::Float, false, pAct, true);
 
-   name_ = channel_ == 1 ? g_DeviceNameArduinoDA1 : g_DeviceNameArduinoDA2;
-
+   switch (channel_) {
+      case 1:
+          name_ = g_DeviceNameArduinoDA1;
+          break;
+      case 2:
+          name_ = g_DeviceNameArduinoDA2;
+          break;
+      case 3:
+          name_ = g_DeviceNameArduinoDA3;
+          break;
+      case 4:
+          name_ = g_DeviceNameArduinoDA4;
+          break;
+      default:
+          // 如果channel_不在1到4之间，可以设置一个默认值或处理错误
+          name_ = "UnknownChannel";
+          break;
+  }
+  
    // Description
    int nRet = CreateProperty(MM::g_Keyword_Description, "Arduino DAC driver", MM::String, true);
    assert(DEVICE_OK == nRet);
@@ -1959,4 +1990,5 @@ void ArduinoInputMonitorThread::Start()
    stop_ = false;
    activate();
 }
+
 
