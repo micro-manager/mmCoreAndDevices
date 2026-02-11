@@ -154,14 +154,20 @@ int AlliedVisionCamera::Initialize()
 
     // Ignore errors from setting up properties
     (void)setupProperties();
-    m_propertiesReady = true;
+    {
+        std::lock_guard<std::recursive_mutex> guard(m_propertyMutex);
+        m_propertiesReady = true;
+    }
     return resizeImageBuffer();
 }
 
 int AlliedVisionCamera::Shutdown()
 {
     LogMessage("Shutting down camera: " + m_cameraName);
-    m_propertiesReady = false;
+    {
+        std::lock_guard<std::recursive_mutex> guard(m_propertyMutex);
+        m_propertiesReady = false;
+    }
     VmbError_t err = VmbErrorSuccess;
     if (m_sdk != nullptr && m_sdk->isInitialized())
     {
@@ -289,12 +295,8 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(const VmbFeatureInfo_t 
     {
         (void)handle;
         AlliedVisionCamera *camera = reinterpret_cast<AlliedVisionCamera *>(userContext);
-        if (!camera->m_propertiesReady)
-        {
-            return;
-        }
         std::unique_lock<std::recursive_mutex> lock(camera->m_propertyMutex, std::try_to_lock);
-        if (!lock.owns_lock())
+        if (!lock.owns_lock() || !camera->m_propertiesReady)
         {
             return;
         }

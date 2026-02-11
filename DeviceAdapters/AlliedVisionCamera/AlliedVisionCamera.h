@@ -20,7 +20,6 @@
 #define ALLIEDVISIONCAMERA_H
 
 #include <array>
-#include <atomic>
 #include <functional>
 #include <mutex>
 #include <regex>
@@ -472,7 +471,7 @@ private:
     static const std::unordered_set<std::string> m_macAddressFeatures;
 
     mutable std::recursive_mutex m_propertyMutex; //<! Mutex for property callback serialization
-    std::atomic<bool> m_propertiesReady;          //<! Flag indicating property creation is complete
+    bool m_propertiesReady;                        //<! Flag indicating property creation is complete
 };
 
 #endif
