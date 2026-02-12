@@ -32,6 +32,7 @@ const char* g_Undefined = "Undefined";
 const char* g_PhysicalCamera = "Physical Camera";
 const char* g_IllumDeviceName = "iSIM Illumination Selector";
 const char* g_IllumDeviceDesc = "Selects which AOTF MOD IN channel is active for each frame";
+const char* g_ReadoutTimeNone = "None";
 
 // Module-level shared pointer for cross-device communication
 static iSIMWaveforms* g_camera = nullptr;
@@ -97,6 +98,8 @@ iSIMWaveforms::iSIMWaveforms() :
 	deviceName_(""),
 	aotfBlankingVoltage_(0.0),
 	samplingRateHz_(50000.0),
+	readoutTimePropName_("Timing-ReadoutTimeNs"),
+	readoutTimeConvToMs_(1.0e-6),
 	frameIntervalMs_(50.0),
 	readoutTimeMs_(22.94),
 	parkingFraction_(0.8),
@@ -169,6 +172,20 @@ iSIMWaveforms::iSIMWaveforms() :
 	// Pre-init property: Clock Source
 	pAct = new CPropertyAction(this, &iSIMWaveforms::OnClockSource);
 	CreateStringProperty("Clock Source", clockSource_.c_str(), false, pAct, true);
+
+	// Pre-init property: Physical Camera Readout Time Property Name
+	// The name of the camera property that reports the readout time.
+	// Set to "None" to manually specify the readout time instead.
+	pAct = new CPropertyAction(this, &iSIMWaveforms::OnReadoutTimePropName);
+	CreateStringProperty("Physical Camera Readout Time Property Name",
+		readoutTimePropName_.c_str(), false, pAct, true);
+
+	// Pre-init property: Readout Time Conversion Factor to ms
+	// Multiplied by the raw camera property value to convert to milliseconds.
+	// Default: 1e-6 (nanoseconds -> milliseconds, for PVCAM's "Timing-ReadoutTimeNs")
+	pAct = new CPropertyAction(this, &iSIMWaveforms::OnReadoutTimeConvToMs);
+	CreateFloatProperty("Readout Time Conversion Factor to ms",
+		readoutTimeConvToMs_, false, pAct, true);
 }
 
 /**
@@ -414,6 +431,38 @@ int iSIMWaveforms::ValidateWaveformParameters() const
 	}
 
 	return DEVICE_OK;
+}
+
+double iSIMWaveforms::ComputeMinFrameIntervalMs() const
+{
+	// The galvo voltage constraint requires:
+	//   waveformPpV = exposurePpV * (rampTimeMs / exposureTimeMs) <= maxPpV
+	//
+	// where exposureTimeMs = F - R, rampTimeMs = F - R*p, and
+	// maxPpV = min(2*(galvoMax - offset), 2*(offset - galvoMin)).
+	//
+	// Solving for F:
+	//   F >= R * (maxPpV - exposurePpV * p) / (maxPpV - exposurePpV)
+
+	double galvoMinV = minVoltage_.at(PROP_GALVO_CHANNEL);
+	double galvoMaxV = maxVoltage_.at(PROP_GALVO_CHANNEL);
+	double maxPpV = (std::min)(
+		2.0 * (galvoMaxV - galvoOffsetV_),
+		2.0 * (galvoOffsetV_ - galvoMinV));
+
+	double minFrameInterval = readoutTimeMs_;
+	if (maxPpV > exposurePpV_)
+	{
+		double galvoLimit = readoutTimeMs_ *
+			(maxPpV - exposurePpV_ * parkingFraction_) /
+			(maxPpV - exposurePpV_);
+		if (galvoLimit > minFrameInterval)
+			minFrameInterval = galvoLimit;
+	}
+
+	// Add a small margin for floating point safety
+	static const double kMarginMs = 0.01;
+	return minFrameInterval + kMarginMs;
 }
 
 void iSIMWaveforms::ComputeWaveformParameters(WaveformParams& params) const
@@ -705,6 +754,26 @@ int iSIMWaveforms::CreatePostInitProperties()
 	if (nRet != DEVICE_OK)
 		return nRet;
 
+	// Readout time properties (conditional on pre-init configuration)
+	if (readoutTimePropName_ == g_ReadoutTimeNone)
+	{
+		// Manual mode: user sets the readout time directly
+		CPropertyAction* pActReadout = new CPropertyAction(this, &iSIMWaveforms::OnReadoutTimeMs);
+		nRet = CreateFloatProperty("Physical Camera Readout Time (ms)",
+			readoutTimeMs_, false, pActReadout);
+		if (nRet != DEVICE_OK)
+			return nRet;
+		SetPropertyLimits("Physical Camera Readout Time (ms)", 0.0, 1000.0);
+	}
+	else
+	{
+		// Auto mode: show the configured property name as read-only info
+		nRet = CreateStringProperty("Readout Time Property Name",
+			readoutTimePropName_.c_str(), true);
+		if (nRet != DEVICE_OK)
+			return nRet;
+	}
+
 	return DEVICE_OK;
 }
 
@@ -882,7 +951,9 @@ int iSIMWaveforms::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct
 				{
 					// Sync frame interval from camera's current exposure
 					frameIntervalMs_ = camera->GetExposure();
-					QueryReadoutTime();
+					int ret = QueryReadoutTime();
+					if (ret != DEVICE_OK)
+						return ret;
 
 					// TODO: How to handle an invalid exposure time that causes frame interval < readout time?
 					RebuildWaveforms();
@@ -1205,31 +1276,80 @@ int iSIMWaveforms::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+int iSIMWaveforms::OnReadoutTimePropName(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(readoutTimePropName_.c_str());
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(readoutTimePropName_);
+	}
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::OnReadoutTimeConvToMs(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(readoutTimeConvToMs_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(readoutTimeConvToMs_);
+	}
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::OnReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(readoutTimeMs_);
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		pProp->Get(readoutTimeMs_);
+		// Rebuild waveforms if initialized and camera is selected
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			RebuildWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
+	}
+	return DEVICE_OK;
+}
+
 /////////////////////////////////////////////
 // Camera wrapper helpers
 /////////////////////////////////////////////
 
 int iSIMWaveforms::QueryReadoutTime()
 {
+	// In manual mode, the user sets readoutTimeMs_ directly via the property
+	if (readoutTimePropName_ == g_ReadoutTimeNone)
+		return DEVICE_OK;
+
 	MM::Camera* camera = GetPhysicalCamera();
 	if (!camera)
 		return ERR_NO_PHYSICAL_CAMERA;
 
-	// Try to get Timing-ReadoutTimeNs property from camera
 	char value[MM::MaxStrLength];
-	int ret = camera->GetProperty("Timing-ReadoutTimeNs", value);
-	if (ret == DEVICE_OK)
+	int ret = camera->GetProperty(readoutTimePropName_.c_str(), value);
+	if (ret != DEVICE_OK)
 	{
-		double readoutTimeNs = atof(value);
-		readoutTimeMs_ = readoutTimeNs / 1e6;  // Convert ns to ms
-	}
-	else
-	{
-		// Log warning - using default readout time
-		LogMessage("Warning: Could not read 'Timing-ReadoutTimeNs' from camera. "
-		           "Using default readout time: " + std::to_string(readoutTimeMs_) + " ms", false);
+		LogMessage("Failed to read property '" + readoutTimePropName_ +
+		           "' from camera '" + physicalCameraName_ + "'", false);
+		return ret;
 	}
 
+	double rawValue = atof(value);
+	readoutTimeMs_ = rawValue * readoutTimeConvToMs_;
 	return DEVICE_OK;
 }
 
@@ -1367,16 +1487,43 @@ double iSIMWaveforms::GetExposure() const
 
 void iSIMWaveforms::SetExposure(double exp)
 {
-	// Store frame interval (MM exposure = frame interval in rolling shutter mode)
-	frameIntervalMs_ = exp;
-
-	// Pass through to physical camera
+	// Pass through to physical camera and read back the actual value
+	// (hardware may round to the nearest supported exposure time)
 	MM::Camera* camera = GetPhysicalCamera();
 	if (camera)
+	{
 		camera->SetExposure(exp);
+		exp = camera->GetExposure();
+	}
 
 	// Query updated readout time from camera
-	QueryReadoutTime();
+	int readoutRet = QueryReadoutTime();
+	if (readoutRet != DEVICE_OK)
+	{
+		LogMessage("SetExposure: Failed to query readout time (error " +
+		           std::to_string(readoutRet) + ")", false);
+		return;
+	}
+
+	// Clamp frame interval to the minimum that satisfies both the readout
+	// time constraint (exposureTimeMs > 0) and the galvo voltage constraint.
+	double minFrameInterval = ComputeMinFrameIntervalMs();
+
+	if (exp < minFrameInterval)
+	{
+		LogMessage("SetExposure: Requested frame interval (" +
+		           std::to_string(exp) + " ms) is below the minimum (" +
+		           std::to_string(minFrameInterval) + " ms). Clamping.", false);
+
+		frameIntervalMs_ = minFrameInterval;
+		if (camera)
+			camera->SetExposure(frameIntervalMs_);
+		OnExposureChanged(frameIntervalMs_);
+	}
+	else
+	{
+		frameIntervalMs_ = exp;
+	}
 
 	// Build waveforms with new timing (always rebuild when exposure changes)
 	// If currently running, stop first, then rebuild and restart
