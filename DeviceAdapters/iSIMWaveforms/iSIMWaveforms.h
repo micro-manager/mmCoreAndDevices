@@ -3,7 +3,7 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Generates analog waveforms for an iSIM microscope.
+// DESCRIPTION:   Generates analog waveforms for an iSIM.
 //
 // AUTHOR:        Kyle M. Douglass, https://kylemdouglass.com
 //
