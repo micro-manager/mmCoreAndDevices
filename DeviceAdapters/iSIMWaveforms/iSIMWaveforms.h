@@ -152,6 +152,9 @@ public:
 	int OnCounterChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnClockSource(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnReadoutTimePropName(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnReadoutTimeConvToMs(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	// Helper methods
@@ -180,6 +183,7 @@ private:
 	std::vector<std::string> GetConfiguredModInChannels() const;
 	int GetNumEnabledModInChannels() const;
 	int ValidateWaveformParameters() const;
+	double ComputeMinFrameIntervalMs() const;
 
 	// Interleaved waveform construction
 	int BuildAndWriteInterleavedWaveforms();
@@ -215,10 +219,13 @@ private:
 	std::map<std::string, double> modInVoltage_;
 	double samplingRateHz_;
 
+	// Readout time configuration
+	std::string readoutTimePropName_;  // Camera property name to query, or "None" for manual
+	double readoutTimeConvToMs_;       // Conversion factor: ms = rawValue * factor
+
 	// Waveform timing parameters
 	double frameIntervalMs_;        // Set via camera exposure time when in rolling shutter mode
-	// TODO: Make the readout time property name of the physical camera settable or provide a way to specify a default value in case the camera does not have the property
-	double readoutTimeMs_;          // Read from camera property
+	double readoutTimeMs_;          // Effective readout time in ms
 	double parkingFraction_;        // Set via property
 	double exposurePpV_;            // Set via property
 	double galvoOffsetV_;           // Set via property
