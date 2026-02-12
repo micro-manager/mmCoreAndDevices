@@ -4,63 +4,7 @@
 
 #include "MMCore.h"
 #include "MockDeviceUtils.h"
-
-#include "DeviceBase.h"
-
-namespace {
-
-class MockMagnifier : public CMagnifierBase<MockMagnifier> {
-   double mag;
-
-public:
-   explicit MockMagnifier(double mag) : mag(mag) {}
-
-   int Initialize() override { return DEVICE_OK; }
-   int Shutdown() override { return DEVICE_OK; }
-   bool Busy() override { return false; }
-   void GetName(char* name) const override {
-      snprintf(name, MM::MaxStrLength, "MockMagnifier");
-   }
-   double GetMagnification() override {
-      return mag;
-   }
-};
-
-class MockCamera : public CCameraBase<MockCamera> {
-   int binning;
-
-public:
-   explicit MockCamera(int binning) : binning(binning) {}
-
-   int Initialize() override { return DEVICE_OK; }
-   int Shutdown() override { return DEVICE_OK; }
-   bool Busy() override { return false; }
-   void GetName(char* name) const override {
-      snprintf(name, MM::MaxStrLength, "MockCamera");
-   }
-
-   int SnapImage() override { return DEVICE_ERR; }
-   const unsigned char* GetImageBuffer() override { return nullptr; }
-   long GetImageBufferSize() const override { return 0; }
-   unsigned GetImageWidth() const override { return 0; }
-   unsigned GetImageHeight() const override { return 0; }
-   unsigned GetImageBytesPerPixel() const override { return 0; }
-   unsigned GetBitDepth() const override { return 0; }
-   int GetBinning() const override { return binning; }
-   int SetBinning(int) override { return DEVICE_ERR; }
-   void SetExposure(double) override { FAIL(); }
-   double GetExposure() const override { return 0.0; }
-   int SetROI(unsigned, unsigned, unsigned, unsigned) override { return DEVICE_ERR; }
-   int GetROI(unsigned&, unsigned&, unsigned&, unsigned&) override { return DEVICE_ERR; }
-   int ClearROI() override { return DEVICE_ERR; }
-   int IsExposureSequenceable(bool&) const override { return DEVICE_ERR; }
-   int StartSequenceAcquisition(long, double, bool) override { return DEVICE_ERR; }
-   int StartSequenceAcquisition(double) override { return DEVICE_ERR; }
-   int StopSequenceAcquisition() override { return DEVICE_ERR; }
-   bool IsCapturing() override { return false; }
-};
-
-}
+#include "StubDevices.h"
 
 TEST_CASE("Pixel size and affine matrix are unscaled with no magnifier or camera") {
    const char* resID = "res0";
@@ -81,8 +25,10 @@ TEST_CASE("Pixel size and affine matrix are unscaled with no magnifier or camera
 }
 
 TEST_CASE("Pixel size and affine matrix are scaled by magnification") {
-   MockMagnifier mag0(2.0);
-   MockMagnifier mag1(3.0);
+   StubMagnifier mag0;
+   mag0.magnification = 2.0;
+   StubMagnifier mag1;
+   mag1.magnification = 3.0;
    MockAdapterWithDevices adapter{
       {"mag0", &mag0},
       {"mag1", &mag1},
@@ -116,7 +62,8 @@ TEST_CASE("Pixel size and affine matrix are scaled by magnification") {
 }
 
 TEST_CASE("Pixel size and affine matrix are scaled by camera binning") {
-   MockCamera cam(4);
+   StubCamera cam;
+   cam.binning = 4;
    MockAdapterWithDevices adapter{
       {"cam", &cam},
    };

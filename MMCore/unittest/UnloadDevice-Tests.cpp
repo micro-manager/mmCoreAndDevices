@@ -2,42 +2,10 @@
 
 #include "MMCore.h"
 #include "MockDeviceUtils.h"
-
-#include "DeviceBase.h"
-
-namespace {
-
-struct MockCamera : public CCameraBase<MockCamera> {
-   int Initialize() override { return DEVICE_OK; }
-   int Shutdown() override { return DEVICE_OK; }
-   bool Busy() override { return false; }
-   void GetName(char* name) const override {
-      snprintf(name, MM::MaxStrLength, "MockCamera");
-   }
-
-   int SnapImage() override { return DEVICE_ERR; }
-   const unsigned char* GetImageBuffer() override { return nullptr; }
-   long GetImageBufferSize() const override { return 0; }
-   unsigned GetImageWidth() const override { return 0; }
-   unsigned GetImageHeight() const override { return 0; }
-   unsigned GetImageBytesPerPixel() const override { return 0; }
-   unsigned GetBitDepth() const override { return 0; }
-   int GetBinning() const override { return 1; }
-   int SetBinning(int) override { return DEVICE_ERR; }
-   void SetExposure(double) override { FAIL(); }
-   double GetExposure() const override { return 0.0; }
-   int SetROI(unsigned, unsigned, unsigned, unsigned) override { return DEVICE_ERR; }
-   int GetROI(unsigned&, unsigned&, unsigned&, unsigned&) override { return DEVICE_ERR; }
-   int ClearROI() override { return DEVICE_ERR; }
-   int IsExposureSequenceable(bool&) const override { return DEVICE_ERR; }
-   int StartSequenceAcquisition(long, double, bool) override { return DEVICE_ERR; }
-   int StartSequenceAcquisition(double) override { return DEVICE_ERR; }
-   int StopSequenceAcquisition() override { return DEVICE_ERR; }
-   bool IsCapturing() override { return false; }
-};
+#include "StubDevices.h"
 
 TEST_CASE("Unload the current camera", "[regression]") {
-   MockCamera cam;
+   StubCamera cam;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
    adapter.LoadIntoCore(c);
@@ -47,7 +15,7 @@ TEST_CASE("Unload the current camera", "[regression]") {
 }
 
 TEST_CASE("Unload all devices with current camera set", "[regression]") {
-   MockCamera cam;
+   StubCamera cam;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
    adapter.LoadIntoCore(c);
@@ -56,7 +24,98 @@ TEST_CASE("Unload all devices with current camera set", "[regression]") {
    c.unloadAllDevices();
 }
 
-// TODO Similar tests should be added for every device role (but maybe once we
-// have a way to avoid boilerplate when mocking devices)
+TEST_CASE("Unload the current shutter", "[regression]") {
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
 
+   c.setShutterDevice("shutter");
+   c.unloadDevice("shutter");
+}
+
+TEST_CASE("Unload all devices with current shutter set", "[regression]") {
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.setShutterDevice("shutter");
+   c.unloadAllDevices();
+}
+
+TEST_CASE("Unload the focus stage", "[regression]") {
+   StubStage stage;
+   MockAdapterWithDevices adapter{{"stage", &stage}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.setFocusDevice("stage");
+   c.unloadDevice("stage");
+}
+
+TEST_CASE("Unload all devices with focus stage set", "[regression]") {
+   StubStage stage;
+   MockAdapterWithDevices adapter{{"stage", &stage}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.setFocusDevice("stage");
+   c.unloadAllDevices();
+}
+
+TEST_CASE("Unload the XY stage", "[regression]") {
+   StubXYStage xy;
+   MockAdapterWithDevices adapter{{"xy", &xy}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.setXYStageDevice("xy");
+   c.unloadDevice("xy");
+}
+
+TEST_CASE("Unload all devices with XY stage set", "[regression]") {
+   StubXYStage xy;
+   MockAdapterWithDevices adapter{{"xy", &xy}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.setXYStageDevice("xy");
+   c.unloadAllDevices();
+}
+
+TEST_CASE("Unload a state device", "[regression]") {
+   StubStateDevice state;
+   MockAdapterWithDevices adapter{{"state", &state}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.unloadDevice("state");
+}
+
+TEST_CASE("Unload all devices with a state device loaded", "[regression]") {
+   StubStateDevice state;
+   MockAdapterWithDevices adapter{{"state", &state}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.unloadAllDevices();
+}
+
+TEST_CASE("Unload a magnifier", "[regression]") {
+   StubMagnifier mag;
+   MockAdapterWithDevices adapter{{"mag", &mag}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.unloadDevice("mag");
+}
+
+TEST_CASE("Unload all devices with a magnifier loaded", "[regression]") {
+   StubMagnifier mag;
+   MockAdapterWithDevices adapter{{"mag", &mag}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.unloadAllDevices();
 }
