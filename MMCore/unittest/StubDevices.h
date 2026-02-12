@@ -25,6 +25,7 @@ struct StubCamera : CCameraBase<StubCamera> {
    unsigned width = 512;
    unsigned height = 512;
    unsigned bytesPerPixel = 1;
+   unsigned nComponents = 1;
    unsigned bitDepth = 8;
    int binning = 1;
    double exposure = 10.0;
@@ -50,6 +51,7 @@ struct StubCamera : CCameraBase<StubCamera> {
    unsigned GetImageWidth() const override { return width; }
    unsigned GetImageHeight() const override { return height; }
    unsigned GetImageBytesPerPixel() const override { return bytesPerPixel; }
+   unsigned GetNumberOfComponents() const override { return nComponents; }
    unsigned GetBitDepth() const override { return bitDepth; }
    int GetBinning() const override { return binning; }
    int SetBinning(int b) override { binning = b; return DEVICE_OK; }
@@ -84,7 +86,8 @@ struct StubCamera : CCameraBase<StubCamera> {
          buf = defaultBuf.data();
       }
       return GetCoreCallback()->InsertImage(this, buf,
-         width, height, bytesPerPixel, md.Serialize().c_str());
+         width, height, bytesPerPixel, nComponents,
+         md.Serialize().c_str());
    }
 
 private:

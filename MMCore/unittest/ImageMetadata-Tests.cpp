@@ -40,10 +40,45 @@ TEST_CASE("All core metadata fields present for GRAY8 image") {
    CHECK(md.GetKeys().size() == 7);
 }
 
-TEST_CASE("PixelType is GRAY16 for 2-byte images") {
+TEST_CASE("PixelType metadata for all pixel formats") {
    StubCamera cam;
-   cam.bytesPerPixel = 2;
-   cam.bitDepth = 16;
+   unsigned bytesPerPixel;
+   unsigned nComponents;
+   const char* expectedPixelType;
+
+   SECTION("GRAY8") {
+      bytesPerPixel = 1;
+      nComponents = 1;
+      expectedPixelType = MM::g_Keyword_PixelType_GRAY8;
+   }
+   SECTION("GRAY16") {
+      bytesPerPixel = 2;
+      nComponents = 1;
+      expectedPixelType = MM::g_Keyword_PixelType_GRAY16;
+   }
+   SECTION("GRAY32") {
+      bytesPerPixel = 4;
+      nComponents = 1;
+      expectedPixelType = MM::g_Keyword_PixelType_GRAY32;
+   }
+   SECTION("RGB32") {
+      bytesPerPixel = 4;
+      nComponents = 4;
+      expectedPixelType = MM::g_Keyword_PixelType_RGB32;
+   }
+   SECTION("RGB64") {
+      bytesPerPixel = 8;
+      nComponents = 4;
+      expectedPixelType = MM::g_Keyword_PixelType_RGB64;
+   }
+   SECTION("Unknown") {
+      bytesPerPixel = 3;
+      nComponents = 1;
+      expectedPixelType = MM::g_Keyword_PixelType_Unknown;
+   }
+
+   cam.bytesPerPixel = bytesPerPixel;
+   cam.nComponents = nComponents;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
    adapter.LoadIntoCore(c);
@@ -55,7 +90,7 @@ TEST_CASE("PixelType is GRAY16 for 2-byte images") {
    Metadata md;
    c.getLastImageMD(md);
    CHECK(md.GetSingleTag(MM::g_Keyword_PixelType).GetValue() ==
-         MM::g_Keyword_PixelType_GRAY16);
+         expectedPixelType);
 }
 
 TEST_CASE("Camera label matches device label") {
