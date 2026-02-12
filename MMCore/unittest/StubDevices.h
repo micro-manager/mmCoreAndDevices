@@ -74,6 +74,19 @@ struct StubCamera : CCameraBase<StubCamera> {
    int StopSequenceAcquisition() override { return DEVICE_OK; }
    bool IsCapturing() override { return false; }
 
+   int InsertTestImage(const Metadata& md = Metadata{},
+                       const unsigned char* pixels = nullptr) {
+      std::vector<unsigned char> defaultBuf;
+      const unsigned char* buf = pixels;
+      if (!buf) {
+         defaultBuf.assign(
+            static_cast<size_t>(width) * height * bytesPerPixel, 0);
+         buf = defaultBuf.data();
+      }
+      return GetCoreCallback()->InsertImage(this, buf,
+         width, height, bytesPerPixel, md.Serialize().c_str());
+   }
+
 private:
    std::vector<unsigned char> imgBuf_;
 };
