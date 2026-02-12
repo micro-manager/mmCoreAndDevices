@@ -34,6 +34,9 @@ const char* g_IllumDeviceName = "iSIM Illumination Selector";
 const char* g_IllumDeviceDesc = "Selects which AOTF MOD IN channel is active for each frame";
 const char* g_ReadoutTimeNone = "None";
 
+// Tolerance for floating-point comparisons to avoid redundant waveform rebuilds
+static constexpr double kEpsilon = 1e-9;
+
 // Module-level shared pointer for cross-device communication
 static iSIMWaveforms* g_camera = nullptr;
 static std::mutex g_cameraMutex;
@@ -1035,7 +1038,11 @@ int iSIMWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(aotfBlankingVoltage_);
+		double newVal;
+		pProp->Get(newVal);
+		if (std::abs(newVal - aotfBlankingVoltage_) < kEpsilon)
+			return DEVICE_OK;
+		aotfBlankingVoltage_ = newVal;
 		// Rebuild waveforms if initialized and camera is selected
 		if (initialized_ && GetPhysicalCamera())
 		{
@@ -1075,7 +1082,10 @@ int iSIMWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
 	{
 		std::string value;
 		pProp->Get(value);
-		modInEnabled_[semanticKey] = (value == "Yes");
+		bool newEnabled = (value == "Yes");
+		if (newEnabled == modInEnabled_[semanticKey])
+			return DEVICE_OK;
+		modInEnabled_[semanticKey] = newEnabled;
 		// Rebuild waveforms if initialized and camera is selected
 		if (initialized_ && GetPhysicalCamera())
 		{
@@ -1113,7 +1123,11 @@ int iSIMWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(modInVoltage_[semanticKey]);
+		double newVal;
+		pProp->Get(newVal);
+		if (std::abs(newVal - modInVoltage_[semanticKey]) < kEpsilon)
+			return DEVICE_OK;
+		modInVoltage_[semanticKey] = newVal;
 		// Rebuild waveforms if initialized and camera is selected
 		if (initialized_ && GetPhysicalCamera())
 		{
@@ -1136,7 +1150,11 @@ int iSIMWaveforms::OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(samplingRateHz_);
+		double newVal;
+		pProp->Get(newVal);
+		if (std::abs(newVal - samplingRateHz_) < kEpsilon)
+			return DEVICE_OK;
+		samplingRateHz_ = newVal;
 		// Rebuild waveforms if initialized and camera is selected
 		if (initialized_ && GetPhysicalCamera())
 		{
@@ -1159,7 +1177,11 @@ int iSIMWaveforms::OnParkingFraction(MM::PropertyBase* pProp, MM::ActionType eAc
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(parkingFraction_);
+		double newVal;
+		pProp->Get(newVal);
+		if (std::abs(newVal - parkingFraction_) < kEpsilon)
+			return DEVICE_OK;
+		parkingFraction_ = newVal;
 		// Rebuild waveforms if initialized and camera is selected
 		if (initialized_ && GetPhysicalCamera())
 		{
@@ -1182,7 +1204,11 @@ int iSIMWaveforms::OnExposureVoltage(MM::PropertyBase* pProp, MM::ActionType eAc
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(exposurePpV_);
+		double newVal;
+		pProp->Get(newVal);
+		if (std::abs(newVal - exposurePpV_) < kEpsilon)
+			return DEVICE_OK;
+		exposurePpV_ = newVal;
 		// Rebuild waveforms if initialized and camera is selected
 		if (initialized_ && GetPhysicalCamera())
 		{
@@ -1205,7 +1231,11 @@ int iSIMWaveforms::OnGalvoOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(galvoOffsetV_);
+		double newVal;
+		pProp->Get(newVal);
+		if (std::abs(newVal - galvoOffsetV_) < kEpsilon)
+			return DEVICE_OK;
+		galvoOffsetV_ = newVal;
 		// Rebuild waveforms if initialized and camera is selected
 		if (initialized_ && GetPhysicalCamera())
 		{
@@ -1310,7 +1340,11 @@ int iSIMWaveforms::OnReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(readoutTimeMs_);
+		double newVal;
+		pProp->Get(newVal);
+		if (std::abs(newVal - readoutTimeMs_) < kEpsilon)
+			return DEVICE_OK;
+		readoutTimeMs_ = newVal;
 		// Rebuild waveforms if initialized and camera is selected
 		if (initialized_ && GetPhysicalCamera())
 		{
@@ -1487,6 +1521,10 @@ double iSIMWaveforms::GetExposure() const
 
 void iSIMWaveforms::SetExposure(double exp)
 {
+	// Save old values for change detection
+	double oldFrameInterval = frameIntervalMs_;
+	double oldReadoutTime = readoutTimeMs_;
+
 	// Pass through to physical camera and read back the actual value
 	// (hardware may round to the nearest supported exposure time)
 	MM::Camera* camera = GetPhysicalCamera();
@@ -1508,6 +1546,7 @@ void iSIMWaveforms::SetExposure(double exp)
 	// Clamp frame interval to the minimum that satisfies both the readout
 	// time constraint (exposureTimeMs > 0) and the galvo voltage constraint.
 	double minFrameInterval = ComputeMinFrameIntervalMs();
+	double newFrameInterval;
 
 	if (exp < minFrameInterval)
 	{
@@ -1515,17 +1554,24 @@ void iSIMWaveforms::SetExposure(double exp)
 		           std::to_string(exp) + " ms) is below the minimum (" +
 		           std::to_string(minFrameInterval) + " ms). Clamping.", false);
 
-		frameIntervalMs_ = minFrameInterval;
+		newFrameInterval = minFrameInterval;
 		if (camera)
-			camera->SetExposure(frameIntervalMs_);
-		OnExposureChanged(frameIntervalMs_);
+			camera->SetExposure(newFrameInterval);
+		OnExposureChanged(newFrameInterval);
 	}
 	else
 	{
-		frameIntervalMs_ = exp;
+		newFrameInterval = exp;
 	}
 
-	// Build waveforms with new timing (always rebuild when exposure changes)
+	// Skip rebuild if neither frame interval nor readout time changed
+	if (std::abs(newFrameInterval - oldFrameInterval) < kEpsilon &&
+	    std::abs(readoutTimeMs_ - oldReadoutTime) < kEpsilon)
+		return;
+
+	frameIntervalMs_ = newFrameInterval;
+
+	// Build waveforms with new timing
 	// If currently running, stop first, then rebuild and restart
 	bool wasRunning = waveformRunning_;
 	if (wasRunning)
@@ -1728,6 +1774,14 @@ int iSIMWaveforms::SetIlluminationState(long state)
 	if (state < 0 || state >= numStates)
 		return DEVICE_UNKNOWN_POSITION;
 
+	// Skip rebuild if already in the requested single-state mode
+	if (state == currentIlluminationState_ &&
+		illuminationSequence_.size() == 1 &&
+		illuminationSequence_[0] == state)
+	{
+		return DEVICE_OK;
+	}
+
 	currentIlluminationState_ = state;
 	illuminationSequence_ = { state };
 
@@ -1748,6 +1802,9 @@ int iSIMWaveforms::SetIlluminationState(long state)
 
 int iSIMWaveforms::ClearIlluminationControl()
 {
+	if (illuminationSequence_.empty())
+		return DEVICE_OK;
+
 	illuminationSequence_.clear();
 
 	if (initialized_ && GetPhysicalCamera())
@@ -1800,6 +1857,13 @@ int iSIMWaveforms::StartIlluminationSequence()
 
 int iSIMWaveforms::StopIlluminationSequence()
 {
+	// Skip rebuild if already in single-state mode for the current state
+	if (illuminationSequence_.size() == 1 &&
+		illuminationSequence_[0] == currentIlluminationState_)
+	{
+		return DEVICE_OK;
+	}
+
 	// Restore single-state interleaved mode
 	illuminationSequence_ = { currentIlluminationState_ };
 
