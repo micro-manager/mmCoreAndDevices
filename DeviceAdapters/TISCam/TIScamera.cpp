@@ -2168,18 +2168,6 @@ int CTIScamera::PushImage()
    md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
    md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
-   MetadataSingleTag mst(MM::g_Keyword_Elapsed_Time_ms, label, true);
-   mst.SetValue(CDeviceUtils::ConvertToString(timeStamp.getMsec()));
-   md.SetTag(mst);
-
-   MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-   mstCount.SetValue(CDeviceUtils::ConvertToString(imageCounter_));      
-   md.SetTag(mstCount);
-
-   MetadataSingleTag mstB(MM::g_Keyword_Binning, label, true);
-   mstB.SetValue(CDeviceUtils::ConvertToString(binSize_));      
-   md.SetTag(mstB);
-
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
    md.PutImageTag(MM::g_Keyword_Binning, buf);
