@@ -583,6 +583,11 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
    }
 
    delete[] bytes;
+
+   {
+      std::lock_guard<std::mutex> lock(sequenceMutex_);
+      stopSequence_ = true;
+   }
 }
 
 
