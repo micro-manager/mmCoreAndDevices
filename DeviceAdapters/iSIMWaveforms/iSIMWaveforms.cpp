@@ -113,6 +113,7 @@ iSIMWaveforms::iSIMWaveforms() :
 	counterChannel_("Dev1/ctr1"),
 	clockSource_("/Dev1/Ctr1InternalOutput"),
 	waveformRunning_(false),
+	interleavedMode_(false),
 	currentIlluminationState_(0)
 {
 	InitializeDefaultErrorMessages();
@@ -624,41 +625,60 @@ std::vector<double> iSIMWaveforms::ConstructModInWaveform(
 
 void iSIMWaveforms::ConfigureDAQChannels()
 {
-	// Clear any existing configuration
 	daq_->clearTasks();
 
-	// Add channels in order: Camera, Galvo, Blanking, then enabled MOD INs
-
-	// Camera channel
+	// Camera channel (always present)
 	std::string cameraHw = channelMapping_.at(PROP_CAMERA_CHANNEL);
 	double cameraMinV = minVoltage_.at(PROP_CAMERA_CHANNEL);
 	double cameraMaxV = maxVoltage_.at(PROP_CAMERA_CHANNEL);
 	daq_->addAnalogOutputChannel(cameraHw, cameraMinV, cameraMaxV);
 
-	// Galvo channel
-	std::string galvoHw = channelMapping_.at(PROP_GALVO_CHANNEL);
-	double galvoMinV = minVoltage_.at(PROP_GALVO_CHANNEL);
-	double galvoMaxV = maxVoltage_.at(PROP_GALVO_CHANNEL);
-	daq_->addAnalogOutputChannel(galvoHw, galvoMinV, galvoMaxV);
-
-	// Blanking channel
-	std::string blankingHw = channelMapping_.at(PROP_AOTF_BLANKING_CHANNEL);
-	double blankingMinV = minVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
-	double blankingMaxV = maxVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
-	daq_->addAnalogOutputChannel(blankingHw, blankingMinV, blankingMaxV);
-
-	// MOD IN channels (in order: 1, 2, 3, 4)
-	// In Interleaved mode, configure all mapped channels (sequence may
-	// reference any of them). In Normal mode, only configure enabled ones.
-	auto modInChannels = illuminationSequence_.empty()
-		? GetEnabledModInChannels()
-		: GetConfiguredModInChannels();
-	for (const auto& modInChannel : modInChannels)
+	if (interleavedMode_)
 	{
-		std::string modInHw = channelMapping_.at(modInChannel);
-		double modInMinV = minVoltage_.at(modInChannel);
-		double modInMaxV = maxVoltage_.at(modInChannel);
-		daq_->addAnalogOutputChannel(modInHw, modInMinV, modInMaxV);
+		// MDA mode: Galvo + Blanking + all configured MOD INs
+		std::string galvoHw = channelMapping_.at(PROP_GALVO_CHANNEL);
+		double galvoMinV = minVoltage_.at(PROP_GALVO_CHANNEL);
+		double galvoMaxV = maxVoltage_.at(PROP_GALVO_CHANNEL);
+		daq_->addAnalogOutputChannel(galvoHw, galvoMinV, galvoMaxV);
+
+		std::string blankingHw = channelMapping_.at(PROP_AOTF_BLANKING_CHANNEL);
+		double blankingMinV = minVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
+		double blankingMaxV = maxVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
+		daq_->addAnalogOutputChannel(blankingHw, blankingMinV, blankingMaxV);
+
+		for (const auto& modInChannel : GetConfiguredModInChannels())
+		{
+			std::string modInHw = channelMapping_.at(modInChannel);
+			double modInMinV = minVoltage_.at(modInChannel);
+			double modInMaxV = maxVoltage_.at(modInChannel);
+			daq_->addAnalogOutputChannel(modInHw, modInMinV, modInMaxV);
+		}
+	}
+	else
+	{
+		// Live/Snap mode: if MOD INs enabled, add Galvo + Blanking + enabled MOD INs.
+		// If none enabled, Camera only (no point scanning without illumination).
+		auto enabledModIns = GetEnabledModInChannels();
+		if (!enabledModIns.empty())
+		{
+			std::string galvoHw = channelMapping_.at(PROP_GALVO_CHANNEL);
+			double galvoMinV = minVoltage_.at(PROP_GALVO_CHANNEL);
+			double galvoMaxV = maxVoltage_.at(PROP_GALVO_CHANNEL);
+			daq_->addAnalogOutputChannel(galvoHw, galvoMinV, galvoMaxV);
+
+			std::string blankingHw = channelMapping_.at(PROP_AOTF_BLANKING_CHANNEL);
+			double blankingMinV = minVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
+			double blankingMaxV = maxVoltage_.at(PROP_AOTF_BLANKING_CHANNEL);
+			daq_->addAnalogOutputChannel(blankingHw, blankingMinV, blankingMaxV);
+
+			for (const auto& modInChannel : enabledModIns)
+			{
+				std::string modInHw = channelMapping_.at(modInChannel);
+				double modInMinV = minVoltage_.at(modInChannel);
+				double modInMaxV = maxVoltage_.at(modInChannel);
+				daq_->addAnalogOutputChannel(modInHw, modInMinV, modInMaxV);
+			}
+		}
 	}
 }
 
@@ -1389,44 +1409,47 @@ int iSIMWaveforms::QueryReadoutTime()
 
 int iSIMWaveforms::BuildAndWriteWaveforms()
 {
-	// Validate parameters
 	int ret = ValidateWaveformParameters();
 	if (ret != DEVICE_OK)
 		return ret;
 
-	// Compute waveform parameters
 	WaveformParams params;
 	ComputeWaveformParameters(params);
 
-	// Construct individual waveforms
 	auto cameraWave = ConstructCameraWaveform(params);
-	auto galvoWave = ConstructGalvoWaveform(params);
-	auto blankingWave = ConstructBlankingWaveform(params);
 
-	// Build row-major interleaved data
-	size_t numChannels = 3 + GetNumEnabledModInChannels();
+	int numEnabled = GetNumEnabledModInChannels();
+	bool hasIllumination = (numEnabled > 0);
+	size_t numChannels = hasIllumination ? (3 + numEnabled) : 1;
 	size_t samplesPerChannel = params.numWaveformSamples;
 	std::vector<double> data(numChannels * samplesPerChannel);
 
-	// Copy waveforms to data array (row-major order)
 	std::copy(cameraWave.begin(), cameraWave.end(), data.begin());
-	std::copy(galvoWave.begin(), galvoWave.end(), data.begin() + samplesPerChannel);
-	std::copy(blankingWave.begin(), blankingWave.end(), data.begin() + 2 * samplesPerChannel);
 
-	size_t channelIdx = 3;
-	for (const auto& modIn : GetEnabledModInChannels())
+	if (hasIllumination)
 	{
-		auto modInWave = ConstructModInWaveform(modIn, params);
-		std::copy(modInWave.begin(), modInWave.end(), data.begin() + channelIdx * samplesPerChannel);
-		++channelIdx;
+		auto galvoWave = ConstructGalvoWaveform(params);
+		auto blankingWave = ConstructBlankingWaveform(params);
+		std::copy(galvoWave.begin(), galvoWave.end(),
+		          data.begin() + samplesPerChannel);
+		std::copy(blankingWave.begin(), blankingWave.end(),
+		          data.begin() + 2 * samplesPerChannel);
+
+		size_t channelIdx = 3;
+		for (const auto& modIn : GetEnabledModInChannels())
+		{
+			auto modInWave = ConstructModInWaveform(modIn, params);
+			std::copy(modInWave.begin(), modInWave.end(),
+			          data.begin() + channelIdx * samplesPerChannel);
+			++channelIdx;
+		}
 	}
 
-	// Configure DAQ and write waveforms
 	try
 	{
 		ConfigureDAQChannels();
-		daq_->configureTiming(samplingRateHz_, samplesPerChannel, triggerSource_,
-		                      counterChannel_, clockSource_);
+		daq_->configureTiming(samplingRateHz_, samplesPerChannel,
+		                      triggerSource_, counterChannel_, clockSource_);
 		daq_->writeAnalogOutput(data, numChannels, samplesPerChannel);
 	}
 	catch (const std::runtime_error& e)
@@ -1774,51 +1797,13 @@ int iSIMWaveforms::SetIlluminationState(long state)
 	if (state < 0 || state >= numStates)
 		return DEVICE_UNKNOWN_POSITION;
 
-	// Skip rebuild if already in the requested single-state mode
-	if (state == currentIlluminationState_ &&
-		illuminationSequence_.size() == 1 &&
-		illuminationSequence_[0] == state)
-	{
-		return DEVICE_OK;
-	}
-
 	currentIlluminationState_ = state;
-	illuminationSequence_ = { state };
-
-	if (initialized_ && GetPhysicalCamera())
-	{
-		bool wasRunning = waveformRunning_;
-		if (wasRunning)
-			StopWaveformOutput();
-		int ret = RebuildWaveforms();
-		if (ret != DEVICE_OK)
-			return ret;
-		if (wasRunning)
-			StartWaveformOutput();
-	}
-
 	return DEVICE_OK;
 }
 
 int iSIMWaveforms::ClearIlluminationControl()
 {
-	if (illuminationSequence_.empty())
-		return DEVICE_OK;
-
 	illuminationSequence_.clear();
-
-	if (initialized_ && GetPhysicalCamera())
-	{
-		bool wasRunning = waveformRunning_;
-		if (wasRunning)
-			StopWaveformOutput();
-		int ret = RebuildWaveforms();
-		if (ret != DEVICE_OK)
-			return ret;
-		if (wasRunning)
-			StartWaveformOutput();
-	}
-
 	return DEVICE_OK;
 }
 
@@ -1839,15 +1824,18 @@ int iSIMWaveforms::StartIlluminationSequence()
 	if (illuminationSequence_.empty())
 		return ERR_WAVEFORM_GENERATION_FAILED;
 
-	// Rebuild waveforms with the multi-frame interleaved pattern.
-	// Do NOT start DAQ output — the camera's StartSequenceAcquisition will do that.
+	interleavedMode_ = true;
+
 	bool wasRunning = waveformRunning_;
 	if (wasRunning)
 		StopWaveformOutput();
 
 	int ret = RebuildWaveforms();
 	if (ret != DEVICE_OK)
+	{
+		interleavedMode_ = false;
 		return ret;
+	}
 
 	if (wasRunning)
 		StartWaveformOutput();
@@ -1857,15 +1845,10 @@ int iSIMWaveforms::StartIlluminationSequence()
 
 int iSIMWaveforms::StopIlluminationSequence()
 {
-	// Skip rebuild if already in single-state mode for the current state
-	if (illuminationSequence_.size() == 1 &&
-		illuminationSequence_[0] == currentIlluminationState_)
-	{
+	if (!interleavedMode_)
 		return DEVICE_OK;
-	}
 
-	// Restore single-state interleaved mode
-	illuminationSequence_ = { currentIlluminationState_ };
+	interleavedMode_ = false;
 
 	bool wasRunning = waveformRunning_;
 	if (wasRunning)
@@ -1883,7 +1866,7 @@ int iSIMWaveforms::StopIlluminationSequence()
 
 int iSIMWaveforms::RebuildWaveforms()
 {
-	if (!illuminationSequence_.empty())
+	if (interleavedMode_)
 		return BuildAndWriteInterleavedWaveforms();
 	else
 		return BuildAndWriteWaveforms();
