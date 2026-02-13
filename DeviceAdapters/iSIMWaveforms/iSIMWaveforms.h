@@ -155,6 +155,7 @@ public:
 	int OnReadoutTimePropName(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnReadoutTimeConvToMs(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnCurrentReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	// Helper methods
@@ -221,7 +222,7 @@ private:
 
 	// Readout time configuration
 	std::string readoutTimePropName_;  // Camera property name to query, or "None" for manual
-	double readoutTimeConvToMs_;       // Conversion factor: ms = rawValue * factor
+	double readoutTimeConvToMs_;  // Conversion factor: ms = rawValue * factor
 
 	// Waveform timing parameters
 	double frameIntervalMs_;        // Set via camera exposure time when in rolling shutter mode

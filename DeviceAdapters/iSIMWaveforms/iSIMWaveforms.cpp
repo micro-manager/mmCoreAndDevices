@@ -34,6 +34,9 @@ const char* g_IllumDeviceName = "iSIM Illumination Selector";
 const char* g_IllumDeviceDesc = "Selects which AOTF MOD IN channel is active for each frame";
 const char* g_ReadoutTimeNone = "None";
 
+// Set to true to use MockDAQAdapter instead of the real NIDAQmx adapter
+static constexpr bool kUseMockDAQ = false;
+
 // Tolerance for floating-point comparisons to avoid redundant waveform rebuilds
 static constexpr double kEpsilon = 1e-9;
 
@@ -145,13 +148,15 @@ iSIMWaveforms::iSIMWaveforms() :
 		"The selected physical camera is invalid or not loaded.");
 
 	// Create DAQ adapter for device discovery
-	// Toggle between Mock and NIDAQmx by commenting/uncommenting:
-	auto mockDaq = std::make_unique<MockDAQAdapter>();
-	mockDaq->setLogger([this](const std::string& msg) {
-		LogMessage(msg, false);
-	});
-	daq_ = std::move(mockDaq);
-	//daq_ = std::make_unique<NIDAQmxAdapter>();
+	if (kUseMockDAQ) {
+		auto mockDaq = std::make_unique<MockDAQAdapter>();
+		mockDaq->setLogger([this](const std::string& msg) {
+			LogMessage(msg, false);
+		});
+		daq_ = std::move(mockDaq);
+	} else {
+		daq_ = std::make_unique<NIDAQmxAdapter>();
+	}
 
 	// Pre-init property: Device
 	std::vector<std::string> devices = daq_->getDeviceNames();
@@ -188,8 +193,8 @@ iSIMWaveforms::iSIMWaveforms() :
 	// Multiplied by the raw camera property value to convert to milliseconds.
 	// Default: 1e-6 (nanoseconds -> milliseconds, for PVCAM's "Timing-ReadoutTimeNs")
 	pAct = new CPropertyAction(this, &iSIMWaveforms::OnReadoutTimeConvToMs);
-	CreateFloatProperty("Readout Time Conversion Factor to ms",
-		readoutTimeConvToMs_, false, pAct, true);
+	CreateStringProperty("Readout Time Conversion Factor to ms",
+		std::to_string(readoutTimeConvToMs_).c_str(), false, pAct, true);
 }
 
 /**
@@ -797,6 +802,12 @@ int iSIMWaveforms::CreatePostInitProperties()
 			return nRet;
 	}
 
+	// Read-only property showing the current effective readout time
+	CPropertyAction* pActCurrentReadout = new CPropertyAction(this, &iSIMWaveforms::OnCurrentReadoutTimeMs);
+	nRet = CreateFloatProperty("ReadoutTimeMs", readoutTimeMs_, true, pActCurrentReadout);
+	if (nRet != DEVICE_OK)
+		return nRet;
+
 	return DEVICE_OK;
 }
 
@@ -1343,11 +1354,14 @@ int iSIMWaveforms::OnReadoutTimeConvToMs(MM::PropertyBase* pProp, MM::ActionType
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(readoutTimeConvToMs_);
+		std::string str = std::to_string(readoutTimeConvToMs_);
+		pProp->Set(str.c_str());
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(readoutTimeConvToMs_);
+		std::string str;
+		pProp->Get(str);
+		readoutTimeConvToMs_ = std::stod(str);
 	}
 	return DEVICE_OK;
 }
@@ -1375,6 +1389,15 @@ int iSIMWaveforms::OnReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct)
 			if (wasRunning)
 				StartWaveformOutput();
 		}
+	}
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::OnCurrentReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(readoutTimeMs_);
 	}
 	return DEVICE_OK;
 }
