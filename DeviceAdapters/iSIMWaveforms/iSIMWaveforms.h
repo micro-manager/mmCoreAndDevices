@@ -240,9 +240,10 @@ private:
 
 	// Waveform state
 	bool waveformRunning_;
+	bool interleavedMode_;       // true during MDA hardware sequencing
 
 	// Illumination sequencing state
-	std::vector<long> illuminationSequence_;  // Non-empty = Interleaved mode
+	std::vector<long> illuminationSequence_;
 	long currentIlluminationState_;           // Current state in software-timed MDA
 };
 
