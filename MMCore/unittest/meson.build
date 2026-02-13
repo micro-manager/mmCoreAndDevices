@@ -12,10 +12,12 @@ catch2_with_main_dep = dependency(
 mmcore_test_sources = files(
     'APIError-Tests.cpp',
     'CoreCreateDestroy-Tests.cpp',
+    'ImageMetadata-Tests.cpp',
     'Logger-Tests.cpp',
     'LoggingSplitEntryIntoLines-Tests.cpp',
     'MockDeviceAdapter-Tests.cpp',
     'PixelSize-Tests.cpp',
+    'StubDevices-Tests.cpp',
     'UnloadDevice-Tests.cpp',
 )
 
