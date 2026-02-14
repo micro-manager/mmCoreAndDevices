@@ -165,6 +165,7 @@ public:
 	int GetLimits(double& lower, double& upper) { return DEVICE_UNSUPPORTED_COMMAND;} // nah 
 	int IsStageSequenceable(bool& isSequenceable) const { isSequenceable = false;  return DEVICE_OK;}
 	bool IsContinuousFocusDrive() const  { return false; }
+
 	bool Busy() { return false; }
 
 	// Helper functions

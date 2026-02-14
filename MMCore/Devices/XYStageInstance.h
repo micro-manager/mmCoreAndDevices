@@ -56,6 +56,7 @@ public:
    int GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax);
    double GetStepSizeXUm();
    double GetStepSizeYUm();
+   int UsesOnXYStagePositionChanged(bool& result) const;
    int IsXYStageSequenceable(bool& isSequenceable) const;
    int GetXYStageSequenceMaxLength(long& nrEvents) const;
    int StartXYStageSequence();
