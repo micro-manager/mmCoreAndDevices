@@ -200,6 +200,7 @@ int StreamWriter::Start()
     camera_->LogAdapterMessage(std::string("Started streaming to '") + path_ + "'", false);
 
     return DEVICE_OK;
+
 }
 
 void StreamWriter::Stop()
@@ -509,6 +510,7 @@ int StreamWriter::SaveSummary(const std::string& fileName) const
         sum << "All " << totalFrameCount << " frames saved.\n";
     }
     else
+
     {
         sum << "Saved " << totalFrameCount << " frames, " << totalFramesLost_ << " frames lost.\n"
             << totalSummary_;
