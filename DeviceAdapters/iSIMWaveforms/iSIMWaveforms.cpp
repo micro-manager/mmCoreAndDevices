@@ -8,8 +8,6 @@
 // AUTHOR:        Kyle M. Douglass, https://kylemdouglass.com
 //
 // VERSION:       0.0.0
-//
-// FIRMWARE:      xxx
 //                
 // COPYRIGHT:     ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE, Switzerland
 //                Laboratory of Experimental Biophysics (LEB), 2026
@@ -35,7 +33,7 @@ const char* g_IllumDeviceDesc = "Selects which AOTF MOD IN channel is active for
 const char* g_ReadoutTimeNone = "None";
 
 // Set to true to use MockDAQAdapter instead of the real NIDAQmx adapter
-static constexpr bool kUseMockDAQ = false;
+static constexpr bool kUseMockDAQ = true;
 
 // Tolerance for floating-point comparisons to avoid redundant waveform rebuilds
 static constexpr double kEpsilon = 1e-9;
@@ -904,7 +902,7 @@ int iSIMWaveforms::Initialize()
 	if (nRet != DEVICE_OK)
 		return nRet;
 
-	// Create post-init voltage control properties
+	// Create post-init control properties
 	nRet = CreatePostInitProperties();
 	if (nRet != DEVICE_OK)
 		return nRet;

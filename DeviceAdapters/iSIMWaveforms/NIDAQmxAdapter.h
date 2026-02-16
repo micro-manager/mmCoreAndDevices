@@ -9,6 +9,8 @@
 //
 // VERSION:       0.0.0
 //
+// FIRMWARE:      NIDAQmx 2026 Q1
+//
 // COPYRIGHT:     ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE, Switzerland
 //                Laboratory of Experimental Biophysics (LEB), 2026
 //
