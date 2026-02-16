@@ -782,6 +782,11 @@ int iSIMWaveforms::CreatePostInitProperties()
 	nRet = CreateStringProperty("Trigger Source", triggerSource_.c_str(), false, pActTrigger);
 	if (nRet != DEVICE_OK)
 		return nRet;
+	{
+		std::vector<std::string> pfiChannels = daq_->getTriggerChannels(deviceName_);
+		for (const auto& pfi : pfiChannels)
+			AddAllowedValue("Trigger Source", pfi.c_str());
+	}
 
 	// Binning property (required by MMCore for camera devices)
 	CPropertyAction* pActBinning = new CPropertyAction(this, &iSIMWaveforms::OnBinning);
@@ -1296,7 +1301,20 @@ int iSIMWaveforms::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(triggerSource_);
+		std::string newVal;
+		pProp->Get(newVal);
+		if (newVal == triggerSource_)
+			return DEVICE_OK;
+		triggerSource_ = newVal;
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			RebuildWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
 	}
 	return DEVICE_OK;
 }

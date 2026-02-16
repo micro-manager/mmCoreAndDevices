@@ -108,4 +108,12 @@ public:
     virtual std::vector<std::string> getAnalogOutputChannels(
         const std::string& deviceName
     ) const = 0;
+
+    /// Get list of trigger-capable terminals (PFI channels) for a device.
+    ///
+    /// @param deviceName The device to query (e.g., "Dev1")
+    /// @return Vector of terminal names (e.g., "/Dev1/PFI0", "/Dev1/PFI3")
+    virtual std::vector<std::string> getTriggerChannels(
+        const std::string& deviceName
+    ) const = 0;
 };

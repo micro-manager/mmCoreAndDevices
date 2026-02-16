@@ -134,4 +134,20 @@ private:
             return {"MockDev2/ao0", "MockDev2/ao1"};
         return {};
     }
+
+    std::vector<std::string> getTriggerChannels(
+        const std::string& deviceName
+    ) const override
+    {
+        if (deviceName == "MockDev1")
+            return {
+                "/MockDev1/PFI0", "/MockDev1/PFI1",
+                "/MockDev1/PFI2", "/MockDev1/PFI3",
+                "/MockDev1/PFI4", "/MockDev1/PFI5",
+                "/MockDev1/PFI6", "/MockDev1/PFI7"
+            };
+        else if (deviceName == "MockDev2")
+            return {"/MockDev2/PFI0", "/MockDev2/PFI1"};
+        return {};
+    }
 };

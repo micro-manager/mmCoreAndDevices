@@ -288,6 +288,25 @@ public:
         return splitCommaList(buf);
     }
 
+    std::vector<std::string> getTriggerChannels(
+        const std::string& deviceName
+    ) const override
+    {
+        char buf[4096] = {};
+        int32 err = DAQmxGetDevTerminals(deviceName.c_str(), buf, sizeof(buf));
+        if (err != 0)
+            return {};
+
+        std::vector<std::string> allTerminals = splitCommaList(buf);
+        std::vector<std::string> pfiTerminals;
+        for (const auto& terminal : allTerminals)
+        {
+            if (terminal.find("PFI") != std::string::npos)
+                pfiTerminals.push_back(terminal);
+        }
+        return pfiTerminals;
+    }
+
 private:
     TaskHandle aoTask_ = 0;
     TaskHandle counterTask_ = 0;
