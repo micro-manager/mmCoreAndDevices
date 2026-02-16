@@ -155,7 +155,11 @@ iSIMWaveforms::iSIMWaveforms() :
 		});
 		daq_ = std::move(mockDaq);
 	} else {
-		daq_ = std::make_unique<NIDAQmxAdapter>();
+		auto realDaq = std::make_unique<NIDAQmxAdapter>();
+		realDaq->setLogger([this](const std::string& msg) {
+			LogMessage(msg, false);
+		});
+		daq_ = std::move(realDaq);
 	}
 
 	// Pre-init property: Device
@@ -630,6 +634,9 @@ std::vector<double> iSIMWaveforms::ConstructModInWaveform(
 
 void iSIMWaveforms::ConfigureDAQChannels()
 {
+	LogMessage("ConfigureDAQChannels: interleavedMode=" +
+		std::string(interleavedMode_ ? "true" : "false"), false);
+
 	daq_->clearTasks();
 
 	// Camera channel (always present)
@@ -1430,11 +1437,56 @@ int iSIMWaveforms::QueryReadoutTime()
 	return DEVICE_OK;
 }
 
+bool iSIMWaveforms::SyncTimingFromCamera()
+{
+	MM::Camera* camera = GetPhysicalCamera();
+	if (!camera)
+		return false;
+
+	double cameraExposure = camera->GetExposure();
+	double oldReadout = readoutTimeMs_;
+	QueryReadoutTime();
+
+	// Clamp to minimum viable frame interval (same as SetExposure)
+	double minFrameInterval = ComputeMinFrameIntervalMs();
+	if (cameraExposure < minFrameInterval)
+	{
+		LogMessage("SyncTimingFromCamera: camera exposure (" +
+		           std::to_string(cameraExposure) +
+		           " ms) below minimum (" +
+		           std::to_string(minFrameInterval) +
+		           " ms). Clamping.", false);
+		cameraExposure = minFrameInterval;
+		camera->SetExposure(cameraExposure);
+	}
+
+	if (std::abs(cameraExposure - frameIntervalMs_) < kEpsilon &&
+	    std::abs(readoutTimeMs_ - oldReadout) < kEpsilon)
+		return false;
+
+	LogMessage("SyncTimingFromCamera: frameInterval " +
+	           std::to_string(frameIntervalMs_) + " -> " +
+	           std::to_string(cameraExposure) + " ms", false);
+	frameIntervalMs_ = cameraExposure;
+	return true;
+}
+
 int iSIMWaveforms::BuildAndWriteWaveforms()
 {
+	LogMessage("BuildAndWriteWaveforms: frameInterval=" +
+		std::to_string(frameIntervalMs_) + " ms, readoutTime=" +
+		std::to_string(readoutTimeMs_) + " ms, enabledModIns=" +
+		std::to_string(GetNumEnabledModInChannels()), false);
+
 	int ret = ValidateWaveformParameters();
 	if (ret != DEVICE_OK)
+	{
+		LogMessage("BuildAndWriteWaveforms: ValidateWaveformParameters failed (error " +
+		           std::to_string(ret) + "), frameInterval=" +
+		           std::to_string(frameIntervalMs_) + " ms, readoutTime=" +
+		           std::to_string(readoutTimeMs_) + " ms", false);
 		return ret;
+	}
 
 	WaveformParams params;
 	ComputeWaveformParameters(params);
@@ -1486,6 +1538,19 @@ int iSIMWaveforms::BuildAndWriteWaveforms()
 
 int iSIMWaveforms::StartWaveformOutput()
 {
+	LogMessage("StartWaveformOutput", false);
+
+	if (SyncTimingFromCamera())
+	{
+		int ret = RebuildWaveforms();
+		if (ret != DEVICE_OK)
+		{
+			LogMessage("StartWaveformOutput: RebuildWaveforms failed (error " +
+			           std::to_string(ret) + ")", false);
+			return ret;
+		}
+	}
+
 	try
 	{
 		daq_->start();
@@ -1501,6 +1566,8 @@ int iSIMWaveforms::StartWaveformOutput()
 
 int iSIMWaveforms::StopWaveformOutput()
 {
+	LogMessage("StopWaveformOutput", false);
+
 	try
 	{
 		daq_->stop();
@@ -1567,58 +1634,13 @@ double iSIMWaveforms::GetExposure() const
 
 void iSIMWaveforms::SetExposure(double exp)
 {
-	// Save old values for change detection
-	double oldFrameInterval = frameIntervalMs_;
-	double oldReadoutTime = readoutTimeMs_;
-
-	// Pass through to physical camera and read back the actual value
-	// (hardware may round to the nearest supported exposure time)
 	MM::Camera* camera = GetPhysicalCamera();
 	if (camera)
-	{
 		camera->SetExposure(exp);
-		exp = camera->GetExposure();
-	}
 
-	// Query updated readout time from camera
-	int readoutRet = QueryReadoutTime();
-	if (readoutRet != DEVICE_OK)
-	{
-		LogMessage("SetExposure: Failed to query readout time (error " +
-		           std::to_string(readoutRet) + ")", false);
-		return;
-	}
-
-	// Clamp frame interval to the minimum that satisfies both the readout
-	// time constraint (exposureTimeMs > 0) and the galvo voltage constraint.
-	double minFrameInterval = ComputeMinFrameIntervalMs();
-	double newFrameInterval;
-
-	if (exp < minFrameInterval)
-	{
-		LogMessage("SetExposure: Requested frame interval (" +
-		           std::to_string(exp) + " ms) is below the minimum (" +
-		           std::to_string(minFrameInterval) + " ms). Clamping.", false);
-
-		newFrameInterval = minFrameInterval;
-		if (camera)
-			camera->SetExposure(newFrameInterval);
-		OnExposureChanged(newFrameInterval);
-	}
-	else
-	{
-		newFrameInterval = exp;
-	}
-
-	// Skip rebuild if neither frame interval nor readout time changed
-	if (std::abs(newFrameInterval - oldFrameInterval) < kEpsilon &&
-	    std::abs(readoutTimeMs_ - oldReadoutTime) < kEpsilon)
+	if (!SyncTimingFromCamera())
 		return;
 
-	frameIntervalMs_ = newFrameInterval;
-
-	// Build waveforms with new timing
-	// If currently running, stop first, then rebuild and restart
 	bool wasRunning = waveformRunning_;
 	if (wasRunning)
 		StopWaveformOutput();
@@ -1897,12 +1919,23 @@ int iSIMWaveforms::RebuildWaveforms()
 
 int iSIMWaveforms::BuildAndWriteInterleavedWaveforms()
 {
+	LogMessage("BuildAndWriteInterleavedWaveforms: frameInterval=" +
+		std::to_string(frameIntervalMs_) + " ms, readoutTime=" +
+		std::to_string(readoutTimeMs_) + " ms, sequenceLen=" +
+		std::to_string(illuminationSequence_.size()), false);
+
 	if (illuminationSequence_.empty())
 		return ERR_WAVEFORM_GENERATION_FAILED;
 
 	int ret = ValidateWaveformParameters();
 	if (ret != DEVICE_OK)
+	{
+		LogMessage("BuildAndWriteInterleavedWaveforms: ValidateWaveformParameters failed (error " +
+		           std::to_string(ret) + "), frameInterval=" +
+		           std::to_string(frameIntervalMs_) + " ms, readoutTime=" +
+		           std::to_string(readoutTimeMs_) + " ms", false);
 		return ret;
+	}
 
 	WaveformParams params;
 	ComputeWaveformParameters(params);

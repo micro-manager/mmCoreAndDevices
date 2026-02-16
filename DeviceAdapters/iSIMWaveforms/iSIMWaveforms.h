@@ -193,6 +193,7 @@ private:
 	// Camera wrapper helpers
 	MM::Camera* GetPhysicalCamera() const;
 	int QueryReadoutTime();
+	bool SyncTimingFromCamera();
 	int BuildAndWriteWaveforms();
 	int StartWaveformOutput();
 	int StopWaveformOutput();

@@ -19,6 +19,9 @@
 
 #include <NIDAQmx.h>
 
+#include <algorithm>
+#include <functional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -32,6 +35,8 @@
 class NIDAQmxAdapter : public IDAQDevice
 {
 public:
+    using LogCallback = std::function<void(const std::string&)>;
+
     NIDAQmxAdapter() = default;
 
     ~NIDAQmxAdapter()
@@ -44,6 +49,11 @@ public:
     // be safely shared between instances.
     NIDAQmxAdapter(const NIDAQmxAdapter&) = delete;
     NIDAQmxAdapter& operator=(const NIDAQmxAdapter&) = delete;
+
+    void setLogger(LogCallback callback)
+    {
+        logger_ = std::move(callback);
+    }
 
     void addAnalogOutputChannel(
         const std::string& channel,
@@ -65,6 +75,16 @@ public:
             DAQmx_Val_Volts,
             nullptr
         ));
+
+        ++channelCount_;
+        if (logger_)
+        {
+            std::ostringstream oss;
+            oss << "[NIDAQmx] addAnalogOutputChannel: channel=" << channel
+                << ", minV=" << minVoltage << ", maxV=" << maxVoltage
+                << " (total channels: " << channelCount_ << ")";
+            logger_(oss.str());
+        }
     }
 
     void configureTiming(
@@ -76,6 +96,18 @@ public:
         size_t counterSamplesPerTrigger = 0
     ) override
     {
+        if (logger_)
+        {
+            std::ostringstream oss;
+            oss << "[NIDAQmx] configureTiming: sampleRate=" << sampleRateHz
+                << " Hz, samplesPerChannel=" << samplesPerChannel
+                << ", trigger=" << triggerSource
+                << ", counter=" << counterChannel
+                << ", clockSource=" << clockSource
+                << ", counterSamplesPerTrigger=" << counterSamplesPerTrigger;
+            logger_(oss.str());
+        }
+
         // --- Counter task setup ---
         safeClear(counterTask_);
         checkError(DAQmxCreateTask("CounterTask", &counterTask_));
@@ -98,6 +130,12 @@ public:
         size_t counterSamples = (counterSamplesPerTrigger > 0)
             ? counterSamplesPerTrigger
             : samplesPerChannel / 2;
+
+        if (logger_)
+        {
+            logger_("[NIDAQmx] counterSamples=" + std::to_string(counterSamples));
+        }
+
         checkError(DAQmxCfgImplicitTiming(
             counterTask_,
             DAQmx_Val_FiniteSamps,
@@ -114,6 +152,12 @@ public:
         // Re-arm counter after each burst
         checkError(DAQmxSetStartTrigRetriggerable(counterTask_, TRUE));
 
+        if (logger_)
+        {
+            logger_("[NIDAQmx] Counter task configured: retriggerable on "
+                    + triggerSource);
+        }
+
         // --- AO task timing setup ---
         // Use counter internal output as sample clock, continuous mode
         checkError(DAQmxCfgSampClkTiming(
@@ -127,6 +171,12 @@ public:
 
         // Enable waveform regeneration: AO buffer loops continuously
         checkError(DAQmxSetWriteRegenMode(aoTask_, DAQmx_Val_AllowRegen));
+
+        if (logger_)
+        {
+            logger_("[NIDAQmx] AO task timing configured: clockSource="
+                    + clockSource + ", regen enabled");
+        }
     }
 
     void writeAnalogOutput(
@@ -154,19 +204,43 @@ public:
                 "NIDAQmx: wrote " + std::to_string(sampsWritten) +
                 " samples but expected " + std::to_string(samplesPerChannel));
         }
+
+        if (logger_)
+        {
+            double minVal = data.empty() ? 0.0 : *std::min_element(data.begin(), data.end());
+            double maxVal = data.empty() ? 0.0 : *std::max_element(data.begin(), data.end());
+            std::ostringstream oss;
+            oss << "[NIDAQmx] writeAnalogOutput: dataSize=" << data.size()
+                << ", numChannels=" << numChannels
+                << ", samplesPerChannel=" << samplesPerChannel
+                << ", written=" << sampsWritten
+                << ", valueRange=[" << minVal << ", " << maxVal << "]";
+            logger_(oss.str());
+        }
     }
 
     void start() override
     {
         // AO must be armed before the counter starts producing clock edges
         if (aoTask_ != 0)
+        {
             checkError(DAQmxStartTask(aoTask_));
+            if (logger_)
+                logger_("[NIDAQmx] Started AO task");
+        }
         if (counterTask_ != 0)
+        {
             checkError(DAQmxStartTask(counterTask_));
+            if (logger_)
+                logger_("[NIDAQmx] Started counter task");
+        }
     }
 
     void stop() override
     {
+        if (logger_)
+            logger_("[NIDAQmx] stop()");
+
         // Stop counter first (stop clock), then AO.
         // Attempt both even if the first fails.
         int32 counterErr = 0;
@@ -180,8 +254,12 @@ public:
 
     void clearTasks() override
     {
+        if (logger_)
+            logger_("[NIDAQmx] clearTasks()");
+
         safeClear(counterTask_);
         safeClear(aoTask_);
+        channelCount_ = 0;
     }
 
     std::vector<std::string> getDeviceNames() const override
@@ -213,12 +291,25 @@ public:
 private:
     TaskHandle aoTask_ = 0;
     TaskHandle counterTask_ = 0;
+    LogCallback logger_;
+    size_t channelCount_ = 0;
 
     /// Throw std::runtime_error if a NIDAQmx call returned an error.
-    /// Positive return values are warnings and are not treated as errors.
-    static void checkError(int32 error)
+    /// Positive return values are warnings and are logged.
+    void checkError(int32 error)
     {
-        if (error < 0)
+        if (error > 0)
+        {
+            // Positive values are DAQmx warnings
+            if (logger_)
+            {
+                char warnBuf[2048] = {};
+                DAQmxGetErrorString(error, warnBuf, sizeof(warnBuf));
+                logger_(std::string("[NIDAQmx] WARNING (") +
+                        std::to_string(error) + "): " + warnBuf);
+            }
+        }
+        else if (error < 0)
         {
             char errBuf[2048] = {};
             DAQmxGetErrorString(error, errBuf, sizeof(errBuf));
