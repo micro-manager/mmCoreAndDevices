@@ -21,6 +21,7 @@
 
 #include <array>
 #include <functional>
+#include <mutex>
 #include <regex>
 #include <unordered_map>
 #include <unordered_set>
@@ -465,9 +466,12 @@ private:
     PixelFormatConverter m_currentPixelFormat;                                     //<! Current Pixel Format information
     static const std::unordered_map<std::string, std::string> m_featureToProperty; //!< Map of features name into uManager properties
     std::unordered_map<std::string, std::string> m_propertyToFeature;              //!< Map of uManager properties into Vimba features
-    
+
     static const std::unordered_set<std::string> m_ipAddressFeatures;
     static const std::unordered_set<std::string> m_macAddressFeatures;
+
+    mutable std::recursive_mutex m_propertyMutex; //<! Mutex for property callback serialization
+    bool m_propertiesReady;                        //<! Flag indicating property creation is complete
 };
 
 #endif

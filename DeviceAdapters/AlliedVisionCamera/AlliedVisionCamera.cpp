@@ -106,7 +106,8 @@ AlliedVisionCamera::AlliedVisionCamera(const char *deviceName) :
     m_isAcquisitionRunning{ false },
     m_currentPixelFormat{},
     m_propertyToFeature{},
-    m_exposureFeatureName{}
+    m_exposureFeatureName{},
+    m_propertiesReady{ false }
 {
     CreateHubIDProperty();
     // Binning property is a Core Property, we will have a dummy one
@@ -153,12 +154,20 @@ int AlliedVisionCamera::Initialize()
 
     // Ignore errors from setting up properties
     (void)setupProperties();
+    {
+        std::lock_guard<std::recursive_mutex> guard(m_propertyMutex);
+        m_propertiesReady = true;
+    }
     return resizeImageBuffer();
 }
 
 int AlliedVisionCamera::Shutdown()
 {
     LogMessage("Shutting down camera: " + m_cameraName);
+    {
+        std::lock_guard<std::recursive_mutex> guard(m_propertyMutex);
+        m_propertiesReady = false;
+    }
     VmbError_t err = VmbErrorSuccess;
     if (m_sdk != nullptr && m_sdk->isInitialized())
     {
@@ -286,6 +295,11 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(const VmbFeatureInfo_t 
     {
         (void)handle;
         AlliedVisionCamera *camera = reinterpret_cast<AlliedVisionCamera *>(userContext);
+        std::unique_lock<std::recursive_mutex> lock(camera->m_propertyMutex, std::try_to_lock);
+        if (!lock.owns_lock() || !camera->m_propertiesReady)
+        {
+            return;
+        }
         const auto propertyName = camera->mapFeatureNameToPropertyName(name);
         auto err = camera->UpdateProperty(propertyName.c_str());
         if (err != VmbErrorSuccess)
@@ -302,11 +316,11 @@ VmbError_t AlliedVisionCamera::createPropertyFromFeature(const VmbFeatureInfo_t 
         return err;
     }
 
-    if (m_ipAddressFeatures.count(feature->name) || m_macAddressFeatures.count(feature->name)) 
+    if (m_ipAddressFeatures.count(feature->name) || m_macAddressFeatures.count(feature->name))
     {
         err = CreateStringProperty(propertyName.c_str(), "", true, uManagerCallback);
         return err;
-    }    
+    }
 
     switch (feature->featureDataType)
     {
@@ -434,6 +448,7 @@ double AlliedVisionCamera::GetExposure() const
 
 void AlliedVisionCamera::SetExposure(double exp_ms)
 {
+    UpdateProperty(m_exposureFeatureName.c_str());
     int err = SetProperty(m_exposureFeatureName.c_str(), CDeviceUtils::ConvertToString(exp_ms * MS_TO_US));
     if (err != DEVICE_OK)
     {
@@ -453,6 +468,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
 
     std::function<VmbError_t(unsigned)> setOffsetXProperty = [this](long x)
     {
+        UpdateProperty(g_OffsetX);
         auto err = SetProperty(g_OffsetX, CDeviceUtils::ConvertToString(x));
         if (err)
         {
@@ -462,6 +478,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
     };
     std::function<VmbError_t(unsigned)> setOffsetYProperty = [this](long y)
     {
+        UpdateProperty(g_OffsetY);
         auto err = SetProperty(g_OffsetY, CDeviceUtils::ConvertToString(y));
         if (err)
         {
@@ -471,6 +488,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
     };
     std::function<VmbError_t(unsigned)> setWidthProperty = [this](long xSize)
     {
+        UpdateProperty(g_Width);
         auto err = SetProperty(g_Width, CDeviceUtils::ConvertToString(xSize));
         if (err)
         {
@@ -480,6 +498,7 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
     };
     std::function<VmbError_t(unsigned)> setHeightProperty = [this](long ySize)
     {
+        UpdateProperty(g_Height);
         auto err = SetProperty(g_Height, CDeviceUtils::ConvertToString(ySize));
         if (err)
         {
@@ -516,8 +535,8 @@ int AlliedVisionCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned 
 
 int AlliedVisionCamera::GetROI(unsigned &x, unsigned &y, unsigned &xSize, unsigned &ySize)
 {
-    std::map<const char *, unsigned *> fields = { 
-        { g_OffsetX, &x }, { g_OffsetY, &y }, { g_Width, &xSize }, { g_Height, &ySize } 
+    std::map<const char *, unsigned *> fields = {
+        { g_OffsetX, &x }, { g_OffsetY, &y }, { g_Width, &xSize }, { g_Height, &ySize }
     };
 
     VmbError_t err = VmbErrorSuccess;
@@ -567,7 +586,7 @@ int AlliedVisionCamera::ClearROI()
 int AlliedVisionCamera::IsExposureSequenceable(bool &isSequenceable) const
 {
     isSequenceable = false;
-  
+
     // TODO implement
     return VmbErrorSuccess;
 }
@@ -584,6 +603,8 @@ bool AlliedVisionCamera::IsCapturing()
 
 int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
 {
+    std::lock_guard<std::recursive_mutex> guard(m_propertyMutex);
+
     // Init
     VmbError_t err = VmbErrorSuccess;
 
@@ -596,7 +617,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
     }
 
     const auto propertyName = pProp->GetName();
-   
+
     auto valueEqual = [pProp](const std::string& newValue) -> bool {
         switch (pProp->GetType())
         {
@@ -738,7 +759,7 @@ int AlliedVisionCamera::onProperty(MM::PropertyBase *pProp, MM::ActionType eAct)
         {
             err = GetCoreCallback()->OnPropertyChanged(this, propertyName.c_str(), propertyValue.c_str());
         }
-           
+
 
         if (propertyName == MM::g_Keyword_PixelType)
         {
@@ -810,7 +831,7 @@ VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t *featureInfo, co
         {
             break;
         }
-        if (m_ipAddressFeatures.count(featureName)) 
+        if (m_ipAddressFeatures.count(featureName))
         {
             std::stringstream ipAddressStream;
             ipAddressStream << (0xFF & (out >> 24)) << "." << (0xFF & (out >> 16)) << "." << (0xFF & (out >> 8)) << "." << (0xFF & out);
@@ -820,7 +841,7 @@ VmbError_t AlliedVisionCamera::getFeatureValue(VmbFeatureInfo_t *featureInfo, co
         else if (m_macAddressFeatures.count(featureName))
         {
             std::stringstream macAddressStream;
-            macAddressStream << std::hex 
+            macAddressStream << std::hex
                 << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & (out >> 40)) << ":"
                 << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & (out >> 32)) << ":"
                 << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(0xFF & (out >> 24)) << ":"
