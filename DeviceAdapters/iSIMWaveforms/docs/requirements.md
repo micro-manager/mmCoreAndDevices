@@ -67,6 +67,7 @@ The user can set the following properties:
  ### Post-Initialization
  
  - AOTF Blanking Voltage (float)
+ - AOTF MOD IN Voltages (float)
  - AOTF MOD IN 1-4 Enabled (boolean)
  - Binning (integer)
    - Required only because we implement MMCamera

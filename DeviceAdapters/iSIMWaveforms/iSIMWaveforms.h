@@ -37,6 +37,7 @@
 #define ERR_WAVEFORM_GENERATION_FAILED   108
 #define ERR_NO_PHYSICAL_CAMERA           109
 #define ERR_INVALID_CAMERA               110
+#define ERR_INVALID_PROPERTY_VALUE       111
 
 class IDAQDevice;
 

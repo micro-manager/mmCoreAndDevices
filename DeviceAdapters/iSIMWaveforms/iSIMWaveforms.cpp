@@ -18,6 +18,7 @@
 #include "NIDAQmxAdapter.h"
 #include "ModuleInterface.h"
 
+#include <algorithm>
 #include <cmath>
 #include <mutex>
 #include <stdexcept>
@@ -33,7 +34,7 @@ const char* g_IllumDeviceDesc = "Selects which AOTF MOD IN channel is active for
 const char* g_ReadoutTimeNone = "None";
 
 // Set to true to use MockDAQAdapter instead of the real NIDAQmx adapter
-static constexpr bool kUseMockDAQ = true;
+static constexpr bool kUseMockDAQ = false;
 
 // Tolerance for floating-point comparisons to avoid redundant waveform rebuilds
 static constexpr double kEpsilon = 1e-9;
@@ -144,6 +145,8 @@ iSIMWaveforms::iSIMWaveforms() :
 		"No physical camera selected. Please select a camera in the Physical Camera property.");
 	SetErrorText(ERR_INVALID_CAMERA,
 		"The selected physical camera is invalid or not loaded.");
+	SetErrorText(ERR_INVALID_PROPERTY_VALUE,
+		"A property value could not be parsed. Please enter a valid number.");
 
 	// Create DAQ adapter for device discovery
 	if (kUseMockDAQ) {
@@ -512,7 +515,7 @@ std::vector<double> iSIMWaveforms::ConstructCameraWaveform(const WaveformParams&
 	std::vector<double> waveform(params.numWaveformSamples, 0.0);
 
 	// Camera trigger: 5% duty cycle pulse at the start of each frame
-	size_t pulseWidth = params.numWaveformSamples / 20;  // 5% of waveform period
+	size_t pulseWidth = std::max<size_t>(params.numWaveformSamples / 20, 1);  // 5% of waveform period
 
 	// First pulse at t=0
 	for (size_t i = 0; i < pulseWidth && i < params.numWaveformSamples; ++i)
@@ -564,13 +567,9 @@ std::vector<double> iSIMWaveforms::ConstructGalvoWaveform(const WaveformParams& 
 	// Apply waveform offset by rolling the array
 	if (params.waveformOffsetSamples > 0 && params.waveformOffsetSamples < params.numWaveformSamples)
 	{
-		std::vector<double> shifted(params.numWaveformSamples);
-		for (size_t i = 0; i < params.numWaveformSamples; ++i)
-		{
-			size_t newIdx = (i + params.waveformOffsetSamples) % params.numWaveformSamples;
-			shifted[newIdx] = waveform[i];
-		}
-		waveform = std::move(shifted);
+		std::rotate(waveform.begin(),
+		            waveform.end() - params.waveformOffsetSamples,
+		            waveform.end());
 	}
 
 	return waveform;
@@ -833,7 +832,7 @@ void iSIMWaveforms::GetName(char* name) const
 }
 
 /**
-* Intializes the hardware.
+* Initializes the hardware.
 * Typically we access and initialize hardware at this point.
 * Device properties are typically created here as well.
 * Required by the MM::Device API.
@@ -988,20 +987,13 @@ int iSIMWaveforms::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct
 			physicalCameraName_ = cameraName;
 
 			// Sync timing parameters from the new camera
+			// (clamps exposure to minimum viable frame interval if needed)
 			if (physicalCameraName_ != g_Undefined)
 			{
-				MM::Camera* camera = GetPhysicalCamera();
-				if (camera)
-				{
-					// Sync frame interval from camera's current exposure
-					frameIntervalMs_ = camera->GetExposure();
-					int ret = QueryReadoutTime();
-					if (ret != DEVICE_OK)
-						return ret;
-
-					// TODO: How to handle an invalid exposure time that causes frame interval < readout time?
-					RebuildWaveforms();
-				}
+				SyncTimingFromCamera();
+				int ret = RebuildWaveforms();
+				if (ret != DEVICE_OK)
+					return ret;
 			}
 		}
 	}
@@ -1036,8 +1028,9 @@ int iSIMWaveforms::OnChannelMapping(MM::PropertyBase* pProp, MM::ActionType eAct
 int iSIMWaveforms::OnMinVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	// Extract semantic channel name from property name (remove " Min Voltage" suffix)
+	static const std::string suffix = " Min Voltage";
 	std::string propName = pProp->GetName();
-	std::string semanticChannel = propName.substr(0, propName.length() - 12); // " Min Voltage" = 12 chars
+	std::string semanticChannel = propName.substr(0, propName.length() - suffix.length());
 
 	if (eAct == MM::BeforeGet)
 	{
@@ -1055,8 +1048,9 @@ int iSIMWaveforms::OnMinVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 int iSIMWaveforms::OnMaxVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	// Extract semantic channel name from property name (remove " Max Voltage" suffix)
+	static const std::string suffix = " Max Voltage";
 	std::string propName = pProp->GetName();
-	std::string semanticChannel = propName.substr(0, propName.length() - 12); // " Max Voltage" = 12 chars
+	std::string semanticChannel = propName.substr(0, propName.length() - suffix.length());
 
 	if (eAct == MM::BeforeGet)
 	{
@@ -1101,9 +1095,11 @@ int iSIMWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType
 int iSIMWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	// Extract channel number from property name (e.g., "AOTF MOD IN 1 Enabled")
+	static const std::string modInPrefix = "AOTF MOD IN ";
 	std::string propName = pProp->GetName();
-	char channelChar = propName[12]; // "AOTF MOD IN X" - X is at position 12
-	int channelNum = channelChar - '0';
+	if (propName.length() <= modInPrefix.length())
+		return DEVICE_ERR;
+	int channelNum = propName[modInPrefix.length()] - '0';
 
 	const char* semanticKey = nullptr;
 	switch (channelNum)
@@ -1144,9 +1140,11 @@ int iSIMWaveforms::OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
 int iSIMWaveforms::OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	// Extract channel number from property name (e.g., "AOTF MOD IN 1 Voltage")
+	static const std::string modInPrefix = "AOTF MOD IN ";
 	std::string propName = pProp->GetName();
-	char channelChar = propName[12]; // "AOTF MOD IN X" - X is at position 12
-	int channelNum = channelChar - '0';
+	if (propName.length() <= modInPrefix.length())
+		return DEVICE_ERR;
+	int channelNum = propName[modInPrefix.length()] - '0';
 
 	const char* semanticKey = nullptr;
 	switch (channelNum)
@@ -1384,7 +1382,15 @@ int iSIMWaveforms::OnReadoutTimeConvToMs(MM::PropertyBase* pProp, MM::ActionType
 	{
 		std::string str;
 		pProp->Get(str);
-		readoutTimeConvToMs_ = std::stod(str);
+		try
+		{
+			readoutTimeConvToMs_ = std::stod(str);
+		}
+		catch (const std::exception&)
+		{
+			LogMessage("Invalid conversion factor: " + str, false);
+			return ERR_INVALID_PROPERTY_VALUE;
+		}
 	}
 	return DEVICE_OK;
 }
@@ -1448,7 +1454,16 @@ int iSIMWaveforms::QueryReadoutTime()
 		return ret;
 	}
 
-	double rawValue = atof(value);
+	double rawValue;
+	try
+	{
+		rawValue = std::stod(value);
+	}
+	catch (const std::exception&)
+	{
+		LogMessage("Failed to parse readout time value: " + std::string(value), false);
+		return ERR_INVALID_PROPERTY_VALUE;
+	}
 	readoutTimeMs_ = rawValue * readoutTimeConvToMs_;
 	return DEVICE_OK;
 }
@@ -2061,6 +2076,8 @@ iSIMIlluminationSelector::iSIMIlluminationSelector() :
 	SetErrorText(ERR_NO_MOD_IN_ENABLED,
 		"No AOTF MOD IN channels are enabled. "
 		"Enable at least one MOD IN on the iSIM Waveforms device.");
+	SetErrorText(ERR_INVALID_PROPERTY_VALUE,
+		"A property value could not be parsed. Please enter a valid number.");
 }
 
 iSIMIlluminationSelector::~iSIMIlluminationSelector()
@@ -2216,7 +2233,15 @@ int iSIMIlluminationSelector::OnState(MM::PropertyBase* pProp, MM::ActionType eA
 		stateSequence.reserve(sequence.size());
 		for (const auto& s : sequence)
 		{
-			long state = std::stol(s);
+			long state;
+			try
+			{
+				state = std::stol(s);
+			}
+			catch (const std::exception&)
+			{
+				return ERR_INVALID_PROPERTY_VALUE;
+			}
 			if (state < 0 || state >= numPositions_)
 				return DEVICE_UNKNOWN_POSITION;
 			stateSequence.push_back(state);
