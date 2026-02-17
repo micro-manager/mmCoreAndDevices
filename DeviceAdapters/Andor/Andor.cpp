@@ -5703,21 +5703,14 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
 
    void AndorCamera::AddSRRFMetadataInfo(Metadata & md)
    {
-      char label[MM::MaxStrLength];
-      this->GetLabel(label);
       MM::MMTime tEnd = GetCurrentMMTime();
 
-      MetadataSingleTag mstSRRFFrameTime(SRRFControl_->GetSRRFFrameTimeMetadataName(), label, true);
-      mstSRRFFrameTime.SetValue(CDeviceUtils::ConvertToString((tEnd - startSRRFImageTime_).getMsec()));
-      md.SetTag(mstSRRFFrameTime);
+      md.PutImageTag(std::string("Andor-") + SRRFControl_->GetSRRFFrameTimeMetadataName(),
+         CDeviceUtils::ConvertToString((tEnd - startSRRFImageTime_).getMsec()));
    }
 
    void AndorCamera::AddMetadataInfo(Metadata & md)
    {
-      // create metadata
-      char label[MM::MaxStrLength];
-      this->GetLabel(label);
-
       MM::MMTime timestamp = this->GetCurrentMMTime();
 
       //These append md tag name to label of device; transient props appear per image.  All in .txt file with stack.
@@ -5731,9 +5724,8 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
       //md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
       //md.PutImageTag(MM::g_Keyword_Binning, binSize_);
 
-      MetadataSingleTag mst(MM::g_Keyword_Elapsed_Time_ms, label, true);
-      mst.SetValue(CDeviceUtils::ConvertToString(timestamp.getMsec()));
-      md.SetTag(mst);
+      md.PutImageTag(std::string("Andor-") + MM::g_Keyword_Elapsed_Time_ms,
+         CDeviceUtils::ConvertToString(timestamp.getMsec()));
 
       if (metaDataAvailable_)
       {
@@ -5742,44 +5734,36 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
          unsigned int ret = GetMetaDataInfo(&timeOfStart, &timeFromStart, imageCounter_);
          if (ret == DRV_SUCCESS)
          {
-            MetadataSingleTag mstHW("ElapsedTime-ms(HW)", label, true);
-            mstHW.SetValue(CDeviceUtils::ConvertToString(timeFromStart));
-            md.SetTag(mstHW);
+            md.PutImageTag(std::string("Andor-") + "ElapsedTime-ms(HW)",
+               CDeviceUtils::ConvertToString(timeFromStart));
          }
       }
 
-      MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-      mstCount.SetValue(CDeviceUtils::ConvertToString(imageCounter_));
-      md.SetTag(mstCount);
+      md.PutImageTag(std::string("Andor-") + MM::g_Keyword_Metadata_ImageNumber,
+         CDeviceUtils::ConvertToString(imageCounter_));
 
-      MetadataSingleTag mstB(MM::g_Keyword_Binning, label, true);
-      mstB.SetValue(CDeviceUtils::ConvertToString(binSize_));
-      md.SetTag(mstB);
+      md.PutImageTag(MM::g_Keyword_Binning,
+         CDeviceUtils::ConvertToString(binSize_));
 
       if (updateTemperatureWhileSequencing_) 
       {
          float temp = 0.;
          unsigned int ret = GetTemperatureF(&temp);
+         std::string currentTempTag = "Andor-CurrentTemperature";
 
          if(ret == DRV_NOT_INITIALIZED || ret == DRV_ACQUIRING || ret == DRV_ERROR_ACK)
          {
-            MetadataSingleTag mstTemperature("CurrentTemperature", label, true);
             ostringstream os;
 
             os << "Get Temperature failed with error: " << ret << endl;
 
-            mstTemperature.SetValue(os.str().c_str());
-            md.SetTag(mstTemperature);
+            md.PutImageTag(currentTempTag, os.str());
          }
          else
          {
-            char * buffer = new char[MAX_CHARS_PER_DESCRIPTION];
+            char buffer[MAX_CHARS_PER_DESCRIPTION];
             snprintf(buffer, MAX_CHARS_PER_DESCRIPTION, "%.2f", temp);
-
-            MetadataSingleTag mstTemperature("CurrentTemperature", label, true);
-            mstTemperature.SetValue(buffer);
-            md.SetTag(mstTemperature);
-            delete buffer;
+            md.PutImageTag(currentTempTag, buffer);
          }
       }
 

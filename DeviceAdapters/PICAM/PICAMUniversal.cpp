@@ -2533,15 +2533,7 @@ int Universal::BuildMetadata( Metadata& md )
    md.PutImageTag<long64>("PICAM-TimeStampBOF", pFrameInfo_->TimeStampBOF);
 #endif
 
-   MetadataSingleTag mstElapsed(MM::g_Keyword_Elapsed_Time_ms, label, true);
    MM::MMTime elapsed = timestamp - startTime_;
-   mstElapsed.SetValue(CDeviceUtils::ConvertToString(elapsed.getMsec()));
-   md.SetTag(mstElapsed);
-
-   MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-   mstCount.SetValue(CDeviceUtils::ConvertToString(curImageCnt_));
-   md.SetTag(mstCount);
-
    double actualInterval = elapsed.getMsec() / curImageCnt_;
    SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval));
 

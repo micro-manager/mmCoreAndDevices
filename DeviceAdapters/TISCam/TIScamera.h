@@ -114,7 +114,6 @@ unsigned GetBitDepth() const;
 	int StopSequenceAcquisition();
     int StopSequenceAcquisition(bool temporary);
 
-	int RestartSequenceAcquisition();
 	bool IsCapturing();
 
 	// action interface for the camera
@@ -194,12 +193,8 @@ private:
 
 	long binSize_;
 
-
-	MM::MMTime sequenceStartTime_;
-
 	double interval_ms_;
 	long lastImage_;
-	long imageCounter_;
     MM::MMTime startTime_;
  	unsigned long sequenceLength_;
    bool stopOnOverflow_;
