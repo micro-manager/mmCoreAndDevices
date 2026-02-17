@@ -574,7 +574,7 @@ bool M8XYStage::Busy()
 
     ret = parentHub->IsMoving(device_, &is_moving);
 
-    return ret;
+    return is_moving;
 }
 
 void M8XYStage::GetName(char* name) const
@@ -777,7 +777,7 @@ bool M8ZStage::Busy()
 
     ret = parentHub->IsMoving(device_, &is_moving);
 
-    return ret;
+    return is_moving;
 }
 
 void M8ZStage::GetName(char* name) const
