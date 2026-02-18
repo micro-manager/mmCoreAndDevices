@@ -24,11 +24,13 @@
 #pragma once
 
 #include "MMDevice.h"
-#include "MMDeviceConstants.h"
-#include "Property.h"
-#include "DeviceUtils.h"
-#include "ModuleInterface.h"
+
+#include "CameraImageMetadata.h"
 #include "DeviceThreads.h"
+#include "DeviceUtils.h"
+#include "MMDeviceConstants.h"
+#include "ModuleInterface.h"
+#include "Property.h"
 
 #include <math.h>
 #include <assert.h>
@@ -1469,8 +1471,12 @@ public:
     */
    virtual void GetTags(char* serializedMetadata)
    {
-      std::string data = metadata_.Serialize();
-      data.copy(serializedMetadata, data.size(), 0);
+      MM::CameraImageMetadata md;
+      for (const auto& p : addedTags_)
+      {
+         md.AddTag(p.first.c_str(), p.second.c_str());
+      }
+      CDeviceUtils::CopyLimitedString(serializedMetadata, md.Serialize());
    }
 
    virtual int PrepareSequenceAcqusition() {return DEVICE_OK;}
@@ -1515,12 +1521,19 @@ public:
 
    virtual void AddTag(const char* key, const char* deviceLabel, const char* value)
    {
-      metadata_.PutTag(key, deviceLabel, value);
+      std::string k;
+      if (deviceLabel != std::string("_"))
+      {
+         k += deviceLabel;
+         k += '-';
+      }
+      k += key;
+      addedTags_[k] = value;
    }
 
    virtual void RemoveTag(const char* key)
    {
-      metadata_.RemoveTag(key);
+      addedTags_.erase(key);
    }
 
    virtual bool SupportsMultiROI()
@@ -1552,7 +1565,7 @@ public:
    }
 
 private:
-   Metadata metadata_;
+   std::map<std::string, std::string> addedTags_;
 };
 
 
