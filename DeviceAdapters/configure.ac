@@ -493,9 +493,6 @@ AC_C_INLINE
 # On the Mac we need some frameworks that can be in the way on Linux
 case $host in 
    *apple-darwin*)
-      AC_MSG_CHECKING(pvcam linker flags)
-      PVCAMFRAMEWORKS="-framework PVCAM"
-      AC_MSG_RESULT($PVCAMFRAMEWORKS)
       AC_MSG_CHECKING(diagnostic spot linker flags)
       SPOTFRAMEWORKS="-framework SpotCam"
       AC_MSG_RESULT($SPOTFRAMEWORKS)
@@ -506,13 +503,7 @@ case $host in
       QUICKTIMEFRAMEWORKS="-framework QuickTime -framework QTKit"
       AC_MSG_RESULT($QUICKTIMEFRAMEWORKS)
       ;;
-   *linux*)
-      AC_MSG_CHECKING(pvcam linker flags)
-      PVCAMFRAMEWORKS="-lpvcam"
-      ;;
 esac
-# PVCAMFRAMEWORKS left only for PrincetonInstruments adapter that relies on very old PVCAM version
-AC_SUBST(PVCAMFRAMEWORKS)
 AC_SUBST(SPOTFRAMEWORKS)
 AC_SUBST(SERIALFRAMEWORKS)
 AC_SUBST(QUICKTIMEFRAMEWORKS)
