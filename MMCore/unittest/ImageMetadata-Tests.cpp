@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 
 #include "MMCore.h"
+#include "CameraImageMetadata.h"
 #include "ImageMetadata.h"
 #include "MMDeviceConstants.h"
 #include "MockDeviceUtils.h"
@@ -158,13 +159,13 @@ TEST_CASE("Unconditionally-added fields overwrite camera-provided values") {
    c.setCameraDevice("cam");
    c.initializeCircularBuffer();
 
-   Metadata camMd;
-   camMd.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, "WRONG");
-   camMd.PutImageTag(MM::g_Keyword_Metadata_Width, 9999);
-   camMd.PutImageTag(MM::g_Keyword_Metadata_Height, 9999);
-   camMd.PutImageTag(MM::g_Keyword_PixelType, "WRONG");
-   camMd.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, "999");
-   camMd.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, "wrong");
+   MM::CameraImageMetadata camMd;
+   camMd.AddTag(MM::g_Keyword_Metadata_CameraLabel, "WRONG");
+   camMd.AddTag(MM::g_Keyword_Metadata_Width, 9999);
+   camMd.AddTag(MM::g_Keyword_Metadata_Height, 9999);
+   camMd.AddTag(MM::g_Keyword_PixelType, "WRONG");
+   camMd.AddTag(MM::g_Keyword_Metadata_ImageNumber, "999");
+   camMd.AddTag(MM::g_Keyword_Metadata_TimeInCore, "wrong");
    cam.InsertTestImage(camMd);
 
    Metadata md;
@@ -190,8 +191,8 @@ TEST_CASE("ElapsedTime-ms preserved when camera provides it") {
    c.setCameraDevice("cam");
    c.initializeCircularBuffer();
 
-   Metadata camMd;
-   camMd.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, "42.0");
+   MM::CameraImageMetadata camMd;
+   camMd.AddTag(MM::g_Keyword_Elapsed_Time_ms, "42.0");
    cam.InsertTestImage(camMd);
 
    Metadata md;
