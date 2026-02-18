@@ -23,7 +23,6 @@
 #pragma once
 
 #include "DeviceBase.h"
-#include "EvidentHubWin.h"
 #include "EvidentModelWin.h"
 #include "EvidentProtocolWin.h"
 

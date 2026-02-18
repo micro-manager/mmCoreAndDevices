@@ -303,7 +303,7 @@ int EvidentObjectiveSetup::QueryObjectiveAtPosition(int position)
       {
          detectedObjectives_[idx].na = std::stod(params[2]);
       }
-      catch (...)
+      catch (const std::logic_error&)
       {
          detectedObjectives_[idx].na = 0.0;
       }
@@ -320,7 +320,7 @@ int EvidentObjectiveSetup::QueryObjectiveAtPosition(int position)
       {
          detectedObjectives_[idx].magnification = std::stod(params[3]);
       }
-      catch (...)
+      catch (const std::logic_error&)
       {
          detectedObjectives_[idx].magnification = 0.0;
       }
@@ -590,7 +590,7 @@ int EvidentObjectiveSetup::UpdateDatabaseDropdown(int position)
       {
          filterMag = std::stod(magStr);
       }
-      catch (...)
+      catch (const std::logic_error&)
       {
          filterMag = 0.0;
       }

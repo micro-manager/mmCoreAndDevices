@@ -1291,47 +1291,45 @@ MM::DeviceDetectionStatus EvidentHubWin::DetectDevice(void)
    MM::DeviceDetectionStatus result = MM::Misconfigured;
    char answerTO[MM::MaxStrLength];
    
-   try
+   std::string portLowerCase = port_;
+   for( std::string::iterator its = portLowerCase.begin(); its != portLowerCase.end(); ++its)
    {
-      std::string portLowerCase = port_;
-      for( std::string::iterator its = portLowerCase.begin(); its != portLowerCase.end(); ++its)
+      *its = (char)tolower(*its);
+   }
+   if( 0< portLowerCase.length() &&  0 != portLowerCase.compare("undefined")  && 0 != portLowerCase.compare("unknown") )
+   {
+      result = MM::CanNotCommunicate;
+      // record current port settings
+      int ret = GetCoreCallback()->GetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
+      if (ret != DEVICE_OK)
       {
-         *its = (char)tolower(*its);
+         LogMessage("Failed to get current AnswerTimeout", false);
+         return MM::CanNotCommunicate;
       }
-      if( 0< portLowerCase.length() &&  0 != portLowerCase.compare("undefined")  && 0 != portLowerCase.compare("unknown") )
-      {
-         result = MM::CanNotCommunicate;
-         // record current port settings
-         GetCoreCallback()->GetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
 
-         // device specific default communication parameters
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_BaudRate, "115200" );
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_StopBits, "1");
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_Parity, "Even");
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "Verbose", "0");
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", "5000.0");
-         GetCoreCallback()->SetDeviceProperty(port_.c_str(), "DelayBetweenCharsMs", "0");
-         MM::Device* pS = GetCoreCallback()->GetDevice(this, port_.c_str());
-         pS->Initialize();
-         std::string unit;
-         int ret = GetUnitDirect(unit);
-         if (ret != DEVICE_OK || unit != "IX5")
-         {
-            pS->Shutdown();
-            // always restore the AnswerTimeout to the default
-            GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
-            return result;
-         }
-         result = MM::CanCommunicate;
+      // device specific default communication parameters
+      GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_BaudRate, "115200" );
+      GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_StopBits, "1");
+      GetCoreCallback()->SetDeviceProperty(port_.c_str(), MM::g_Keyword_Parity, "Even");
+      GetCoreCallback()->SetDeviceProperty(port_.c_str(), "Verbose", "0");
+      GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", "5000.0");
+      GetCoreCallback()->SetDeviceProperty(port_.c_str(), "DelayBetweenCharsMs", "0");
+      MM::Device* pS = GetCoreCallback()->GetDevice(this, port_.c_str());
+      pS->Initialize();
+      std::string unit;
+      ret = GetUnitDirect(unit);
+      if (ret != DEVICE_OK || unit != "IX5")
+      {
          pS->Shutdown();
          // always restore the AnswerTimeout to the default
          GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
-
+         return result;
       }
-   }
-   catch(...)
-   {
-      LogMessage("Exception in DetectDevice!",false);
+      result = MM::CanCommunicate;
+      pS->Shutdown();
+      // always restore the AnswerTimeout to the default
+      GetCoreCallback()->SetDeviceProperty(port_.c_str(), "AnswerTimeout", answerTO);
+
    }
    return result;
 
