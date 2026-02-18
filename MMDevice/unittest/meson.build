@@ -12,6 +12,7 @@ catch2_with_main_dep = dependency(
 mmdevice_test_sources = files(
     'DeviceUtils-Tests.cpp',
     'FloatPropertyTruncation-Tests.cpp',
+    'Metadata-Tests.cpp',
     'MMTime-Tests.cpp',
     'RegisteredDeviceCollection-Tests.cpp',
     'XYStageStepsUm-Tests.cpp',

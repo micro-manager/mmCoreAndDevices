@@ -37,6 +37,7 @@ mmdevice_public_headers = files(
     'DeviceUtils.h',
     'ImageMetadata.h',
     'ImgBuffer.h',
+    'CameraImageMetadata.h',
     'MMDevice.h',
     'MMDeviceConstants.h',
     'ModuleInterface.h',

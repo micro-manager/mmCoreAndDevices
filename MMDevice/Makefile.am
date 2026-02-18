@@ -7,6 +7,7 @@ noinst_HEADERS = \
 	DeviceUtils.h \
 	ImageMetadata.h \
 	ImgBuffer.h \
+	CameraImageMetadata.h \
 	MMDevice.h \
 	MMDeviceConstants.h \
 	ModuleInterface.h \
