@@ -216,3 +216,20 @@ TEST_CASE("Custom device tag is transmitted") {
    CHECK(md.GetSingleTag("cam-MyCustomTag").GetValue() == "hello");
    CHECK(md.GetKeys().size() == 8);
 }
+
+TEST_CASE("RemoveTag removes a previously added device tag") {
+   StubCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.initializeCircularBuffer();
+
+   cam.AddTag("MyCustomTag", "cam", "hello");
+   cam.RemoveTag("cam-MyCustomTag");
+   cam.InsertTestImage();
+
+   Metadata md;
+   c.getLastImageMD(md);
+   CHECK(md.GetKeys().size() == 7);
+}
