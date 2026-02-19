@@ -79,7 +79,6 @@ public:
    int GetChannelName(unsigned channel, char* name);
 
    unsigned GetNumberOfComponents() const;
-   int GetComponentName(unsigned channel, char* name);
 
    unsigned GetImageWidth() const;
    unsigned GetImageHeight() const;

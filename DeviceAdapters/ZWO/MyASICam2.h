@@ -47,7 +47,7 @@ public:
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();
 	unsigned  GetNumberOfComponents() const { return iComponents;};
-	int GetComponentName(unsigned component, char* name);
+
 	// action interface
 	// ----------------
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);

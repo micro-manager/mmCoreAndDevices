@@ -97,7 +97,6 @@ public:
     
     //////////////////////////////////////////////////////////////////////////
     unsigned GetNumberOfComponents() const;
-    int GetComponentName(unsigned channel, char* name);
     const unsigned int* GetImageBufferAsRGB32();
     
 private:

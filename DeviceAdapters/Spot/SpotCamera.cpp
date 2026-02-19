@@ -761,36 +761,6 @@ unsigned int SpotCamera::GetNumberOfComponents() const
 }
 
 
-int SpotCamera::GetComponentName(unsigned channel, char* name)
-{
-	bool bColor = (pImplementation_->CanDoColor() && (1 == pImplementation_->BinSize()));
-  if (!bColor && (channel > 0))  return DEVICE_NONEXISTENT_CHANNEL;      
-  
-  switch (channel)
-  {
-  case 0:      
-    if (!bColor) 
-      CDeviceUtils::CopyLimitedString(name, "Grayscale");
-    else 
-      CDeviceUtils::CopyLimitedString(name, "B");
-    break;
-
-  case 1:
-    CDeviceUtils::CopyLimitedString(name, "G");
-    break;
-
-  case 2:
-    CDeviceUtils::CopyLimitedString(name, "R");
-    break;
-
-  default:
-    return DEVICE_NONEXISTENT_CHANNEL;
-    break;
-  }
-  return DEVICE_OK;
-}
- 
-
 /**
  * Returns image buffer X-size in pixels.
  * Required by the MM::Camera API.

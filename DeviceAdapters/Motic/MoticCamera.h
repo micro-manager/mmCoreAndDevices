@@ -98,34 +98,6 @@ public:
     return 4;
   }
 
-  int GetComponentName(unsigned channel, char* name)
-  {
-    if(m_iBytesPerPixel == 1 || m_iBytesPerPixel == 2)
-    {
-       CDeviceUtils::CopyLimitedString(name, "Grayscale");
-    }
-    else if(channel == 0)
-    {
-      CDeviceUtils::CopyLimitedString(name, "Blue");
-    }
-    else if(channel == 1)
-    {
-      CDeviceUtils::CopyLimitedString(name, "Green");
-    }
-    else if(channel == 2)
-    {
-      CDeviceUtils::CopyLimitedString(name, "Red");
-    }
-    else if(channel == 3)
-    {
-      CDeviceUtils::CopyLimitedString(name, "Alpha");
-    }
-    else
-    {
-      return DEVICE_NONEXISTENT_CHANNEL;
-    }
-    return DEVICE_OK; 
-  }
 //    unsigned GetNumberOfChannels() const 
 //    {
 //       return 3;

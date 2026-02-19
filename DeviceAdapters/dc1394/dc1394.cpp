@@ -1728,37 +1728,6 @@ unsigned int Cdc1394::GetNumberOfComponents() const
 }
 
 
-// EF: pretty much identical to SpotCamera.cpp
-int Cdc1394::GetComponentName(unsigned channel, char* name)
-{
-	bool bColor = IsColor();
-	if (!bColor && (channel > 0))  return DEVICE_NONEXISTENT_CHANNEL;      
-	
-	switch (channel)
-	{
-		case 0:      
-			if (!bColor) 
-				CDeviceUtils::CopyLimitedString(name, "Grayscale");
-			else 
-				CDeviceUtils::CopyLimitedString(name, "B");
-			break;
-			
-		case 1:
-			CDeviceUtils::CopyLimitedString(name, "G");
-			break;
-			
-		case 2:
-			CDeviceUtils::CopyLimitedString(name, "R");
-			break;
-			
-		default:
-			return DEVICE_NONEXISTENT_CHANNEL;
-			break;
-	}
-	return DEVICE_OK;
-}
-
-
 int Cdc1394::GetBytesPerPixel() const
 {
    if (depth_ <= 8 && integrateFrameNumber_ == 1) {

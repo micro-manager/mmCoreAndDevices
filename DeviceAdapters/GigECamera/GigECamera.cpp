@@ -696,21 +696,6 @@ unsigned int CGigECamera::GetNumberOfComponents() const
 	return color_ ? 4 : 1;
 }
 
- int CGigECamera::GetComponentName(unsigned comp, char* name)
- {
-	if ( comp > 4 )
-	{
-		name = "invalid comp";
-		return DEVICE_ERR;
-	}
-
-	std::string rgba ("RGBA");
-	CDeviceUtils::CopyLimitedString(name, &rgba.at(comp) );
-
-	return DEVICE_OK;
- }
-
-
 /**
 * Sets the camera Region Of Interest.
 * Required by the MM::Camera API.

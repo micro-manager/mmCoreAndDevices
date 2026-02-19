@@ -1415,12 +1415,11 @@ public:
       return 1; // Default to monochrome (ie not RGB)
    }
 
-   virtual int GetComponentName(unsigned channel, char* name)
+   // To be removed (never used by MMCore); devices should not override.
+   virtual int GetComponentName(unsigned channel, char* name) final
    {
-      if (channel > 0)
-         return DEVICE_NONEXISTENT_CHANNEL;
-
-      CDeviceUtils::CopyLimitedString(name, "Grayscale");
+      (void)channel;
+      CDeviceUtils::CopyLimitedString(name, "");
       return DEVICE_OK;
    }
 

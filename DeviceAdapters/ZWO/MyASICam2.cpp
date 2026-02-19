@@ -867,36 +867,7 @@ long CMyASICam::GetImageBufferSize() const
 {
 	return iROIWidth*iROIHeight*iPixBytes;
 }
- /**
-       * Returns the name for each component 
-       */
-int CMyASICam::GetComponentName(unsigned component, char* name)
-{
-	if(iComponents != 1)
-	{
-		switch (component)
-		{
-		case 1:
-			strcpy(name, "red");
-			break;
-		case 2:
-			strcpy(name, "green");
-			break;
-		case 3:
-			strcpy(name, "blue");
-			break;
-		case 4:
-			strcpy(name, "0");
-			break;
-		default:
-			strcpy(name, "error");
-			break;
-		}
-	}
-	else
-		strcpy(name, "grey");
-	return DEVICE_OK;
-}
+
 /**
 * Sets the camera Region Of Interest.
 * Required by the MM::Camera API.

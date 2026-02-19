@@ -44,7 +44,6 @@ public:
    const unsigned char* GetImageBuffer(unsigned channelNr);
    const unsigned int* GetImageBufferAsRGB32();
    unsigned GetNumberOfComponents() const;
-   std::string GetComponentName(unsigned component);
    int unsigned GetNumberOfChannels() const;
    std::string GetChannelName(unsigned channel);
    long GetImageBufferSize()const;

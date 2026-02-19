@@ -4130,14 +4130,6 @@ unsigned QICamera::GetNumberOfComponents() const
    //return 1;
 }
 
-int QICamera::GetComponentName(unsigned comp, char* name)
-{
-   char compName[MM::MaxStrLength];
-   snprintf(compName, MM::MaxStrLength, "component-%d", comp);
-   CDeviceUtils::CopyLimitedString(name, compName);
-   return DEVICE_OK;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // Private QICamera methods
 ///////////////////////////////////////////////////////////////////////////////

@@ -201,7 +201,6 @@ public:
     int RestartSequenceAcquisition();
     bool IsCapturing() { return m_sthd->IsRunning(); };
     unsigned GetNumberOfComponents() const;
-    int GetComponentName(unsigned comp, char* name);
 
     // action interface
     // ----------------

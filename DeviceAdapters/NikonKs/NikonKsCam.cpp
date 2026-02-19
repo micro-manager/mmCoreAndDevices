@@ -1109,21 +1109,6 @@ int NikonKsCam::SetBinning(int /* binF */)
     return DEVICE_OK;
 }
 
-int NikonKsCam::GetComponentName(unsigned comp, char* name)
-{
-    if (comp > 4)
-    {
-        name = "invalid comp";
-        return DEVICE_ERR;
-    }
-
-    std::string rgba("RGBA");
-    CDeviceUtils::CopyLimitedString(name, &rgba.at(comp));
-
-    return DEVICE_OK;
-}
-
-
 //Sequence functions, mostly copied from other drivers with slight modification
 /**
  * Required by the MM::Camera API
