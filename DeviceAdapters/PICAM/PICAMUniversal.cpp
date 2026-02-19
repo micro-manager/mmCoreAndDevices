@@ -2320,13 +2320,14 @@ int Universal::ThreadRun(void)
    }
 }
 
-/**
+/*
  * Micromanager calls the "live" acquisition a "sequence"
  *  don't get this confused with a PICAM sequence acquisition, it's actually circular buffer mode
  */
-int Universal::PrepareSequenceAcqusition()
+
+int Universal::PrepareSeqAcq() // Note: no longer a devcie interface function
 {
-   START_METHOD("Universal::PrepareSequenceAcqusition");
+   START_METHOD("Universal::PrepareSeqAcq");
 
    if (IsCapturing())
    {
@@ -2363,7 +2364,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
 {
    START_METHOD("Universal::StartSequenceAcquisition");
 
-   int ret = PrepareSequenceAcqusition();
+   int ret = PrepareSeqAcq();
    if (ret != DEVICE_OK)
       return ret;
 

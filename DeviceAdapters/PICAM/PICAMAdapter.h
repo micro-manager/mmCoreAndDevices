@@ -235,7 +235,6 @@ class Universal : public CLegacyCameraBase<Universal>
 #ifndef linux
       // micromanager calls the "live" acquisition a "sequence"
       //  don't get this confused with a PICAM sequence acquisition, it's actually circular buffer mode
-      int PrepareSequenceAcqusition();
       int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
       int StopSequenceAcquisition();
 #endif
@@ -288,6 +287,9 @@ class Universal : public CLegacyCameraBase<Universal>
       int PushImage(const unsigned char* pixBuffer, Metadata* pMd );
 
    private:
+#ifndef linux
+      int PrepareSeqAcq();
+#endif
 
       Universal(Universal&) {}
       int GetExposureValue(piflt& exposureValue);

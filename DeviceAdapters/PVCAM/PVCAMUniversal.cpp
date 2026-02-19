@@ -1990,9 +1990,9 @@ bool Universal::IsCapturing()
     return bCapturing;
 }
 
-int Universal::PrepareSequenceAcqusition()
+int Universal::PrepareSeqAcq() // Note: no longer a device interface function
 {
-    START_METHOD("Universal::PrepareSequenceAcqusition");
+    START_METHOD("Universal::PrepareSeqAcq");
 
     if (isAcquiring_)
         return ERR_BUSY_ACQUIRING;
@@ -2048,7 +2048,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     if (ret != DEVICE_OK)
         return ret;
 
-    ret = PrepareSequenceAcqusition();
+    ret = PrepareSeqAcq();
     if (ret != DEVICE_OK)
         return ret;
 
