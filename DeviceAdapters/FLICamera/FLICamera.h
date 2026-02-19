@@ -58,7 +58,6 @@ class CFLICamera : public CLegacyCameraBase<CFLICamera>
 		int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
 		int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
 		int ClearROI();
-		int PrepareSequenceAcqusition();
 		int GetBinning() const;
 		int SetBinning(int binSize);
 		int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}

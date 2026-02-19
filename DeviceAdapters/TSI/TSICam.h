@@ -109,7 +109,6 @@ public:
 
    // overrides the same in the base class
    int InsertImage();
-   int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StartSequenceAcquisition(double interval);
    int StopSequenceAcquisition(); 

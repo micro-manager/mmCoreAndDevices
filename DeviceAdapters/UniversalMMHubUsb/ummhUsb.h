@@ -430,7 +430,6 @@ public:
 	int ClearROI();
 
 	// sequence acquisition
-	int PrepareSequenceAcqusition() { return DEVICE_OK; }
 	int StartSequenceAcquisition(double interval);
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();

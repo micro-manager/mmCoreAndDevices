@@ -693,19 +693,6 @@ int AmScope::SetBinning(int binF)
    return SetProperty("Binning-Software", CDeviceUtils::ConvertToString(binF));
 }
 
-//int AmScope::PrepareSequenceAcqusition()
-//{
-//   if (IsCapturing())
-//      return DEVICE_CAMERA_BUSY_ACQUIRING;
-//
-//   int ret = GetCoreCallback()->PrepareForAcq(this);
-//   if (ret != DEVICE_OK)
-//      return ret;
-//
-//   return DEVICE_OK;
-//}
-
-
 /**
  * Required by the MM::Camera API
  * Please implement this yourself and do not rely on the base class implementation

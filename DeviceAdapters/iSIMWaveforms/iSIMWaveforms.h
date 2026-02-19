@@ -106,7 +106,6 @@ public:
 	int SetBinning(int binSize);
 
 	// Camera API - Sequence acquisition
-	int PrepareSequenceAcqusition();  // Note: MM API typo preserved
 	int StartSequenceAcquisition(double interval);
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();

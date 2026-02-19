@@ -1276,12 +1276,6 @@ int LumeneraCamera::StopSequenceAcquisition()
 	return DEVICE_OK;
 }
 
-int LumeneraCamera::PrepareSequenceAcqusition()
-{
-	// nothing to prepare
-	return DEVICE_OK;
-}
-
 
 //////////////////////////////////
 ///// Internal functions /////////

@@ -111,10 +111,6 @@ public:
    void ResizeSRRFImage(long radiality);
 
    // high-speed interface
-   int PrepareSequenceAcqusition()
-   { 
-      return DEVICE_OK; 
-   }
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    /**
    * Continuous sequence acquisition.  

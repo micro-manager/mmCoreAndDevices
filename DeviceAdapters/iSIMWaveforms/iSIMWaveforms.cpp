@@ -1802,15 +1802,6 @@ int iSIMWaveforms::SnapImage()
 	return ret;
 }
 
-int iSIMWaveforms::PrepareSequenceAcqusition()
-{
-	MM::Camera* camera = GetPhysicalCamera();
-	if (!camera)
-		return ERR_NO_PHYSICAL_CAMERA;
-
-	return camera->PrepareSequenceAcqusition();
-}
-
 int iSIMWaveforms::StartSequenceAcquisition(double interval)
 {
 	MM::Camera* camera = GetPhysicalCamera();

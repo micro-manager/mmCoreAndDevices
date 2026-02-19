@@ -635,12 +635,6 @@ int BitFlowCamera::StopSequenceAcquisition()
    return DEVICE_OK;
 }
 
-int BitFlowCamera::PrepareSequenceAcqusition()
-{
-   // nothing to prepare
-   return DEVICE_OK;
-}
-
 unsigned BitFlowCamera::GetNumberOfComponents() const
 {
      return 1;

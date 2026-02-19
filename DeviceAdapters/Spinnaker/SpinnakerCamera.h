@@ -43,7 +43,6 @@ public:
    int SetBinning(int binSize);
    int IsExposureSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; };
 
-   int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(double interval);
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();

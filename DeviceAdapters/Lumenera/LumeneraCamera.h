@@ -124,7 +124,6 @@ public:
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StartSequenceAcquisition(double interval_ms);
 	int StopSequenceAcquisition();
-	int PrepareSequenceAcqusition();
 	bool IsCapturing();
 
 

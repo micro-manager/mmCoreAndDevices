@@ -1074,12 +1074,6 @@ int AravisCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int AravisCamera::PrepareSequenceAcqusition()
-{
-   return DEVICE_OK;
-}
-
-
 int AravisCamera::SetBinning(int binSize)
 {
   GError *gerror = nullptr;

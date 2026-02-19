@@ -56,7 +56,6 @@ void camera_disconnect_callback(char* /* cameraSerialNumber */, void* /* context
 
 Tsi3Cam::Tsi3Cam() :
    initialized(0),
-   prepared(false),
    stopOnOverflow(false),
    triggerPolarity(TL_CAMERA_TRIGGER_POLARITY_ACTIVE_HIGH),
    operationMode(TL_CAMERA_OPERATION_MODE_SOFTWARE_TRIGGERED),
@@ -770,31 +769,16 @@ int Tsi3Cam::ClearROI()
    return ResizeImageBuffer();
 }
 
-int Tsi3Cam::PrepareSequenceAcqusition()
-{
-   if (IsCapturing())
-   {
-      return DEVICE_CAMERA_BUSY_ACQUIRING;
-   }
-
-   int ret = GetCoreCallback()->PrepareForAcq(this);
-   if (ret != DEVICE_OK) 
-   {
-      return ret;
-   }
-   prepared = true;
-   return DEVICE_OK;
-}
-
 int Tsi3Cam::StartSequenceAcquisition(long numImages, double /*interval_ms*/, bool stopOnOvl)
 {
    if (IsCapturing())
    {
       return DEVICE_CAMERA_BUSY_ACQUIRING;
    }
-   if (!prepared) 
+   int ret = GetCoreCallback()->PrepareForAcq(this);
+   if (ret != DEVICE_OK) 
    {
-      this->PrepareSequenceAcqusition();
+      return ret;
    }
 
    // the camera ignores interval, running at the rate dictated by the exposure
@@ -812,9 +796,10 @@ int Tsi3Cam::StartSequenceAcquisition(double /*interval_ms*/)
    {
       return DEVICE_CAMERA_BUSY_ACQUIRING;
    }
-   if (!prepared) 
+   int ret = GetCoreCallback()->PrepareForAcq(this);
+   if (ret != DEVICE_OK) 
    {
-      this->PrepareSequenceAcqusition();
+      return ret;
    }
 
    // the camera ignores interval, running at the rate dictated by the exposure
@@ -830,7 +815,6 @@ int Tsi3Cam::StopSequenceAcquisition()
 {
    StopCamera();
    GetCoreCallback()->AcqFinished(this, DEVICE_OK);
-   prepared = false;
    return DEVICE_OK;
 }
 

@@ -714,11 +714,6 @@ int CFLICamera::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return ret; 
 }
 
-int CFLICamera::PrepareSequenceAcqusition()
-{
-	return DEVICE_OK;
-}
-
 int CFLICamera::ResizeImageBuffer()
 {
 	int byteDepth = 2;

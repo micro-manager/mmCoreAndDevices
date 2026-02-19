@@ -1600,12 +1600,6 @@ int HikrobotCamera::StopSequenceAcquisition()
 	return DEVICE_OK;
 }
 
-int HikrobotCamera::PrepareSequenceAcqusition()
-{
-	// nothing to prepare
-	return DEVICE_OK;
-}
-
 void HikrobotCamera::ResizeSnapBuffer() {
 
 	long bytes = GetImageBufferSize();
