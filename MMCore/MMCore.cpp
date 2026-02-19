@@ -7596,6 +7596,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
    {
       os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreFocus << ',' << focus->GetLabel() << '\n';
    }
+   os << MM::g_CFGCommand_Property << ',' << MM::g_Keyword_CoreDevice << ',' << MM::g_Keyword_CoreAutoShutter << ',' << (getAutoShutter() ? '1' : '0') << endl;
 }
 
 /**
