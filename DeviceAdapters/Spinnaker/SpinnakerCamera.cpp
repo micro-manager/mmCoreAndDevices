@@ -1539,12 +1539,6 @@ int SpinnakerCamera::allocateImageBuffer(const std::size_t size, const SPKR::Pix
    return DEVICE_OK;
 }
 
-
-int SpinnakerCamera::PrepareSequenceAcqusition()
-{
-   return DEVICE_OK;
-}
-
 int SpinnakerCamera::StartSequenceAcquisition(double interval)
 {
    if (!m_aqThread->IsStopped())

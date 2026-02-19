@@ -2273,11 +2273,6 @@ int CPCOCam::ResizeImageBuffer()
   return DEVICE_OK;
 }
 
-int CPCOCam::PrepareSequenceAcqusition()
-{
-  return DEVICE_OK;
-}
-
 int CPCOCam::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
   int nErr = 0;

@@ -1287,16 +1287,6 @@ int POACamera::SendExposureSequence() const {
     return DEVICE_OK;
 }
 
-
-int POACamera::PrepareSequenceAcqusition()
-{
-    LOG("PrepareSequenceAcqusition")
-    if (IsCapturing())
-        return DEVICE_CAMERA_BUSY_ACQUIRING;
-
-    return DEVICE_OK;
-}
-
 /**
  * Required by the MM::Camera API
  * Please implement this yourself and do not rely on the base class implementation

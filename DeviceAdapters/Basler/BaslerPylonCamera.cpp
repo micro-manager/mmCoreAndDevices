@@ -1236,12 +1236,6 @@ int BaslerCamera::StopSequenceAcquisition()
 	return DEVICE_OK;
 }
 
-int BaslerCamera::PrepareSequenceAcqusition()
-{
-	// nothing to prepare
-	return DEVICE_OK;
-}
-
 void BaslerCamera::ResizeSnapBuffer() {
 
 	free(imgBuffer_);

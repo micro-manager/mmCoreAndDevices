@@ -62,7 +62,6 @@ public:
     virtual int GetProperty(const char* name, char* value) const;
     virtual int SetProperty(const char* name, const char* value);
 
-    int PrepareSequenceAcqusition() { return DEVICE_OK; }
     int StartSequenceAcquisition(double interval);
     int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
     int StopSequenceAcquisition();

@@ -1073,17 +1073,6 @@ int CMyASICam::SetBinning(int binF)
 	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));//就是onBinning(, afterSet)
 }
 
-int CMyASICam::PrepareSequenceAcqusition()
-{
-	if (IsCapturing())
-		return DEVICE_CAMERA_BUSY_ACQUIRING;
-	/*   int ret = GetCoreCallback()->PrepareForAcq(this);
-	if (ret != DEVICE_OK)
-	return ret;*/
-	return DEVICE_OK;
-}
-
-
 /**
 * Required by the MM::Camera API
 * Please implement this yourself and do not rely on the base class implementation
