@@ -78,6 +78,7 @@ mmcore_public_headers = files(
     'Configuration.h',
     'Error.h',
     'ErrorCodes.h',
+    'ImageMetadata.h',
     'Logging/GenericLogger.h',
     'Logging/Logger.h',
     'Logging/Metadata.h',

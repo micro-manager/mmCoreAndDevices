@@ -23,7 +23,6 @@
     <ClInclude Include="DeviceBase.h" />
     <ClInclude Include="DeviceThreads.h" />
     <ClInclude Include="DeviceUtils.h" />
-    <ClInclude Include="ImageMetadata.h" />
     <ClInclude Include="ImgBuffer.h" />
     <ClInclude Include="CameraImageMetadata.h" />
     <ClInclude Include="MMDevice.h" />
