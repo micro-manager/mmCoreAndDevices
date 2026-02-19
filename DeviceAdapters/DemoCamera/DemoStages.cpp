@@ -371,8 +371,8 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
    moveStartTime_ = currentTime;
    timeOutTimer_ = new MM::TimeoutMs(currentTime, moveDuration_ms_);
 
-   // Optionally, notify listeners of the starting position (as an acknowledgement)
-   int ret = OnXYStagePositionChanged(startPosX_um_, startPosY_um_);
+   // Notify listeners of the target position.
+   int ret = OnXYStagePositionChanged(targetPosX_um_, targetPosY_um_);
    if (ret != DEVICE_OK)
       return ret;
 

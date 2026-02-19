@@ -529,6 +529,14 @@ int CXYStage::GetPositionSteps(long& x, long& y)
 //	  return DEVICE_OK;
 //}
 
+int CXYStage::SetPositionUm(double x, double y)
+{
+   int ret = CXYStageBase<CXYStage>::SetPositionUm(x, y);
+   if (ret == DEVICE_OK)
+      OnXYStagePositionChanged(x, y);
+   return ret;
+}
+
 int CXYStage::SetPositionSteps(long x, long y)
 {
    std::ostringstream command;

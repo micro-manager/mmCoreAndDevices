@@ -69,6 +69,8 @@ public:
    int AddToXYStageSequence(double positionX, double positionY);
    int SendXYStageSequence();
 
+   int SetPositionUm(double x, double y);
+
    // leave default implementation which call corresponding "Steps" functions
    //    while accounting for mirroring and so forth
 //      int SetPositionUm(double x, double y);
