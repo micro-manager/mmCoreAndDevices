@@ -474,25 +474,6 @@ int CameraPulser::ClearROI()
    return DEVICE_OK;
 }
 
-int CameraPulser::PrepareSequenceAcqusition()
-{
-   if (nrCamerasInUse_ < 1)
-      return ERR_NO_PHYSICAL_CAMERA;
-
-   for (unsigned int i = 0; i < usedCameras_.size(); i++)
-   {
-      MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
-      if (camera != 0)
-      {
-         int ret = camera->PrepareSequenceAcqusition();
-         if (ret != DEVICE_OK)
-            return ret;
-      }
-   }
-
-   return DEVICE_OK;
-}
-
 int CameraPulser::StartSequenceAcquisition(double interval)
 {
    if (nrCamerasInUse_ < 1)
