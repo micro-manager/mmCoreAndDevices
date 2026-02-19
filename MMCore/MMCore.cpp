@@ -106,7 +106,7 @@ namespace mmi = mmcore::internal;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 12, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 11, MMCore_versionMinor = 13, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2925,9 +2925,11 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
 }
 
 /**
- * Prepare the camera for the sequence acquisition to save the time in the
- * StartSequenceAcqusition() call which is supposed to come next.
+ * Deprecated and only checks that the camera is not running a sequence acquisition.
+ *
+ * @deprecated
  */
+MMCORE_DEPRECATED
 void CMMCore::prepareSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> pCam =
@@ -2938,14 +2940,7 @@ void CMMCore::prepareSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(
       throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
                      MMERR_NotAllowedDuringSequenceAcquisition);
 
-   LOG_DEBUG(coreLogger_) << "Will prepare camera " << label <<
-      " for sequence acquisition";
-   int nRet = pCam->PrepareSequenceAcqusition();
-   if (nRet != DEVICE_OK)
-      throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
-
-   LOG_DEBUG(coreLogger_) << "Did prepare camera " << label <<
-      " for sequence acquisition";
+   LOG_DEBUG(coreLogger_) << "Prepare camera " << label << " for sequence acquisition (deprecated; no-op)";
 }
 
 

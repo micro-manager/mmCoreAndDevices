@@ -132,7 +132,6 @@ int CameraInstance::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
 int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); }
 int CameraInstance::StartSequenceAcquisition(double interval_ms) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(interval_ms); }
 int CameraInstance::StopSequenceAcquisition() { RequireInitialized(__func__); return GetImpl()->StopSequenceAcquisition(); }
-int CameraInstance::PrepareSequenceAcqusition() { RequireInitialized(__func__); return GetImpl()->PrepareSequenceAcqusition(); }
 bool CameraInstance::IsCapturing() { RequireInitialized(__func__); return GetImpl()->IsCapturing(); }
 
 std::string CameraInstance::GetTags()

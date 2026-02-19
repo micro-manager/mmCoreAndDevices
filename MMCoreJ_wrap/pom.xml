@@ -6,7 +6,7 @@
 
     <groupId>org.micro-manager.mmcorej</groupId>
     <artifactId>MMCoreJ</artifactId>
-    <version>11.12.0</version>
+    <version>11.13.0</version>
 
     <name>MMCore Java API</name>
     <description>Java bindings for MMCore, the device abstraction layer of Micro-Manager, the microscope control and acquisition platform.</description>

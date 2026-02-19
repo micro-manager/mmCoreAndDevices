@@ -72,7 +72,6 @@ public:
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StartSequenceAcquisition(double interval_ms);
    int StopSequenceAcquisition();
-   int PrepareSequenceAcqusition();
    bool IsCapturing();
    std::string GetTags();
    void AddTag(const char* key, const char* deviceLabel, const char* value);
