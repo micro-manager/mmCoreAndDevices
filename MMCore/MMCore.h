@@ -412,7 +412,7 @@ public:
          bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError);
    void startSequenceAcquisition(const char* cameraLabel, long numImages,
          double intervalMs, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError);
-   void prepareSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError);
+   MMCORE_DEPRECATED void prepareSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError);
    void startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGACY_THROW(CMMError);
    void stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError);
    void stopSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError);
