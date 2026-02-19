@@ -76,6 +76,7 @@ mmcore_include_dir = include_directories('.')
 
 mmcore_public_headers = files(
     'Configuration.h',
+    'CoreDeclHelpers.h',
     'Error.h',
     'ErrorCodes.h',
     'ImageMetadata.h',

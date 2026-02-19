@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "MMDeviceConstants.h"
+#include "CoreDeclHelpers.h"
 
 #include <cstddef>
 #include <cstdlib>
@@ -31,14 +31,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#ifdef SWIG
-#define MMDEVICE_LEGACY_THROW(ex) throw (ex)
-#define MMDEVICE_NOEXCEPT throw ()
-#else
-#define MMDEVICE_LEGACY_THROW(ex)
-#define MMDEVICE_NOEXCEPT noexcept
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // MetadataError
@@ -58,7 +50,7 @@ public:
       return message_;
    }
 
-   virtual const char* what() const MMDEVICE_NOEXCEPT { return message_.c_str(); }
+   virtual const char* what() const MMCORE_NOEXCEPT { return message_.c_str(); }
 
 private:
    std::string message_;
@@ -328,14 +320,14 @@ public:
          return false;
    }
 
-   MetadataSingleTag GetSingleTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
+   MetadataSingleTag GetSingleTag(const char* key) const MMCORE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataSingleTag* stag = tag->ToSingleTag();
       return *stag;
    }
 
-   MetadataArrayTag GetArrayTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
+   MetadataArrayTag GetArrayTag(const char* key) const MMCORE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataArrayTag* atag = tag->ToArrayTag();
@@ -386,7 +378,7 @@ public:
     * Deprecated name. Equivalent to PutImageTag.
     */
    template <class anytype>
-   MMDEVICE_DEPRECATED
+   MMCORE_DEPRECATED
    void put(std::string key, anytype value)
    {
       PutImageTag(key, value);

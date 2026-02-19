@@ -167,6 +167,9 @@
     <ClInclude Include="CoreCallback.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CoreDeclHelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="CoreFeatures.h">
       <Filter>Header Files</Filter>
     </ClInclude>

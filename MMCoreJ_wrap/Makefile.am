@@ -21,6 +21,7 @@ swig_sources = MMCoreJ.i \
 	../MMCore/CircularBuffer.h  \
 	../MMCore/ConfigGroup.h  \
 	../MMCore/Configuration.h \
+	../MMCore/CoreDeclHelpers.h \
 	../MMCore/CoreCallback.h \
 	../MMCore/CoreProperty.h \
 	../MMCore/CoreUtils.h \

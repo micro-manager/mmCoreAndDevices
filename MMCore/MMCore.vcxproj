@@ -123,6 +123,7 @@
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="CoreCallback.h" />
+    <ClInclude Include="CoreDeclHelpers.h" />
     <ClInclude Include="CoreFeatures.h" />
     <ClInclude Include="CoreProperty.h" />
     <ClInclude Include="CoreUtils.h" />
