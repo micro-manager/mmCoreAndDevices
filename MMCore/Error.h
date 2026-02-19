@@ -26,24 +26,11 @@
 
 #include "ErrorCodes.h"
 
+#include "CoreDeclHelpers.h"
+
 #include <exception>
 #include <memory>
 #include <string>
-
-
-// At the moment we rely on C++ dynamic exception specifiers (deprecated in
-// C++11, removed in C++17) to tell SWIG-Java which exceptions may be thrown by
-// API functions. But to avoid warnings and errors from the C++ compiler, we
-// hide them behind a macro.
-// Also hide 'noexcept' from SWIG 3.x, which doesn't support that keyword.
-#ifdef SWIG
-#define MMCORE_LEGACY_THROW(ex) throw (ex)
-#define MMCORE_NOEXCEPT throw ()
-#else
-#define MMCORE_LEGACY_THROW(ex)
-#define MMCORE_NOEXCEPT noexcept
-#endif
-
 
 /// Core error class. Exceptions thrown by the Core public API are of this type.
 /**

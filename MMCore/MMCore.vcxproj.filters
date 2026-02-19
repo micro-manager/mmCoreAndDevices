@@ -167,6 +167,9 @@
     <ClInclude Include="CoreCallback.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CoreDeclHelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="CoreFeatures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -180,6 +183,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FrameBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageMetadata.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MMCore.h">

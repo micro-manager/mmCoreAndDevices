@@ -923,6 +923,7 @@ namespace std {
 
 }
 
+%import "CoreDeclHelpers.h"
 
 %include "MMDeviceConstants.h"
 %include "Error.h"

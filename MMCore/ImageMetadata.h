@@ -22,22 +22,15 @@
 
 #pragma once
 
-#include "MMDeviceConstants.h"
+#include "CoreDeclHelpers.h"
 
-#include <string>
-#include <vector>
+#include <cstddef>
+#include <cstdlib>
+#include <exception>
 #include <map>
 #include <sstream>
-#include <stdio.h>
-#include <stdlib.h>
-
-#ifdef SWIG
-#define MMDEVICE_LEGACY_THROW(ex) throw (ex)
-#define MMDEVICE_NOEXCEPT throw ()
-#else
-#define MMDEVICE_LEGACY_THROW(ex)
-#define MMDEVICE_NOEXCEPT noexcept
-#endif
+#include <string>
+#include <vector>
 
 ///////////////////////////////////////////////////////////////////////////////
 // MetadataError
@@ -57,7 +50,7 @@ public:
       return message_;
    }
 
-   virtual const char* what() const MMDEVICE_NOEXCEPT { return message_.c_str(); }
+   virtual const char* what() const MMCORE_NOEXCEPT { return message_.c_str(); }
 
 private:
    std::string message_;
@@ -195,7 +188,7 @@ public:
    {
       SetName(ReadLine(is).c_str());
       SetDevice(ReadLine(is).c_str());
-      SetReadOnly(atoi(ReadLine(is).c_str()) != 0);
+      SetReadOnly(std::atoi(ReadLine(is).c_str()) != 0);
 
       value_ = ReadLine(is);
 
@@ -217,20 +210,20 @@ public:
    virtual const MetadataArrayTag* ToArrayTag() const { return this; }
 
    void AddValue(const char* val) {values_.push_back(val);}
-   void SetValue(const char* val, size_t idx)
+   void SetValue(const char* val, std::size_t idx)
    {
       if (values_.size() < idx+1)
          values_.resize(idx+1);
       values_[idx] = val;
    }
 
-   const std::string& GetValue(size_t idx) const {
+   const std::string& GetValue(std::size_t idx) const {
       if (idx >= values_.size())
          throw MetadataIndexError();
       return values_[idx];
    }
 
-   size_t GetSize() const {return values_.size();}
+   std::size_t GetSize() const {return values_.size();}
 
    MetadataTag* Clone()
    {
@@ -249,7 +242,7 @@ public:
       os << values_.size();
       str.append(os.str()).append("\n");
 
-      for (size_t i = 0; i < values_.size(); i++)
+      for (std::size_t i = 0; i < values_.size(); i++)
          str.append(values_[i]).append("\n");
 
       return str;
@@ -267,11 +260,11 @@ public:
       SetDevice(ReadLine(is).c_str());
       SetReadOnly(atoi(ReadLine(is).c_str()) != 0);
 
-      size_t size = atol(ReadLine(is).c_str());
+      std::size_t size = std::atol(ReadLine(is).c_str());
 
       values_.resize(size);
 
-      for (size_t i = 0; i < size; i++)
+      for (std::size_t i = 0; i < size; i++)
          values_[i] = ReadLine(is);
 
       return true;
@@ -327,14 +320,14 @@ public:
          return false;
    }
 
-   MetadataSingleTag GetSingleTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
+   MetadataSingleTag GetSingleTag(const char* key) const MMCORE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataSingleTag* stag = tag->ToSingleTag();
       return *stag;
    }
 
-   MetadataArrayTag GetArrayTag(const char* key) const MMDEVICE_LEGACY_THROW(MetadataKeyError)
+   MetadataArrayTag GetArrayTag(const char* key) const MMCORE_LEGACY_THROW(MetadataKeyError)
    {
       MetadataTag* tag = FindTag(key);
       const MetadataArrayTag* atag = tag->ToArrayTag();
@@ -385,7 +378,7 @@ public:
     * Deprecated name. Equivalent to PutImageTag.
     */
    template <class anytype>
-   MMDEVICE_DEPRECATED
+   MMCORE_DEPRECATED
    void put(std::string key, anytype value)
    {
       PutImageTag(key, value);
@@ -448,9 +441,9 @@ public:
 
       std::istringstream is(stream);
 
-      const size_t sz = atol(readLine(is).c_str());
+      const std::size_t sz = std::atol(readLine(is).c_str());
 
-      for (size_t i=0; i<sz; i++)
+      for (std::size_t i=0; i<sz; i++)
       {
          const std::string id(readLine(is));
 

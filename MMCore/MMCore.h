@@ -45,6 +45,7 @@
  * file (MMCore.cpp).
  */
 
+#include "CoreDeclHelpers.h"
 #include "Configuration.h"
 #include "Error.h"
 #include "ErrorCodes.h"
@@ -61,20 +62,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-
-#if !defined(SWIGJAVA) && !defined(SWIGPYTHON)
-#   ifdef _MSC_VER
-#      define MMCORE_DEPRECATED(prototype) __declspec(deprecated) prototype
-#   elif defined(__GNUC__)
-#      define MMCORE_DEPRECATED(prototype) prototype __attribute__((deprecated))
-#   else
-#      define MMCORE_DEPRECATED(prototype) prototype
-#   endif
-#else
-#   define MMCORE_DEPRECATED(prototype) prototype
-#endif
-
 
 class MMEventCallback;
 class Metadata;

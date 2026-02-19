@@ -1,235 +1,214 @@
 #include <catch2/catch_all.hpp>
 
-#include "MMCore.h"
-#include "CameraImageMetadata.h"
 #include "ImageMetadata.h"
-#include "MMDeviceConstants.h"
-#include "MockDeviceUtils.h"
-#include "StubDevices.h"
+#include "CameraImageMetadata.h"
 
 #include <string>
 
-TEST_CASE("All core metadata fields present for GRAY8 image") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+// --- Metadata serialization via PutImageTag() ---
 
-   cam.InsertTestImage();
-
+TEST_CASE("Metadata serialize via PutImageTag empty", "[Metadata]") {
    Metadata md;
-   c.getLastImageMD(md);
-
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue() == "cam");
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
-         "0");
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue() == "512");
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue() == "512");
-   CHECK(md.GetSingleTag(MM::g_Keyword_PixelType).GetValue() ==
-         MM::g_Keyword_PixelType_GRAY8);
-
-   auto elapsed =
-       md.GetSingleTag(MM::g_Keyword_Elapsed_Time_ms).GetValue();
-   CHECK(std::stod(elapsed) >= 0.0);
-
-   auto timeInCore =
-       md.GetSingleTag(MM::g_Keyword_Metadata_TimeInCore).GetValue();
-   CHECK(!timeInCore.empty());
-
-   CHECK(md.GetKeys().size() == 7);
+   CHECK(md.Serialize() == "0\n");
 }
 
-TEST_CASE("PixelType metadata for all pixel formats") {
-   StubCamera cam;
-   unsigned bytesPerPixel;
-   unsigned nComponents;
-   const char* expectedPixelType;
+TEST_CASE("Metadata serialize via PutImageTag single string tag",
+          "[Metadata]") {
+   Metadata md;
+   md.PutImageTag("Exposure", "10.0");
+   CHECK(md.Serialize() == "1\ns\nExposure\n_\n1\n10.0\n");
+}
 
-   SECTION("GRAY8") {
-      bytesPerPixel = 1;
-      nComponents = 1;
-      expectedPixelType = MM::g_Keyword_PixelType_GRAY8;
+TEST_CASE("Metadata serialize via PutImageTag three tags", "[Metadata]") {
+   Metadata md;
+   md.PutImageTag("Exposure", "10.0");
+   md.PutImageTag("Binning", 2);
+   md.PutImageTag("X", 1.5);
+   CHECK(md.Serialize() ==
+       "3\n"
+       "s\nBinning\n_\n1\n2\n"
+       "s\nExposure\n_\n1\n10.0\n"
+       "s\nX\n_\n1\n1.5\n");
+}
+
+// --- CameraImageMetadata to Metadata restore ---
+
+TEST_CASE("CameraImageMetadata to Metadata restore empty", "[Metadata]") {
+   MM::CameraImageMetadata m;
+   Metadata md;
+   REQUIRE(md.Restore(m.Serialize()));
+   CHECK(md.GetKeys().empty());
+}
+
+TEST_CASE("CameraImageMetadata to Metadata restore single string tag",
+          "[Metadata]") {
+   MM::CameraImageMetadata m;
+   m.AddTag("Exposure", "10.0");
+   Metadata md;
+   REQUIRE(md.Restore(m.Serialize()));
+   CHECK(md.GetKeys().size() == 1);
+   CHECK(md.HasTag("Exposure"));
+   auto tag = md.GetSingleTag("Exposure");
+   CHECK(tag.GetName() == "Exposure");
+   CHECK(tag.GetDevice() == "_");
+   CHECK(tag.GetValue() == "10.0");
+}
+
+TEST_CASE("CameraImageMetadata to Metadata restore single int tag",
+          "[Metadata]") {
+   MM::CameraImageMetadata m;
+   m.AddTag("Binning", 2);
+   Metadata md;
+   REQUIRE(md.Restore(m.Serialize()));
+   CHECK(md.GetKeys().size() == 1);
+   CHECK(md.HasTag("Binning"));
+   auto tag = md.GetSingleTag("Binning");
+   CHECK(tag.GetName() == "Binning");
+   CHECK(tag.GetDevice() == "_");
+   CHECK(tag.GetValue() == "2");
+}
+
+TEST_CASE("CameraImageMetadata to Metadata restore single double tag",
+          "[Metadata]") {
+   MM::CameraImageMetadata m;
+   m.AddTag("X", 1.5);
+   Metadata md;
+   REQUIRE(md.Restore(m.Serialize()));
+   CHECK(md.GetKeys().size() == 1);
+   CHECK(md.HasTag("X"));
+   auto tag = md.GetSingleTag("X");
+   CHECK(tag.GetName() == "X");
+   CHECK(tag.GetDevice() == "_");
+   CHECK(tag.GetValue() == "1.5");
+}
+
+TEST_CASE("CameraImageMetadata to Metadata restore three tags",
+          "[Metadata]") {
+   MM::CameraImageMetadata m;
+   m.AddTag("Exposure", "10.0");
+   m.AddTag("Binning", 2);
+   m.AddTag("X", 1.5);
+   Metadata md;
+   REQUIRE(md.Restore(m.Serialize()));
+   CHECK(md.GetKeys().size() == 3);
+
+   CHECK(md.HasTag("Binning"));
+   auto tag1 = md.GetSingleTag("Binning");
+   CHECK(tag1.GetName() == "Binning");
+   CHECK(tag1.GetDevice() == "_");
+   CHECK(tag1.GetValue() == "2");
+
+   CHECK(md.HasTag("Exposure"));
+   auto tag2 = md.GetSingleTag("Exposure");
+   CHECK(tag2.GetName() == "Exposure");
+   CHECK(tag2.GetDevice() == "_");
+   CHECK(tag2.GetValue() == "10.0");
+
+   CHECK(md.HasTag("X"));
+   auto tag3 = md.GetSingleTag("X");
+   CHECK(tag3.GetName() == "X");
+   CHECK(tag3.GetDevice() == "_");
+   CHECK(tag3.GetValue() == "1.5");
+}
+
+// --- Metadata PutImageTag() and CameraImageMetadata equivalence ---
+
+// These tests show that CameraImageMetadata produces equivalent results to
+// Metadata::PutImageTag(), by restoring both into Metadata and comparing tag
+// values.
+
+TEST_CASE("CameraImageMetadata and PutImageTag produce same tags, empty",
+          "[Metadata]")
+{
+   MM::CameraImageMetadata m;
+   Metadata legacyMd;
+
+   Metadata fromNew;
+   REQUIRE(fromNew.Restore(m.Serialize()));
+   Metadata fromLegacy;
+   REQUIRE(fromLegacy.Restore(legacyMd.Serialize().c_str()));
+
+   CHECK(fromNew.GetKeys() == fromLegacy.GetKeys());
+}
+
+TEST_CASE("CameraImageMetadata and PutImageTag produce same tags, string",
+          "[Metadata]")
+{
+   MM::CameraImageMetadata m;
+   m.AddTag("Exposure", "10.0");
+
+   Metadata legacyMd;
+   legacyMd.PutImageTag("Exposure", "10.0");
+
+   Metadata fromNew;
+   REQUIRE(fromNew.Restore(m.Serialize()));
+   Metadata fromLegacy;
+   REQUIRE(fromLegacy.Restore(legacyMd.Serialize().c_str()));
+
+   CHECK(fromNew.GetKeys() == fromLegacy.GetKeys());
+   CHECK(fromNew.GetSingleTag("Exposure").GetValue() ==
+         fromLegacy.GetSingleTag("Exposure").GetValue());
+}
+
+TEST_CASE("CameraImageMetadata and PutImageTag produce same tags, int",
+          "[Metadata]")
+{
+   MM::CameraImageMetadata m;
+   m.AddTag("Binning", 2);
+
+   Metadata legacyMd;
+   legacyMd.PutImageTag("Binning", 2);
+
+   Metadata fromNew;
+   REQUIRE(fromNew.Restore(m.Serialize()));
+   Metadata fromLegacy;
+   REQUIRE(fromLegacy.Restore(legacyMd.Serialize().c_str()));
+
+   CHECK(fromNew.GetKeys() == fromLegacy.GetKeys());
+   CHECK(fromNew.GetSingleTag("Binning").GetValue() ==
+         fromLegacy.GetSingleTag("Binning").GetValue());
+}
+
+TEST_CASE("CameraImageMetadata and PutImageTag produce same tags, double",
+          "[Metadata]")
+{
+   MM::CameraImageMetadata m;
+   m.AddTag("X", 1.5);
+
+   Metadata legacyMd;
+   legacyMd.PutImageTag("X", 1.5);
+
+   Metadata fromNew;
+   REQUIRE(fromNew.Restore(m.Serialize()));
+   Metadata fromLegacy;
+   REQUIRE(fromLegacy.Restore(legacyMd.Serialize().c_str()));
+
+   CHECK(fromNew.GetKeys() == fromLegacy.GetKeys());
+   CHECK(fromNew.GetSingleTag("X").GetValue() ==
+         fromLegacy.GetSingleTag("X").GetValue());
+}
+
+TEST_CASE("CameraImageMetadata and PutImageTag produce same tags, three tags",
+          "[Metadata]")
+{
+   MM::CameraImageMetadata m;
+   m.AddTag("Exposure", "10.0");
+   m.AddTag("Binning", 2);
+   m.AddTag("X", 1.5);
+
+   Metadata legacyMd;
+   legacyMd.PutImageTag("Exposure", "10.0");
+   legacyMd.PutImageTag("Binning", 2);
+   legacyMd.PutImageTag("X", 1.5);
+
+   Metadata fromNew;
+   REQUIRE(fromNew.Restore(m.Serialize()));
+   Metadata fromLegacy;
+   REQUIRE(fromLegacy.Restore(legacyMd.Serialize().c_str()));
+
+   CHECK(fromNew.GetKeys() == fromLegacy.GetKeys());
+   for (const auto& key : fromNew.GetKeys()) {
+      CHECK(fromNew.GetSingleTag(key.c_str()).GetValue() ==
+            fromLegacy.GetSingleTag(key.c_str()).GetValue());
    }
-   SECTION("GRAY16") {
-      bytesPerPixel = 2;
-      nComponents = 1;
-      expectedPixelType = MM::g_Keyword_PixelType_GRAY16;
-   }
-   SECTION("GRAY32") {
-      bytesPerPixel = 4;
-      nComponents = 1;
-      expectedPixelType = MM::g_Keyword_PixelType_GRAY32;
-   }
-   SECTION("RGB32") {
-      bytesPerPixel = 4;
-      nComponents = 4;
-      expectedPixelType = MM::g_Keyword_PixelType_RGB32;
-   }
-   SECTION("RGB64") {
-      bytesPerPixel = 8;
-      nComponents = 4;
-      expectedPixelType = MM::g_Keyword_PixelType_RGB64;
-   }
-   SECTION("Unknown") {
-      bytesPerPixel = 3;
-      nComponents = 1;
-      expectedPixelType = MM::g_Keyword_PixelType_Unknown;
-   }
-
-   cam.bytesPerPixel = bytesPerPixel;
-   cam.nComponents = nComponents;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   cam.InsertTestImage();
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetSingleTag(MM::g_Keyword_PixelType).GetValue() ==
-         expectedPixelType);
-}
-
-TEST_CASE("Camera label matches device label") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"myCam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("myCam");
-   c.initializeCircularBuffer();
-
-   cam.InsertTestImage();
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue() == "myCam");
-}
-
-TEST_CASE("Width and Height reflect camera dimensions") {
-   StubCamera cam;
-   cam.width = 256;
-   cam.height = 128;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   cam.InsertTestImage();
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue() == "256");
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue() == "128");
-}
-
-TEST_CASE("ImageNumber increments across inserted images") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   cam.InsertTestImage();
-   cam.InsertTestImage();
-   cam.InsertTestImage();
-
-   Metadata md;
-   c.popNextImageMD(md);
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
-         "0");
-   c.popNextImageMD(md);
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
-         "1");
-   c.popNextImageMD(md);
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
-         "2");
-}
-
-TEST_CASE("Unconditionally-added fields overwrite camera-provided values") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   MM::CameraImageMetadata camMd;
-   camMd.AddTag(MM::g_Keyword_Metadata_CameraLabel, "WRONG");
-   camMd.AddTag(MM::g_Keyword_Metadata_Width, 9999);
-   camMd.AddTag(MM::g_Keyword_Metadata_Height, 9999);
-   camMd.AddTag(MM::g_Keyword_PixelType, "WRONG");
-   camMd.AddTag(MM::g_Keyword_Metadata_ImageNumber, "999");
-   camMd.AddTag(MM::g_Keyword_Metadata_TimeInCore, "wrong");
-   cam.InsertTestImage(camMd);
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue() ==
-         "cam");
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue() == "512");
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue() == "512");
-   CHECK(md.GetSingleTag(MM::g_Keyword_PixelType).GetValue() ==
-         MM::g_Keyword_PixelType_GRAY8);
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
-         "0");
-   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_TimeInCore).GetValue() !=
-         "wrong");
-   CHECK(md.GetKeys().size() == 7);
-}
-
-TEST_CASE("ElapsedTime-ms preserved when camera provides it") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   MM::CameraImageMetadata camMd;
-   camMd.AddTag(MM::g_Keyword_Elapsed_Time_ms, "42.0");
-   cam.InsertTestImage(camMd);
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetSingleTag(MM::g_Keyword_Elapsed_Time_ms).GetValue() == "42.0");
-}
-
-TEST_CASE("Custom device tag is transmitted") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   cam.AddTag("MyCustomTag", "cam", "hello");
-   cam.InsertTestImage();
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetSingleTag("cam-MyCustomTag").GetValue() == "hello");
-   CHECK(md.GetKeys().size() == 8);
-}
-
-TEST_CASE("RemoveTag removes a previously added device tag") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   cam.AddTag("MyCustomTag", "cam", "hello");
-   cam.RemoveTag("cam-MyCustomTag");
-   cam.InsertTestImage();
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetKeys().size() == 7);
 }

@@ -21,15 +21,16 @@ swig_sources = MMCoreJ.i \
 	../MMCore/CircularBuffer.h  \
 	../MMCore/ConfigGroup.h  \
 	../MMCore/Configuration.h \
+	../MMCore/CoreDeclHelpers.h \
 	../MMCore/CoreCallback.h \
 	../MMCore/CoreProperty.h \
 	../MMCore/CoreUtils.h \
 	../MMCore/Error.h \
 	../MMCore/ErrorCodes.h \
+	../MMCore/ImageMetadata.h \
 	../MMCore/MMCore.h  \
 	../MMCore/MMEventCallback.h \
 	../MMCore/PluginManager.h \
-	../MMDevice/ImageMetadata.h \
 	../MMDevice/MMDevice.h \
 	../MMDevice/MMDeviceConstants.h
 
