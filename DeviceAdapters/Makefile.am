@@ -134,6 +134,7 @@ SUBDIRS = \
 	DTOpenLayer \
 	DemoCamera \
 	Diskovery \
+	EvidentIX85 \
 	FocalPoint \
 	FreeSerialPort \
 	HamiltonMVP \
