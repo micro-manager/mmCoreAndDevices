@@ -4652,7 +4652,7 @@ void CMMCore::setBinning(const char* label, long binning) MMCORE_LEGACY_THROW(CM
          {
             testValue = pCamera->GetPropertyValueAt(MM::g_Keyword_Binning, 0);
          } 
-         catch (CMMError) {
+         catch (const CMMError&) {
             testValue = pCamera->GetProperty(MM::g_Keyword_Binning);
          }
          size_t xPos = binningValue.find('x');
