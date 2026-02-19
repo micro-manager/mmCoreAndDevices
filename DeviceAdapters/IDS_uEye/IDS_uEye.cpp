@@ -39,6 +39,7 @@
 #include <iostream>
 #include <algorithm>
 
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 #include "IDS_uEye.h"
@@ -1299,12 +1300,12 @@ int CIDS_uEye::InsertImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
    // Add a timestamp
    char tStamp[128], tStampRaw[64];
@@ -1322,15 +1323,15 @@ int CIDS_uEye::InsertImage()
 	   imgInfo_.dwIoStatus,
 	   imgInfo_.dwHostProcessTime );
 
-   md.PutImageTag("uEye-Timestamp", tStamp);
-   md.PutImageTag("uEye-rawStamp", tStampRaw);
+   md.AddTag("uEye-Timestamp", tStamp);
+   md.AddTag("uEye-rawStamp", tStampRaw);
 
 
    imageCounter_++;
 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
-   md.PutImageTag(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
 
    MMThreadGuard g(imgPixelsLock_);
 
@@ -1339,7 +1340,7 @@ int CIDS_uEye::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /*

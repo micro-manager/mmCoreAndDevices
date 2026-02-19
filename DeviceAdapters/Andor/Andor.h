@@ -39,6 +39,7 @@
 #ifndef _ANDOR_H_
 #define _ANDOR_H_
 
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 #include "MMDevice.h"
 #include "ImgBuffer.h"
@@ -429,8 +430,8 @@ private:
    unsigned int createShutterProperty(AndorCapabilities * caps);
    unsigned int AddTriggerProperty(int mode);
    void SetDefaultVSSForUltra888WithValidSRRF();
-   void AddMetadataInfo(Metadata & md);
-   void AddSRRFMetadataInfo(Metadata & md);
+   void AddMetadataInfo(MM::CameraImageMetadata & md);
+   void AddSRRFMetadataInfo(MM::CameraImageMetadata & md);
    int SnapImageNormal();
    int SnapImageSRRF();
    bool IsSRRFEnabled() const;

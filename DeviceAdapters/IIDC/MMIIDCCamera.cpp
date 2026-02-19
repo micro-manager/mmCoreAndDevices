@@ -34,6 +34,7 @@
 #include "IIDCVideoMode.h"
 #include "IIDCVendorAVT.h"
 
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 #include "ModuleInterface.h"
 
@@ -2072,11 +2073,11 @@ MMIIDCCamera::ProcessedSequenceCallback(const void* pixels,
       size_t width, size_t height, size_t bytesPerPixel,
       uint32_t timestampUs )
 {
-   Metadata md;
+   MM::CameraImageMetadata md;
 
    char label[MM::MaxStrLength];
    GetLabel(label);
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
 #ifndef _WIN32
    // The Windows CMU backend does not provide a valid timestamp (the field
@@ -2085,11 +2086,9 @@ MMIIDCCamera::ProcessedSequenceCallback(const void* pixels,
    // pretty accurate.
    double timestampMs = ComputeRelativeTimestampMs(timestampUs);
 
-   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms,
          CDeviceUtils::ConvertToString(timestampMs));
 #endif
-
-   std::string serializedMD(md.Serialize());
 
    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(pixels);
 
@@ -2100,7 +2099,7 @@ MMIIDCCamera::ProcessedSequenceCallback(const void* pixels,
 
    int err;
    err = GetCoreCallback()->InsertImage(this, bytes, uWidth, uHeight, uBytesPerPixel,
-         serializedMD.c_str());
+         md.Serialize());
    if (err != DEVICE_OK)
       BOOST_THROW_EXCEPTION(Error("Unknown error (" +
                boost::lexical_cast<std::string>(err) +

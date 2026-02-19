@@ -57,6 +57,7 @@ The files VC100*.* shall be reachable from the path specifier.
   #include <Shlobj.h>
 #endif
 
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "TIScamera.h"
 #include <string>
@@ -2148,15 +2149,15 @@ int CTIScamera::PushImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.PutImageTag(MM::g_Keyword_Binning, binSize_);
-   md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Binning, binSize_);
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
-   md.PutImageTag(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
 
 //   MMThreadGuard g(imgPixelsLock_);
 
@@ -2170,7 +2171,7 @@ int CTIScamera::PushImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 

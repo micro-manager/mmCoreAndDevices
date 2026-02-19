@@ -41,7 +41,6 @@
 
 #include "MMDeviceConstants.h"
 #include "DeviceUtils.h"
-#include "ImageMetadata.h"
 #include "DeviceThreads.h"
 
 #include <climits>

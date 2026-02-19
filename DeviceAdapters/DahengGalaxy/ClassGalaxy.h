@@ -20,7 +20,6 @@
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include "DeviceUtils.h"
-#include "ImageMetadata.h"
 #include "ImgBuffer.h"
 #include "ModuleInterface.h"
 

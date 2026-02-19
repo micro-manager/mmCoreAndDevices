@@ -9,7 +9,9 @@
 
 #include <PixeLINKAPI.h>
 #include "Pixelink.h"
-#include "../../MMDevice/ModuleInterface.h"
+
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
 
 
 /*
@@ -903,12 +905,12 @@ int Pixelink::InsertImage()
 
 	
 
-	Metadata md;
+	MM::CameraImageMetadata md;
 	//md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
-	md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-	md.PutImageTag("FrameCounter", frameCounter);
+	md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+	md.AddTag("FrameCounter", frameCounter);
 
-	return GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize().c_str(), false);
+	return GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize(), false);
 }
 
 

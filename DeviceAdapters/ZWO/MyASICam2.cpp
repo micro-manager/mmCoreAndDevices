@@ -1,6 +1,6 @@
 #include "MyASICam2.h"
 
-
+#include "CameraImageMetadata.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // FILE:          CMyASICam.cpp
@@ -1146,18 +1146,18 @@ int CMyASICam::InsertImage()
 	this->GetLabel(label);
 
 	// Important:  metadata about the image are generated here:
-	Metadata md;
-	md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+	MM::CameraImageMetadata md;
+	md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);
-	md.PutImageTag(MM::g_Keyword_Binning, buf);
+	md.AddTag(MM::g_Keyword_Binning, buf);
 
 	//   MMThreadGuard g(imgPixelsLock_);
 
 	const unsigned char* pI;
 	pI = GetImageBuffer();
-	return GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize().c_str());
+	return GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize());
 }
 
 

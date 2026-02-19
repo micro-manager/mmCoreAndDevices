@@ -33,6 +33,7 @@
 
 
 // MMDevice
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include "DeviceUtils.h"
@@ -649,7 +650,7 @@ protected:
     /*
     * Pushes a final image with its metadata to the MMCore
     */
-    int PushImageToMmCore(const unsigned char* pixBuffer, Metadata* pMd);
+    int PushImageToMmCore(const unsigned char* pixBuffer, MM::CameraImageMetadata* pMd);
     /**
     * Called from the Notification Thread. Prepares the frame for insertion to the MMCore.
     */

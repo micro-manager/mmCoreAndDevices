@@ -24,10 +24,13 @@
 //#define MMLINUX32
 
 #include "RaptorEPIX.h"
+
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
+
 #include <cstdio> 
 #include <string>
 #include <math.h>
-#include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm>
 
@@ -5869,16 +5872,16 @@ int CRaptorEPIX::InsertImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
+   MM::CameraImageMetadata md;
 
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   //md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
-   md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   //md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(fieldCount_));
-   md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
-   //md.PutImageTag("FieldCount", CDeviceUtils::ConvertToString( (long) fieldCount_)); 
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   //md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
+   md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   //md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(fieldCount_));
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   //md.AddTag("FieldCount", CDeviceUtils::ConvertToString( (long) fieldCount_)); 
 
 	std::string prefix =
 #ifdef HORIBA_COMPILE
@@ -5887,33 +5890,33 @@ int CRaptorEPIX::InsertImage()
 		"RaptorEPIX-";
 #endif
  
-	md.PutImageTag(prefix + "Interval Wait Time", CDeviceUtils::ConvertToString(myIntervalWaitTime_*1000.0));
+	md.AddTag(prefix + "Interval Wait Time", CDeviceUtils::ConvertToString(myIntervalWaitTime_*1000.0));
 
-	md.PutImageTag(prefix + "Frame Diff Time", CDeviceUtils::ConvertToString(myFrameDiffTime_*1000.0));
+	md.AddTag(prefix + "Frame Diff Time", CDeviceUtils::ConvertToString(myFrameDiffTime_*1000.0));
 
-	md.PutImageTag(prefix + MM::g_Keyword_Elapsed_Time_ms,
+	md.AddTag(prefix + MM::g_Keyword_Elapsed_Time_ms,
 		CDeviceUtils::ConvertToString((myReadoutStartTime_ - mySequenceStartTime_)*1000.0));
 
 	dCurrentClock2 = myClock();
 
 	if(trigSnap_)
 	{
-		md.PutImageTag(prefix + "Trigger to Capture Time",
+		md.AddTag(prefix + "Trigger to Capture Time",
 			CDeviceUtils::ConvertToString((myCaptureTime_ - myReadoutStartTime_)*1000.0));
 
-		md.PutImageTag(prefix + "Trigger to Data Time",
+		md.AddTag(prefix + "Trigger to Data Time",
 			CDeviceUtils::ConvertToString((myCaptureTime2_ - myReadoutStartTime_)*1000.0));
 	}
-	md.PutImageTag(prefix + "Field Count", CDeviceUtils::ConvertToString(fieldCount_));
+	md.AddTag(prefix + "Field Count", CDeviceUtils::ConvertToString(fieldCount_));
 
-	md.PutImageTag(prefix + "Field Buffer", CDeviceUtils::ConvertToString(fieldBuffer_));
+	md.AddTag(prefix + "Field Buffer", CDeviceUtils::ConvertToString(fieldBuffer_));
 
    imageCounter_++;
  
    char buf[MM::MaxStrLength];
    //GetProperty(MM::g_Keyword_Binning, buf);
    sprintf_s(buf, MM::MaxStrLength, "%ld", binSize_);
-   md.PutImageTag(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
 
    MMThreadGuard g(imgPixelsLock_);
 
@@ -5922,10 +5925,7 @@ int CRaptorEPIX::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   //int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b) ;//, &md);
-   //int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-
-   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /*

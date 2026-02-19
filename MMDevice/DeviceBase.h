@@ -1668,11 +1668,11 @@ protected:
    {
       char label[MM::MaxStrLength];
       this->GetLabel(label);
-      Metadata md;
-      md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+      MM::CameraImageMetadata md;
+      md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
       return this->GetCoreCallback()->InsertImage(this, this->GetImageBuffer(), this->GetImageWidth(),
          this->GetImageHeight(), this->GetImageBytesPerPixel(),
-         md.Serialize().c_str());
+         md.Serialize());
    }
 
    virtual double GetIntervalMs() {return thd_->GetIntervalMs();}

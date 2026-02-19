@@ -356,7 +356,7 @@ PicamError Universal::AcquisitionUpdated(
             // So far there is no way to use metadada for single frame mode (SnapImage())
             if (sequenceModeReady_)
             {
-               Metadata md;
+               MM::CameraImageMetadata md;
                ret = BuildMetadata( md );
                if (ret==DEVICE_OK)
                {
@@ -2261,7 +2261,7 @@ int Universal::ThreadRun(void)
    char dbgBuf[128]; // Debug log buffer
    uniAcqThd_->setStop(false); // make sure this thread's status is updated properly.
    pibln bRunning=TRUE;
-   Metadata md;
+   MM::CameraImageMetadata md;
 
    try
    {
@@ -2517,20 +2517,20 @@ void Universal::OnThreadExiting() throw ()
 /**
  * Creates metadata for current frame
  */
-int Universal::BuildMetadata( Metadata& md )
+int Universal::BuildMetadata( MM::CameraImageMetadata& md )
 {
    char label[MM::MaxStrLength];
    GetLabel(label);
 
    MM::MMTime timestamp = GetCurrentMMTime();
    md.Clear();
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
 #ifdef PICAM_FRAME_INFO_SUPPORTED
-   md.PutImageTag<int32>("PICAM-FrameNr", pFrameInfo_->FrameNr);
-   md.PutImageTag<int32>("PICAM-ReadoutTime", pFrameInfo_->ReadoutTime);
-   md.PutImageTag<long64>("PICAM-TimeStamp",  pFrameInfo_->TimeStamp);
-   md.PutImageTag<long64>("PICAM-TimeStampBOF", pFrameInfo_->TimeStampBOF);
+   md.AddTag<int32>("PICAM-FrameNr", pFrameInfo_->FrameNr);
+   md.AddTag<int32>("PICAM-ReadoutTime", pFrameInfo_->ReadoutTime);
+   md.AddTag<long64>("PICAM-TimeStamp",  pFrameInfo_->TimeStamp);
+   md.AddTag<long64>("PICAM-TimeStampBOF", pFrameInfo_->TimeStampBOF);
 #endif
 
    MM::MMTime elapsed = timestamp - startTime_;
@@ -2540,7 +2540,7 @@ int Universal::BuildMetadata( Metadata& md )
    return DEVICE_OK;
 }
 
-int Universal::PushImage(const unsigned char* pixBuffer, Metadata* pMd )
+int Universal::PushImage(const unsigned char* pixBuffer, MM::CameraImageMetadata* pMd )
 {
    START_METHOD("Universal::PushImage");
 
@@ -2551,7 +2551,7 @@ int Universal::PushImage(const unsigned char* pixBuffer, Metadata* pMd )
          GetImageWidth(),
          GetImageHeight(),
          GetImageBytesPerPixel(),
-         pMd->Serialize().c_str());
+         pMd->Serialize());
 }
 
 

@@ -28,14 +28,7 @@
 
 #include "TSI3Cam.h"
 
-#ifdef WIN32
-#endif
-
-#ifdef __APPLE__
-#endif
-
-#ifdef __linux__
-#endif
+#include "CameraImageMetadata.h"
 
 #include <string>
 #include <sstream>
@@ -875,14 +868,14 @@ int Tsi3Cam::InsertImage()
 	// Important:  metadata about the image are generated here:
 	char label[MM::MaxStrLength];
 	this->GetLabel(label);
-	Metadata md;
+	MM::CameraImageMetadata md;
 
    return GetCoreCallback()->InsertImage(this,
          img.GetPixels(),
          img.Width(),
          img.Height(),
          img.Depth(),
-	   md.Serialize().c_str());
+	   md.Serialize());
 }
 
 bool Tsi3Cam::StopCamera()

@@ -17,7 +17,9 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 
-#include <ModuleInterface.h>
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
+
 #include "JAI.h"
 #include <PvInterface.h>
 #include <PvDevice.h>
@@ -1196,14 +1198,14 @@ void JAICamera::ClearPvBuffers()
 
 int JAICamera::InsertImage()
 {
-   Metadata md;
+   MM::CameraImageMetadata md;
    return GetCoreCallback()->InsertImage(this,
          img.GetPixels(),
          img.Width(),
          img.Height(),
          img.Depth(),
          GetNumberOfComponents(),
-         md.Serialize().c_str());
+         md.Serialize());
 }
 
 /**

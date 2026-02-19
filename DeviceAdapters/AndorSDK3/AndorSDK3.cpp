@@ -1289,9 +1289,9 @@ int CAndorSDK3Camera::InsertImage()
    std::string prefix = deviceName;
    prefix += '-';
    
-   Metadata md;
+   MM::CameraImageMetadata md;
 
-   md.PutImageTag(prefix + MM::g_Keyword_Metadata_ImageNumber,
+   md.AddTag(prefix + MM::g_Keyword_Metadata_ImageNumber,
       CDeviceUtils::ConvertToString(thd_->GetImageCounter()));
 
    if (0 == thd_->GetImageCounter())
@@ -1302,7 +1302,7 @@ int CAndorSDK3Camera::InsertImage()
    stringstream ss;
    double d_result = (timeStamp_-sequenceStartTime_)/static_cast<double>(fpgaTSclockFrequency_);
    ss << d_result*1000 << " [" << d_result << " seconds]";
-   md.PutImageTag(prefix + MM::g_Keyword_Elapsed_Time_ms, ss.str());
+   md.AddTag(prefix + MM::g_Keyword_Elapsed_Time_ms, ss.str());
 
    MMThreadGuard g(imgPixelsLock_);
    return InsertMMImage(img_, md);
@@ -1313,12 +1313,12 @@ int CAndorSDK3Camera::InsertImageWithSRRF()
    char deviceName[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_CameraName, deviceName);
 
-   Metadata md;
+   MM::CameraImageMetadata md;
 
    stringstream ss;
    double frameTimeInS = (startSRRFImageTime_ - startSRRFSequenceTime_) / static_cast<double>(fpgaTSclockFrequency_);
    ss << frameTimeInS * 1000;
-   md.PutImageTag(deviceName + std::string("-") + SRRFControl_->GetSRRFFrameTimeMetadataName(), ss.str());
+   md.AddTag(deviceName + std::string("-") + SRRFControl_->GetSRRFFrameTimeMetadataName(), ss.str());
 
    MMThreadGuard g(imgPixelsLock_);
 
@@ -1328,14 +1328,14 @@ int CAndorSDK3Camera::InsertImageWithSRRF()
    return InsertMMImage(*SRRFImage_, md);
 }
 
-int CAndorSDK3Camera::InsertMMImage(const ImgBuffer& image, const Metadata& md)
+int CAndorSDK3Camera::InsertMMImage(const ImgBuffer& image, const MM::CameraImageMetadata& md)
 {
    const unsigned char * pData = image.GetPixels();
    unsigned int w = image.Width();
    unsigned int h = image.Height();
    unsigned int b = image.Depth();
 
-   return GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str());
+   return GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize());
 }
 
 std::wstring CAndorSDK3Camera::GetPreferredFeature(std::wstring Name, std::wstring FallbackName) const

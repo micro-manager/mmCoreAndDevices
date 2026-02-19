@@ -24,6 +24,7 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
 #include "ThorlabsUSBCamera.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "uc480.h"
 #include <cstdio>
@@ -608,12 +609,12 @@ int ThorlabsUSBCam::StartSequenceAcquisition(long numImages, double interval_ms,
 int ThorlabsUSBCam::InsertImage()
 {
    // Image metadata
-   Metadata md;
+   MM::CameraImageMetadata md;
    char label[MM::MaxStrLength];
    this->GetLabel(label);
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
-   md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_)); 
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
+   md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_)); 
 
    imageCounter_++;
 
@@ -623,7 +624,7 @@ int ThorlabsUSBCam::InsertImage()
                                                   img_.Width(),
                                                   img_.Height(), 
                                                   img_.Depth(), 
-                                                  md.Serialize().c_str());
+                                                  md.Serialize());
 }
 
 /*

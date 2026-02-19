@@ -23,6 +23,7 @@
 #include <cassert>
 #include <limits>
 #include "mvIMPACT_Acquire_Device.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include <sstream>
 
@@ -964,20 +965,20 @@ bool mvIMPACT_Acquire_Device::IsCapturing( void )
 int mvIMPACT_Acquire_Device::InsertImage( void )
 //-----------------------------------------------------------------------------
 {
-   Metadata md;
+   MM::CameraImageMetadata md;
    char label[MM::MaxStrLength];
    GetLabel( label );
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label );
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label );
    MM::MMTime timeStamp = readoutStartTime_;
-   md.PutImageTag( MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString( ( timeStamp - sequenceStartTime_ ).getMsec() ) );
-   md.PutImageTag( MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( static_cast<long>( pCurrentRequest_->infoFrameID.read() ) ) );
-   md.PutImageTag( MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( pCurrentRequest_->imageOffsetX.read() ) );
-   md.PutImageTag( MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( pCurrentRequest_->imageOffsetY.read() ) );
+   md.AddTag( MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString( ( timeStamp - sequenceStartTime_ ).getMsec() ) );
+   md.AddTag( MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( static_cast<long>( pCurrentRequest_->infoFrameID.read() ) ) );
+   md.AddTag( MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( pCurrentRequest_->imageOffsetX.read() ) );
+   md.AddTag( MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( pCurrentRequest_->imageOffsetY.read() ) );
    const unsigned char* pI = GetImageBuffer();
    const unsigned int w = GetImageWidth();
    const unsigned int h = GetImageHeight();
    const unsigned int b = GetImageBytesPerPixel();
-   return GetCoreCallback()->InsertImage( this, pI, w, h, b, md.Serialize().c_str(), false );
+   return GetCoreCallback()->InsertImage( this, pI, w, h, b, md.Serialize(), false );
 }
 
 //-----------------------------------------------------------------------------

@@ -38,7 +38,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "ImageMetadata.h"
 #include "ImgBuffer.h"
 #include <iostream>
 

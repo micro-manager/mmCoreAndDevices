@@ -4152,14 +4152,14 @@ int Universal::FrameAcquired()
     return DEVICE_OK;
 }
 
-int Universal::PushImageToMmCore(const unsigned char* pPixBuffer, Metadata* pMd )
+int Universal::PushImageToMmCore(const unsigned char* pPixBuffer, MM::CameraImageMetadata* pMd )
 {
     START_METHOD("Universal::PushImageToMmCore");
 
     MM::Core* pCore = GetCoreCallback();
     // This method inserts a new image into the circular buffer (residing in MMCore)
     return pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
-        GetImageBytesPerPixel(), pMd->Serialize().c_str());
+        GetImageBytesPerPixel(), pMd->Serialize());
 }
 
 int Universal::ProcessNotification( const NotificationEntry& entry )
@@ -4193,20 +4193,20 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
     if (sendFrameToCore)
     {
         // Build the metadata
-        Metadata md;
-        md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
-        md.PutImageTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
+        MM::CameraImageMetadata md;
+        md.AddTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
+        md.AddTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
 
 #ifdef PVCAM_FRAME_INFO_SUPPORTED
-        md.PutImageTag<int32>( "PVCAM-CameraHandle",  frameNfo.PvHCam() );
-        md.PutImageTag<int32>( "PVCAM-FrameNr",       frameNfo.PvFrameNr() );
-        md.PutImageTag<int32>( "PVCAM-ReadoutTime",   frameNfo.PvReadoutTime() );
-        md.PutImageTag<long64>( "PVCAM-TimeStamp",    frameNfo.PvTimeStamp() );
-        md.PutImageTag<long64>( "PVCAM-TimeStampBOF", frameNfo.PvTimeStampBOF() );
+        md.AddTag<int32>( "PVCAM-CameraHandle",  frameNfo.PvHCam() );
+        md.AddTag<int32>( "PVCAM-FrameNr",       frameNfo.PvFrameNr() );
+        md.AddTag<int32>( "PVCAM-ReadoutTime",   frameNfo.PvReadoutTime() );
+        md.AddTag<long64>( "PVCAM-TimeStamp",    frameNfo.PvTimeStamp() );
+        md.AddTag<long64>( "PVCAM-TimeStampBOF", frameNfo.PvTimeStampBOF() );
         if (circBufFrameRecoveryEnabled_)
         {
-            md.PutImageTag<bool>( "PVCAM-FrameRecovered", frameNfo.IsRecovered() );
-            md.PutImageTag<int32>( "PVCAM-FramesRecoveredTotal", imagesRecovered_ );
+            md.AddTag<bool>( "PVCAM-FrameRecovered", frameNfo.IsRecovered() );
+            md.AddTag<int32>( "PVCAM-FramesRecoveredTotal", imagesRecovered_ );
         }
 #endif
 
@@ -4215,7 +4215,7 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
 
         // The time elapsed since start of the acquisition until current frame readout
         // Now added by MM automatically, no need to do it here.
-        // md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(elapsedTimeMsec));
+        // md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(elapsedTimeMsec));
 
         const double actualInterval = elapsedTimeMsec / imagesInserted_;
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval)); 
@@ -4237,45 +4237,45 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             // metadata from other metadata and keep them grouped or close together.
             const md_frame_header* fHdr = metaFrameStruct_->header;
             // Selected metadata from the frame header
-            md.PutImageTag<uns16>("PVCAM-FMD-Version", fHdr->version); // Need to use uns16 because uns8 is displayed as char
-            md.PutImageTag<uns32>("PVCAM-FMD-FrameNr", fHdr->frameNr);
-            md.PutImageTag<uns16>("PVCAM-FMD-RoiCount", fHdr->roiCount);
-            md.PutImageTag<uns16>("PVCAM-FMD-BitDepth", fHdr->bitDepth); // Need to use uns16 because uns8 is displayed as char
+            md.AddTag<uns16>("PVCAM-FMD-Version", fHdr->version); // Need to use uns16 because uns8 is displayed as char
+            md.AddTag<uns32>("PVCAM-FMD-FrameNr", fHdr->frameNr);
+            md.AddTag<uns16>("PVCAM-FMD-RoiCount", fHdr->roiCount);
+            md.AddTag<uns16>("PVCAM-FMD-BitDepth", fHdr->bitDepth); // Need to use uns16 because uns8 is displayed as char
             const char* cKeywordColorMask = "PVCAM-FMD-ColorMask";
             switch (fHdr->colorMask)
             {
             case COLOR_NONE:
-                md.PutImageTag(cKeywordColorMask, "None");
+                md.AddTag(cKeywordColorMask, "None");
                 break;
             case COLOR_RGGB:
-                md.PutImageTag(cKeywordColorMask, "RGGB");
+                md.AddTag(cKeywordColorMask, "RGGB");
                 break;
             case COLOR_GRBG:
-                md.PutImageTag(cKeywordColorMask, "GRBG");
+                md.AddTag(cKeywordColorMask, "GRBG");
                 break;
             case COLOR_GBRG:
-                md.PutImageTag(cKeywordColorMask, "GBRG");
+                md.AddTag(cKeywordColorMask, "GBRG");
                 break;
             case COLOR_BGGR:
-                md.PutImageTag(cKeywordColorMask, "BGGR");
+                md.AddTag(cKeywordColorMask, "BGGR");
                 break;
             default:
-                md.PutImageTag(cKeywordColorMask, "Unknown");
+                md.AddTag(cKeywordColorMask, "Unknown");
                 break;
             }
-            md.PutImageTag<uns16>("PVCAM-FMD-Flags",  fHdr->flags); // Need to use uns16 because uns8 is displayed as char
+            md.AddTag<uns16>("PVCAM-FMD-Flags",  fHdr->flags); // Need to use uns16 because uns8 is displayed as char
             if (fHdr->version >= 2)
             {
-                md.PutImageTag("PVCAM-FMD-ImageFormat", getPvcamImageFormatString(fHdr->imageFormat));
-                md.PutImageTag("PVCAM-FMD-ImageCompression", getPvcamImageCompressionString(fHdr->imageCompression));
+                md.AddTag("PVCAM-FMD-ImageFormat", getPvcamImageFormatString(fHdr->imageFormat));
+                md.AddTag("PVCAM-FMD-ImageCompression", getPvcamImageCompressionString(fHdr->imageCompression));
             }
             if (fHdr->version < 3)
             {
-                md.PutImageTag<ulong64>( "PVCAM-FMD-ExposureTimeNs",
+                md.AddTag<ulong64>( "PVCAM-FMD-ExposureTimeNs",
                     (ulong64)fHdr->exposureTime * fHdr->exposureTimeResNs );
-                md.PutImageTag<ulong64>( "PVCAM-FMD-TimestampBofNs",
+                md.AddTag<ulong64>( "PVCAM-FMD-TimestampBofNs",
                     (ulong64)fHdr->timestampBOF * fHdr->timestampResNs );
-                md.PutImageTag<ulong64>( "PVCAM-FMD-TimestampEofNs",
+                md.AddTag<ulong64>( "PVCAM-FMD-TimestampEofNs",
                     (ulong64)fHdr->timestampEOF * fHdr->timestampResNs );
             }
             else
@@ -4283,18 +4283,18 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
                 const md_frame_header_v3* fHdr3 =
                     reinterpret_cast<const md_frame_header_v3*>(metaFrameStruct_->header);
                 // Version 3 of the metadata transfers the timestamps in picoseconds.
-                md.PutImageTag<ulong64>( "PVCAM-FMD-ExposureTimePs",
+                md.AddTag<ulong64>( "PVCAM-FMD-ExposureTimePs",
                     (ulong64)fHdr3->exposureTime );
-                md.PutImageTag<ulong64>( "PVCAM-FMD-TimestampBofPs",
+                md.AddTag<ulong64>( "PVCAM-FMD-TimestampBofPs",
                     (ulong64)fHdr3->timestampBOF );
-                md.PutImageTag<ulong64>( "PVCAM-FMD-TimestampEofPs",
+                md.AddTag<ulong64>( "PVCAM-FMD-TimestampEofPs",
                     (ulong64)fHdr3->timestampEOF );
             }
             // Implied ROI
             const rgn_type& iRoi = metaFrameStruct_->impliedRoi;
             snprintf(metaRoiStr_, sizeof(metaRoiStr_), "[%u,%u,%u,%u,%u,%u]",
                     iRoi.s1, iRoi.s2, iRoi.sbin, iRoi.p1, iRoi.p2, iRoi.pbin);
-            md.PutImageTag<std::string>("PVCAM-FMD-ImpliedRoi", metaRoiStr_); 
+            md.AddTag<std::string>("PVCAM-FMD-ImpliedRoi", metaRoiStr_); 
             // Per-ROI metadata
             metaAllRoisStr_ = "[";
             for (int i = 0; i < metaFrameStruct_->roiCount; ++i)
@@ -4361,7 +4361,7 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
                 metaAllRoisStr_.append("}");
             }
             metaAllRoisStr_.append("]");
-            md.PutImageTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
+            md.AddTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
         }
 #endif
 

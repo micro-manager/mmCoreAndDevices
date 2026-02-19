@@ -30,6 +30,7 @@
 #include "TwoPhoton.h"
 #include <sstream>
 #include <math.h>
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "DeviceUtils.h"
 
@@ -1017,14 +1018,14 @@ int BitFlowCamera::LiveThread::svc()
       std::string labelStr = label;
 
       MM::MMTime timestamp = cam_->GetCurrentMMTime();
-      Metadata md;
+      MM::CameraImageMetadata md;
       std::string prefix = "TwoPhoton-";
 
       MM::MMTime elapsed = timestamp - cam_->startTime_;
-      md.PutImageTag(prefix + MM::g_Keyword_Elapsed_Time_ms,
+      md.AddTag(prefix + MM::g_Keyword_Elapsed_Time_ms,
          CDeviceUtils::ConvertToString(elapsed.getMsec()));
 
-      md.PutImageTag(prefix + MM::g_Keyword_Metadata_ImageNumber,
+      md.AddTag(prefix + MM::g_Keyword_Metadata_ImageNumber,
          CDeviceUtils::ConvertToString(imageCounter_));
 
 	  // insert all channels
@@ -1032,18 +1033,18 @@ int BitFlowCamera::LiveThread::svc()
 	  {
 		  char buf[MM::MaxStrLength];
 		  snprintf(buf, MM::MaxStrLength, "%d", i);
-		  md.PutImageTag(MM::g_Keyword_CameraChannelIndex, buf);
-		  md.PutImageTag(labelStr + MM::g_Keyword_CameraChannelIndex, buf); // compat
+		  md.AddTag(MM::g_Keyword_CameraChannelIndex, buf);
+		  md.AddTag(labelStr + MM::g_Keyword_CameraChannelIndex, buf); // compat
 
 		  cam_->GetChannelName(i, buf);
-		  md.PutImageTag(MM::g_Keyword_CameraChannelName, buf);
-		  md.PutImageTag(labelStr + MM::g_Keyword_CameraChannelName, buf); // compat
+		  md.AddTag(MM::g_Keyword_CameraChannelName, buf);
+		  md.AddTag(labelStr + MM::g_Keyword_CameraChannelName, buf); // compat
 
 		  ret = cam_->GetCoreCallback()->InsertImage(cam_, cam_->GetImageBuffer(i),
 			  cam_->GetImageWidth(),
 			  cam_->GetImageHeight(),
 			  cam_->GetImageBytesPerPixel(),
-			  md.Serialize().c_str());
+			  md.Serialize());
 		  if (ret != DEVICE_OK) {
 			  cam_->GetCoreCallback()->LogMessage(cam_, "BitFlow thread: error inserting image", false);
 			  break;
