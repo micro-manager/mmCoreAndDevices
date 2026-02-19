@@ -66,6 +66,7 @@ using namespace GenICam;
 #include "BaslerPylonCamera.h"
 #include <sstream>
 #include <math.h>
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "DeviceUtils.h"
 #include <vector>
@@ -2125,12 +2126,12 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 	// char label[MM::MaxStrLength];
 
 	// Important:  meta data about the image are generated here:
-	Metadata md;
-	md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, "");
-	md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetWidth()));
-	md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetHeight()));
-	md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetImageNumber()));
-	md.PutImageTag(MM::g_Keyword_Metadata_Exposure, dev_->GetExposure());
+	MM::CameraImageMetadata md;
+	md.AddTag(MM::g_Keyword_Metadata_CameraLabel, "");
+	md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetWidth()));
+	md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetHeight()));
+	md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)ptrGrabResult->GetImageNumber()));
+	md.AddTag(MM::g_Keyword_Metadata_Exposure, dev_->GetExposure());
 	// Image grabbed successfully?
 	if (ptrGrabResult->GrabSucceeded())
 	{
@@ -2150,7 +2151,7 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 			//copy to intermediate buffer
 			int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)ptrGrabResult->GetBuffer(),
 				(unsigned)ptrGrabResult->GetWidth(), (unsigned)ptrGrabResult->GetHeight(),
-				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
+				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
 		}
 		else if (IsByerFormat || ptrGrabResult->GetPixelType() == PixelType_RGB8packed)
 		{
@@ -2160,7 +2161,7 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 			//copy to intermediate buffer
 			int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)image.GetBuffer(),
 				(unsigned)dev_->GetImageWidth(), (unsigned)dev_->GetImageHeight(),
-				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
+				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
 		}
 		else if (ptrGrabResult->GetPixelType() == PixelType_BGR8packed)
 		{
@@ -2168,7 +2169,7 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 			//copy to intermediate buffer
 			int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)dev_->Buffer4ContinuesShot,
 				(unsigned)dev_->GetImageWidth(), (unsigned)dev_->GetImageHeight(),
-				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
+				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
 		}
 	}
 	else

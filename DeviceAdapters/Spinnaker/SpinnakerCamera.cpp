@@ -3,6 +3,7 @@
 #pragma warning(disable : 4251) // Note: need to have a C++ interface, i.e., compiler versions need to match!
 
 #include "SpinnakerCamera.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include <vector>
 #include <string>
@@ -1613,15 +1614,15 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          char label[MM::MaxStrLength];
          this->GetLabel(label);
 
-         Metadata md;
-         md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
-         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - m_aqThread->GetStartTime()).getMsec()));
-         md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)m_cam->Width.GetValue()));
-         md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)m_cam->Height.GetValue()));
+         MM::CameraImageMetadata md;
+         md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+         md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - m_aqThread->GetStartTime()).getMsec()));
+         md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)m_cam->Width.GetValue()));
+         md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)m_cam->Height.GetValue()));
 
          char buf[MM::MaxStrLength];
          GetProperty(MM::g_Keyword_Binning, buf);
-         md.PutImageTag(MM::g_Keyword_Binning, buf);
+         md.AddTag(MM::g_Keyword_Binning, buf);
 
          MMThreadGuard g(m_pixelLock);
 
@@ -1660,7 +1661,7 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          unsigned int h = GetImageHeight();
          unsigned int b = GetImageBytesPerPixel();
 
-         int ret = GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize().c_str());
+         int ret = GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize());
          if (ip != nullptr)
             ip->Release();
 

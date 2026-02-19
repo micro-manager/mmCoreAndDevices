@@ -29,6 +29,7 @@
 // AUTHOR:        Motic
 
 #include "MoticCamera.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "MoticImageDevicesProxy.h"
 #include <algorithm>
@@ -828,7 +829,7 @@ int CMoticCamera::InsertImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
+   MM::CameraImageMetadata md;
 
    const unsigned char* img;
 

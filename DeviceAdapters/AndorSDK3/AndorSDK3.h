@@ -32,6 +32,7 @@
 #ifndef _ANDORSDK3_H_
 #define _ANDORSDK3_H_
 
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "DeviceThreads.h"
@@ -139,7 +140,7 @@ private:
    int AcquireFrameInSequence(bool isFirstFrame);
    int AcquireSRRFImage(bool insertImage, long imageCounter);
    bool IsSRRFEnabled() const;
-   int InsertMMImage(const ImgBuffer& image, const Metadata& md);
+   int InsertMMImage(const ImgBuffer& image, const MM::CameraImageMetadata& md);
    std::wstring GetPreferredFeature(std::wstring Name, std::wstring FallbackName) const;
    void AddSimpleEnumProperty(std::wstring Name, std::string DisplayName="");
    void AddSimpleBoolProperty(std::wstring Name, std::string DisplayName="");

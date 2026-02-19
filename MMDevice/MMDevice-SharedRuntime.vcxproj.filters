@@ -49,6 +49,9 @@
     <ClInclude Include="ImgBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CameraImageMetadata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="MMDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -27,6 +27,8 @@
 #include <algorithm>
 
 #include "PointGrey.h"
+
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 using namespace FlyCapture2;
@@ -1326,19 +1328,19 @@ int PointGrey::InsertImage(Image* pImg)
 
 
 	// Important:  metadata about the image are generated here:
-	Metadata md;
-	md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
-   md.PutImageTag(g_CameraTime, CDeviceUtils::ConvertToString(timeStamp.getMsec()));
-	md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   md.PutImageTag("FrameCounter", frameCounter); // framecounter is always 0 for me
-	//md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-	//md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+	MM::CameraImageMetadata md;
+	md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
+   md.AddTag(g_CameraTime, CDeviceUtils::ConvertToString(timeStamp.getMsec()));
+	md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   md.AddTag("FrameCounter", frameCounter); // framecounter is always 0 for me
+	//md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+	//md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 	
 	imageCounter_++;
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);
-	md.PutImageTag(MM::g_Keyword_Binning, buf);
+	md.AddTag(MM::g_Keyword_Binning, buf);
 
    unsigned int w = pImg->GetCols();
    unsigned int h = pImg->GetRows();
@@ -1349,7 +1351,7 @@ int PointGrey::InsertImage(Image* pImg)
    {
       pData = RGBToBGRA(pImg->GetData());
    }
-   return GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize().c_str(), false);
+   return GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize(), false);
 }
 
 

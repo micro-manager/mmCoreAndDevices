@@ -1,4 +1,7 @@
 #include "ClassGalaxy.h"
+
+#include "CameraImageMetadata.h"
+
 #include <condition_variable>
 
 #include <iostream>
@@ -2037,12 +2040,12 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
     // char label[MM::MaxStrLength];
     //dev_->AddToLog("OnImageGrabbed");
     // Important:  meta data about the image are generated here:
-    Metadata md;
-    md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, "");
-    md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetWidth()));
-    md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetHeight()));
-    md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetFrameID()));
-    md.PutImageTag(MM::g_Keyword_Metadata_Exposure, dev_->GetExposure());
+    MM::CameraImageMetadata md;
+    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, "");
+    md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetWidth()));
+    md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetHeight()));
+    md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString((long)objImageDataPointer->GetFrameID()));
+    md.AddTag(MM::g_Keyword_Metadata_Exposure, dev_->GetExposure());
     // Image grabbed successfully ?
     if (objImageDataPointer->GetStatus()== GX_FRAME_STATUS_SUCCESS)
     {
@@ -2056,7 +2059,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
             //copy to intermediate buffer
             int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)objImageDataPointer->GetBuffer(),
                 (unsigned)objImageDataPointer->GetWidth(), (unsigned)objImageDataPointer->GetHeight(),
-                (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
+                (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
         }
         else if (dev_->colorCamera_)
         {
@@ -2071,7 +2074,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
             //copy to intermediate buffer
             int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)dev_->imgBuffer_,
                 (unsigned)dev_->GetImageWidth(), (unsigned)dev_->GetImageHeight(),
-                (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
+                (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
         }
         imgCounter_++;
         if (imgCounter_ == numImages_)

@@ -30,6 +30,8 @@
 #include <iostream>
 
 #include "FliSdk_utils.h"
+
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 //---------------------------------------------------------------
@@ -214,16 +216,16 @@ void FirstLightImagingCameras::imageReceived(const uint8_t* image)
 	unsigned int h = GetImageHeight();
 	unsigned int b = GetImageBytesPerPixel();
 
-	Metadata md;
+	MM::CameraImageMetadata md;
 	char label[MM::MaxStrLength];
 	GetLabel(label);
-	md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
-	md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)w));
-	md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)h));
+	md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+	md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)w));
+	md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)h));
 
 	MM::Core* core = GetCoreCallback();
 
-	int ret = core->InsertImage(this, image, w, h, b, 1, md.Serialize().c_str(), false);
+	int ret = core->InsertImage(this, image, w, h, b, 1, md.Serialize(), false);
 }
 
 //---------------------------------------------------------------

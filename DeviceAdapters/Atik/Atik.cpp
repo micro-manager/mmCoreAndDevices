@@ -23,6 +23,7 @@
 //
 
 #include "Atik.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 using namespace std;
@@ -878,9 +879,9 @@ int Atik::InsertImage()
 	this->GetLabel(label);
 
 	// Important:  metadata about the image are generated here:
-	Metadata md;
+	MM::CameraImageMetadata md;
 
-	md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, "Atik SDK Camera");
+	md.AddTag(MM::g_Keyword_Metadata_CameraLabel, "Atik SDK Camera");
 
 	string serialised = md.Serialize();
 

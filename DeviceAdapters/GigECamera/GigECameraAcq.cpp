@@ -12,6 +12,8 @@
 
 #include "GigECamera.h"
 
+#include "CameraImageMetadata.h"
+
 #include "boost/lexical_cast.hpp"
 
 
@@ -48,12 +50,12 @@ void CGigECamera::SnapImageCallback( J_tIMAGE_INFO* imageInfo )
 		int nRet;
 
 		// create metadata
-		Metadata md;
+		MM::CameraImageMetadata md;
 		char label[MM::MaxStrLength];
 		GetLabel(label);
 
 		nRet = GetCoreCallback()->InsertImage(this, buffer_,
-				GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel(), md.Serialize().c_str());
+				GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel(), md.Serialize());
 	} // end if doContinuousAcquisition
 	else if( this->snapOneImageOnly )
 	{

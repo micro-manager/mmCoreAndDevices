@@ -1,13 +1,16 @@
+#include "HikrobotCamera.h"
+
+#include "CameraImageMetadata.h"
+#include "DeviceBase.h"
+#include "DeviceUtils.h"
+#include "ModuleInterface.h"
 
 #include <sstream>
 #include <math.h>
-#include "ModuleInterface.h"
-#include "DeviceUtils.h"
 #include <vector>
-#include "HikrobotCamera.h"
-#include "DeviceBase.h"
 #include <process.h>
 #include <algorithm>   //std::sort
+
 using namespace std;
 
 const char* g_HikrobotCameraDeviceName = "HikrobotCamera";
@@ -1539,12 +1542,12 @@ void HikrobotCamera::ImageRecvThreadProc()
 			}
 
 			//!fix , md must assign something
-			Metadata md;
-			md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, "");
+			MM::CameraImageMetadata md;
+			md.AddTag(MM::g_Keyword_Metadata_CameraLabel, "");
 
 			nRet = GetCoreCallback()->InsertImage(this, (const unsigned char*)stConvertParam.pDstBuffer,
 				stOutFrame.stFrameInfo.nWidth,
-				stOutFrame.stFrameInfo.nHeight, GetImageBytesPerPixel(), 1, md.Serialize().c_str(), FALSE);
+				stOutFrame.stFrameInfo.nHeight, GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
 			if (nRet == DEVICE_OK)
 			{
 				MvWriteLog(__FILE__, __LINE__, m_chDevID, "Success InsertImage Width[%d], Height[%d], FrameNum[%d] FrameLen[%d] enPixelType[%lld]",

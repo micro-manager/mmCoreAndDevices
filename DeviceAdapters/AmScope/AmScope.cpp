@@ -23,6 +23,7 @@
 //
 
 #include "AmScope.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 //#include <iostream>
@@ -765,19 +766,19 @@ int AmScope::InsertImage()
  
    MMThreadGuard g(imgPixelsLock_);
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
-  md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-  md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( imageCounter_ ));
-  md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_));
-  md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_));
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+  md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+  md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( imageCounter_ ));
+  md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_));
+  md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_));
   
   const unsigned char* pI = GetImageBuffer();
   unsigned int w = GetImageWidth();
   unsigned int h = GetImageHeight();
   unsigned int b = GetImageBytesPerPixel();  
 
-  int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str() );
+  int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
   
   if (ret == DEVICE_OK)
   {

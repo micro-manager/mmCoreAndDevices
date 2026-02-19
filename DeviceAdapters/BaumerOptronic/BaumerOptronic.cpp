@@ -61,6 +61,7 @@ there is too much uncommented magic in this code.
 
 #include "BaumerOptronic.h"
 
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "MMDeviceConstants.h"
 
@@ -2268,8 +2269,8 @@ int CBaumerOptronic::SendImageToCore()
 {
    char label[MM::MaxStrLength];
    this->GetLabel(label);
-   Metadata md;
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
    int err = WaitForImageAndCopyToBuffer();
    if (err != DEVICE_OK)
@@ -2282,7 +2283,7 @@ int CBaumerOptronic::SendImageToCore()
    unsigned h = GetImageHeight();
    unsigned b = GetImageBytesPerPixel();
 
-   return GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
+   return GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize());
 }
 
 

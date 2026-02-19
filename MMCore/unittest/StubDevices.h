@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 
 #include <string>
@@ -76,8 +77,9 @@ struct StubCamera : CCameraBase<StubCamera> {
    int StopSequenceAcquisition() override { return DEVICE_OK; }
    bool IsCapturing() override { return false; }
 
-   int InsertTestImage(const Metadata& md = Metadata{},
-                       const unsigned char* pixels = nullptr) {
+   int InsertTestImage(
+         const MM::CameraImageMetadata& md = MM::CameraImageMetadata{},
+         const unsigned char* pixels = nullptr) {
       std::vector<unsigned char> defaultBuf;
       const unsigned char* buf = pixels;
       if (!buf) {
@@ -87,7 +89,7 @@ struct StubCamera : CCameraBase<StubCamera> {
       }
       return GetCoreCallback()->InsertImage(this, buf,
          width, height, bytesPerPixel, nComponents,
-         md.Serialize().c_str());
+         md.Serialize());
    }
 
 private:

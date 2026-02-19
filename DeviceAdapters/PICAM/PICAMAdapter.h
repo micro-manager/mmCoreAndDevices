@@ -25,6 +25,7 @@
 #ifndef _PICAMADAPTER_H_
 #define _PICAMADAPTER_H_
 
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "Debayer.h"
@@ -284,8 +285,8 @@ class Universal : public CLegacyCameraBase<Universal>
 #endif
 
       //   int FrameDone();
-      int BuildMetadata( Metadata& md );
-      int PushImage(const unsigned char* pixBuffer, Metadata* pMd );
+      int BuildMetadata( MM::CameraImageMetadata& md );
+      int PushImage(const unsigned char* pixBuffer, MM::CameraImageMetadata* pMd );
 
    private:
 

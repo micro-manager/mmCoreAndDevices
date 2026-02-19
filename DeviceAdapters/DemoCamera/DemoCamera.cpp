@@ -23,13 +23,16 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
 #include "DemoCamera.h"
+
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
+#include "WriteCompactTiffRGB.h"
+
 #include <cstdio>
 #include <string>
 #include <math.h>
-#include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm>
-#include "WriteCompactTiffRGB.h"
 #include <iostream>
 #include <future>
 
@@ -962,18 +965,18 @@ int CDemoCamera::InsertImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
    std::string elapsed = CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec());
-   md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms, elapsed);
-   md.PutImageTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.PutImageTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, elapsed);
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
    imageCounter_++;
 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
-   md.PutImageTag(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
 
    MMThreadGuard g(imgPixelsLock_);
 
@@ -984,7 +987,7 @@ int CDemoCamera::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   return GetCoreCallback()->InsertImage(this, pI, w, h, b, nComponents_, md.Serialize().c_str());
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, nComponents_, md.Serialize());
 }
 
 /*
