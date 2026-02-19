@@ -180,6 +180,7 @@ private:
 	                                            const WaveformParams& params) const;
 
 	// DAQ configuration helpers
+	std::unique_ptr<IDAQDevice> CreateDaqAdapter(const std::string& deviceName);
 	void ConfigureDAQChannels();
 	std::vector<std::string> GetEnabledModInChannels() const;
 	std::vector<std::string> GetConfiguredModInChannels() const;
