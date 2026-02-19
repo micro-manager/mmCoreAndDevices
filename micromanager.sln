@@ -532,6 +532,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CairnOptoSpinUCSF", "Device
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iSIMWaveforms", "DeviceAdapters\iSIMWaveforms\iSIMWaveforms.vcxproj", "{D176BC58-E00D-43FB-9471-56C383233974}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvidentIX85", "DeviceAdapters\EvidentIX85\EvidentIX85.vcxproj", "{E8A5D9F1-4B2C-4E8F-9C1D-6F3A8B7E2D4C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvidentIX85XYStage", "DeviceAdapters\EvidentIX85XYStage\EvidentIX85XYStage.vcxproj", "{A7F8E9C3-5D4B-4E2F-9A1C-3B7D8E6F4A2C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvidentIX85Win", "DeviceAdapters\EvidentIX85Win\EvidentIX85Win.vcxproj", "{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1598,6 +1604,18 @@ Global
 		{D176BC58-E00D-43FB-9471-56C383233974}.Debug|x64.Build.0 = Debug|x64
 		{D176BC58-E00D-43FB-9471-56C383233974}.Release|x64.ActiveCfg = Release|x64
 		{D176BC58-E00D-43FB-9471-56C383233974}.Release|x64.Build.0 = Release|x64
+		{E8A5D9F1-4B2C-4E8F-9C1D-6F3A8B7E2D4C}.Debug|x64.ActiveCfg = Debug|x64
+		{E8A5D9F1-4B2C-4E8F-9C1D-6F3A8B7E2D4C}.Debug|x64.Build.0 = Debug|x64
+		{E8A5D9F1-4B2C-4E8F-9C1D-6F3A8B7E2D4C}.Release|x64.ActiveCfg = Release|x64
+		{E8A5D9F1-4B2C-4E8F-9C1D-6F3A8B7E2D4C}.Release|x64.Build.0 = Release|x64
+		{A7F8E9C3-5D4B-4E2F-9A1C-3B7D8E6F4A2C}.Debug|x64.ActiveCfg = Debug|x64
+		{A7F8E9C3-5D4B-4E2F-9A1C-3B7D8E6F4A2C}.Debug|x64.Build.0 = Debug|x64
+		{A7F8E9C3-5D4B-4E2F-9A1C-3B7D8E6F4A2C}.Release|x64.ActiveCfg = Release|x64
+		{A7F8E9C3-5D4B-4E2F-9A1C-3B7D8E6F4A2C}.Release|x64.Build.0 = Release|x64
+		{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}.Debug|x64.ActiveCfg = Debug|x64
+		{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}.Debug|x64.Build.0 = Debug|x64
+		{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}.Release|x64.ActiveCfg = Release|x64
+		{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
