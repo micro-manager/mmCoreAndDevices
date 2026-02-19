@@ -574,6 +574,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    DTOpenLayer
    DemoCamera
    Diskovery
+   EvidentIX85
    FakeCamera
    FocalPoint
    FreeSerialPort
