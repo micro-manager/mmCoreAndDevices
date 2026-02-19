@@ -33,9 +33,6 @@ const char* g_IllumDeviceName = "iSIM Illumination Selector";
 const char* g_IllumDeviceDesc = "Selects which AOTF MOD IN channel is active for each frame";
 const char* g_ReadoutTimeNone = "None";
 
-// Set to true to use MockDAQAdapter instead of the real NIDAQmx adapter
-static constexpr bool kUseMockDAQ = false;
-
 // Tolerance for floating-point comparisons to avoid redundant waveform rebuilds
 static constexpr double kEpsilon = 1e-9;
 
@@ -148,31 +145,30 @@ iSIMWaveforms::iSIMWaveforms() :
 	SetErrorText(ERR_INVALID_PROPERTY_VALUE,
 		"A property value could not be parsed. Please enter a valid number.");
 
-	// Create DAQ adapter for device discovery
-	if (kUseMockDAQ) {
-		auto mockDaq = std::make_unique<MockDAQAdapter>();
-		mockDaq->setLogger([this](const std::string& msg) {
-			LogMessage(msg, false);
-		});
-		daq_ = std::move(mockDaq);
-	} else {
-		auto realDaq = std::make_unique<NIDAQmxAdapter>();
-		realDaq->setLogger([this](const std::string& msg) {
-			LogMessage(msg, false);
-		});
-		daq_ = std::move(realDaq);
-	}
+	// Discover real NI devices; always append mock devices so they are available
+	// even without hardware, preventing bit rot in MockDAQAdapter.
+	NIDAQmxAdapter niDaqForDiscovery;
+	std::vector<std::string> devices = niDaqForDiscovery.getDeviceNames();
 
-	// Pre-init property: Device
-	std::vector<std::string> devices = daq_->getDeviceNames();
+	MockDAQAdapter mockDaqForDiscovery;
+	for (const auto& dev : mockDaqForDiscovery.getDeviceNames())
+		devices.push_back(dev);
+
+	// Pre-init property: AO Device
+	// IMPORTANT: This property name must sort alphabetically before all channel
+	// properties ("AOTF...", "Camera...", "Galvo...") so that Micro-Manager loads
+	// it first when reading a .cfg file. If this property is ever renamed, verify
+	// that the new name still sorts before all channel property names; otherwise
+	// config loading will break with "Invalid property value" errors.
 	CPropertyAction* pAct = new CPropertyAction(this, &iSIMWaveforms::OnDevice);
 	std::string defaultDevice = devices.empty() ? "" : devices[0];
 	deviceName_ = defaultDevice;
-	CreateStringProperty("Device", defaultDevice.c_str(), false, pAct, true);
+	CreateStringProperty("AO Device", defaultDevice.c_str(), false, pAct, true);
 	for (const auto& dev : devices)
-		AddAllowedValue("Device", dev.c_str());
+		AddAllowedValue("AO Device", dev.c_str());
 
-	// Discover channels for default device
+	// Create active adapter for the default device and discover its channels
+	daq_ = CreateDaqAdapter(deviceName_);
 	availableChannels_ = daq_->getAnalogOutputChannels(deviceName_);
 
 	// Initialize semantic channel defaults and create pre-init properties
@@ -629,6 +625,22 @@ std::vector<double> iSIMWaveforms::ConstructModInWaveform(
 	return waveform;
 }
 
+std::unique_ptr<IDAQDevice> iSIMWaveforms::CreateDaqAdapter(const std::string& deviceName)
+{
+	if (deviceName.rfind("MockDev", 0) == 0)
+	{
+		auto mock = std::make_unique<MockDAQAdapter>();
+		mock->setLogger([this](const std::string& msg) { LogMessage(msg, false); });
+		return mock;
+	}
+	else
+	{
+		auto real = std::make_unique<NIDAQmxAdapter>();
+		real->setLogger([this](const std::string& msg) { LogMessage(msg, false); });
+		return real;
+	}
+}
+
 void iSIMWaveforms::ConfigureDAQChannels()
 {
 	LogMessage("ConfigureDAQChannels: interleavedMode=" +
@@ -961,12 +973,17 @@ int iSIMWaveforms::OnDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
 		{
 			deviceName_ = newDevice;
 
+			// Switch to the appropriate adapter for the selected device
+			daq_ = CreateDaqAdapter(deviceName_);
+
 			// Rediscover channels for new device
 			availableChannels_ = daq_->getAnalogOutputChannels(deviceName_);
-
-			// Update allowed values for all semantic channel properties
-			UpdateChannelAllowedValues();
 		}
+
+		// Always populate/refresh channel dropdowns, even when device is unchanged.
+		// This ensures correct values when loading a config whose saved Device
+		// matches the constructor default (OnDevice fires but newDevice == deviceName_).
+		UpdateChannelAllowedValues();
 	}
 	return DEVICE_OK;
 }

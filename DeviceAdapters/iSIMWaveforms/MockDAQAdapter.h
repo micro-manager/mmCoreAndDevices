@@ -109,10 +109,6 @@ public:
             logger_("[MockDAQ] clearTasks()");
     }
 
-private:
-    LogCallback logger_;
-    size_t channelCount_ = 0;
-
     std::vector<std::string> getDeviceNames() const override
     {
         return {"MockDev1", "MockDev2"};
@@ -150,4 +146,8 @@ private:
             return {"/MockDev2/PFI0", "/MockDev2/PFI1"};
         return {};
     }
+
+private:
+    LogCallback logger_;
+    size_t channelCount_ = 0;
 };
