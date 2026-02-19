@@ -1479,7 +1479,8 @@ public:
       CDeviceUtils::CopyLimitedString(serializedMetadata, md.Serialize());
    }
 
-   virtual int PrepareSequenceAcqusition() {return DEVICE_OK;}
+   // To be removed; devices should no longer override.
+   virtual int PrepareSequenceAcqusition() final {return DEVICE_OK;}
 
    /**
     * @brief Start sequence acquisition.
