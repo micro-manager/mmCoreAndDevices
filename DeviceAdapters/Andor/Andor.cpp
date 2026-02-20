@@ -5295,8 +5295,7 @@ int AndorCamera::GetCameraAcquisitionProgress(at_32* series)
                SRRFImage_->Width(),
                SRRFImage_->Height(),
                SRRFImage_->Depth(),
-               md.Serialize(),
-               false);
+               md.Serialize());
             //oss.str("");
             //oss << "[PushImageWithSRRF] sent up an image to MMCore and returned: " << corecallbackInsertImageReturn << endl;
             //Log(oss.str().c_str());

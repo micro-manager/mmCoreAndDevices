@@ -225,7 +225,7 @@ void FirstLightImagingCameras::imageReceived(const uint8_t* image)
 
 	MM::Core* core = GetCoreCallback();
 
-	int ret = core->InsertImage(this, image, w, h, b, 1, md.Serialize(), false);
+	int ret = core->InsertImage(this, image, w, h, b, 1, md.Serialize());
 }
 
 //---------------------------------------------------------------

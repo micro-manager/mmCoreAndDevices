@@ -1547,7 +1547,7 @@ void HikrobotCamera::ImageRecvThreadProc()
 
 			nRet = GetCoreCallback()->InsertImage(this, (const unsigned char*)stConvertParam.pDstBuffer,
 				stOutFrame.stFrameInfo.nWidth,
-				stOutFrame.stFrameInfo.nHeight, GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
+				stOutFrame.stFrameInfo.nHeight, GetImageBytesPerPixel(), 1, md.Serialize());
 			if (nRet == DEVICE_OK)
 			{
 				MvWriteLog(__FILE__, __LINE__, m_chDevID, "Success InsertImage Width[%d], Height[%d], FrameNum[%d] FrameLen[%d] enPixelType[%lld]",

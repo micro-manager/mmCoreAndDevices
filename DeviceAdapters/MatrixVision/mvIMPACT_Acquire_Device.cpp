@@ -978,7 +978,7 @@ int mvIMPACT_Acquire_Device::InsertImage( void )
    const unsigned int w = GetImageWidth();
    const unsigned int h = GetImageHeight();
    const unsigned int b = GetImageBytesPerPixel();
-   return GetCoreCallback()->InsertImage( this, pI, w, h, b, md.Serialize(), false );
+   return GetCoreCallback()->InsertImage( this, pI, w, h, b, md.Serialize());
 }
 
 //-----------------------------------------------------------------------------

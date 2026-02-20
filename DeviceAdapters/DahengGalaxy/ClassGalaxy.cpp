@@ -2059,7 +2059,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
             //copy to intermediate buffer
             int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)objImageDataPointer->GetBuffer(),
                 (unsigned)objImageDataPointer->GetWidth(), (unsigned)objImageDataPointer->GetHeight(),
-                (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
+                (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize());
         }
         else if (dev_->colorCamera_)
         {
@@ -2074,7 +2074,7 @@ void CircularBufferInserter::DoOnImageCaptured(CImageDataPointer& objImageDataPo
             //copy to intermediate buffer
             int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)dev_->imgBuffer_,
                 (unsigned)dev_->GetImageWidth(), (unsigned)dev_->GetImageHeight(),
-                (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
+                (unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize());
         }
         imgCounter_++;
         if (imgCounter_ == numImages_)
