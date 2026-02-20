@@ -113,6 +113,7 @@ iSIMWaveforms::iSIMWaveforms() :
 	clockSource_("/Dev1/Ctr1InternalOutput"),
 	waveformRunning_(false),
 	interleavedMode_(false),
+	alignmentMode_(false),
 	currentIlluminationState_(0)
 {
 	InitializeDefaultErrorMessages();
@@ -714,16 +715,24 @@ int iSIMWaveforms::CreatePostInitProperties()
 		return nRet;
 	SetPropertyLimits("Sampling Rate (Hz)", 1000.0, 1000000.0);
 
-	// AOTF Blanking Voltage slider (always created since AOTF Blanking is required)
+	// AOTF Blanking (V) slider (always created since AOTF Blanking is required)
 	CPropertyAction* pAct = new CPropertyAction(this, &iSIMWaveforms::OnAOTFBlankingVoltage);
 	double minV = minVoltage_[PROP_AOTF_BLANKING_CHANNEL];
 	double maxV = maxVoltage_[PROP_AOTF_BLANKING_CHANNEL];
 	aotfBlankingVoltage_ = minV;
 
-	nRet = CreateFloatProperty("AOTF Blanking Voltage", aotfBlankingVoltage_, false, pAct);
+	nRet = CreateFloatProperty("AOTF Blanking (V)", aotfBlankingVoltage_, false, pAct);
 	if (nRet != DEVICE_OK)
 		return nRet;
-	SetPropertyLimits("AOTF Blanking Voltage", minV, maxV);
+	SetPropertyLimits("AOTF Blanking (V)", minV, maxV);
+
+	// Alignment Mode Enabled
+	CPropertyAction* pActAlignment = new CPropertyAction(this, &iSIMWaveforms::OnAlignmentModeEnabled);
+	nRet = CreateStringProperty("Alignment Mode Enabled", "No", false, pActAlignment);
+	if (nRet != DEVICE_OK)
+		return nRet;
+	AddAllowedValue("Alignment Mode Enabled", "No");
+	AddAllowedValue("Alignment Mode Enabled", "Yes");
 
 	// MOD IN properties (only for configured channels)
 	const std::vector<std::pair<const char*, int>> modInChannels = {
@@ -1105,6 +1114,34 @@ int iSIMWaveforms::OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType
 			if (wasRunning)
 				StartWaveformOutput();
 		}
+	}
+	return DEVICE_OK;
+}
+
+int iSIMWaveforms::OnAlignmentModeEnabled(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+	if (eAct == MM::BeforeGet)
+	{
+		pProp->Set(alignmentMode_ ? "Yes" : "No");
+	}
+	else if (eAct == MM::AfterSet)
+	{
+		std::string value;
+		pProp->Get(value);
+		bool newMode = (value == "Yes");
+		if (newMode == alignmentMode_)
+			return DEVICE_OK;
+		alignmentMode_ = newMode;
+		if (initialized_ && GetPhysicalCamera())
+		{
+			bool wasRunning = waveformRunning_;
+			if (wasRunning)
+				StopWaveformOutput();
+			RebuildWaveforms();
+			if (wasRunning)
+				StartWaveformOutput();
+		}
+		GetCoreCallback()->OnPropertyChanged(this, "Alignment Mode Enabled", value.c_str());
 	}
 	return DEVICE_OK;
 }
@@ -1950,10 +1987,70 @@ int iSIMWaveforms::StopIlluminationSequence()
 
 int iSIMWaveforms::RebuildWaveforms()
 {
+	if (alignmentMode_)
+		return BuildAndWriteAlignmentWaveforms();
 	if (interleavedMode_)
 		return BuildAndWriteInterleavedWaveforms();
 	else
 		return BuildAndWriteWaveforms();
+}
+
+int iSIMWaveforms::BuildAndWriteAlignmentWaveforms()
+{
+	LogMessage("BuildAndWriteAlignmentWaveforms", false);
+
+	int ret = ValidateWaveformParameters();
+	if (ret != DEVICE_OK)
+		return ret;
+
+	WaveformParams params;
+	ComputeWaveformParameters(params);
+
+	auto cameraWave = ConstructCameraWaveform(params);
+
+	int numEnabled = GetNumEnabledModInChannels();
+	bool hasIllumination = (numEnabled > 0);
+	size_t numChannels = hasIllumination ? (3 + numEnabled) : 1;
+	size_t samplesPerChannel = params.numWaveformSamples;
+	std::vector<double> data(numChannels * samplesPerChannel);
+
+	std::copy(cameraWave.begin(), cameraWave.end(), data.begin());
+
+	if (hasIllumination)
+	{
+		// Galvo: constant at offset voltage
+		std::fill(data.begin() + samplesPerChannel,
+		          data.begin() + 2 * samplesPerChannel, galvoOffsetV_);
+
+		// Blanking: constant at blanking voltage
+		std::fill(data.begin() + 2 * samplesPerChannel,
+		          data.begin() + 3 * samplesPerChannel, aotfBlankingVoltage_);
+
+		// MOD IN: constant at each enabled channel's voltage
+		size_t channelIdx = 3;
+		for (const auto& modIn : GetEnabledModInChannels())
+		{
+			double voltage = modInVoltage_.at(modIn);
+			std::fill(data.begin() + channelIdx * samplesPerChannel,
+			          data.begin() + (channelIdx + 1) * samplesPerChannel, voltage);
+			++channelIdx;
+		}
+	}
+
+	try
+	{
+		ConfigureDAQChannels();
+		daq_->configureTiming(samplingRateHz_, samplesPerChannel,
+		                      triggerSource_, counterChannel_, clockSource_);
+		daq_->writeAnalogOutput(data, numChannels, samplesPerChannel);
+	}
+	catch (const std::runtime_error& e)
+	{
+		LogMessage(std::string("DAQ error: ") + e.what(), false);
+		return ERR_WAVEFORM_GENERATION_FAILED;
+	}
+
+	return DEVICE_OK;
 }
 
 int iSIMWaveforms::BuildAndWriteInterleavedWaveforms()

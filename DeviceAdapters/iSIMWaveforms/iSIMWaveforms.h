@@ -142,6 +142,7 @@ public:
 	int OnMinVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnMaxVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnAOTFBlankingVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnAlignmentModeEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnModInEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnModInVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnSamplingRate(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -188,6 +189,7 @@ private:
 	double ComputeMinFrameIntervalMs() const;
 
 	// Interleaved waveform construction
+	int BuildAndWriteAlignmentWaveforms();
 	int BuildAndWriteInterleavedWaveforms();
 	int RebuildWaveforms();
 
@@ -244,6 +246,7 @@ private:
 	// Waveform state
 	bool waveformRunning_;
 	bool interleavedMode_;       // true during MDA hardware sequencing
+	bool alignmentMode_;         // true when alignment mode is active
 
 	// Illumination sequencing state
 	std::vector<long> illuminationSequence_;
