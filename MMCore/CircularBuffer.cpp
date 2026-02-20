@@ -193,17 +193,11 @@ static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_c
 }
 
 /**
-* Inserts a single image in the buffer.
-*/
-bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
-{
-   return InsertImage(pixArray, width, height, byteDepth, 1, pMd);
-}
-
-/**
 * Inserts a single image, possibly with multiple components, in the buffer.
 */
-bool CircularBuffer::InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
+bool CircularBuffer::InsertImage(const unsigned char* pixArray,
+   unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
+   const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
     MMThreadGuard insertGuard(g_insertLock);
 
