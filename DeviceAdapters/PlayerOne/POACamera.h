@@ -118,7 +118,6 @@ public:
 
     bool SupportsMultiROI();
 
-    int PrepareSequenceAcqusition();
     int StartSequenceAcquisition(double interval);
     int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
     int StopSequenceAcquisition(); 

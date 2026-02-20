@@ -10,6 +10,9 @@
 
 #include "QSICameraAdapter.h"
 #include "QSIToolkit.h"
+
+#include "CameraImageMetadata.h"
+
 #include <algorithm>
 
 using namespace std;
@@ -472,22 +475,19 @@ int QSICameraAdapter::ClearROI()
 int QSICameraAdapter::InsertImage()
 {
   char label[MM::MaxStrLength];
-  Metadata metadata;
+  MM::CameraImageMetadata metadata;
   const unsigned char * pImageBuffer;
-  const char * pSerializedMetadata;
 
   // Assemble metadata
   this->GetLabel( label );
   
-  metadata.put(MM::g_Keyword_Metadata_CameraLabel, label );
-
-  pSerializedMetadata =  metadata.Serialize().c_str();
+  metadata.AddTag(MM::g_Keyword_Metadata_CameraLabel, label );
 
   // Download image
   pImageBuffer = GetImageBuffer();
 
   // Insert received image into MMCore's circular buffer
-  return GetCoreCallback()->InsertImage( this, pImageBuffer, m_imageNumX, m_imageNumY, QSI_IMAGE_BYTES_PER_PIXEL, pSerializedMetadata );
+  return GetCoreCallback()->InsertImage( this, pImageBuffer, m_imageNumX, m_imageNumY, QSI_IMAGE_BYTES_PER_PIXEL, metadata.Serialize() );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

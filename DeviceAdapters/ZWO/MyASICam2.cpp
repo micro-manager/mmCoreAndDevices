@@ -1,6 +1,6 @@
 #include "MyASICam2.h"
 
-
+#include "CameraImageMetadata.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // FILE:          CMyASICam.cpp
@@ -867,36 +867,7 @@ long CMyASICam::GetImageBufferSize() const
 {
 	return iROIWidth*iROIHeight*iPixBytes;
 }
- /**
-       * Returns the name for each component 
-       */
-int CMyASICam::GetComponentName(unsigned component, char* name)
-{
-	if(iComponents != 1)
-	{
-		switch (component)
-		{
-		case 1:
-			strcpy(name, "red");
-			break;
-		case 2:
-			strcpy(name, "green");
-			break;
-		case 3:
-			strcpy(name, "blue");
-			break;
-		case 4:
-			strcpy(name, "0");
-			break;
-		default:
-			strcpy(name, "error");
-			break;
-		}
-	}
-	else
-		strcpy(name, "grey");
-	return DEVICE_OK;
-}
+
 /**
 * Sets the camera Region Of Interest.
 * Required by the MM::Camera API.
@@ -1073,17 +1044,6 @@ int CMyASICam::SetBinning(int binF)
 	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));//就是onBinning(, afterSet)
 }
 
-int CMyASICam::PrepareSequenceAcqusition()
-{
-	if (IsCapturing())
-		return DEVICE_CAMERA_BUSY_ACQUIRING;
-	/*   int ret = GetCoreCallback()->PrepareForAcq(this);
-	if (ret != DEVICE_OK)
-	return ret;*/
-	return DEVICE_OK;
-}
-
-
 /**
 * Required by the MM::Camera API
 * Please implement this yourself and do not rely on the base class implementation
@@ -1146,18 +1106,18 @@ int CMyASICam::InsertImage()
 	this->GetLabel(label);
 
 	// Important:  metadata about the image are generated here:
-	Metadata md;
-	md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+	MM::CameraImageMetadata md;
+	md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);
-	md.put(MM::g_Keyword_Binning, buf);
+	md.AddTag(MM::g_Keyword_Binning, buf);
 
 	//   MMThreadGuard g(imgPixelsLock_);
 
 	const unsigned char* pI;
 	pI = GetImageBuffer();
-	return GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize().c_str());
+	return GetCoreCallback()->InsertImage(this, pI, iROIWidth, iROIHeight, iPixBytes, md.Serialize());
 }
 
 

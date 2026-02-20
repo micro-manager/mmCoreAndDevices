@@ -39,6 +39,7 @@
 #ifndef _ANDOR_H_
 #define _ANDOR_H_
 
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 #include "MMDevice.h"
 #include "ImgBuffer.h"
@@ -110,10 +111,6 @@ public:
    void ResizeSRRFImage(long radiality);
 
    // high-speed interface
-   int PrepareSequenceAcqusition()
-   { 
-      return DEVICE_OK; 
-   }
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    /**
    * Continuous sequence acquisition.  
@@ -429,8 +426,8 @@ private:
    unsigned int createShutterProperty(AndorCapabilities * caps);
    unsigned int AddTriggerProperty(int mode);
    void SetDefaultVSSForUltra888WithValidSRRF();
-   void AddMetadataInfo(Metadata & md);
-   void AddSRRFMetadataInfo(Metadata & md);
+   void AddMetadataInfo(MM::CameraImageMetadata & md);
+   void AddSRRFMetadataInfo(MM::CameraImageMetadata & md);
    int SnapImageNormal();
    int SnapImageSRRF();
    bool IsSRRFEnabled() const;

@@ -11,6 +11,8 @@
 // COPYRIGHT:     SIGMA KOKI CO.,LTD, Tokyo, 2023
 #pragma once
 
+#include "CameraImageMetadata.h"
+
 #include <cstdio>
 #include <string>
 #include <math.h>
@@ -951,10 +953,10 @@ int Camera::InsertImage()
 	this->GetLabel(label);
 
 	// Important:  metadata about the image are generated here:
-	Metadata md;
-	md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-	md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+	MM::CameraImageMetadata md;
+	md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+	md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+	md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
 
 	imageCounter_++;
 
@@ -967,7 +969,7 @@ int Camera::InsertImage()
 	unsigned int h = GetImageHeight();
 	unsigned int b = GetImageBytesPerPixel();
 	cout << "bytes per pixel    = " << b << endl;
-	return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
+	return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /*

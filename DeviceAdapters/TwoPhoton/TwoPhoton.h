@@ -79,7 +79,6 @@ public:
    int GetChannelName(unsigned channel, char* name);
 
    unsigned GetNumberOfComponents() const;
-   int GetComponentName(unsigned channel, char* name);
 
    unsigned GetImageWidth() const;
    unsigned GetImageHeight() const;
@@ -101,7 +100,6 @@ public:
     int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
     int StartSequenceAcquisition(double interval_ms);
     int StopSequenceAcquisition();
-    int PrepareSequenceAcqusition();
     
     /**
      * Flag to indicate whether Sequence Acquisition is currently running.

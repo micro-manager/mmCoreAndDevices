@@ -20,6 +20,9 @@ MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = YES
 PREDEFINED             = MMDEVICE_DEPRECATED=
 
+# Changing this changes the HTML file names; stick to what we had
+CASE_SENSE_NAMES       = NO
+
 CLASS_GRAPH            = TEXT
 COLLABORATION_GRAPH    = NO
 GROUP_GRAPHS           = NO

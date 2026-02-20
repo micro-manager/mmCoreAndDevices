@@ -29,6 +29,8 @@
 
 #include "AravisCamera.h"
 
+#include "CameraImageMetadata.h"
+
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -147,7 +149,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
   size_t size;
   unsigned char *cb_arv_buffer_data;
 
-  Metadata md;
+  MM::CameraImageMetadata md;
 
   if (!capturing){
     return;
@@ -167,13 +169,13 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
     ArvBufferUpdate(cb_arv_buffer);
 
     // Image metadata.
-    md.put(MM::g_Keyword_Metadata_CameraLabel, "");
-    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)img_buffer_width));
-    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)img_buffer_height));
-    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(counter));
-    md.put(MM::g_Keyword_Metadata_Exposure, exposure_time);
-    md.put(MM::g_Keyword_PixelType, pixel_type);
-    
+    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, "");
+    md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)img_buffer_width));
+    md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)img_buffer_height));
+    md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(counter));
+    md.AddTag(MM::g_Keyword_Metadata_Exposure, exposure_time);
+    md.AddTag(MM::g_Keyword_PixelType, pixel_type);
+
     // Pass data to MM.
     int ret = GetCoreCallback()->InsertImage(this,
 					     img_buffer,
@@ -181,8 +183,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 					     img_buffer_height,
 					     img_buffer_bytes_per_pixel,
 					     1,
-					     md.Serialize().c_str(),
-					     FALSE);
+					     md.Serialize());
 
     arv_stream_push_buffer(arv_stream, cb_arv_buffer);
     counter += 1;
@@ -1069,12 +1070,6 @@ int AravisCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
   }
   
   return DEVICE_OK;
-}
-
-
-int AravisCamera::PrepareSequenceAcqusition()
-{
-   return DEVICE_OK;
 }
 
 

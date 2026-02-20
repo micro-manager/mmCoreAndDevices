@@ -43,10 +43,10 @@
     <ClInclude Include="DeviceUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ImageMetadata.h">
+    <ClInclude Include="ImgBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ImgBuffer.h">
+    <ClInclude Include="CameraImageMetadata.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MMDevice.h">

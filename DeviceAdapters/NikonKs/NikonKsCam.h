@@ -72,14 +72,12 @@ public:
 	unsigned GetImageBytesPerPixel() const{return img_.Depth();};
 	unsigned GetBitDepth() const{return bitDepth_;};
 	long GetImageBufferSize() const{return img_.Width() * img_.Height() * GetImageBytesPerPixel();}
-	int GetComponentName(unsigned comp, char* name);
 	unsigned GetNumberOfComponents() const{return numComponents_;};
 	double GetExposure() const;
 	void SetExposure(double exp);
 	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
 	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
 	int ClearROI();
-	int PrepareSequenceAcqusition(){return DEVICE_OK;}
 	int StartSequenceAcquisition(double interval);
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();

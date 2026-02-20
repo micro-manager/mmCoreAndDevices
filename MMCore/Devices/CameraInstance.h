@@ -44,7 +44,6 @@ public:
    const unsigned char* GetImageBuffer(unsigned channelNr);
    const unsigned int* GetImageBufferAsRGB32();
    unsigned GetNumberOfComponents() const;
-   std::string GetComponentName(unsigned component);
    int unsigned GetNumberOfChannels() const;
    std::string GetChannelName(unsigned channel);
    long GetImageBufferSize()const;
@@ -72,7 +71,6 @@ public:
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StartSequenceAcquisition(double interval_ms);
    int StopSequenceAcquisition();
-   int PrepareSequenceAcqusition();
    bool IsCapturing();
    std::string GetTags();
    void AddTag(const char* key, const char* deviceLabel, const char* value);

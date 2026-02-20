@@ -24,8 +24,8 @@
 #include "SequenceTester.h"
 #include "SequenceTesterImpl.h"
 
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
-
 
 #include <exception>
 #include <future>
@@ -530,9 +530,8 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
 
    char label[MM::MaxStrLength];
    GetLabel(label);
-   Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   std::string serializedMD(md.Serialize());
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
    const unsigned char* bytes = 0;
 
@@ -559,7 +558,7 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
       try
       {
          int err = core->InsertImage(this, bytes, width, height,
-               bytesPerPixel, serializedMD.c_str());
+               bytesPerPixel, md.Serialize());
          if (err != DEVICE_OK)
          {
             bool stopped;
@@ -583,6 +582,11 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
    }
 
    delete[] bytes;
+
+   {
+      std::lock_guard<std::mutex> lock(sequenceMutex_);
+      stopSequence_ = true;
+   }
 }
 
 

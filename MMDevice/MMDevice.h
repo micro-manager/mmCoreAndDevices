@@ -41,7 +41,6 @@
 
 #include "MMDeviceConstants.h"
 #include "DeviceUtils.h"
-#include "ImageMetadata.h"
 #include "DeviceThreads.h"
 
 #include <climits>
@@ -373,10 +372,10 @@ namespace MM {
        * This is '1' for grayscale cameras, and '4' for RGB cameras.
        */
       virtual unsigned GetNumberOfComponents() const = 0;
-      /**
-       * @brief Return the name for each component.
-       */
+
+      /** Unused; to be removed. */
       virtual int GetComponentName(unsigned component, char* name) = 0;
+
       /**
        * @brief Return the number of simultaneous channels that camera is capable of.
        *
@@ -1651,18 +1650,22 @@ namespace MM {
 
       virtual int OnPropertiesChanged(const Device* caller) = 0;
       /**
-       * @brief Signal the UI that a property changed.
+       * @brief Inform the UI that a property changed.
        *
        * The Core will check if groups or pixel size changed as a consequence of
        * the change of this property and inform the UI.
        */
       virtual int OnPropertyChanged(const Device* caller, const char* propName, const char* propValue) = 0;
       /**
-       * @brief Signal the UI when the stage has reached a new position.
+       * @brief Inform the UI when a stage has changed its position.
+       *
+       * @see CDeviceBase::OnStagePositionChanged().
        */
       virtual int OnStagePositionChanged(const Device* caller, double pos) = 0;
       /**
-       * @brief Signal the UI when the XY stage has reached a new position.
+       * @brief Inform the UI when an XY stage has changed its position.
+       *
+       * @see CDeviceBase::OnXYStagePositionChanged()
        */
       virtual int OnXYStagePositionChanged(const Device* caller, double xPos, double yPos) = 0;
       /**

@@ -39,7 +39,7 @@
 #endif
 
 #include <string>
-#include <map>
+#include <vector>
 
 static const char* g_DeviceJAICam = "JAICamera";
 static const char* g_Gain = "Gain";
@@ -228,6 +228,7 @@ private:
 	std::string connectionId;
 	std::vector<PvBuffer*> pvBuffers;
 	std::string commonExposureSelector_;  // e.g., "Common"
+	std::vector<std::string> individualExposureSelectors_;  // e.g., {"Red", "Green", "Blue"}
 	std::string commonGainSelector_;      // e.g., "AnalogAll"
 
    friend class AcqSequenceThread;

@@ -48,12 +48,52 @@
 #define ERR_STAGE_MOVING         106
 #define HUB_NOT_AVAILABLE        107
 
-const char* NoHubError = "Parent Hub not defined.";
-extern const char* g_PressurePumpDeviceName;
-extern const char* g_PropImposedPressure;
-extern const char* g_VolumetricPumpDeviceName;
+extern const char* NoHubError;
 
-enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST };
+// External device name constants (defined in DemoCamera.cpp)
+extern const char* g_CameraDeviceName;
+extern const char* g_WheelDeviceName;
+extern const char* g_StateDeviceName;
+extern const char* g_LightPathDeviceName;
+extern const char* g_ObjectiveDeviceName;
+extern const char* g_StageDeviceName;
+extern const char* g_XYStageDeviceName;
+extern const char* g_AutoFocusDeviceName;
+extern const char* g_ShutterDeviceName;
+extern const char* g_DADeviceName;
+extern const char* g_DA2DeviceName;
+extern const char* g_GalvoDeviceName;
+extern const char* g_MagnifierDeviceName;
+extern const char* g_PressurePumpDeviceName;
+extern const char* g_VolumetricPumpDeviceName;
+extern const char* g_HubDeviceName;
+extern const char* g_PropImposedPressure;
+
+// External pixel type constants (defined in DemoCamera.cpp)
+extern const char* g_PixelType_8bit;
+extern const char* g_PixelType_16bit;
+extern const char* g_PixelType_32bitRGB;
+extern const char* g_PixelType_64bitRGB;
+extern const char* g_PixelType_32bit;
+
+// External mode constants (defined in DemoCamera.cpp)
+extern const char* g_Sine_Wave;
+extern const char* g_Norm_Noise;
+extern const char* g_Color_Test;
+extern const char* g_Beads;
+
+// Global intensity factor (defined in DemoCamera.cpp)
+extern double g_IntensityFactor_;
+
+enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST, MODE_BEADS };
+
+// Bead structure for fluorescent beads mode
+struct Bead {
+   double worldX;  // World coordinates in microns
+   double worldY;
+   double intensityFactor; // Variation factor 0.8 to 1.2
+   double sizeFactor;      // Variation factor 0.8 to 1.2
+};
 
 // Defines which segments in a seven-segment display are lit up for each of
 // the numbers 0-9. Segments are:
@@ -155,7 +195,6 @@ public:
            unsigned numROIs);
    int GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
            unsigned* heights, unsigned* length);
-   int PrepareSequenceAcqusition() { return DEVICE_OK; }
    int StartSequenceAcquisition(double interval);
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
@@ -208,6 +247,10 @@ public:
    int OnPhotonFlux(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnReadNoise(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBeadDensity(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBeadSize(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBeadBrightness(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBeadBlurRate(MM::PropertyBase* pProp, MM::ActionType eAct);
 
    // Special public DemoCamera methods
    void AddBackgroundAndNoise(ImgBuffer& img, double mean, double stdDev);
@@ -227,6 +270,13 @@ private:
    void GenerateSyntheticImage(ImgBuffer& img, double exp);
    bool GenerateColorTestPattern(ImgBuffer& img);
    int ResizeImageBuffer();
+   void GenerateBeadPositions();
+   void GenerateBeadsForTile(int tileX, int tileY, std::vector<Bead>& beads);
+   unsigned int HashTileCoords(int tileX, int tileY);
+   void RenderBeadToImage(ImgBuffer& img, const Bead& bead, double blurRadius, double stageX, double stageY);
+   void GenerateBeadsImage(ImgBuffer& img, double exposure);
+   double GetCurrentZPosition();
+   void GetCurrentXYPosition(double& x, double& y);
 
    double exposureMaximum_ = 10000.0;
    double dPhase_ = 0.0;
@@ -283,6 +333,14 @@ private:
    double pcf_ = 1.0;
    double photonFlux_ = 50.0;
    double readNoise_ = 2.5;
+   
+   // Bead mode members
+   std::vector<Bead> beads_;
+   bool beadsGenerated_ = false;
+   int beadDensity_ = 100;
+   double beadSize_ = 2.0;
+   double beadBrightness_ = 1.0;
+   double beadBlurRate_ = 0.5;
 };
 
 class MySequenceThread : public MMDeviceThreadBase

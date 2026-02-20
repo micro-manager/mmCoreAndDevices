@@ -21,6 +21,7 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
 #include "NikonKsCam.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include <cstdio>
 #include <string>
@@ -1108,21 +1109,6 @@ int NikonKsCam::SetBinning(int /* binF */)
     return DEVICE_OK;
 }
 
-int NikonKsCam::GetComponentName(unsigned comp, char* name)
-{
-    if (comp > 4)
-    {
-        name = "invalid comp";
-        return DEVICE_ERR;
-    }
-
-    std::string rgba("RGBA");
-    CDeviceUtils::CopyLimitedString(name, &rgba.at(comp));
-
-    return DEVICE_OK;
-}
-
-
 //Sequence functions, mostly copied from other drivers with slight modification
 /**
  * Required by the MM::Camera API
@@ -1190,13 +1176,13 @@ int NikonKsCam::InsertImage()
 {
 
     // Image metadata
-    Metadata md;
+    MM::CameraImageMetadata md;
     char label[MM::MaxStrLength];
     this->GetLabel(label);
-    md.put("Camera", label);
-    // md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
-    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
-    md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+    md.AddTag("Camera", label);
+    // md.AddTag(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
+    md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
+    md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
 
     imageCounter_++;
 
@@ -1206,7 +1192,7 @@ int NikonKsCam::InsertImage()
               img_.Width(),
               img_.Height(),
               img_.Depth(),
-              md.Serialize().c_str());
+              md.Serialize());
 }
 
 /*

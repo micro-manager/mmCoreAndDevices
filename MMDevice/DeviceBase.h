@@ -24,11 +24,13 @@
 #pragma once
 
 #include "MMDevice.h"
-#include "MMDeviceConstants.h"
-#include "Property.h"
-#include "DeviceUtils.h"
-#include "ModuleInterface.h"
+
+#include "CameraImageMetadata.h"
 #include "DeviceThreads.h"
+#include "DeviceUtils.h"
+#include "MMDeviceConstants.h"
+#include "ModuleInterface.h"
+#include "Property.h"
 
 #include <math.h>
 #include <assert.h>
@@ -1137,7 +1139,15 @@ protected:
    }
 
    /**
-    * @brief Signal that the stage has arrived at a new position.
+    * @brief Report position change (for single-axis stage).
+    *
+    * Stages that do not receive change notifications from the hardware/driver
+    * don't have to call this. In particular, they should not use this to
+    * report the destination of a move that has not yet completed.
+    *
+    * It is up to the stage whether to report only after moves finish or also
+    * periodically during moves. But the reported position should eventually
+    * catch up to the actual position after the stage stops moving.
     */
    int OnStagePositionChanged(double pos)
    {
@@ -1147,7 +1157,15 @@ protected:
    }
 
    /**
-    * @brief Signal that the XY stage has arrived at a new position.
+    * @brief Report position change (for XY stage).
+    *
+    * Stages that do not receive change notifications from the hardware/driver
+    * don't have to call this. In particular, they should not use this to
+    * report the destination of a move that has not yet completed.
+    *
+    * It is up to the stage whether to report only after moves finish or also
+    * periodically during moves. But the reported position should eventually
+    * catch up to the actual position after the stage stops moving.
     */
    int OnXYStagePositionChanged(double xPos, double yPos)
    {
@@ -1413,12 +1431,11 @@ public:
       return 1; // Default to monochrome (ie not RGB)
    }
 
-   virtual int GetComponentName(unsigned channel, char* name)
+   // To be removed (never used by MMCore); devices should not override.
+   virtual int GetComponentName(unsigned channel, char* name) final
    {
-      if (channel > 0)
-         return DEVICE_NONEXISTENT_CHANNEL;
-
-      CDeviceUtils::CopyLimitedString(name, "Grayscale");
+      (void)channel;
+      CDeviceUtils::CopyLimitedString(name, "");
       return DEVICE_OK;
    }
 
@@ -1469,11 +1486,16 @@ public:
     */
    virtual void GetTags(char* serializedMetadata)
    {
-      std::string data = metadata_.Serialize();
-      data.copy(serializedMetadata, data.size(), 0);
+      MM::CameraImageMetadata md;
+      for (const auto& p : addedTags_)
+      {
+         md.AddTag(p.first.c_str(), p.second.c_str());
+      }
+      CDeviceUtils::CopyLimitedString(serializedMetadata, md.Serialize());
    }
 
-   virtual int PrepareSequenceAcqusition() {return DEVICE_OK;}
+   // To be removed; devices should no longer override.
+   virtual int PrepareSequenceAcqusition() final {return DEVICE_OK;}
 
    /**
     * @brief Start sequence acquisition.
@@ -1515,12 +1537,19 @@ public:
 
    virtual void AddTag(const char* key, const char* deviceLabel, const char* value)
    {
-      metadata_.PutTag(key, deviceLabel, value);
+      std::string k;
+      if (deviceLabel != std::string("_"))
+      {
+         k += deviceLabel;
+         k += '-';
+      }
+      k += key;
+      addedTags_[k] = value;
    }
 
    virtual void RemoveTag(const char* key)
    {
-      metadata_.RemoveTag(key);
+      addedTags_.erase(key);
    }
 
    virtual bool SupportsMultiROI()
@@ -1551,25 +1580,8 @@ public:
       return DEVICE_UNSUPPORTED_COMMAND;
    }
 
-protected:
-   /////////////////////////////////////////////
-   // utility methods for use by derived classes
-   // //////////////////////////////////////////
-
-   virtual std::vector<std::string> GetTagKeys()
-   {
-      return metadata_.GetKeys();
-   }
-
-   virtual std::string GetTagValue(const char* key)
-   {
-      return metadata_.GetSingleTag(key).GetValue();
-   }
-
 private:
-
-   Metadata metadata_;
-
+   std::map<std::string, std::string> addedTags_;
 };
 
 
@@ -1672,11 +1684,11 @@ protected:
    {
       char label[MM::MaxStrLength];
       this->GetLabel(label);
-      Metadata md;
-      md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+      MM::CameraImageMetadata md;
+      md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
       return this->GetCoreCallback()->InsertImage(this, this->GetImageBuffer(), this->GetImageWidth(),
          this->GetImageHeight(), this->GetImageBytesPerPixel(),
-         md.Serialize().c_str());
+         md.Serialize());
    }
 
    virtual double GetIntervalMs() {return thd_->GetIntervalMs();}
@@ -2019,7 +2031,6 @@ public:
       if (ret == DEVICE_OK) {
          xPos_ = x_um;
          yPos_ = y_um;
-         this->OnXYStagePositionChanged(xPos_, yPos_);
       }
       return ret;
    }
@@ -2045,7 +2056,6 @@ public:
       if (ret == DEVICE_OK) {
          xPos_ = xPos;
          yPos_ = yPos;
-         this->OnXYStagePositionChanged(xPos_, yPos_);
       }
       return ret;
    }

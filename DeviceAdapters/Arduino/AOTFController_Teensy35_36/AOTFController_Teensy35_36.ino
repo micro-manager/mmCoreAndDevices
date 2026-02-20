@@ -1,8 +1,13 @@
-// Firmare code for the Teensy 3.5 (and 3.6?) compatible with the
+// Firmware code for the Teensy 3.5/3.6 compatible with the
 // standard MM Arduino device adapter.
 // Based on code by Bonno Medens (which was based on code by Nico Stuurman, who wrote this code)
-// Could be extended to support PWM outputs and to support
-// sequencing for analog output values.
+//
+// Pin assignments:
+//   Pin  2:     trigger input
+//   A21, A22:   analog outputs (true DAC, channels 0-1)
+//   Pins 3-8:   analog outputs (PWM, channels 2-7)
+//   Pins 9-16:  digital outputs
+//   Pins 17-22: analog inputs
 
 
 /*
@@ -16,8 +21,8 @@
  */
 
 /* Interface specifications
- *  Digital pattern specification: single byte, bit 0 corresponds to pin 8,
- *    bit 1 to pin 9, etc.. Bits 7 and 8 will not be used (and should stay 0).
+ *  Digital pattern specification: single byte, bit 0 corresponds to dos[0] (pin 9),
+ *    bit 1 to dos[1] (pin 10), etc.
  */
 
 /* Set digital output command: 1p
@@ -132,13 +137,29 @@
   * Available as of version 4
  */
 
-
-/* Read digital state of analog input pins 0-5: 40
- *    Returns raw value of PINC
+/* Get DA channel count: 34
+ *   Returns: 34 followed by 1 byte with the number of DA channels
+ *   Available as of version 5
  */
 
-/* Read analog state of input pins 0-5: 41x
+/* Get digital pin count: 35
+ *   Returns: 35 followed by 1 byte with the number of digital output pins
+ *   Available as of version 5
+ */
+
+
+/* Read digital state of analog input pins: 40
+ *    Returns a byte with bits corresponding to analog input pins (ais[])
+ */
+
+/* Read analog state of input pin: 41x
  *    x=0-5. Returns analog value as a 10-bit number (0-1023)
+ *    Reads from pin ais[x] (pins 17-22)
+ */
+
+/* Set pull-up resistor on analog input pin: 42xp
+ *    x=0-5 (index into ais[]), p=0 (off) or 1 (on)
+ *    Returns 42xp
  */
 
 /*
@@ -147,12 +168,10 @@
  *   Get digital patterm
  *   Get Number of digital patterns
  */
-// pin on whick to receive the trigger (2 and 3 can be used with interrupts, although this code does not use them)
-// to read out the state of inPin_ faster, ise
-// int inPinBit_ = 1<< inPin_; // bit mask
+// pin on which to receive the trigger
 
 
-unsigned int version_ = 4;  // Change from 3 > 4: Make SequenceLength Configurable.
+unsigned int version_ = 5;  // Change from 3 > 4: Make SequenceLength Configurable.  5: report capabilities.
 
 const int SEQUENCELENGTH = 10000;  // This number can be increased until you run out of memory
 byte triggerPattern_[SEQUENCELENGTH];
@@ -190,20 +209,28 @@ const unsigned int PWMresolution = 12;
 
 
 
-// Channel selection
-const uint8_t inPin_ = 2;
-const uint8_t ao1 = A21;  // Non Dac blanking -> const int ch1 = 8;
-const uint8_t ao2 = A22;  // Non Dac blanking -> const int ch2 = 9;
-const uint8_t ao3 = 3;
-const uint8_t ao4 = 4;
-const uint8_t ao5 = 5;
-const uint8_t ao6 = 6;
-const uint8_t ao7 = 7;
-const uint8_t ao8 = 8;
+// Pin assignment summary:
+//   Pin  2:     trigger input
+//   A21, A22:   analog outputs (true DAC, channels 0-1)
+//   Pins 3-8:   analog outputs (PWM, channels 2-7)
+//   Pins 9-16:  digital outputs
+//   Pins 17-22: analog inputs (A3-A8 on Teensy 3.5/3.6)
 
+// Trigger input
+const uint8_t inPin_ = 2;
+
+// Analog output channels (channels 0-1 are DAC, 2-7 are PWM)
 const uint8_t aos[8] = { A21, A22, 3, 4, 5, 6, 7, 8 };
 
-const uint8_t dos[8] = { 13, 14, 15, 16, 17, 18, 19, 20 };
+// Digital output pins
+const uint8_t dos[8] = { 9, 10, 11, 12, 13, 14, 15, 16 };
+
+// Analog input pins
+const uint8_t numAnalogInputs_ = 6;
+const uint8_t ais[6] = { 17, 18, 19, 20, 21, 22 };
+
+const uint8_t numDAChannels_ = 8;
+const uint8_t numDigitalPins_ = 8;
 
 void setup() {
   // put your setup code here, to run once:
@@ -222,6 +249,11 @@ void setup() {
   for (uint8_t i = 0; i < 8; i++) {
     pinMode(dos[i], OUTPUT);
     digitalWriteFast(dos[i], LOW);
+  }
+
+  // Analog input pins: configure as input (default, but be explicit)
+  for (uint8_t i = 0; i < numAnalogInputs_; i++) {
+    pinMode(ais[i], INPUT);
   }
 
   // New for PWM for more information https://www.pjrc.com/teensy/td_pulse.html
@@ -458,20 +490,37 @@ void loop() {
         }
         break;
 
-
-
-      //Not implemented
-      case 40:
-        Serial.write(byte(40));
-        //Serial.write( PINC);
-        Serial.write(byte(0));
+      // Returns the number of DA channels
+      case 34:
+        Serial.write(byte(34));
+        Serial.write(byte(numDAChannels_));
         break;
 
+      // Returns the number of digital output pins
+      case 35:
+        Serial.write(byte(35));
+        Serial.write(byte(numDigitalPins_));
+        break;
+
+      // Read digital state of all analog input pins: 40
+      case 40:
+        {
+          byte digitalState = 0;
+          for (uint8_t i = 0; i < numAnalogInputs_; i++) {
+            if (digitalReadFast(ais[i]))
+              digitalState |= (1 << i);
+          }
+          Serial.write(byte(40));
+          Serial.write(digitalState);
+        }
+        break;
+
+      // Read analog value of input pin: 41x
       case 41:
         if (waitForSerial(timeOut_)) {
           int pin = Serial.read();
-          if (pin >= 0 && pin <= 5) {
-            int val = analogRead(pin);
+          if (pin >= 0 && pin < numAnalogInputs_) {
+            int val = analogRead(ais[pin]);
             Serial.write(byte(41));
             Serial.write(pin);
             Serial.write(highByte(val));
@@ -480,6 +529,7 @@ void loop() {
         }
         break;
 
+      // Set pull-up resistor on analog input pin: 42
       case 42:
         if (waitForSerial(timeOut_)) {
           int pin = Serial.read();
@@ -487,13 +537,15 @@ void loop() {
             int state = Serial.read();
             Serial.write(byte(42));
             Serial.write(pin);
-            if (state == 0) {
-              digitalWrite(14 + pin, LOW);
-              Serial.write(byte(0));
-            }
-            if (state == 1) {
-              digitalWrite(14 + pin, HIGH);
-              Serial.write(byte(1));
+            if (pin >= 0 && pin < numAnalogInputs_) {
+              if (state == 0) {
+                pinMode(ais[pin], INPUT);
+                Serial.write(byte(0));
+              }
+              if (state == 1) {
+                pinMode(ais[pin], INPUT_PULLUP);
+                Serial.write(byte(1));
+              }
             }
           }
         }

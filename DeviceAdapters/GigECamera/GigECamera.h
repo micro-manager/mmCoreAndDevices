@@ -114,11 +114,6 @@ public:
 	unsigned GetNumberOfComponents() const;
 
 	/**
-    * Returns the name for each component
-    */
-	int GetComponentName(unsigned comp, char* name);
-
-	/**
 	* Returns the size in bytes of the image buffer.
 	* Required by the MM::Camera API.
 	* For multi-channel cameras, return the size of a single channel
@@ -183,7 +178,6 @@ public:
 	int ClearROI();
 
 	// sequence-acquisition-related functions
-	int PrepareSequenceAcqusition() { return DEVICE_OK; }
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
 	int StopSequenceAcquisition();

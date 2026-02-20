@@ -20,7 +20,6 @@
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include "DeviceUtils.h"
-#include "ImageMetadata.h"
 #include "ImgBuffer.h"
 #include "ModuleInterface.h"
 
@@ -156,7 +155,6 @@ private:
 	double gain_, gainMax_, gainMin_;
 	double offset_, offsetMin_, offsetMax_;
 
-	std::string binningFactor_;
 	std::string pixelType_;
 	std::string reverseX_, reverseY_;
 	std::string sensorReadoutMode_;

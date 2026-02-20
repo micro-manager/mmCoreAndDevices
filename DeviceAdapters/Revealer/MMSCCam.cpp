@@ -9,6 +9,7 @@
 //                License text is included with the source distribution.
 
 #include "MMSCCam.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "SCDefines.h"
 
@@ -657,15 +658,15 @@ int SCCamera::InsertImage()
     char label[MM::MaxStrLength];
     this->GetLabel(label);
 
-    Metadata md;
-    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-    //md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) xoffset_));
-    //md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) yoffset_)); 
+    MM::CameraImageMetadata md;
+    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+    //md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) xoffset_));
+    //md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) yoffset_)); 
     MMThreadGuard g(imgPixelsLock_);
 	const unsigned char* data = GetImageBuffer();
 
     auto coreCallback = GetCoreCallback();
-    return GetCoreCallback()->InsertImage(this, data, width, height, bytePerPixel,1, md.Serialize().c_str());
+    return GetCoreCallback()->InsertImage(this, data, width, height, bytePerPixel,1, md.Serialize());
 }
 
 int SCCamera::getNextFrame() {

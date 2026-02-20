@@ -123,6 +123,7 @@
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="CoreCallback.h" />
+    <ClInclude Include="CoreDeclHelpers.h" />
     <ClInclude Include="CoreFeatures.h" />
     <ClInclude Include="CoreProperty.h" />
     <ClInclude Include="CoreUtils.h" />
@@ -148,6 +149,7 @@
     <ClInclude Include="Devices\XYStageInstance.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="FrameBuffer.h" />
+    <ClInclude Include="ImageMetadata.h" />
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImpl.h" />

@@ -45,6 +45,7 @@
  * file (MMCore.cpp).
  */
 
+#include "CoreDeclHelpers.h"
 #include "Configuration.h"
 #include "Error.h"
 #include "ErrorCodes.h"
@@ -61,20 +62,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-
-#if !defined(SWIGJAVA) && !defined(SWIGPYTHON)
-#   ifdef _MSC_VER
-#      define MMCORE_DEPRECATED(prototype) __declspec(deprecated) prototype
-#   elif defined(__GNUC__)
-#      define MMCORE_DEPRECATED(prototype) prototype __attribute__((deprecated))
-#   else
-#      define MMCORE_DEPRECATED(prototype) prototype
-#   endif
-#else
-#   define MMCORE_DEPRECATED(prototype) prototype
-#endif
-
 
 class MMEventCallback;
 class Metadata;
@@ -394,6 +381,13 @@ public:
    double getExposure() MMCORE_LEGACY_THROW(CMMError);
    double getExposure(const char* label) MMCORE_LEGACY_THROW(CMMError);
 
+   long getBinning() MMCORE_LEGACY_THROW(CMMError);
+   long getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError);
+   std::vector<long> getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMError);
+   std::vector<long> getAllowedBinningValues(const char* label) MMCORE_LEGACY_THROW(CMMError);
+   void setBinning(long binning) MMCORE_LEGACY_THROW(CMMError);
+   void setBinning(const char* label, long binning) MMCORE_LEGACY_THROW(CMMError);
+
    void snapImage() MMCORE_LEGACY_THROW(CMMError);
    void* getImage() MMCORE_LEGACY_THROW(CMMError);
    void* getImage(unsigned numChannel) MMCORE_LEGACY_THROW(CMMError);
@@ -418,7 +412,7 @@ public:
          bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError);
    void startSequenceAcquisition(const char* cameraLabel, long numImages,
          double intervalMs, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError);
-   void prepareSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError);
+   MMCORE_DEPRECATED void prepareSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError);
    void startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGACY_THROW(CMMError);
    void stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError);
    void stopSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError);

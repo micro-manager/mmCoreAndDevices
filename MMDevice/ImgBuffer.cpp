@@ -23,9 +23,7 @@
 #include <cassert>
 #include <cstring>
 
-///////////////////////////////////////////////////////////////////////////////
-// ImgBuffer class
-//
+
 ImgBuffer::ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
    pixels_(0), width_(xSize), height_(ySize), pixDepth_(pixDepth)
 {
@@ -154,13 +152,4 @@ ImgBuffer& ImgBuffer::operator=(const ImgBuffer& img)
    Copy(img);
 
    return *this;
-}
-
-void ImgBuffer::SetMetadata(const Metadata& md)
-{
-   //metadata_ = md;
-   // Serialize/Restore instead of =operator used to avoid object new/delete
-   // issues across the DLL boundary (on Windows)
-   // TODO: this is inefficient and should be revised
-    metadata_.Restore(md.Serialize().c_str());
 }

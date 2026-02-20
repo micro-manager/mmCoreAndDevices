@@ -392,18 +392,6 @@ const unsigned char* CFLICamera::GetImageBuffer()
 	return img_.GetPixels();
 }
 
-int CFLICamera::GetComponentName(unsigned channel, char* name)
-{
-  if (channel >= GetNumberOfComponents())
-     return DEVICE_NONEXISTENT_CHANNEL;
-
-	char buf[32];
-	snprintf(buf, sizeof(buf), "Channel %d", channel);
-
-  CDeviceUtils::CopyLimitedString(name, buf);
-  return DEVICE_OK;
-}
-
 unsigned CFLICamera::GetNumberOfChannels() const 
 {
   return 1;
@@ -712,11 +700,6 @@ int CFLICamera::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 
 	return ret; 
-}
-
-int CFLICamera::PrepareSequenceAcqusition()
-{
-	return DEVICE_OK;
 }
 
 int CFLICamera::ResizeImageBuffer()

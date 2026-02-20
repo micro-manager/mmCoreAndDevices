@@ -10,6 +10,7 @@ catch2_with_main_dep = dependency(
 )
 
 mmdevice_test_sources = files(
+    'CameraImageMetadata-Tests.cpp',
     'DeviceUtils-Tests.cpp',
     'FloatPropertyTruncation-Tests.cpp',
     'MMTime-Tests.cpp',

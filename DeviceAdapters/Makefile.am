@@ -134,6 +134,7 @@ SUBDIRS = \
 	DTOpenLayer \
 	DemoCamera \
 	Diskovery \
+	EvidentIX85 \
 	FocalPoint \
 	FreeSerialPort \
 	HamiltonMVP \
@@ -185,6 +186,7 @@ SUBDIRS = \
 	PrecisExcite \
 	Prior \
 	PriorLegacy \
+	RappLasers \
 	Sapphire \
 	Scientifica \
 	SerialManager \

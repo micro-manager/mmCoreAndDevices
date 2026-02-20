@@ -43,12 +43,11 @@ public:
 	int SetBinning(int binSize);
 
 	int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
-	int PrepareSequenceAcqusition();
 	int StartSequenceAcquisition(double interval);
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();
 	unsigned  GetNumberOfComponents() const { return iComponents;};
-	int GetComponentName(unsigned component, char* name);
+
 	// action interface
 	// ----------------
 	int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);

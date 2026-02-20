@@ -1,0 +1,6 @@
+option(
+    'javadoc_from_doxygen',
+    type: 'boolean',
+    value: false,
+    description: 'Add Javadoc comments from Doxygen HTML (requires Doxygen)',
+)

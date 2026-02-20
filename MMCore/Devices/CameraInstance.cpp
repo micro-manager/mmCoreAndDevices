@@ -30,17 +30,6 @@ const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(__fun
 const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(channelNr); }
 const unsigned int* CameraInstance::GetImageBufferAsRGB32() { RequireInitialized(__func__); return GetImpl()->GetImageBufferAsRGB32(); }
 unsigned CameraInstance::GetNumberOfComponents() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfComponents(); }
-
-std::string CameraInstance::GetComponentName(unsigned component)
-{
-   RequireInitialized(__func__);
-   DeviceStringBuffer nameBuf(this, "GetComponentName");
-   int err = GetImpl()->GetComponentName(component, nameBuf.GetBuffer());
-   ThrowIfError(err, "Cannot get component name at index " +
-         ToString(component));
-   return nameBuf.Get();
-}
-
 int unsigned CameraInstance::GetNumberOfChannels() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfChannels(); }
 
 std::string CameraInstance::GetChannelName(unsigned channel)
@@ -132,7 +121,6 @@ int CameraInstance::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
 int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); }
 int CameraInstance::StartSequenceAcquisition(double interval_ms) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(interval_ms); }
 int CameraInstance::StopSequenceAcquisition() { RequireInitialized(__func__); return GetImpl()->StopSequenceAcquisition(); }
-int CameraInstance::PrepareSequenceAcqusition() { RequireInitialized(__func__); return GetImpl()->PrepareSequenceAcqusition(); }
 bool CameraInstance::IsCapturing() { RequireInitialized(__func__); return GetImpl()->IsCapturing(); }
 
 std::string CameraInstance::GetTags()

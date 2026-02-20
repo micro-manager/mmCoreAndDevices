@@ -446,22 +446,6 @@ unsigned int TwainCamera::GetNumberOfComponents() const
    return n;
 }
 
-int TwainCamera::GetComponentName(unsigned int channel, char* name)
-{
-   int ret=DEVICE_ERR;
-   if(channel == 0)
-   {
-      CDeviceUtils::CopyLimitedString(name, g_ChannelName);
-      ret = DEVICE_OK;
-   }
-   else
-   {
-      CDeviceUtils::CopyLimitedString(name, g_Unknown);
-      ret = DEVICE_NONEXISTENT_CHANNEL;
-   }
-   return ret;
-}
-
 
 /**
 * Shuts down (unloads) the device.

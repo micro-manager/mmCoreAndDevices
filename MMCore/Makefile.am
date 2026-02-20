@@ -17,6 +17,7 @@ libMMCore_la_SOURCES = \
 	Configuration.h \
 	CoreCallback.cpp \
 	CoreCallback.h \
+	CoreDeclHelpers.h \
 	CoreFeatures.cpp \
 	CoreFeatures.h \
 	CoreProperty.cpp \
@@ -64,6 +65,7 @@ libMMCore_la_SOURCES = \
 	ErrorCodes.h \
 	FrameBuffer.cpp \
 	FrameBuffer.h \
+	ImageMetadata.h \
 	LibraryInfo/LibraryPaths.h \
 	LibraryInfo/LibraryPathsUnix.cpp \
 	LoadableModules/LoadedDeviceAdapter.cpp \

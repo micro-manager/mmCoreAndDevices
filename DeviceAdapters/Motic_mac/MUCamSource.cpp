@@ -630,35 +630,6 @@ unsigned MUCamSource::GetNumberOfComponents() const
     return 4;
 }
 
-int MUCamSource::GetComponentName(unsigned channel, char* name)
-{
-    if(bytesPerPixel_ == 1 || bytesPerPixel_ == 2)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Grayscale");
-    }
-    else if(channel == 0)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Blue");
-    }
-    else if(channel == 1)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Green");
-    }
-    else if(channel == 2)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Red");
-    }
-    else if(channel == 3)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Alpha");
-    }
-    else
-    {
-        return DEVICE_NONEXISTENT_CHANNEL;
-    }
-    return DEVICE_OK;
-}
-
 const unsigned int* MUCamSource::GetImageBufferAsRGB32()
 {
     return (unsigned int*)img_.GetPixels();

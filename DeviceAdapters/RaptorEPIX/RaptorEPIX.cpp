@@ -24,10 +24,13 @@
 //#define MMLINUX32
 
 #include "RaptorEPIX.h"
+
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
+
 #include <cstdio> 
 #include <string>
 #include <math.h>
-#include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm>
 
@@ -5869,79 +5872,51 @@ int CRaptorEPIX::InsertImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
+   MM::CameraImageMetadata md;
 
-/*   Metadata myMetadata = GetMetaData();
-   // Copy the metadata inserted by other processes:
-   std::vector<std::string> keys = metadata_.GetKeys();
-//   for (unsigned int i= 0; i < keys.size(); i++) {
-//      md.put(keys[i], metadata_.GetSingleTag(keys[i].c_str()).GetValue().c_str());
-//   }
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   //md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
+   md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   //md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(fieldCount_));
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   //md.AddTag("FieldCount", CDeviceUtils::ConvertToString( (long) fieldCount_)); 
 
-   for (unsigned int i= 0; i < keys.size(); i++) {
-      MetadataSingleTag mst = metadata_.GetSingleTag(keys[i].c_str());
-      md.PutTag(mst.GetName(), mst.GetDevice(), mst.GetValue());
-   }
-*/
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   //md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(fieldCount_));
-   md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   //md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(fieldCount_));
-   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
-   //md.put("FieldCount", CDeviceUtils::ConvertToString( (long) fieldCount_)); 
+	std::string prefix =
+#ifdef HORIBA_COMPILE
+		"HoribaEPIX-";
+#else
+		"RaptorEPIX-";
+#endif
  
-	MetadataSingleTag mst1("Interval Wait Time", label, true);
-	mst1.SetValue(CDeviceUtils::ConvertToString(myIntervalWaitTime_*1000.0));
-	md.SetTag(mst1);
+	md.AddTag(prefix + "Interval Wait Time", CDeviceUtils::ConvertToString(myIntervalWaitTime_*1000.0));
 
-	MetadataSingleTag mst4("Frame Diff Time", label, true);
-	mst4.SetValue(CDeviceUtils::ConvertToString(myFrameDiffTime_*1000.0));
-	md.SetTag(mst4);
+	md.AddTag(prefix + "Frame Diff Time", CDeviceUtils::ConvertToString(myFrameDiffTime_*1000.0));
 
-	
-	MetadataSingleTag mst3(MM::g_Keyword_Elapsed_Time_ms, label, true);
-	mst3.SetValue(CDeviceUtils::ConvertToString((myReadoutStartTime_ - mySequenceStartTime_)*1000.0));
-	md.SetTag(mst3);
+	md.AddTag(prefix + MM::g_Keyword_Elapsed_Time_ms,
+		CDeviceUtils::ConvertToString((myReadoutStartTime_ - mySequenceStartTime_)*1000.0));
 
 	dCurrentClock2 = myClock();
 
 	if(trigSnap_)
 	{
-		MetadataSingleTag mst5("Trigger to Capture Time", label, true);
-		mst5.SetValue(CDeviceUtils::ConvertToString((myCaptureTime_ - myReadoutStartTime_)*1000.0));
-		md.SetTag(mst5);
+		md.AddTag(prefix + "Trigger to Capture Time",
+			CDeviceUtils::ConvertToString((myCaptureTime_ - myReadoutStartTime_)*1000.0));
 
-		MetadataSingleTag mst6("Trigger to Data Time", label, true);
-		mst6.SetValue(CDeviceUtils::ConvertToString((myCaptureTime2_ - myReadoutStartTime_)*1000.0));
-		md.SetTag(mst6);
+		md.AddTag(prefix + "Trigger to Data Time",
+			CDeviceUtils::ConvertToString((myCaptureTime2_ - myReadoutStartTime_)*1000.0));
 	}
-	MetadataSingleTag mst("Field Count", label, true);
-	//mst.SetValue(CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-	mst.SetValue(CDeviceUtils::ConvertToString(fieldCount_));
-	md.SetTag(mst);
+	md.AddTag(prefix + "Field Count", CDeviceUtils::ConvertToString(fieldCount_));
 
-	MetadataSingleTag mst2("Field Buffer", label, true);
-	//mst.SetValue(CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-	mst2.SetValue(CDeviceUtils::ConvertToString(fieldBuffer_));
-	md.SetTag(mst2);
-
-/*	MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-	mstCount.SetValue(CDeviceUtils::ConvertToString(imageCounter_));      
-	md.SetTag(mstCount);
-
-	MetadataSingleTag mstB(MM::g_Keyword_Binning, label, true);
-	mstB.SetValue(CDeviceUtils::ConvertToString(binSize_));      
-	md.SetTag(mstB);
-*/
+	md.AddTag(prefix + "Field Buffer", CDeviceUtils::ConvertToString(fieldBuffer_));
 
    imageCounter_++;
  
    char buf[MM::MaxStrLength];
    //GetProperty(MM::g_Keyword_Binning, buf);
    sprintf_s(buf, MM::MaxStrLength, "%ld", binSize_);
-   md.put(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
 
    MMThreadGuard g(imgPixelsLock_);
 
@@ -5950,10 +5925,7 @@ int CRaptorEPIX::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   //int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b) ;//, &md);
-   //int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-
-   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /*
