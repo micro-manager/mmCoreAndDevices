@@ -556,6 +556,8 @@ public:
 
    bool IsContinuousFocusDrive() const {return false;}
 
+   int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+
    // action interface
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -636,6 +638,7 @@ public:
 
    int IsXYStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
 
+   int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 
    // action interface
    // ----------------

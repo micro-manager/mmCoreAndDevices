@@ -57,6 +57,7 @@ public:
    int GetLimits(double& lower, double& upper);
    MM::FocusDirection GetFocusDirection();
    void SetFocusDirection(MM::FocusDirection direction);
+   int UsesOnStagePositionChanged(bool& result) const;
    int IsStageSequenceable(bool& isSequenceable) const;
    int IsStageLinearSequenceable(bool& isSequenceable) const;
    bool IsContinuousFocusDrive() const;
