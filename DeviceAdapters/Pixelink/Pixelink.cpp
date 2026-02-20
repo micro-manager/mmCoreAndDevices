@@ -910,7 +910,7 @@ int Pixelink::InsertImage()
 	md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
 	md.AddTag("FrameCounter", frameCounter);
 
-	return GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize(), false);
+	return GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize());
 }
 
 

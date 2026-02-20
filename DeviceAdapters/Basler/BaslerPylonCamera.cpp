@@ -2145,7 +2145,7 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 			//copy to intermediate buffer
 			int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)ptrGrabResult->GetBuffer(),
 				(unsigned)ptrGrabResult->GetWidth(), (unsigned)ptrGrabResult->GetHeight(),
-				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
+				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize());
 		}
 		else if (IsByerFormat || ptrGrabResult->GetPixelType() == PixelType_RGB8packed)
 		{
@@ -2155,7 +2155,7 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 			//copy to intermediate buffer
 			int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)image.GetBuffer(),
 				(unsigned)dev_->GetImageWidth(), (unsigned)dev_->GetImageHeight(),
-				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
+				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize());
 		}
 		else if (ptrGrabResult->GetPixelType() == PixelType_BGR8packed)
 		{
@@ -2163,7 +2163,7 @@ void CircularBufferInserter::OnImageGrabbed(CInstantCamera& /* camera */, const 
 			//copy to intermediate buffer
 			int ret = dev_->GetCoreCallback()->InsertImage(dev_, (const unsigned char*)dev_->Buffer4ContinuesShot,
 				(unsigned)dev_->GetImageWidth(), (unsigned)dev_->GetImageHeight(),
-				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize(), FALSE);
+				(unsigned)dev_->GetImageBytesPerPixel(), 1, md.Serialize());
 		}
 	}
 	else

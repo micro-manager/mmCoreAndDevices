@@ -1351,7 +1351,7 @@ int PointGrey::InsertImage(Image* pImg)
    {
       pData = RGBToBGRA(pImg->GetData());
    }
-   return GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize(), false);
+   return GetCoreCallback()->InsertImage(this, pData, w, h, b, md.Serialize());
 }
 
 

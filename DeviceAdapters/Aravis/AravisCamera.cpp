@@ -183,8 +183,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 					     img_buffer_height,
 					     img_buffer_bytes_per_pixel,
 					     1,
-					     md.Serialize(),
-					     FALSE);
+					     md.Serialize());
 
     arv_stream_push_buffer(arv_stream, cb_arv_buffer);
     counter += 1;

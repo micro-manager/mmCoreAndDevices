@@ -815,7 +815,7 @@ int XimeaCamera::InsertImage()
 	unsigned int h = GetImageHeight();
 	unsigned int b = GetImageBytesPerPixel();
 
-	return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize(), false);
+	return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /***********************************************************************
