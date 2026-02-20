@@ -254,7 +254,7 @@ public:
    void setDeviceDelayMs(const char* label, double delayMs) MMCORE_LEGACY_THROW(CMMError);
    bool usesDeviceDelay(const char* label) MMCORE_LEGACY_THROW(CMMError);
 
-   void setTimeoutMs(long timeoutMs) {if (timeoutMs > 0) timeoutMs_ = timeoutMs;}
+   void setTimeoutMs(long timeoutMs);
    long getTimeoutMs() { return timeoutMs_;}
 
    void sleep(double intervalMs) const;
