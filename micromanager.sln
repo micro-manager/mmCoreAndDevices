@@ -538,6 +538,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvidentIX85XYStage", "Devic
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvidentIX85Win", "DeviceAdapters\EvidentIX85Win\EvidentIX85Win.vcxproj", "{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsTSP01", "DeviceAdapters\ThorlabsTSP01\ThorlabsTSP01.vcxproj", "{54605E16-229F-4D3E-B3F0-339D87CD866E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1616,6 +1618,10 @@ Global
 		{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}.Debug|x64.Build.0 = Debug|x64
 		{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}.Release|x64.ActiveCfg = Release|x64
 		{F2B9E7A6-3C5D-4F1E-8D2A-9B4C7E6F3A5D}.Release|x64.Build.0 = Release|x64
+		{54605E16-229F-4D3E-B3F0-339D87CD866E}.Debug|x64.ActiveCfg = Debug|x64
+		{54605E16-229F-4D3E-B3F0-339D87CD866E}.Debug|x64.Build.0 = Debug|x64
+		{54605E16-229F-4D3E-B3F0-339D87CD866E}.Release|x64.ActiveCfg = Release|x64
+		{54605E16-229F-4D3E-B3F0-339D87CD866E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
