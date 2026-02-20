@@ -218,38 +218,16 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
    return newMD;
 }
 
-int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess)
+int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf,
+   unsigned width, unsigned height, unsigned bytesPerPixel,
+   const char* serializedMetadata)
 {
-   Metadata origMd;
-   if (serializedMetadata)
-   {
-      origMd.Restore(serializedMetadata);
-   }
-
-   try 
-   {
-      Metadata md = AddCameraMetadata(caller, &origMd);
-
-      if(doProcess)
-      {
-         MM::ImageProcessor* ip = GetImageProcessor(caller);
-         if( NULL != ip)
-         {
-            ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
-         }
-      }
-      if (core_->cbuf_->InsertImage(buf, width, height, byteDepth, &md))
-         return DEVICE_OK;
-      else
-         return DEVICE_BUFFER_OVERFLOW;
-   }
-   catch (CMMError& /*e*/)
-   {
-      return DEVICE_INCOMPATIBLE_IMAGE;
-   }
+   return InsertImage(caller, buf, width, height, bytesPerPixel, 1, serializedMetadata);
 }
 
-int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess)
+int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf,
+   unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
+   const char* serializedMetadata)
 {
    Metadata origMd;
    if (serializedMetadata)
@@ -261,15 +239,12 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    {
       Metadata md = AddCameraMetadata(caller, &origMd);
 
-      if(doProcess)
-      {
          MM::ImageProcessor* ip = GetImageProcessor(caller);
          if( NULL != ip)
          {
-            ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
+            ip->Process(const_cast<unsigned char*>(buf), width, height, bytesPerPixel);
          }
-      }
-      if (core_->cbuf_->InsertImage(buf, width, height, byteDepth, nComponents, &md))
+      if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, nComponents, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
