@@ -1139,7 +1139,15 @@ protected:
    }
 
    /**
-    * @brief Signal that the stage has arrived at a new position.
+    * @brief Report position change (for single-axis stage).
+    *
+    * Stages that do not receive change notifications from the hardware/driver
+    * don't have to call this. In particular, they should not use this to
+    * report the destination of a move that has not yet completed.
+    *
+    * It is up to the stage whether to report only after moves finish or also
+    * periodically during moves. But the reported position should eventually
+    * catch up to the actual position after the stage stops moving.
     */
    int OnStagePositionChanged(double pos)
    {
@@ -1149,7 +1157,15 @@ protected:
    }
 
    /**
-    * @brief Signal that the XY stage has arrived at a new position.
+    * @brief Report position change (for XY stage).
+    *
+    * Stages that do not receive change notifications from the hardware/driver
+    * don't have to call this. In particular, they should not use this to
+    * report the destination of a move that has not yet completed.
+    *
+    * It is up to the stage whether to report only after moves finish or also
+    * periodically during moves. But the reported position should eventually
+    * catch up to the actual position after the stage stops moving.
     */
    int OnXYStagePositionChanged(double xPos, double yPos)
    {
