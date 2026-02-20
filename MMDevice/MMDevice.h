@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 74
+#define DEVICE_INTERFACE_VERSION 75
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -1682,14 +1682,15 @@ namespace MM {
        * Cameras must call this function during sequence acquisition to send
        * each frame to the Core.
        *
-       * byteDepth: 1 or 2 for grayscale images; 4 for BGR_
+       * bytesPerPixel: 1 or 2 for grayscale images; 4 or 8 for BGRx
        *
-       * nComponents: 1 for grayscale; 4 for BGR_ (_: unused component)
+       * nComponents: 1 for grayscale; 4 for BGRx (x: an unused component)
        *
-       * serializedMetadata: must be the result of md.serialize().c_str() (md
-       *                     being an instance of Metadata)
+       * (8-byte BGRx may not be supported by the Micro-Manager GUI)
        *
-       * doProcess: must be true, except for the case mentioned below
+       * serializedMetadata: must be the result of md.Serialize() (md
+       *                     being an instance of MM::CameraImageMetadata)
+       *                     or nullptr (= no tags)
        *
        * Legacy note: Previously, cameras were required to perform special
        * handling when InsertImage() returns DEVICE_BUFFER_OVERFLOW and
@@ -1698,7 +1699,9 @@ namespace MM {
        * cameras should always just stop the acquisition if InsertImage()
        * returns any error.
        */
-      virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true) = 0;
+      virtual int InsertImage(const Device* caller, const unsigned char* buf,
+         unsigned width, unsigned height, unsigned bytePerPixel, unsigned nComponents,
+         const char* serializedMetadata) = 0;
 
       /**
        * @brief Send a grayscale frame to the Core during sequence acquisition.
@@ -1706,7 +1709,9 @@ namespace MM {
        * Same as the overload with the added nComponents parameter.
        * Assumes nComponents == 1 (grayscale).
        */
-      virtual int InsertImage(const Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata = nullptr, const bool doProcess = true) = 0;
+      virtual int InsertImage(const Device* caller, const unsigned char* buf,
+         unsigned width, unsigned height, unsigned bytePerPixel,
+         const char* serializedMetadata = nullptr) = 0;
 
       /**
        * @brief Prepare the sequence buffer for the given image size and pixel format.
