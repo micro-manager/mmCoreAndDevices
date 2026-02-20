@@ -28,7 +28,7 @@
 // Header version
 // If any of the class definitions changes, the interface version
 // must be incremented
-#define DEVICE_INTERFACE_VERSION 74
+#define DEVICE_INTERFACE_VERSION 75
 ///////////////////////////////////////////////////////////////////////////////
 
 // N.B.
@@ -373,9 +373,6 @@ namespace MM {
        */
       virtual unsigned GetNumberOfComponents() const = 0;
 
-      /** Unused; to be removed. */
-      virtual int GetComponentName(unsigned component, char* name) = 0;
-
       /**
        * @brief Return the number of simultaneous channels that camera is capable of.
        *
@@ -422,10 +419,6 @@ namespace MM {
        * Required by the MM::Camera API.
        */
       virtual unsigned GetBitDepth() const = 0;
-      /**
-       * @brief Unused and slated for removal. Implemented in DeviceBase.h.
-       */
-      virtual double GetPixelSizeUm() const = 0;
       /**
        * @brief Return the current binning factor.
        */
@@ -488,10 +481,6 @@ namespace MM {
        * @brief Stop an ongoing sequence acquisition.
        */
       virtual int StopSequenceAcquisition() = 0;
-      /**
-       * @brief Set up the camera so that Sequence acquisition can start without delay.
-       */
-      virtual int PrepareSequenceAcqusition() = 0;
       /**
        * @brief Indicate whether sequence acquisition is currently running.
        *
