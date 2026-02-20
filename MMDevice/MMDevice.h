@@ -1701,7 +1701,7 @@ namespace MM {
        */
       virtual int InsertImage(const Device* caller, const unsigned char* buf,
          unsigned width, unsigned height, unsigned bytePerPixel, unsigned nComponents,
-         const char* serializedMetadata) = 0;
+         const char* serializedMetadata = nullptr) = 0;
 
       /**
        * @brief Send a grayscale frame to the Core during sequence acquisition.
