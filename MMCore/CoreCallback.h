@@ -84,8 +84,12 @@ public:
    void Sleep(const MM::Device* caller, double intervalMs);
 
    // continuous acquisition support
-   int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess = true);
-   int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true);
+   int InsertImage(const MM::Device* caller, const unsigned char* buf,
+      unsigned width, unsigned height, unsigned bytesPerPixel,
+      const char* serializedMetadata);
+   int InsertImage(const MM::Device* caller, const unsigned char* buf,
+      unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
+      const char* serializedMetadata);
    bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
    int AcqFinished(const MM::Device* caller, int statusCode);
