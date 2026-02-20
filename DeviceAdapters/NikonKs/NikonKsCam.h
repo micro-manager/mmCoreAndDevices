@@ -72,7 +72,6 @@ public:
 	unsigned GetImageBytesPerPixel() const{return img_.Depth();};
 	unsigned GetBitDepth() const{return bitDepth_;};
 	long GetImageBufferSize() const{return img_.Width() * img_.Height() * GetImageBytesPerPixel();}
-	int GetComponentName(unsigned comp, char* name);
 	unsigned GetNumberOfComponents() const{return numComponents_;};
 	double GetExposure() const;
 	void SetExposure(double exp);

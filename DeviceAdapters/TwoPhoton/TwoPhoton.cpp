@@ -646,18 +646,6 @@ unsigned BitFlowCamera::GetNumberOfChannels() const
 	//return (unsigned)img_.size();
 }
 
-
-int BitFlowCamera::GetComponentName(unsigned channel, char* name)
-{
-   if (channel < 0 || channel >= img_.size())
-      return DEVICE_NONEXISTENT_CHANNEL;
-
-   ostringstream txt;
-   txt << "Input-" << channel;
-   CDeviceUtils::CopyLimitedString(name, txt.str().c_str());
-   return DEVICE_OK;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // BitFlowCamera Action handlers
 ///////////////////////////////////////////////////////////////////////////////

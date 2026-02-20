@@ -105,7 +105,6 @@ public:
 
    // virtual const unsigned int* GetImageBufferAsRGB32(); // TODO
    // virtual unsigned GetNumberOfComponents() const;
-   // virtual int GetComponentName(unsigned component, char* name);
 
    virtual long GetImageBufferSize() const;
    virtual unsigned GetImageWidth() const;

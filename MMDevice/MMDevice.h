@@ -372,10 +372,10 @@ namespace MM {
        * This is '1' for grayscale cameras, and '4' for RGB cameras.
        */
       virtual unsigned GetNumberOfComponents() const = 0;
-      /**
-       * @brief Return the name for each component.
-       */
+
+      /** Unused; to be removed. */
       virtual int GetComponentName(unsigned component, char* name) = 0;
+
       /**
        * @brief Return the number of simultaneous channels that camera is capable of.
        *

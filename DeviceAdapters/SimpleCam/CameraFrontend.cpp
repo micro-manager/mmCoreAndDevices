@@ -473,42 +473,6 @@ unsigned int CCameraFrontend::GetNumberOfComponents() const
 }
 
 /**
-* Returns the name for each channel. 
-*/
-int CCameraFrontend::GetComponentName(unsigned int channel, char* name)
-{
-   if (imgGrayScale_)
-   {
-      if (channel == 0)
-         CDeviceUtils::CopyLimitedString(name, "Grayscale");
-      else
-         return DEVICE_NONEXISTENT_CHANNEL;
-   }
-   else 
-   {
-      switch (channel)
-      {
-         case 0:
-            CDeviceUtils::CopyLimitedString(name, "Blue");
-            break;
-         case 1:
-            CDeviceUtils::CopyLimitedString(name, "Green");
-            break;
-         case 2:
-            CDeviceUtils::CopyLimitedString(name, "Red");
-            break;
-         case 3:
-            CDeviceUtils::CopyLimitedString(name, "Alpha");
-            break;
-         default:
-            return DEVICE_NONEXISTENT_CHANNEL;
-            break;
-      }
-   }
-   return DEVICE_OK;
-}
-
-/**
 * Returns image buffer X-size in pixels.
 * Required by the MM::Camera API.
 */

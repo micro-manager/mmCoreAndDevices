@@ -30,17 +30,6 @@ const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(__fun
 const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(channelNr); }
 const unsigned int* CameraInstance::GetImageBufferAsRGB32() { RequireInitialized(__func__); return GetImpl()->GetImageBufferAsRGB32(); }
 unsigned CameraInstance::GetNumberOfComponents() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfComponents(); }
-
-std::string CameraInstance::GetComponentName(unsigned component)
-{
-   RequireInitialized(__func__);
-   DeviceStringBuffer nameBuf(this, "GetComponentName");
-   int err = GetImpl()->GetComponentName(component, nameBuf.GetBuffer());
-   ThrowIfError(err, "Cannot get component name at index " +
-         ToString(component));
-   return nameBuf.Get();
-}
-
 int unsigned CameraInstance::GetNumberOfChannels() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfChannels(); }
 
 std::string CameraInstance::GetChannelName(unsigned channel)

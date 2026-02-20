@@ -82,7 +82,6 @@ public:
    const unsigned char* GetImageBuffer();
    const unsigned int* GetImageBufferAsRGB32();
    unsigned GetNumberOfComponents() const;
-   int GetComponentName(unsigned int channel, char* name);
    unsigned GetImageWidth() const;
    unsigned GetImageHeight() const;
    unsigned GetImageBytesPerPixel() const;
