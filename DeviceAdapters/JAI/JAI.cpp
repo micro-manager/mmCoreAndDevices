@@ -713,22 +713,6 @@ unsigned JAICamera::GetNumberOfComponents() const
 	return 4;
 }
 
-unsigned JAICamera::GetNumberOfChannels() const
-{
-   return 1;
-}
-
-int JAICamera::GetChannelName(unsigned channel, char* name)
-{
-   // TODO: multichannel
-
-   if (channel != 0)
-      return ERR_INVALID_CHANNEL_INDEX;
-   
-   strncpy(name, "Channel-0", MM::MaxStrLength);
-   return DEVICE_OK;
-}
-
 /**
  * Snaps a single image, blocks at least until exposure is finished 
  */

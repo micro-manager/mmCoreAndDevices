@@ -578,11 +578,6 @@ unsigned Tsi3Cam::GetNumberOfComponents() const
 	return numComp;
 }
 
-unsigned Tsi3Cam::GetNumberOfChannels() const
-{
-   return 1;
-}
-
 unsigned Tsi3Cam::GetImageBytesPerPixel() const
 {
 	//ostringstream os;
@@ -590,16 +585,6 @@ unsigned Tsi3Cam::GetImageBytesPerPixel() const
 	//LogMessage(os.str(), true);
 	return img.Depth();
 } 
-
-
-int Tsi3Cam::GetChannelName(unsigned channel, char* name)
-{
-   if (channel != 0)
-      return ERR_INVALID_CHANNEL_INDEX;
-   
-   strncpy(name, "Channel-0", MM::MaxStrLength);
-   return DEVICE_OK;
-}
 
 /**
  * Snaps a single image, blocks at least until exposure is finished 

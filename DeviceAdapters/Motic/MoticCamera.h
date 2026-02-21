@@ -98,39 +98,6 @@ public:
     return 4;
   }
 
-//    unsigned GetNumberOfChannels() const 
-//    {
-//       return 3;
-//    }
-// 
-//    virtual int GetChannelName(unsigned  channel , char* name)
-//    {
-//      if(channel == 0)
-//      {
-//        CDeviceUtils::CopyLimitedString(name, "Blue");
-//      }
-//      else if(channel == 1)
-//      {
-//        CDeviceUtils::CopyLimitedString(name, "Green");
-//      }
-//      else if(channel == 2)
-//      {
-//        CDeviceUtils::CopyLimitedString(name, "Red");
-//      }
-//      else
-//      {
-//        return DEVICE_NONEXISTENT_CHANNEL;
-//      }
-//      return DEVICE_OK;      
-//    }
-// 
-//    virtual const unsigned char* GetImageBuffer(unsigned /* channelNr */)
-//    {
-//       if (GetNumberOfChannels() == 1)
-//          return GetImageBuffer();
-//       return 0;
-//    }
-
    const unsigned int* GetImageBufferAsRGB32()
    {
       return (unsigned int*)m_img.GetPixels();

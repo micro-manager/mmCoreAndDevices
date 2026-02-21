@@ -508,28 +508,10 @@ const unsigned int* TsiCam::GetImageBufferAsRGB32()
 }
 unsigned TsiCam::GetNumberOfComponents() const
 {
-   // TODO: multichannel
    if (color)
       return 4;
    else
       return 1;
-}
-
-unsigned TsiCam::GetNumberOfChannels() const
-{
-   // TODO: multichannel
-   return 1;
-}
-
-int TsiCam::GetChannelName(unsigned channel, char* name)
-{
-   // TODO: multichannel
-
-   if (channel != 0)
-      return ERR_INVALID_CHANNEL_INDEX;
-   
-   strncpy(name, "Channel-0", MM::MaxStrLength);
-   return DEVICE_OK;
 }
 
 /**

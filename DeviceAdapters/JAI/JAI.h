@@ -152,8 +152,6 @@ public:
    const unsigned char* GetImageBuffer();
 
    unsigned GetNumberOfComponents() const;
-   unsigned GetNumberOfChannels() const;
-   int GetChannelName(unsigned channel, char* name);
 
    unsigned GetImageWidth() const {return img.Width();}
    unsigned GetImageHeight() const {return img.Height();}
