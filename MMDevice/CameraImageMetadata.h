@@ -103,8 +103,8 @@ public:
       // (The '_' device-label field is always "_".)
       // (The '1' indicates "read-only"; no actual meaning.)
       //
-      // Tags must have unique keys as of DIV 74 (otherwise memory may leak on
-      // deserialization by Metadata::Restore())
+      // Tags must have unique keys up to DIV 74. In DIV 75+, the last
+      // occurrence of duplicate tags wins.
 
       serialized_.clear();
       serialized_ = std::to_string(tags_.size());
