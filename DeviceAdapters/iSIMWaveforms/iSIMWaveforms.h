@@ -157,6 +157,8 @@ public:
 	int OnReadoutTimeConvToMs(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnCurrentReadoutTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnCurrentExposureTimeMs(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnCameraPulseWidthMs(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	// Helper methods
@@ -187,6 +189,8 @@ private:
 	int GetNumEnabledModInChannels() const;
 	int ValidateWaveformParameters() const;
 	double ComputeMinFrameIntervalMs() const;
+	double ComputeCameraPulseWidthMs() const;
+	void NotifyTimingChanged();
 
 	// Interleaved waveform construction
 	int BuildAndWriteAlignmentWaveforms();
