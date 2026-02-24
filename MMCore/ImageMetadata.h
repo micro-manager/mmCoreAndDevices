@@ -470,5 +470,5 @@ private:
          throw MetadataKeyError(key);
    }
 
-   std::map<std::string, std::unique_ptr<MetadataTag>> tags_;
+   std::map<std::string, std::unique_ptr<MetadataTag> > tags_;
 };
