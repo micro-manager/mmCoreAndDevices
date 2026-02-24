@@ -28,6 +28,7 @@
 #include <cstdlib>
 #include <exception>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -290,34 +291,23 @@ public:
 
    Metadata(const Metadata& original) // copy constructor
    {
-      for (TagConstIter it = original.tags_.begin(); it != original.tags_.end(); it++)
-      {
-         SetTag(*it->second);
-      }
+      for (const auto& p : original.tags_)
+         SetTag(*p.second);
    }
 
-   void Clear()
-   {
-      for (TagConstIter it=tags_.begin(); it != tags_.end(); it++)
-         delete it->second;
-      tags_.clear();
-   }
+   void Clear() { tags_.clear(); }
 
    std::vector<std::string> GetKeys() const
    {
       std::vector<std::string> keyList;
-      for (TagConstIter it = tags_.begin(), end = tags_.end(); it != end; ++it)
-         keyList.push_back(it->first);
+      for (const auto& p : tags_)
+         keyList.push_back(p.first);
       return keyList;
    }
 
    bool HasTag(const char* key)
    {
-      TagConstIter it = tags_.find(key);
-      if (it != tags_.end())
-         return true;
-      else
-         return false;
+      return tags_.find(key) != tags_.end();
    }
 
    MetadataSingleTag GetSingleTag(const char* key) const MMCORE_LEGACY_THROW(MetadataKeyError)
@@ -336,21 +326,12 @@ public:
 
    void SetTag(MetadataTag& tag)
    {
-      MetadataTag* newTag = tag.Clone();
-      const std::string key(tag.GetQualifiedName());
-      RemoveTag(key.c_str());
-      tags_[key] = newTag;
+      std::unique_ptr<MetadataTag> newTag(tag.Clone());
+      std::string key(tag.GetQualifiedName());
+      tags_[key] = std::move(newTag);
    }
 
-   void RemoveTag(const char* key)
-   {
-      TagIter it = tags_.find(key);
-      if (it != tags_.end())
-      {
-         delete it->second;
-         tags_.erase(it); // Non-const iterator needed in pre-C++11 code
-      }
-   }
+   void RemoveTag(const char* key) { tags_.erase(key); }
 
    /*
     * Convenience method to add a MetadataSingleTag
@@ -360,9 +341,11 @@ public:
    {
       std::stringstream os;
       os << value;
-      MetadataSingleTag* newTag = new MetadataSingleTag(key.c_str(), deviceLabel.c_str(), true);
+      auto newTag = std::make_unique<MetadataSingleTag>(
+          key.c_str(), deviceLabel.c_str(), true);
       newTag->SetValue(os.str().c_str());
-      tags_[newTag->GetQualifiedName()] = newTag;
+      std::string qname(newTag->GetQualifiedName());
+      tags_[qname] = std::move(newTag);
    }
 
    /*
@@ -388,22 +371,16 @@ public:
    Metadata& operator=(const Metadata& rhs)
    {
       Clear();
-      
-      for (TagConstIter it=rhs.tags_.begin(); it != rhs.tags_.end(); it++)
-      {
-         SetTag(*it->second);
-      }
-
+      for (const auto& p : rhs.tags_)
+         SetTag(*p.second);
       return *this;
    }
 #endif
 
    void Merge(const Metadata& newTags)
-   {     
-      for (TagConstIter it=newTags.tags_.begin(); it != newTags.tags_.end(); it++)
-      {
-         SetTag(*it->second);
-      }
+   {
+      for (const auto& p : newTags.tags_)
+         SetTag(*p.second);
    }
 
    std::string Serialize() const
@@ -414,12 +391,11 @@ public:
       os << tags_.size();
       str.append(os.str()).append("\n");
 
-      for (TagConstIter it = tags_.begin(); it != tags_.end(); it++)
+      for (const auto& p : tags_)
       {
-         const std::string id((it->second->ToArrayTag()) ? "a" : "s");
+         const std::string id(p.second->ToArrayTag() ? "a" : "s");
          str.append(id).append("\n");
-
-         str.append(it->second->Serialize());
+         str.append(p.second->Serialize());
       }
 
       return str;
@@ -447,14 +423,14 @@ public:
       {
          const std::string id(readLine(is));
 
-         MetadataTag* newTag;
+         std::unique_ptr<MetadataTag> newTag;
          if (id.compare("s") == 0)
          {
-            newTag = new MetadataSingleTag();
+            newTag = std::make_unique<MetadataSingleTag>();
          }
          else if (id.compare("a") == 0)
          {
-            newTag = new MetadataArrayTag();
+            newTag = std::make_unique<MetadataArrayTag>();
          }
          else
          {
@@ -462,7 +438,7 @@ public:
          }
 
          newTag->Restore(is);
-         tags_[newTag->GetQualifiedName()] = newTag;
+         tags_[newTag->GetQualifiedName()] = std::move(newTag);
       }
       return true;
    }
@@ -472,12 +448,12 @@ public:
       std::ostringstream os;
 
       os << tags_.size();
-      for (TagConstIter it = tags_.begin(); it != tags_.end(); it++)
+      for (const auto& p : tags_)
       {
          std::string id("s");
-         if (it->second->ToArrayTag())
+         if (p.second->ToArrayTag())
             id = "a";
-         std::string ser = it->second->Serialize();
+         std::string ser = p.second->Serialize();
          os << id << " : " << ser << '\n';
       }
 
@@ -487,14 +463,12 @@ public:
 private:
    MetadataTag* FindTag(const char* key) const
    {
-      TagConstIter it = tags_.find(key);
+      auto it = tags_.find(key);
       if (it != tags_.end())
-         return it->second;
+         return it->second.get();
       else
          throw MetadataKeyError(key);
    }
 
-   std::map<std::string, MetadataTag*> tags_;
-   typedef std::map<std::string, MetadataTag*>::iterator TagIter;
-   typedef std::map<std::string, MetadataTag*>::const_iterator TagConstIter;
+   std::map<std::string, std::unique_ptr<MetadataTag>> tags_;
 };

@@ -31,6 +31,14 @@ TEST_CASE("Metadata serialize via PutImageTag three tags", "[Metadata]") {
        "s\nX\n_\n1\n1.5\n");
 }
 
+TEST_CASE("Metadata PutImageTag overwrites previous value", "[Metadata]") {
+   Metadata md;
+   md.PutImageTag("Exposure", "10.0");
+   md.PutImageTag("Exposure", "20.0");
+   CHECK(md.GetKeys().size() == 1);
+   CHECK(md.GetSingleTag("Exposure").GetValue() == "20.0");
+}
+
 // --- CameraImageMetadata to Metadata restore ---
 
 TEST_CASE("CameraImageMetadata to Metadata restore empty", "[Metadata]") {
@@ -109,6 +117,16 @@ TEST_CASE("CameraImageMetadata to Metadata restore three tags",
    CHECK(tag3.GetName() == "X");
    CHECK(tag3.GetDevice() == "_");
    CHECK(tag3.GetValue() == "1.5");
+}
+
+TEST_CASE("Metadata Restore with duplicate tags keeps last", "[Metadata]") {
+   Metadata md;
+   REQUIRE(md.Restore(
+       "2\n"
+       "s\nExposure\n_\n1\n10.0\n"
+       "s\nExposure\n_\n1\n20.0\n"));
+   CHECK(md.GetKeys().size() == 1);
+   CHECK(md.GetSingleTag("Exposure").GetValue() == "20.0");
 }
 
 // --- Metadata PutImageTag() and CameraImageMetadata equivalence ---
