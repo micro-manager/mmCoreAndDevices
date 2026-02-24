@@ -392,11 +392,6 @@ const unsigned char* CFLICamera::GetImageBuffer()
 	return img_.GetPixels();
 }
 
-unsigned CFLICamera::GetNumberOfChannels() const 
-{
-  return 1;
-}
-
 unsigned CFLICamera::GetNumberOfComponents() const 
 {
   return 1;

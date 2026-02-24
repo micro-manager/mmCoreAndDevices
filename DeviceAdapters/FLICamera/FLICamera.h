@@ -61,7 +61,6 @@ class CFLICamera : public CLegacyCameraBase<CFLICamera>
 		int GetBinning() const;
 		int SetBinning(int binSize);
 		int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
-		unsigned GetNumberOfChannels() const;
 		unsigned GetNumberOfComponents() const;
 
     // action interface
