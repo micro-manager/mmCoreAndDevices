@@ -814,6 +814,8 @@ void CCRISP::CreateSumProperty() {
             }
         ));
     }
+
+    UpdateProperty(propertyName.c_str());
 }
 
 // Always read
@@ -869,6 +871,8 @@ void CCRISP::CreateDitherErrorProperty() {
             }
         ));
     }
+
+    UpdateProperty(propertyName.c_str());
 }
 
 // Advanced Properties
