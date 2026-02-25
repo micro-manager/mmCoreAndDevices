@@ -61,11 +61,10 @@ public:
    int Shutdown()
    {
       // NB: can be called even if the device was never fully initialized
-      char deviceLabel[MM::MaxStrLength];
-      this->GetLabel(deviceLabel);
-      std::string str(deviceLabel);
       if (hub_) {
-         hub_->UnRegisterPeripheral(str);
+          char deviceLabel[MM::MaxStrLength];
+          this->GetLabel(deviceLabel);
+          hub_->UnRegisterPeripheral(deviceLabel);
       }
       return (ASIBase<TDeviceBase, UConcreteDevice>::Shutdown());
    }
@@ -116,8 +115,7 @@ public:
       // register peripheral with the hub, get label in c-string and convert to c++ string
       char deviceLabel[MM::MaxStrLength];
       this->GetLabel(deviceLabel);
-      std::string str(deviceLabel);
-      hub_->RegisterPeripheral(str, addressChar_);
+      hub_->RegisterPeripheral(deviceLabel, addressChar_);
 
       // I can't seem to define action handlers here that will apply to derived classes
       // I'd like to do that to avoid so much boilerplate in separate device code
