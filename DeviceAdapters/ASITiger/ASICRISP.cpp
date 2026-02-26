@@ -134,10 +134,6 @@ int CCRISP::Initialize()
    CreateProperty(g_CRISPOffsetPropertyName, "", MM::Integer, true, pAct);
    UpdateProperty(g_CRISPOffsetPropertyName);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnState);
-   CreateProperty(g_CRISPStatePropertyName, "", MM::String, true, pAct);
-   UpdateProperty(g_CRISPStatePropertyName);
-
    if (FirmwareVersionAtLeast(3.12))
    {
     pAct = new CPropertyAction(this, &CCRISP::OnNumSkips);
@@ -151,6 +147,7 @@ int CCRISP::Initialize()
    }
 
    // Always read
+   CreateStateProperty();
    CreateSumProperty();
    CreateDitherErrorProperty();
 
@@ -734,26 +731,32 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-// Always read
-int CCRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        char tmp = '\0';
-        std::ostringstream command;
-        command << addressChar_ << "LK X?";
-        RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
-        RETURN_ON_MM_ERROR(hub_->GetAnswerCharAtPosition3(tmp));
-        std::string str(1, tmp);
-        if (!pProp->Set(str.c_str()))
-        {
-            return DEVICE_INVALID_PROPERTY_VALUE;
-        }
-    }
-    return DEVICE_OK;
-}
-
 // Read-only Properties
+
+// Always read
+void CCRISP::CreateStateProperty() {
+    const std::string propertyName = "CRISP State Character";
+
+    const std::string command = addressChar_ + "LK X?";
+
+    CreateStringProperty(
+        propertyName.c_str(), "", true,
+        new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                char tmp = '\0';
+                RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
+                RETURN_ON_MM_ERROR(hub_->GetAnswerCharAtPosition3(tmp));
+                std::string str(1, tmp);
+                if (!pProp->Set(str.c_str())) {
+                    return DEVICE_INVALID_PROPERTY_VALUE;
+                }
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    UpdateProperty(propertyName.c_str());
+}
 
 // Always read
 void CCRISP::CreateSumProperty() {

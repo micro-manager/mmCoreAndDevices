@@ -63,7 +63,6 @@ public:
     int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     int UpdateFocusState();
@@ -71,6 +70,7 @@ private:
     int ForceSetFocusState(const std::string& focusState);
 
     // Properties
+    void CreateStateProperty();
     void CreateSumProperty();
     void CreateDitherErrorProperty();
     void CreateSetLogAmpAGCProperty();

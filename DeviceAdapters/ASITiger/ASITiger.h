@@ -21,8 +21,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h, ASIFW1000.h, Arduino.h, and DemoCamera.h
-//
 
 #ifndef ASITIGER_H
 #define ASITIGER_H
@@ -371,7 +369,6 @@ const char* const g_CRISPNumberSkipsPropertyName = "Number of Skips";
 const char* const g_CRISPInFocusRangePropertyName = "In Focus Range(um)";
 const char* const g_CRISPOffsetPropertyName = "Lock Offset";
 const char* const g_CRISPSumPropertyName = "Sum";
-const char* const g_CRISPStatePropertyName = "CRISP State Character";
 
 // ring buffer property names
 const char* const g_RB_DelayPropertyName = "RingBufferDelayBetweenPoints(ms)";
