@@ -687,10 +687,14 @@ void CCRISP::CreateStateProperty() {
 void CCRISP::CreateSNRProperty() {
     const std::string propertyName = "Signal Noise Ratio";
 
-    LogMessage("CRISP: firmware < 3.53; use full EXTRA Y? for the "
-        + propertyName + " property.", true);
-
-    const std::string command = addressChar_ + "EXTRA Y?";
+    std::string command = addressChar_;
+    if (FirmwareVersionAtLeast(3.53)) {
+        command += "EX Y?";
+        LogMessage("CRISP: firmware >= 3.53; using shortcut 'EX Y?' for SNR.", true);
+    } else {
+        command += "EXTRA Y?";
+        LogMessage("CRISP: firmware < 3.53; using full 'EXTRA Y?' for SNR.", true);
+    }
 
     CreateFloatProperty(
         propertyName.c_str(), 0.0, true,
@@ -744,8 +748,7 @@ void CCRISP::CreateSumProperty() {
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
         // The command responds with => ":A 0 \r\n"
-        LogMessage("CRISP: firmware >= 3.40; use LK T? for the "
-            + propertyName + " property.", true);
+        LogMessage("CRISP: firmware >= 3.40; using 'LK T?' for Sum.", true);
 
         const std::string command = addressChar_ + "LK T?";
 
@@ -768,8 +771,7 @@ void CCRISP::CreateSumProperty() {
 
         // The old version uses the EXTRA command and requires parsing
         // The command responds with => "I    0    0 \r\n"
-        LogMessage("CRISP: firmware < 3.40; use EXTRA X? for the "
-            + propertyName + " property.", true);
+        LogMessage("CRISP: firmware < 3.40; using 'EXTRA X?' for Sum", true);
 
         const std::string command = addressChar_ + "EXTRA X?";
 
@@ -801,8 +803,7 @@ void CCRISP::CreateDitherErrorProperty() {
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
         // The command responds with => ":A 0 \r\n"
-        LogMessage("CRISP: firmware >= 3.40; use LK Y? for the "
-            + propertyName + " property.", true);
+        LogMessage("CRISP: firmware >= 3.40; using 'LK Y?' for Dither Error.", true);
 
         const std::string command = addressChar_ + "LK Y?";
 
@@ -825,8 +826,7 @@ void CCRISP::CreateDitherErrorProperty() {
 
         // The old version uses the EXTRA command and requires parsing
         // The command responds with => "I    0    0 \r\n"
-        LogMessage("CRISP: firmware < 3.40; use EXTRA X? for the "
-            + propertyName + " property.", true);
+        LogMessage("CRISP: firmware < 3.40; using 'EXTRA X?' for Dither Error.", true);
 
         const std::string command = addressChar_ + "EXTRA X?";
 
