@@ -372,8 +372,6 @@ const char* const g_CRISPInFocusRangePropertyName = "In Focus Range(um)";
 const char* const g_CRISPOffsetPropertyName = "Lock Offset";
 const char* const g_CRISPSumPropertyName = "Sum";
 const char* const g_CRISPStatePropertyName = "CRISP State Character";
-const char* const g_CRISPSetLogAmpAGCPropertyName = "Set LogAmpAGC (Advanced Users Only)";
-const char* const g_CRISPSetOffsetPropertyName = "Set Lock Offset (Advanced Users Only)";
 
 // ring buffer property names
 const char* const g_RB_DelayPropertyName = "RingBufferDelayBetweenPoints(ms)";
