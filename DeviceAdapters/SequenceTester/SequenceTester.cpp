@@ -478,7 +478,7 @@ TesterCamera::StopSequenceAcquisition()
       sequenceFuture_ = std::future<void>();
    }
 
-   return GetCoreCallback()->AcqFinished(this, 0);
+   return DEVICE_OK;
 }
 
 
@@ -577,11 +577,14 @@ TesterCamera::SendSequence(bool finite, long count, bool stopOnOverflow)
       catch (...)
       {
          delete[] bytes;
+         core->AcqFinished(this, 0);
          throw;
       }
    }
 
    delete[] bytes;
+
+   core->AcqFinished(this, 0);
 
    {
       std::lock_guard<std::mutex> lock(sequenceMutex_);
