@@ -660,12 +660,12 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 // Always read
 void CCRISP::CreateStateProperty() {
-    const std::string propertyName = "CRISP State Character";
+    const char* propertyName = "CRISP State Character";
 
     const std::string command = addressChar_ + "LK X?";
 
     CreateStringProperty(
-        propertyName.c_str(), "", true,
+        propertyName, "", true,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 char tmp = '\0';
@@ -680,12 +680,12 @@ void CCRISP::CreateStateProperty() {
         })
     );
 
-    UpdateProperty(propertyName.c_str());
+    UpdateProperty(propertyName);
 }
 
 // Always read
 void CCRISP::CreateSNRProperty() {
-    const std::string propertyName = "Signal Noise Ratio";
+    const char* propertyName = "Signal Noise Ratio";
 
     std::string command = addressChar_;
     if (FirmwareVersionAtLeast(3.53)) {
@@ -697,7 +697,7 @@ void CCRISP::CreateSNRProperty() {
     }
 
     CreateFloatProperty(
-        propertyName.c_str(), 0.0, true,
+        propertyName, 0.0, true,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 double tmp = 0.0;
@@ -711,15 +711,15 @@ void CCRISP::CreateSNRProperty() {
         })
     );
 
-    UpdateProperty(propertyName.c_str());
+    UpdateProperty(propertyName);
 }
 
 // Always read
 void CCRISP::CreateOffsetProperty() {
-    const std::string propertyName = "Lock Offset";
+    const char* propertyName = "Lock Offset";
 
     CreateIntegerProperty(
-        propertyName.c_str(), 0L, true,
+        propertyName, 0L, true,
         new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 if (!refreshProps_ && initialized_ && !refreshOverride_) {
@@ -738,12 +738,12 @@ void CCRISP::CreateOffsetProperty() {
         })
     );
 
-    UpdateProperty(propertyName.c_str());
+    UpdateProperty(propertyName);
 }
 
 // Always read
 void CCRISP::CreateSumProperty() {
-    const std::string propertyName = "Sum";
+    const char* propertyName = "Sum";
 
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
@@ -753,7 +753,7 @@ void CCRISP::CreateSumProperty() {
         const std::string command = addressChar_ + "LK T?";
 
         CreateIntegerProperty(
-            propertyName.c_str(), 0L, true,
+            propertyName, 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
@@ -776,7 +776,7 @@ void CCRISP::CreateSumProperty() {
         const std::string command = addressChar_ + "EXTRA X?";
 
         CreateIntegerProperty(
-            propertyName.c_str(), 0L, true,
+            propertyName, 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
@@ -793,12 +793,12 @@ void CCRISP::CreateSumProperty() {
         );
     }
 
-    UpdateProperty(propertyName.c_str());
+    UpdateProperty(propertyName);
 }
 
 // Always read
 void CCRISP::CreateDitherErrorProperty() {
-    const std::string propertyName = "Dither Error";
+    const char* propertyName = "Dither Error";
 
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
@@ -808,7 +808,7 @@ void CCRISP::CreateDitherErrorProperty() {
         const std::string command = addressChar_ + "LK Y?";
 
         CreateIntegerProperty(
-            propertyName.c_str(), 0L, true,
+            propertyName, 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
@@ -831,7 +831,7 @@ void CCRISP::CreateDitherErrorProperty() {
         const std::string command = addressChar_ + "EXTRA X?";
 
         CreateIntegerProperty(
-            propertyName.c_str(), 0L, true,
+            propertyName, 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
@@ -848,17 +848,17 @@ void CCRISP::CreateDitherErrorProperty() {
         );
     }
 
-    UpdateProperty(propertyName.c_str());
+    UpdateProperty(propertyName);
 }
 
 // Always read
 void CCRISP::CreateLogAmpAGCProperty() {
-    const std::string propertyName = "LogAmpAGC";
+    const char* propertyName = "LogAmpAGC";
 
     const std::string command = addressChar_ + "AL X?";
 
     CreateIntegerProperty(
-        propertyName.c_str(), 0L, true,
+        propertyName, 0L, true,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 long tmp = 0;
@@ -872,18 +872,18 @@ void CCRISP::CreateLogAmpAGCProperty() {
         })
     );
 
-    UpdateProperty(propertyName.c_str());
+    UpdateProperty(propertyName);
 }
 
 // Advanced Properties
 
 void CCRISP::CreateSetLogAmpAGCProperty() {
-    const std::string propertyName = "Set LogAmpAGC (Advanced Users Only)";
+    const char* propertyName = "Set LogAmpAGC (Advanced Users Only)";
 
     const std::string command = addressChar_ + "LK M=";
 
     CreateIntegerProperty(
-        propertyName.c_str(), 0L, false,
+        propertyName, 0L, false,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 pProp->Set("0");
@@ -902,12 +902,12 @@ void CCRISP::CreateSetLogAmpAGCProperty() {
 }
 
 void CCRISP::CreateSetLockOffsetProperty() {
-    const std::string propertyName = "Set Lock Offset (Advanced Users Only)";
+    const char* propertyName = "Set Lock Offset (Advanced Users Only)";
 
     const std::string command = addressChar_ + "LK Z=";
 
     CreateIntegerProperty(
-        propertyName.c_str(), 0L, false,
+        propertyName, 0L, false,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 pProp->Set("0");
