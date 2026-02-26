@@ -2883,7 +2883,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
    }
    else
    {
-      logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CameraNotAvailable).c_str());
+      logError("no camera available", getCoreErrorText(MMERR_CameraNotAvailable).c_str());
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
    }
    LOG_DEBUG(coreLogger_) << "Did start sequence acquisition from default camera";
