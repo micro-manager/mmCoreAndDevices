@@ -1422,21 +1422,9 @@ public:
     */
    virtual int StopSequenceAcquisition() = 0;
 
-   // It appears that this function was never used by MMCore and is slated for
-   // removal. Concrete cameras should not override.
-   double GetPixelSizeUm() const final { return 0.0; }
-
    virtual unsigned GetNumberOfComponents() const
    {
       return 1; // Default to monochrome (ie not RGB)
-   }
-
-   // To be removed (never used by MMCore); devices should not override.
-   virtual int GetComponentName(unsigned channel, char* name) final
-   {
-      (void)channel;
-      CDeviceUtils::CopyLimitedString(name, "");
-      return DEVICE_OK;
    }
 
    /**
@@ -1493,9 +1481,6 @@ public:
       }
       CDeviceUtils::CopyLimitedString(serializedMetadata, md.Serialize());
    }
-
-   // To be removed; devices should no longer override.
-   virtual int PrepareSequenceAcqusition() final {return DEVICE_OK;}
 
    /**
     * @brief Start sequence acquisition.
@@ -1905,6 +1890,15 @@ class CStageBase : public CDeviceBase<MM::Stage, U>
       return DEVICE_OK;
    }
 
+   /**
+   * @brief Return true when your device adapter uses OnStagePositionChanged callbacks.
+   */
+   virtual int UsesOnStagePositionChanged(bool& result) const
+   {
+      result = false;
+      return DEVICE_OK;
+   }
+
    virtual int IsStageLinearSequenceable(bool& isSequenceable) const
    {
       isSequenceable = false;
@@ -2111,6 +2105,15 @@ public:
          return ret;
 
       return this->SetPositionSteps(xSteps+x, ySteps+y);
+   }
+
+   /**
+    * @brief Return true when your device adapter uses OnXYStagePositionChanged callbacks.
+   */
+   virtual int UsesOnXYStagePositionChanged(bool& result) const
+   {
+      result = false;
+      return DEVICE_OK;
    }
 
    virtual int Move(double /*vx*/, double /*vy*/)

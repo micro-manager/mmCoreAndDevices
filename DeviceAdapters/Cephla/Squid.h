@@ -284,6 +284,7 @@ public:
 
    int IsXYStageSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; }
 
+   int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 
    // action interface
    // ----------------
@@ -353,6 +354,8 @@ public:
       return DEVICE_OK;
    }
    bool IsContinuousFocusDrive() const { return false; };
+
+   int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 
    int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);

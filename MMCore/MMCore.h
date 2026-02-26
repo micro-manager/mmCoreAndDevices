@@ -493,6 +493,7 @@ public:
    void setFocusDirection(const char* stageLabel, int sign);
    int getFocusDirection(const char* stageLabel) MMCORE_LEGACY_THROW(CMMError);
 
+   bool isStageUsingCallbacks(const char* stageLabel) MMCORE_LEGACY_THROW(CMMError);
    bool isStageSequenceable(const char* stageLabel) MMCORE_LEGACY_THROW(CMMError);
    bool isStageLinearSequenceable(const char* stageLabel) MMCORE_LEGACY_THROW(CMMError);
    void startStageSequence(const char* stageLabel) MMCORE_LEGACY_THROW(CMMError);
@@ -530,6 +531,7 @@ public:
          double newXUm, double newYUm) MMCORE_LEGACY_THROW(CMMError);
    void setAdapterOriginXY(double newXUm, double newYUm) MMCORE_LEGACY_THROW(CMMError);
 
+   bool isXYStageUsingCallbacks(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError);
    bool isXYStageSequenceable(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError);
    void startXYStageSequence(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError);
    void stopXYStageSequence(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError);

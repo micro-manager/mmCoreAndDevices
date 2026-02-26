@@ -118,6 +118,11 @@ public:
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
+    int UsesOnXYStagePositionChanged(bool& result) const override {
+        result = false;
+        return DEVICE_OK;
+    }
+
 protected:
     double origin_x_ = 0.0;
     double origin_y_ = 0.0;

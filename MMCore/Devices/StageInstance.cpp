@@ -60,6 +60,7 @@ StageInstance::SetFocusDirection(MM::FocusDirection direction)
    focusDirectionHasBeenSet_ = true;
 }
 
+int StageInstance::UsesOnStagePositionChanged(bool& result) const { RequireInitialized(__func__); return GetImpl()->UsesOnStagePositionChanged(result); }
 int StageInstance::IsStageSequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsStageSequenceable(isSequenceable); }
 int StageInstance::IsStageLinearSequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsStageLinearSequenceable(isSequenceable); }
 bool StageInstance::IsContinuousFocusDrive() const { RequireInitialized(__func__); return GetImpl()->IsContinuousFocusDrive(); }

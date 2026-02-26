@@ -42,6 +42,7 @@ int XYStageInstance::SetYOrigin() { RequireInitialized(__func__); return GetImpl
 int XYStageInstance::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax) { RequireInitialized(__func__); return GetImpl()->GetStepLimits(xMin, xMax, yMin, yMax); }
 double XYStageInstance::GetStepSizeXUm() { RequireInitialized(__func__); return GetImpl()->GetStepSizeXUm(); }
 double XYStageInstance::GetStepSizeYUm() { RequireInitialized(__func__); return GetImpl()->GetStepSizeYUm(); }
+int XYStageInstance::UsesOnXYStagePositionChanged(bool& result) const { RequireInitialized(__func__); return GetImpl()->UsesOnXYStagePositionChanged(result); }
 int XYStageInstance::IsXYStageSequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsXYStageSequenceable(isSequenceable); }
 int XYStageInstance::GetXYStageSequenceMaxLength(long& nrEvents) const { RequireInitialized(__func__); return GetImpl()->GetXYStageSequenceMaxLength(nrEvents); }
 int XYStageInstance::StartXYStageSequence() { RequireInitialized(__func__); return GetImpl()->StartXYStageSequence(); }

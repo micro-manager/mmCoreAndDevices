@@ -170,6 +170,7 @@ public:
    bool IsContinuousFocusDrive() const {
       return false;
    };
+
    void CallbackPositionSteps(long steps);
    void RemoveHub() { pHub_ = 0; };
 

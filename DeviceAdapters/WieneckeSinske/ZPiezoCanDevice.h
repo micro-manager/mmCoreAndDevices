@@ -77,7 +77,6 @@ public:
 	int SetOrigin();
 	int IsStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
 
-	
 	// action interface                                                       
 	// ----------------                                                       
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct); 
