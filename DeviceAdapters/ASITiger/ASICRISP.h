@@ -71,8 +71,11 @@ private:
 
     // Properties
     void CreateStateProperty();
+    void CreateSNRProperty();
+    void CreateOffsetProperty();
     void CreateSumProperty();
     void CreateDitherErrorProperty();
+    void CreateLogAmpAGCProperty();
     void CreateSetLogAmpAGCProperty();
     void CreateSetLockOffsetProperty();
 
