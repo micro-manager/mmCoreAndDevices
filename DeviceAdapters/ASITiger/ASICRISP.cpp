@@ -30,7 +30,7 @@
 #include <string>
 
 
-// NOTE: there are 6 "Always read" properties
+// NOTE: there are 7 "Always read" properties
 
 // shared properties not implemented for CRISP because as of mid-2017 only can have one per card
 
@@ -231,11 +231,10 @@ int CCRISP::IncrementalFocus()
 
 int CCRISP::GetLastFocusScore(double& score)
 {
-   score = 0.0; // init in case we can't read it
-   std::ostringstream command;
-   command << addressChar_ << "LK Y?";
-   RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
-   return hub_->ParseAnswerAfterPosition3(score);
+    score = 0.0; // init in case we can't read it
+    const std::string command = addressChar_ + "LK Y?";
+    RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
+    return hub_->ParseAnswerAfterPosition3(score);
 }
 
 int CCRISP::GetCurrentFocusScore(double& score)
@@ -257,11 +256,9 @@ int CCRISP::SetOffset(double offset)
    return DEVICE_OK;
 }
 
-int CCRISP::UpdateFocusState()
-{
-   std::ostringstream command;
-   command << addressChar_ << "LK X?";
-   RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
+int CCRISP::UpdateFocusState() {
+   const std::string command = addressChar_ + "LK X?";
+   RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
 
    char state = '\0';
    RETURN_ON_MM_ERROR(hub_->GetAnswerCharAtPosition3(state));
