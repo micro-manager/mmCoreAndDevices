@@ -21,8 +21,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h, ASIFW1000.h, Arduino.h, and DemoCamera.h
-//
 
 #ifndef ASITIGER_H
 #define ASITIGER_H
@@ -364,16 +362,8 @@ const char* const g_CRISPCalibrationRangePropertyName = "Calibration Range(um)";
 const char* const g_CRISPLEDIntensityPropertyName = "LED Intensity";
 const char* const g_CRISPLoopGainMultiplierPropertyName = "GainMultiplier";
 const char* const g_CRISPNumberAveragesPropertyName = "Number of Averages";
-const char* const g_CRISPSNRPropertyName = "Signal Noise Ratio";
-const char* const g_CRISPDitherErrorPropertyName = "Dither Error";
-const char* const g_CRISPLogAmpAGCPropertyName = "LogAmpAGC";
 const char* const g_CRISPNumberSkipsPropertyName = "Number of Skips";
 const char* const g_CRISPInFocusRangePropertyName = "In Focus Range(um)";
-const char* const g_CRISPOffsetPropertyName = "Lock Offset";
-const char* const g_CRISPSumPropertyName = "Sum";
-const char* const g_CRISPStatePropertyName = "CRISP State Character";
-const char* const g_CRISPSetLogAmpAGCPropertyName = "Set LogAmpAGC (Advanced Users Only)";
-const char* const g_CRISPSetOffsetPropertyName = "Set Lock Offset (Advanced Users Only)";
 
 // ring buffer property names
 const char* const g_RB_DelayPropertyName = "RingBufferDelayBetweenPoints(ms)";
