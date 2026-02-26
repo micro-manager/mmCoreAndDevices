@@ -64,8 +64,6 @@ public:
     int OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     int UpdateFocusState();
@@ -75,6 +73,8 @@ private:
     // Properties
     void CreateSumProperty();
     void CreateDitherErrorProperty();
+    void CreateSetLogAmpAGCProperty();
+    void CreateSetLockOffsetProperty();
 
     std::string axisLetter_;
     std::string focusState_;

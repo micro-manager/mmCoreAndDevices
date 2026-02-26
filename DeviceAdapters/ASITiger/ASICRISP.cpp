@@ -156,15 +156,9 @@ int CCRISP::Initialize()
 
    // LK M requires firmware version 3.39 or higher.
    // Enable these properties as a group to modify calibration settings.
-   if (FirmwareVersionAtLeast(3.39))
-   {
-       // No need to call UpdateProperty() because the values for these properties
-       // are always set to 0 to avoid unnecessary updates.
-       pAct = new CPropertyAction(this, &CCRISP::OnSetLogAmpAGC);
-       CreateProperty(g_CRISPSetLogAmpAGCPropertyName, "0", MM::Integer, false, pAct);
-
-       pAct = new CPropertyAction(this, &CCRISP::OnSetLockOffset);
-       CreateProperty(g_CRISPSetOffsetPropertyName, "0", MM::Integer, false, pAct);
+   if (FirmwareVersionAtLeast(3.39)) {
+       CreateSetLogAmpAGCProperty();
+       CreateSetLockOffsetProperty();
    }
 
    initialized_ = true;
@@ -740,7 +734,7 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-// always read
+// Always read
 int CCRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::BeforeGet)
@@ -774,7 +768,7 @@ void CCRISP::CreateSumProperty() {
         const std::string command = addressChar_ + "LK T?";
 
         CreateIntegerProperty(
-            propertyName.c_str(), 0, true,
+            propertyName.c_str(), 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
@@ -785,8 +779,8 @@ void CCRISP::CreateSumProperty() {
                     }
                 }
                 return DEVICE_OK;
-            }
-        ));
+            })
+        );
 
     } else { // Firmware < 3.40
 
@@ -798,7 +792,7 @@ void CCRISP::CreateSumProperty() {
         const std::string command = addressChar_ + "EXTRA X?";
 
         CreateIntegerProperty(
-            propertyName.c_str(), 0, true,
+            propertyName.c_str(), 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
@@ -811,8 +805,8 @@ void CCRISP::CreateSumProperty() {
                     }
                 }
                 return DEVICE_OK;
-            }
-        ));
+            })
+        );
     }
 
     UpdateProperty(propertyName.c_str());
@@ -831,7 +825,7 @@ void CCRISP::CreateDitherErrorProperty() {
         const std::string command = addressChar_ + "LK Y?";
 
         CreateIntegerProperty(
-            propertyName.c_str(), 0, true,
+            propertyName.c_str(), 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
@@ -842,8 +836,8 @@ void CCRISP::CreateDitherErrorProperty() {
                     }
                 }
                 return DEVICE_OK;
-            }
-        ));
+            })
+        );
 
     } else { // Firmware < 3.40
 
@@ -855,7 +849,7 @@ void CCRISP::CreateDitherErrorProperty() {
         const std::string command = addressChar_ + "EXTRA X?";
 
         CreateIntegerProperty(
-            propertyName.c_str(), 0, true,
+            propertyName.c_str(), 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
@@ -868,8 +862,8 @@ void CCRISP::CreateDitherErrorProperty() {
                     }
                 }
                 return DEVICE_OK;
-            }
-        ));
+            })
+        );
     }
 
     UpdateProperty(propertyName.c_str());
@@ -877,50 +871,57 @@ void CCRISP::CreateDitherErrorProperty() {
 
 // Advanced Properties
 
-int CCRISP::OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        pProp->Set("0");
-    }
-    else if (eAct == MM::AfterSet)
-    {
-        double logAmpAGC = 0.0;
-        pProp->Get(logAmpAGC);
-        if (logAmpAGC != 0.0)
-        {
-            std::ostringstream command;
-            command << addressChar_ << "LK M=" << logAmpAGC;
-            RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
-        }
-    }
-    return DEVICE_OK;
+void CCRISP::CreateSetLogAmpAGCProperty() {
+    const std::string propertyName = "Set LogAmpAGC (Advanced Users Only)";
+
+    const std::string command = addressChar_ + "LK M=";
+
+    CreateIntegerProperty(
+        propertyName.c_str(), 0L, false,
+        new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set("0");
+            } else if (eAct == MM::AfterSet) {
+                double logAmpAGC = 0.0;
+                pProp->Get(logAmpAGC);
+                if (logAmpAGC != 0.0) {
+                    RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(logAmpAGC), ":A"));
+                }
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    // No need to call UpdateProperty() because the value is always set to 0 to avoid updates
 }
 
-int CCRISP::OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        pProp->Set("0");
-    }
-    else if (eAct == MM::AfterSet)
-    {
-        double offset = 0.0;
-        pProp->Get(offset);
-        if (offset != 0.0)
-        {
-            refreshOverride_ = true;
-            std::ostringstream command;
-            command << addressChar_ << "LK Z=" << offset;
-            const int result = hub_->QueryCommandVerify(command.str(), ":A");
-            if (result != DEVICE_OK)
-            {
-                refreshOverride_ = false;
-                return result;
+void CCRISP::CreateSetLockOffsetProperty() {
+    const std::string propertyName = "Set Lock Offset (Advanced Users Only)";
+
+    const std::string command = addressChar_ + "LK Z=";
+
+    CreateIntegerProperty(
+        propertyName.c_str(), 0L, false,
+        new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set("0");
+            } else if (eAct == MM::AfterSet) {
+                double offset = 0.0;
+                pProp->Get(offset);
+                if (offset != 0.0) {
+                    refreshOverride_ = true;
+                    const int result = hub_->QueryCommandVerify(command + std::to_string(offset), ":A");
+                    if (result != DEVICE_OK) {
+                        refreshOverride_ = false;
+                        return result;
+                    }
+                    UpdateProperty(g_CRISPOffsetPropertyName);
+                    refreshOverride_ = false;
+                }
             }
-            UpdateProperty(g_CRISPOffsetPropertyName);
-            refreshOverride_ = false;
-        }
-    }
-    return DEVICE_OK;
+            return DEVICE_OK;
+        })
+    );
+
+    // No need to call UpdateProperty() because the value is always set to 0 to avoid updates
 }
