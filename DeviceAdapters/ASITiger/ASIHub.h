@@ -76,6 +76,8 @@ public:
    int QueryCommandVerify(const char *command, const char *expectedReplyPrefix, const char *replyTerminator, const long delayMs); // all variants call this
    int QueryCommandVerify(const char *command, const char *expectedReplyPrefix)
       { return QueryCommandVerify(command, expectedReplyPrefix, g_SerialTerminatorDefault, (long)0); }
+   int QueryCommandVerify(const std::string& command, const char* expectedReplyPrefix)
+      { return QueryCommandVerify(command.c_str(), expectedReplyPrefix, g_SerialTerminatorDefault, (long)0); }
    int QueryCommandVerify(const std::string &command, const std::string &expectedReplyPrefix)
       { return QueryCommandVerify(command.c_str(), expectedReplyPrefix.c_str(), g_SerialTerminatorDefault, (long)0); }
    int QueryCommandVerify(const std::string &command, const std::string &expectedReplyPrefix, const std::string &replyTerminator)
