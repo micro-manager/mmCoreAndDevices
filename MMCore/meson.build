@@ -65,6 +65,8 @@ mmcore_sources = files(
     'LogManager.cpp',
     'MMCore.cpp',
     'PluginManager.cpp',
+    'DeviceConformance/CameraConformance.cpp',
+    'DeviceConformance/SeqAcqTestMonitor.cpp',
     'Semaphore.cpp',
     'Task.cpp',
     'TaskSet.cpp',

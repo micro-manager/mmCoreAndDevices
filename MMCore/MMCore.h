@@ -56,6 +56,7 @@
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
 
+#include <atomic>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -90,6 +91,7 @@ namespace internal {
    class CPluginManager;
    class DeviceManager;
    class LogManager;
+   class SeqAcqTestMonitor;
 } // namespace internal
 } // namespace mmcore
 
@@ -672,6 +674,12 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) MMCORE_LEGACY_THROW(CMMError);
    ///@}
 
+   /** \name Device conformance testing. */
+   ///@{
+   std::string runCameraConformanceTests(const char* cameraLabel,
+         const char* testName = nullptr) MMCORE_LEGACY_THROW(CMMError);
+   ///@}
+
 #if !defined(SWIGJAVA) && !defined(SWIGPYTHON)
    /** \name Testing */
    ///@{
@@ -714,6 +722,8 @@ private:
    MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
    mmcore::internal::CircularBuffer* cbuf_;
+
+   std::atomic<mmcore::internal::SeqAcqTestMonitor*> seqAcqTestMonitor_{nullptr};
 
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
