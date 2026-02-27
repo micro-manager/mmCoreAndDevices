@@ -50,6 +50,7 @@
 #include "MMCore.h"
 #include "MMEventCallback.h"
 #include "PluginManager.h"
+#include "DeviceConformance/CameraConformance.h"
 
 #include "DeviceThreads.h"
 #include "DeviceUtils.h"
@@ -3126,6 +3127,34 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
    mmi::DeviceModuleLockGuard guard(pCam);
    return pCam->IsCapturing();
 };
+
+/**
+ * Run behavioral tests on a camera device adapter and return a JSON report.
+ *
+ * The tests exercise the sequence acquisition callback protocol
+ * (PrepareForAcq, InsertImage, AcqFinished).
+ *
+ * @param cameraLabel  Label of the camera to test (must be loaded and
+ *                     initialized, and not currently acquiring).
+ * @param testName     Slug name of a single test to run, or null/empty to run
+ *                     all tests.
+ * @return A JSON string containing the test results.
+ */
+std::string CMMCore::runCameraConformanceTests(const char* cameraLabel,
+      const char* testName) MMCORE_LEGACY_THROW(CMMError)
+{
+   auto pCam = deviceManager_->GetDeviceOfType<mmi::CameraInstance>(cameraLabel);
+   {
+      mmi::DeviceModuleLockGuard guard(pCam);
+      if (pCam->IsCapturing())
+         throw CMMError(
+            getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition),
+            MMERR_NotAllowedDuringSequenceAcquisition);
+   }
+
+   return mmi::RunCameraConformanceTests(pCam, seqAcqTestMonitor_, testName,
+      cameraLabel, pCam->GetName(), pCam->GetAdapterModule()->GetName());
+}
 
 /**
  * Gets the last image from the circular buffer.
