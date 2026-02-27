@@ -19,19 +19,66 @@
 
 #include "MMDeviceConstants.h"
 
+#include <nlohmann/json.hpp>
+
 #include <chrono>
+#include <ctime>
 #include <functional>
+#include <iomanip>
 #include <sstream>
 #include <thread>
 
 namespace mmcore {
 namespace internal {
 
+namespace {
+
+std::string FormatISO8601(std::chrono::system_clock::time_point tp) {
+   auto time = std::chrono::system_clock::to_time_t(tp);
+   std::tm tm{};
+#ifdef _WIN32
+   gmtime_s(&tm, &time);
+#else
+   gmtime_r(&time, &tm);
+#endif
+   std::ostringstream ss;
+   ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+   return ss.str();
+}
+
+nlohmann::json AssertionToJson(const AssertionResult& a) {
+   nlohmann::json j;
+   j["passed"] = a.passed;
+   j["message"] = a.message;
+   if (!a.details.empty())
+      j["details"] = a.details;
+   return j;
+}
+
+nlohmann::json TestToJson(const TestResult& t) {
+   nlohmann::json j;
+   j["name"] = t.name;
+   j["passed"] = t.passed;
+   nlohmann::json assertions = nlohmann::json::array();
+   for (const auto& a : t.assertions)
+      assertions.push_back(AssertionToJson(a));
+   j["assertions"] = assertions;
+   return j;
+}
+
+} // anonymous namespace
+
 std::string RunCameraConformanceTests(
       std::shared_ptr<CameraInstance> pCam,
       std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor,
-      const char* testName) {
+      const char* testName,
+      const std::string& deviceLabel,
+      const std::string& deviceName,
+      const std::string& adapterName) {
    using namespace std::chrono;
+
+   const auto startTime = system_clock::now();
+   const auto startSteady = steady_clock::now();
 
    const MM::Device* rawCam = pCam->GetRawPtr();
    const auto testTimeout = seconds(10);
@@ -71,14 +118,11 @@ std::string RunCameraConformanceTests(
          pCam->StopSequenceAcquisition();
    };
 
-   std::ostringstream report;
-   int totalTests = 0;
-   int passedTests = 0;
+   std::vector<TestResult> results;
 
-   // --- Test 1: seq-prepare-before-insert ---
    auto testPrepareBeforeInsert = [&]() {
-      report << "--- seq-prepare-before-insert ---\n";
-      ++totalTests;
+      TestResult result;
+      result.name = "seq-prepare-before-insert";
 
       SeqAcqTestMonitor monitor(rawCam);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
@@ -87,23 +131,24 @@ std::string RunCameraConformanceTests(
       startFinite(5, 0.0);
       monitor.WaitForInsertImageCount(5, testTimeout);
 
-      bool pass = true;
       if (!monitor.PrepareForAcqCalled()) {
-         report << "FAIL: PrepareForAcq was not called\n";
-         pass = false;
+         result.assertions.push_back(
+            {false, "PrepareForAcq was not called", {}});
       } else if (!monitor.PrepareBeforeFirstInsert()) {
-         report << "FAIL: PrepareForAcq was called after InsertImage\n";
-         pass = false;
+         result.assertions.push_back(
+            {false, "PrepareForAcq was called after InsertImage", {}});
       } else {
-         report << "PASS: PrepareForAcq called before first InsertImage\n";
+         result.assertions.push_back(
+            {true, "PrepareForAcq called before first InsertImage", {}});
       }
-      if (pass) ++passedTests;
+
+      result.passed = result.assertions.back().passed;
+      results.push_back(std::move(result));
    };
 
-   // --- Test 2: seq-finished-after-count ---
    auto testFinishedAfterCount = [&]() {
-      report << "--- seq-finished-after-count ---\n";
-      ++totalTests;
+      TestResult result;
+      result.name = "seq-finished-after-count";
 
       SeqAcqTestMonitor monitor(rawCam);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
@@ -112,27 +157,32 @@ std::string RunCameraConformanceTests(
       startFinite(5, 0.0);
       monitor.WaitForInsertImageCount(5, testTimeout);
 
-      bool pass = false;
       if (monitor.WaitForAcqFinished(testTimeout)) {
-         report << "PASS: AcqFinished called after finite sequence completed\n";
-         pass = true;
+         result.assertions.push_back(
+            {true, "AcqFinished called after finite sequence completed", {}});
       } else {
-         report << "FAIL: AcqFinished not called after finite sequence (5 frames)\n";
+         AssertionResult a;
+         a.passed = false;
+         a.message = "AcqFinished not called after finite sequence (5 frames)";
          stopCamera();
          if (monitor.WaitForAcqFinished(testTimeout)) {
-            report << "  (AcqFinished was called after stopSequenceAcquisition)\n";
+            a.details.push_back(
+               "AcqFinished was called after stopSequenceAcquisition");
          } else {
-            report << "  (AcqFinished was not called even after stopSequenceAcquisition)\n";
+            a.details.push_back(
+               "AcqFinished was not called even after stopSequenceAcquisition");
          }
+         result.assertions.push_back(std::move(a));
       }
-      if (pass) ++passedTests;
+
+      result.passed = result.assertions.back().passed;
+      results.push_back(std::move(result));
    };
 
-   // --- Tests 3-6 share a pattern: error/overflow injection ---
    auto testFinishedOnError = [&](const char* slug, int errorCode,
          const char* errorName, bool continuous) {
-      report << "--- " << slug << " ---\n";
-      ++totalTests;
+      TestResult result;
+      result.name = slug;
 
       SeqAcqTestMonitor monitor(rawCam);
       monitor.SetErrorInjection(errorCode, 3);
@@ -149,50 +199,55 @@ std::string RunCameraConformanceTests(
       bool pass = true;
 
       if (monitor.WaitForAcqFinished(testTimeout)) {
-         report << "PASS: AcqFinished called after " << errorName << "\n";
+         result.assertions.push_back(
+            {true, std::string("AcqFinished called after ") + errorName, {}});
       } else {
-         report << "FAIL: AcqFinished not called after " << errorName << "\n";
+         AssertionResult a;
+         a.passed = false;
+         a.message = std::string("AcqFinished not called after ") + errorName;
          pass = false;
          stopCamera();
          if (monitor.WaitForAcqFinished(testTimeout)) {
-            report << "  (AcqFinished was called after stopSequenceAcquisition)\n";
+            a.details.push_back(
+               "AcqFinished was called after stopSequenceAcquisition");
          } else {
-            report << "  (AcqFinished was not called even after stopSequenceAcquisition)\n";
+            a.details.push_back(
+               "AcqFinished was not called even after stopSequenceAcquisition");
          }
+         result.assertions.push_back(std::move(a));
       }
 
       std::this_thread::sleep_for(postErrorDelay);
       int afterError = monitor.InsertImageCountAfterError();
       if (afterError > 1) {
-         report << "FAIL: " << (afterError - 1)
-                << " InsertImage call(s) after error return\n";
+         result.assertions.push_back(
+            {false, std::to_string(afterError - 1) +
+               " InsertImage call(s) after error return", {}});
          pass = false;
       } else {
-         report << "PASS: No further InsertImage calls after error\n";
+         result.assertions.push_back(
+            {true, "No further InsertImage calls after error", {}});
       }
 
-      if (pass) ++passedTests;
+      result.passed = pass;
+      results.push_back(std::move(result));
    };
 
-   // --- Test 3: seq-finished-on-error-finite ---
    auto testFinishedOnErrorFinite = [&]() {
       testFinishedOnError("seq-finished-on-error-finite",
          DEVICE_ERR, "DEVICE_ERR", false);
    };
 
-   // --- Test 4: seq-finished-on-error-continuous ---
    auto testFinishedOnErrorContinuous = [&]() {
       testFinishedOnError("seq-finished-on-error-continuous",
          DEVICE_ERR, "DEVICE_ERR", true);
    };
 
-   // --- Test 5: seq-finished-on-overflow-finite ---
    auto testFinishedOnOverflowFinite = [&]() {
       testFinishedOnError("seq-finished-on-overflow-finite",
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", false);
    };
 
-   // --- Test 6: seq-finished-on-overflow-continuous ---
    auto testFinishedOnOverflowContinuous = [&]() {
       testFinishedOnError("seq-finished-on-overflow-continuous",
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", true);
@@ -232,12 +287,39 @@ std::string RunCameraConformanceTests(
       if (!selectedTest.empty() && selectedTest != t.slug)
          continue;
       t.func();
-      report << "\n";
    }
 
-   report << "=== Summary: " << passedTests << " / " << totalTests
-          << " tests passed ===\n";
-   return report.str();
+   const auto endSteady = steady_clock::now();
+   double durationMs =
+      duration_cast<duration<double, std::milli>>(endSteady - startSteady)
+         .count();
+
+   int passedCount = 0;
+   for (const auto& r : results)
+      if (r.passed)
+         ++passedCount;
+
+   nlohmann::json testsJson = nlohmann::json::array();
+   for (const auto& r : results)
+      testsJson.push_back(TestToJson(r));
+
+   nlohmann::json j;
+   j["version"] = 1;
+   j["timestamp"] = FormatISO8601(startTime);
+   j["device"] = {
+      {"label", deviceLabel},
+      {"name", deviceName},
+      {"library", adapterName},
+   };
+   j["deviceType"] = "Camera";
+   j["tests"] = testsJson;
+   j["summary"] = {
+      {"total", static_cast<int>(results.size())},
+      {"passed", passedCount},
+      {"durationMs", durationMs},
+   };
+
+   return j.dump(2);
 }
 
 } // namespace internal

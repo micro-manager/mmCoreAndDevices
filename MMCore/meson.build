@@ -101,6 +101,7 @@ mmcore_lib = static_library(
     include_directories: mmcore_include_dir,
     dependencies: [
         mmdevice_dep,
+        dependency('nlohmann_json'),
         dependency('threads'),
         dependency('dl', required: false),
     ],

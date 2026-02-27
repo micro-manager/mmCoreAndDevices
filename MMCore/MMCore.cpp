@@ -3129,7 +3129,7 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 };
 
 /**
- * Run behavioral tests on a camera device adapter and return a text report.
+ * Run behavioral tests on a camera device adapter and return a JSON report.
  *
  * The tests exercise the sequence acquisition callback protocol
  * (PrepareForAcq, InsertImage, AcqFinished).
@@ -3138,7 +3138,7 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
  *                     initialized, and not currently acquiring).
  * @param testName     Slug name of a single test to run, or null/empty to run
  *                     all tests.
- * @return A human-readable text report.
+ * @return A JSON string containing the test results.
  */
 std::string CMMCore::runCameraConformanceTests(const char* cameraLabel,
       const char* testName) MMCORE_LEGACY_THROW(CMMError)
@@ -3152,7 +3152,8 @@ std::string CMMCore::runCameraConformanceTests(const char* cameraLabel,
             MMERR_NotAllowedDuringSequenceAcquisition);
    }
 
-   return mmi::RunCameraConformanceTests(pCam, seqAcqTestMonitor_, testName);
+   return mmi::RunCameraConformanceTests(pCam, seqAcqTestMonitor_, testName,
+      cameraLabel, pCam->GetName(), pCam->GetAdapterModule()->GetName());
 }
 
 /**
