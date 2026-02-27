@@ -18,16 +18,32 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace mmcore {
 namespace internal {
 
 class CameraInstance;
 
+struct AssertionResult {
+   bool passed;
+   std::string message;
+   std::vector<std::string> details;
+};
+
+struct TestResult {
+   std::string name;
+   bool passed;
+   std::vector<AssertionResult> assertions;
+};
+
 std::string RunCameraConformanceTests(
       std::shared_ptr<CameraInstance> camera,
       std::atomic<SeqAcqTestMonitor*>& testMonitor,
-      const char* testName);
+      const char* testName,
+      const std::string& deviceLabel,
+      const std::string& deviceName,
+      const std::string& adapterName);
 
 } // namespace internal
 } // namespace mmcore
