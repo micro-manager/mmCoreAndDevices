@@ -69,23 +69,6 @@ int CCRISP::Initialize()
    AddAllowedValue(g_RefreshPropValsPropertyName, g_NoState);
    AddAllowedValue(g_RefreshPropValsPropertyName, g_YesState);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnFocusState);
-   CreateProperty (g_CRISPState, g_CRISP_I, MM::String, false, pAct);
-   AddAllowedValue(g_CRISPState, g_CRISP_I, 79);
-   AddAllowedValue(g_CRISPState, g_CRISP_R, 85);
-   AddAllowedValue(g_CRISPState, g_CRISP_D);
-   AddAllowedValue(g_CRISPState, g_CRISP_K, 83);
-   AddAllowedValue(g_CRISPState, g_CRISP_F);
-   AddAllowedValue(g_CRISPState, g_CRISP_N);
-   AddAllowedValue(g_CRISPState, g_CRISP_E);
-   AddAllowedValue(g_CRISPState, g_CRISP_G, 72);
-   AddAllowedValue(g_CRISPState, g_CRISP_SG, 67);
-   AddAllowedValue(g_CRISPState, g_CRISP_f, 102);
-   AddAllowedValue(g_CRISPState, g_CRISP_C, 97);
-   AddAllowedValue(g_CRISPState, g_CRISP_B, 66);
-   AddAllowedValue(g_CRISPState, g_CRISP_RFO, 111);
-   AddAllowedValue(g_CRISPState, g_CRISP_SSZ);
-
    pAct = new CPropertyAction(this, &CCRISP::OnWaitAfterLock);
    CreateProperty(g_CRISPWaitAfterLockPropertyName, "1000", MM::Integer, false, pAct);
    UpdateProperty(g_CRISPWaitAfterLockPropertyName);
@@ -135,6 +118,7 @@ int CCRISP::Initialize()
    }
 
    // Always read
+   CreateFocusStateProperty();
    CreateStateProperty();
    CreateSNRProperty();
    CreateOffsetProperty();
@@ -365,23 +349,6 @@ int CCRISP::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
         refreshProps_ = (tmpstr == g_YesState) ? true : false;
     }
     return DEVICE_OK;
-}
-
-// read this every time
-int CCRISP::OnFocusState(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      RETURN_ON_MM_ERROR( UpdateFocusState() );
-      pProp->Set(focusState_.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string focusState;
-      pProp->Get(focusState);
-      RETURN_ON_MM_ERROR( SetFocusState(focusState) );
-   }
-   return DEVICE_OK;
 }
 
 // property value set in MM only, not read from nor written to controller
@@ -654,6 +621,43 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 // Read-only Properties
+
+// Always read
+void CCRISP::CreateFocusStateProperty() {
+    const char* propertyName = "CRISP State";
+
+    CreateStringProperty(
+        propertyName, "Idle", false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                RETURN_ON_MM_ERROR(UpdateFocusState());
+                pProp->Set(focusState_.c_str());
+            } else if (eAct == MM::AfterSet) {
+                std::string focusState;
+                pProp->Get(focusState);
+                RETURN_ON_MM_ERROR(SetFocusState(focusState));
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    AddAllowedValue(propertyName, g_CRISP_I, 79);
+    AddAllowedValue(propertyName, g_CRISP_R, 85);
+    AddAllowedValue(propertyName, g_CRISP_D);
+    AddAllowedValue(propertyName, g_CRISP_K, 83);
+    AddAllowedValue(propertyName, g_CRISP_F);
+    AddAllowedValue(propertyName, g_CRISP_N);
+    AddAllowedValue(propertyName, g_CRISP_E);
+    AddAllowedValue(propertyName, g_CRISP_G, 72);
+    AddAllowedValue(propertyName, g_CRISP_SG, 67);
+    AddAllowedValue(propertyName, g_CRISP_f, 102);
+    AddAllowedValue(propertyName, g_CRISP_C, 97);
+    AddAllowedValue(propertyName, g_CRISP_B, 66);
+    AddAllowedValue(propertyName, g_CRISP_RFO, 111);
+    AddAllowedValue(propertyName, g_CRISP_SSZ);
+
+    UpdateProperty(propertyName);
+}
 
 // Always read
 void CCRISP::CreateStateProperty() {

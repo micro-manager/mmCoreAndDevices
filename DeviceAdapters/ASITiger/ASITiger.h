@@ -723,7 +723,6 @@ const char* const g_FocusPolarityMicroManagerDefault = "Positive towards sample"
 const char* const g_AxisPolarityNormal = "Normal";  // used for other stages
 const char* const g_AxisPolarityReversed = "Reversed";  // used for other stages
 // CRISP states
-const char* const g_CRISPState = "CRISP State";
 const char* const g_CRISP_I = "Idle";
 const char* const g_CRISP_R = "Ready";  // LED on and ready to move to K/lock state
 const char* const g_CRISP_D = "Dim";

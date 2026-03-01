@@ -49,7 +49,6 @@ public:
 
     // action interface
     int OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnFocusState(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNA(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -70,6 +69,7 @@ private:
     int ForceSetFocusState(const std::string& focusState);
 
     // Properties
+    void CreateFocusStateProperty();
     void CreateStateProperty();
     void CreateSNRProperty();
     void CreateOffsetProperty();
