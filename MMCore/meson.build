@@ -110,7 +110,9 @@ mmcore_lib = static_library(
 
 subdir('unittest')
 
-subdir('docs')
+if get_option('docs').allowed()
+    subdir('docs')
+endif
 
 mmcore_dep = declare_dependency(
     include_directories: mmcore_include_dir,

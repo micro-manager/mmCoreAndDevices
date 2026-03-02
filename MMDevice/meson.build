@@ -81,7 +81,7 @@ endif
 build_docs = get_option('docs').allowed()
 if meson.is_subproject() and not get_option('client_interface')
     if get_option('docs').auto()
-        build_tests = false
+        build_docs = false
     endif
 endif
 if build_docs
