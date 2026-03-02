@@ -264,6 +264,68 @@ public:
         channelCount_ = 0;
     }
 
+    void writeStaticOutputs(
+        const std::vector<std::string>& channels,
+        const std::vector<double>& minVoltages,
+        const std::vector<double>& maxVoltages,
+        const std::vector<double>& values
+    ) override
+    {
+        if (channels.empty())
+            return;
+
+        TaskHandle tempTask = 0;
+        try
+        {
+            checkError(DAQmxCreateTask("StaticOutputTask", &tempTask));
+
+            for (size_t i = 0; i < channels.size(); ++i)
+            {
+                checkError(DAQmxCreateAOVoltageChan(
+                    tempTask,
+                    channels[i].c_str(),
+                    nullptr,
+                    minVoltages[i],
+                    maxVoltages[i],
+                    DAQmx_Val_Volts,
+                    nullptr
+                ));
+            }
+
+            // No timing configured -> on-demand (software-timed) output.
+            // autoStart=TRUE: DAQmx starts the task before writing.
+            int32 written = 0;
+            checkError(DAQmxWriteAnalogF64(
+                tempTask,
+                1,
+                TRUE,
+                10.0,
+                DAQmx_Val_GroupByChannel,
+                values.data(),
+                &written,
+                nullptr
+            ));
+
+            DAQmxStopTask(tempTask);
+            DAQmxClearTask(tempTask);
+            tempTask = 0;
+
+            if (logger_)
+            {
+                std::ostringstream oss;
+                oss << "[NIDAQmx] writeStaticOutputs: wrote " << channels.size()
+                    << " channels to static values";
+                logger_(oss.str());
+            }
+        }
+        catch (...)
+        {
+            if (tempTask != 0)
+                DAQmxClearTask(tempTask);
+            throw;
+        }
+    }
+
     std::vector<std::string> getDeviceNames() const override
     {
         int32 bufSize = DAQmxGetSysDevNames(nullptr, 0);
