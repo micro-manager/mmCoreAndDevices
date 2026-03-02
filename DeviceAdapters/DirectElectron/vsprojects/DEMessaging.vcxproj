@@ -55,6 +55,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Lib>
       <AdditionalLibraryDirectories>$(MM_BOOST_LIBDIR);$(MM_PROTOBUF_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -69,6 +70,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WIN32_WINNT=0x0501;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>
       </PrecompiledHeader>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Lib>
       <AdditionalLibraryDirectories>$(MM_BOOST_LIBDIR);$(MM_PROTOBUF_LIBDIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

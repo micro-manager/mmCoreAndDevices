@@ -1,5 +1,5 @@
 
-AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) $(BOOST_CPPFLAGS) -std=c++17
+AM_CXXFLAGS = $(MMDEVAPI_CXXFLAGS) $(BOOST_CPPFLAGS)
 deviceadapter_LTLIBRARIES = libmmgr_dal_EvidentIX85.la
 libmmgr_dal_EvidentIX85_la_SOURCES = EvidentHub.cpp EvidentHub.h \
                                       EvidentIX85.cpp EvidentIX85.h \

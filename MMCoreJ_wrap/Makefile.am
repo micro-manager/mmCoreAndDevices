@@ -10,7 +10,7 @@ AUTOMAKE_OPTIONS = foreign subdir-objects
 # (We used to globally use -O by default, rather than -O2, on Linux, presumably
 # for the above reason (though the intent was never documented). But there is
 # nothing Linux-specific about this.)
-AM_CXXFLAGS = -fno-strict-aliasing
+AM_CXXFLAGS = -std=c++17 -fno-strict-aliasing
 AM_CPPFLAGS = $(JNI_CPPFLAGS) -DMMDEVICE_CLIENT_BUILD -I../MMDevice -I../MMCore
 
 

@@ -7,7 +7,7 @@ project(
     # TODO version (set here and generate pom.xml)
     meson_version: '>=1.3.0',
     default_options: [
-        'cpp_std=c++14',
+        'cpp_std=c++17',
         'warning_level=3',
     ],
 )
