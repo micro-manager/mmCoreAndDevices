@@ -264,9 +264,9 @@ int CPMT::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::AfterSet)
     {
-        std::string tmpstr;
-        pProp->Get(tmpstr);
-        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+        std::string tmp;
+        pProp->Get(tmp);
+        refreshProps_ = (tmp == g_YesState);
     }
     return DEVICE_OK;
 }
