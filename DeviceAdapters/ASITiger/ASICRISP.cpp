@@ -904,11 +904,11 @@ void CCRISP::CreateSetLogAmpAGCProperty() {
         Props::SetLogAmpAGC, 0L, false,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
-                pProp->Set("0");
+                pProp->Set(0L);
             } else if (eAct == MM::AfterSet) {
-                double logAmpAGC = 0.0;
+                long logAmpAGC = 0L;
                 pProp->Get(logAmpAGC);
-                if (logAmpAGC != 0.0) {
+                if (logAmpAGC != 0L) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(logAmpAGC), ":A"));
                 }
             }
@@ -926,11 +926,11 @@ void CCRISP::CreateSetLockOffsetProperty() {
         Props::SetLockOffset, 0L, false,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
-                pProp->Set("0");
+                pProp->Set(0L);
             } else if (eAct == MM::AfterSet) {
-                double offset = 0.0;
+                long offset = 0L;
                 pProp->Get(offset);
-                if (offset != 0.0) {
+                if (offset != 0L) {
                     refreshOverride_ = true;
                     const int result = hub_->QueryCommandVerify(command + std::to_string(offset), ":A");
                     if (result != DEVICE_OK) {
