@@ -354,7 +354,6 @@ const char* const g_ScanOvershootDistancePropertyName = "ScanOvershootDistance(u
 const char* const g_ScanRetraceSpeedPercentPropertyName = "ScanRetraceSpeedPercent(%)";
 
 // CRISP property names
-const char* const g_CRISPWaitAfterLockPropertyName = "Wait ms after Lock";
 const char* const g_CRISPObjectiveNAPropertyName = "Objective NA";
 const char* const g_CRISPLockRangePropertyName = "Max Lock Range(mm)";
 const char* const g_CRISPCalibrationGainPropertyName = "Calibration Gain";

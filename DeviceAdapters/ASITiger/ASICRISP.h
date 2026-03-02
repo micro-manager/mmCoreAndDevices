@@ -48,8 +48,6 @@ public:
     int SetOffset(double offset);
 
     // action interface
-    int OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNA(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -57,11 +55,9 @@ public:
     int OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     int UpdateFocusState();
@@ -69,6 +65,8 @@ private:
     int ForceSetFocusState(const std::string& focusState);
 
     // Properties
+    void CreateRefreshPropertiesProperty();
+    void CreateWaitAfterLockProperty();
     void CreateFocusStateProperty();
     void CreateStateProperty();
     void CreateSNRProperty();

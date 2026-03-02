@@ -40,13 +40,13 @@
 CCRISP::CCRISP(const char* name) :
    ASIPeripheralBase< ::CAutoFocusBase, CCRISP >(name),
    axisLetter_(g_EmptyAxisLetterStr),    // value determined by extended name
-   waitAfterLock_(1000)
+   waitAfterLock_(1000L)
 {
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetter_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
-   }
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        axisLetter_ = GetAxisLetterFromExtName(name);
+        CreateStringProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), true);
+    }
 }
 
 int CCRISP::Initialize()
@@ -57,21 +57,14 @@ int CCRISP::Initialize()
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    std::ostringstream command;
    command << g_CRISPDeviceDescription << " Axis=" << axisLetter_ << " HexAddr=" << addressString_;
-   CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
-
-   // create properties and corresponding action handlers
-
-   CPropertyAction* pAct;
+   CreateStringProperty(MM::g_Keyword_Description, command.str().c_str(), true);
 
    // refresh properties from controller every time - default is not to refresh (speeds things up by not redoing so much serial comm)
-   pAct = new CPropertyAction (this, &CCRISP::OnRefreshProperties);
-   CreateProperty(g_RefreshPropValsPropertyName, g_NoState, MM::String, false, pAct);
-   AddAllowedValue(g_RefreshPropValsPropertyName, g_NoState);
-   AddAllowedValue(g_RefreshPropValsPropertyName, g_YesState);
+   CreateRefreshPropertiesProperty();
+   CreateWaitAfterLockProperty();
 
-   pAct = new CPropertyAction(this, &CCRISP::OnWaitAfterLock);
-   CreateProperty(g_CRISPWaitAfterLockPropertyName, "1000", MM::Integer, false, pAct);
-   UpdateProperty(g_CRISPWaitAfterLockPropertyName);
+   // create properties and corresponding action handlers
+   CPropertyAction* pAct;
 
    pAct = new CPropertyAction(this, &CCRISP::OnNA);
    CreateProperty(g_CRISPObjectiveNAPropertyName, "0.8", MM::Float, false, pAct);
@@ -328,41 +321,55 @@ int CCRISP::ForceSetFocusState(const std::string& focusState)
     }
 }
 
-int CCRISP::SetFocusState(const std::string& focusState)
-{
-    RETURN_ON_MM_ERROR ( UpdateFocusState() );
-    if (focusState == focusState_)
-    {
+int CCRISP::SetFocusState(const std::string& focusState) {
+    RETURN_ON_MM_ERROR(UpdateFocusState());
+    if (focusState == focusState_) {
         return DEVICE_OK;
     }
     return ForceSetFocusState(focusState);
 }
 
-// action handlers
+// Properties
 
-int CCRISP::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::AfterSet)
-    {
-        std::string tmpstr;
-        pProp->Get(tmpstr);
-        refreshProps_ = (tmpstr == g_YesState) ? true : false;
-    }
-    return DEVICE_OK;
+// Note: Device adapter property (no serial communication with the controller)
+void CCRISP::CreateRefreshPropertiesProperty() {
+    CreateStringProperty(
+        g_RefreshPropValsPropertyName, g_NoState, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::AfterSet) {
+                std::string tmp;
+                pProp->Get(tmp);
+                refreshProps_ = (tmp == g_YesState) ? true : false;
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    AddAllowedValue(g_RefreshPropValsPropertyName, g_NoState);
+    AddAllowedValue(g_RefreshPropValsPropertyName, g_YesState);
+
+    // No need to call UpdateProperty() because we already initialized
+    // refreshProps_ in the constructor and CreateStringProperty()
 }
 
-// property value set in MM only, not read from nor written to controller
-int CCRISP::OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        pProp->Set(waitAfterLock_);
-    }
-    else if (eAct == MM::AfterSet)
-    {
-        pProp->Get(waitAfterLock_);
-    }
-    return DEVICE_OK;
+// Note: Device adapter property (no serial communication with the controller)
+void CCRISP::CreateWaitAfterLockProperty() {
+    const char* propertyName = "Wait ms after Lock";
+
+    CreateIntegerProperty(
+        propertyName, 1000L, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(waitAfterLock_);
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(waitAfterLock_);
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    // No need to call UpdateProperty() because we already initialized
+    // waitAfterLock_ in the constructor and CreateIntegerProperty()
 }
 
 int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
