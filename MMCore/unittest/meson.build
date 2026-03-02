@@ -11,6 +11,7 @@ catch2_with_main_dep = dependency(
 
 mmcore_test_sources = files(
     'APIError-Tests.cpp',
+    'CameraConformance-Tests.cpp',
     'CircularBuffer-Tests.cpp',
     'CoreCreateDestroy-Tests.cpp',
     'ImageMetadata-Tests.cpp',
@@ -32,10 +33,11 @@ mmcore_test_exe = executable(
     dependencies: [
         mmdevice_dep,
         catch2_with_main_dep,
+        nlohmann_json_dep,
     ],
     cpp_args: [
         '-D_CRT_SECURE_NO_WARNINGS', # TODO Eliminate the need
     ],
 )
 
-test('MMCore tests', mmcore_test_exe)
+test('MMCore tests', mmcore_test_exe, timeout: 120)
