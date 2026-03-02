@@ -74,6 +74,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\third_party;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\third_party\json\src;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\inc;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\luxapps;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\lumenera_sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -96,6 +97,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\third_party;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\third_party\json\src;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\inc;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\luxapps;$(MM_3RDPARTYPRIVATE)\Lumenera\mm\include\lumenera_sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
