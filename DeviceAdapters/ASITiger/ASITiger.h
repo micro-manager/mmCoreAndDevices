@@ -353,17 +353,6 @@ const char* const g_ScanSettlingTimePropertyName = "ScanSettlingTime(ms)";
 const char* const g_ScanOvershootDistancePropertyName = "ScanOvershootDistance(um)";
 const char* const g_ScanRetraceSpeedPercentPropertyName = "ScanRetraceSpeedPercent(%)";
 
-// CRISP property names
-const char* const g_CRISPObjectiveNAPropertyName = "Objective NA";
-const char* const g_CRISPLockRangePropertyName = "Max Lock Range(mm)";
-const char* const g_CRISPCalibrationGainPropertyName = "Calibration Gain";
-const char* const g_CRISPCalibrationRangePropertyName = "Calibration Range(um)";
-const char* const g_CRISPLEDIntensityPropertyName = "LED Intensity";
-const char* const g_CRISPLoopGainMultiplierPropertyName = "GainMultiplier";
-const char* const g_CRISPNumberAveragesPropertyName = "Number of Averages";
-const char* const g_CRISPNumberSkipsPropertyName = "Number of Skips";
-const char* const g_CRISPInFocusRangePropertyName = "In Focus Range(um)";
-
 // ring buffer property names
 const char* const g_RB_DelayPropertyName = "RingBufferDelayBetweenPoints(ms)";
 const char* const g_RB_ModePropertyName = "RingBufferMode";

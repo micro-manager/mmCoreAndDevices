@@ -27,6 +27,8 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
+// ASI CRISP Autofocus Device
+// Documentation: https://asiimaging.com/docs/crisp_manual
 class CCRISP : public ASIPeripheralBase<CAutoFocusBase, CCRISP> {
 public:
     CCRISP(const char* name);
