@@ -35,7 +35,7 @@ jobs:
           - macos-intel
           - ubuntu
         cppstd:  # Test the oldest and newest standards we support
-          - c++14
+          - c++14  # MMDevice only
           - c++17
         include:
           - os: windows
@@ -71,6 +71,7 @@ jobs:
           meson setup builddir --buildtype debug -Dcpp_std=${{ matrix.cppstd }}
           meson test -C builddir --print-errorlogs
       - name: Prepare MMCore source
+        if: matrix.cppstd != 'c++14'
         shell: bash
         run: |
           git clean -dxf
@@ -78,6 +79,7 @@ jobs:
           # wrap from the mmdevice mirror repository.
           cp -R MMDevice MMCore/subprojects/mmdevice
       - name: Build and test MMCore
+        if: matrix.cppstd != 'c++14'
         run: |
           cd MMCore
           meson setup builddir --buildtype debug -Dcpp_std=${{ matrix.cppstd }}
