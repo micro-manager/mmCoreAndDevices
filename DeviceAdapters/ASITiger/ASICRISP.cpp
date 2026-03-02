@@ -518,7 +518,7 @@ int CCRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CCRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::ostringstream command;
-   double tmp = 0;
+   long tmp = 0L;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
@@ -749,12 +749,13 @@ void CCRISP::CreateOffsetProperty() {
                 if (!refreshProps_ && initialized_ && !refreshOverride_) {
                     return DEVICE_OK;
                 }
-                double tmp = 0.0;
+                double tmp = 0.0; // NOTE: autofocus API requires double
                 const int result = GetOffset(tmp);
                 if (result != DEVICE_OK) {
                     return result;
                 }
-                if (!pProp->Set(tmp)) {
+                // convert to long for integer property
+                if (!pProp->Set(static_cast<long>(tmp))) {
                     return DEVICE_INVALID_PROPERTY_VALUE;
                 }
             }
@@ -803,7 +804,7 @@ void CCRISP::CreateSumProperty() {
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
-                    std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
+                    const std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
                     if (vReply.size() <= 2) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
                     }
@@ -857,7 +858,7 @@ void CCRISP::CreateDitherErrorProperty() {
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
-                    std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
+                    const std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
                     if (vReply.size() <= 2) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
                     }
@@ -881,10 +882,11 @@ void CCRISP::CreateLogAmpAGCProperty() {
         Props::LogAmpAGC, 0L, true,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
-                long tmp = 0;
+                double tmp = 0.0; // NOTE: response is ":A X=1.000000", parse as double
                 RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A X="));
                 RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
-                if (!pProp->Set(tmp)) {
+                // convert to long for integer property
+                if (!pProp->Set(static_cast<long>(tmp))) {
                     return DEVICE_INVALID_PROPERTY_VALUE;
                 }
             }

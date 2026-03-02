@@ -31,8 +31,8 @@
 // Documentation: https://asiimaging.com/docs/crisp_manual
 class CCRISP : public ASIPeripheralBase<CAutoFocusBase, CCRISP> {
 public:
-    CCRISP(const char* name);
-    ~CCRISP() { }
+    explicit CCRISP(const char* name);
+    ~CCRISP() = default;
 
     // Device API
     int Initialize();
