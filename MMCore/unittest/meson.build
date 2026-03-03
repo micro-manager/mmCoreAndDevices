@@ -13,6 +13,7 @@ mmcore_test_sources = files(
     'APIError-Tests.cpp',
     'CircularBuffer-Tests.cpp',
     'CoreCreateDestroy-Tests.cpp',
+    'EventCallback-Tests.cpp',
     'ImageMetadata-Tests.cpp',
     'ImageMetadataTags-Tests.cpp',
     'Logger-Tests.cpp',
