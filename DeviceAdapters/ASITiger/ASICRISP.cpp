@@ -83,12 +83,14 @@ int CCRISP::Initialize() {
     // call generic Initialize first, this gets hub
     RETURN_ON_MM_ERROR(PeripheralInitialize());
 
-    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-    std::ostringstream command;
-    command << g_CRISPDeviceDescription << " Axis=" << axisLetter_ << " HexAddr=" << addressString_;
-    CreateStringProperty(MM::g_Keyword_Description, command.str().c_str(), true);
+    // create MM description; requires runtime values not
+    // available during the hardware configuration wizard
+    const std::string description = std::string(g_CRISPDeviceDescription)
+        + " Axis=" + axisLetter_ + " HexAddr=" + addressString_;
+    CreateStringProperty(MM::g_Keyword_Description, description.c_str(), true);
 
-    // refresh properties from controller every time - default is not to refresh (speeds things up by not redoing so much serial comm)
+    // refresh properties from controller every time - default is not to refresh
+    // (speeds things up by not redoing as much serial communication)
     CreateRefreshPropertiesProperty();
     CreateWaitAfterLockProperty();
 
@@ -158,8 +160,7 @@ int CCRISP::Initialize() {
     return DEVICE_OK;
 }
 
-bool CCRISP::Busy()
-{
+bool CCRISP::Busy() {
     // not sure how to define it, Nico's ASIStage adapter hard-codes it false so I'll do same thing
     return false;
 }
@@ -179,13 +180,13 @@ int CCRISP::SetContinuousFocusing(bool state)
         // was off, turning on
         if (focusState_ == g_CRISP_R)
         {
-            return ForceSetFocusState(g_CRISP_K);
+            return SetFocusState(g_CRISP_K);
         }
         else
         {
             // need to move to ready state, then turn on
-            RETURN_ON_MM_ERROR( ForceSetFocusState(g_CRISP_R) );
-            RETURN_ON_MM_ERROR( ForceSetFocusState(g_CRISP_K) );
+            RETURN_ON_MM_ERROR(SetFocusState(g_CRISP_R));
+            RETURN_ON_MM_ERROR(SetFocusState(g_CRISP_K));
         }
     }
     // if already in state requested we don't need to do anything
@@ -211,8 +212,8 @@ int CCRISP::FullFocus()
    // Does a "one-shot" autofocus: locks and then unlocks again
    RETURN_ON_MM_ERROR ( SetContinuousFocusing(true) );
 
-   MM::MMTime startTime = GetCurrentMMTime();
-   MM::MMTime wait(0, waitAfterLock_ * 1000);
+   const MM::MMTime startTime = GetCurrentMMTime();
+   const MM::MMTime wait(0, waitAfterLock_ * 1000L);
    while (!IsContinuousFocusLocked() && ((GetCurrentMMTime() - startTime) < wait))
    {
       CDeviceUtils::SleepMs(25);
@@ -350,7 +351,7 @@ int CCRISP::ForceSetFocusState(const std::string& focusState)
 }
 
 int CCRISP::SetFocusState(const std::string& focusState) {
-    RETURN_ON_MM_ERROR(UpdateFocusState());
+    // avoid serial communication if already in the state
     if (focusState == focusState_) {
         return DEVICE_OK;
     }
