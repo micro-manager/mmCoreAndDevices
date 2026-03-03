@@ -19,6 +19,7 @@ mmcore_test_sources = files(
     'Logger-Tests.cpp',
     'LoggingSplitEntryIntoLines-Tests.cpp',
     'MockDeviceAdapter-Tests.cpp',
+    'Notification-Tests.cpp',
     'PixelSize-Tests.cpp',
     'SequenceAcquisition-Tests.cpp',
     'StubDevices-Tests.cpp',

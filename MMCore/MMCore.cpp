@@ -49,6 +49,7 @@
 #include "LogManager.h"
 #include "MMCore.h"
 #include "MMEventCallback.h"
+#include "NotificationQueue.h"
 #include "PluginManager.h"
 
 #include "DeviceThreads.h"
@@ -70,6 +71,7 @@
 #include <vector>
 
 namespace mmi = mmcore::internal;
+namespace notif = mmcore::internal::notification;
 
 /*
  * Important! Read this before changing this file:
@@ -106,7 +108,7 @@ namespace mmi = mmcore::internal;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 11, MMCore_versionMinor = 14, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 12, MMCore_versionMinor = 0, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -129,7 +131,6 @@ CMMCore::CMMCore() :
    callback_(0),
    configGroups_(0),
    properties_(0),
-   externalCallback_(0),
    pixelSizeGroup_(0),
    cbuf_(0),
    pluginManager_(new mmi::CPluginManager()),
@@ -863,19 +864,15 @@ void CMMCore::unloadAllDevices() MMCORE_LEGACY_THROW(CMMError)
 
       // The system config has "changed" (to "(none)").
       // But don't notify if we will proceed to load a new config.
-      if (externalCallback_ && !isLoadingSystemConfiguration_)
-      {
-         externalCallback_->onSystemConfigurationLoaded();
-      }
+      if (!isLoadingSystemConfiguration_)
+         postNotification(notif::SystemConfigurationLoaded{});
    }
    catch (CMMError& err) {
       logError("MMCore::unloadAllDevices", err.getMsg().c_str());
 
       // The config has "changed" even in this case.
-      if (externalCallback_ && !isLoadingSystemConfiguration_)
-      {
-         externalCallback_->onSystemConfigurationLoaded();
-      }
+      if (!isLoadingSystemConfiguration_)
+         postNotification(notif::SystemConfigurationLoaded{});
 
       throw;
    }
@@ -2625,10 +2622,7 @@ void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
             }
             waitForDevice(shutter);
          }
-         if (externalCallback_)
-         {
-            externalCallback_->onImageSnapped(camera->GetLabel().c_str());
-         }
+         postNotification(notif::ImageSnapped{camera->GetLabel()});
 		}catch( CMMError& e){
 			throw e;
 		}
@@ -3606,10 +3600,7 @@ void CMMCore::setChannelGroup(const char* chGroup) MMCORE_LEGACY_THROW(CMMError)
       MMThreadGuard scg(stateCacheLock_);
       stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreChannelGroup, channelGroup_.c_str()));
    }
-   if (externalCallback_ != 0) 
-   {
-      externalCallback_->onChannelGroupChanged(channelGroup_.c_str());
-   }
+   postNotification(notif::ChannelGroupChanged{channelGroup_});
 }
 
 /**
@@ -7686,10 +7677,7 @@ void CMMCore::loadSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
       throw;
    }
 
-   if (externalCallback_)
-   {
-      externalCallback_->onSystemConfigurationLoaded();
-   }
+   postNotification(notif::SystemConfigurationLoaded{});
 }
 
 
@@ -7958,12 +7946,48 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_TH
  *
  * The caller is responsible for ensuring that the object pointed to by \p cb
  * remains valid until it is unregistered.
- *
- * This function is not thread safe.
  */
 void CMMCore::registerCallback(MMEventCallback* cb)
 {
-   externalCallback_ = cb;
+   std::lock_guard<std::mutex> guard(callbackMutex_);
+
+   // Stop existing delivery thread if running
+   if (notificationQueue_) {
+      notificationQueue_->RequestInterrupt();
+      notificationDeliveryThread_.join();
+   }
+
+   if (cb) {
+      if (!notificationQueue_) {
+         auto queue = std::make_shared<mmi::NotificationQueue>();
+         std::unique_lock<std::shared_mutex> lock(notificationQueueMutex_);
+         notificationQueue_ = queue;
+      }
+
+      auto queue = notificationQueue_;
+      notificationDeliveryThread_ = std::thread([queue, cb, this] {
+         while (auto n = queue->WaitAndPop()) {
+            try {
+               mmi::DispatchNotification(*n, *cb);
+            }
+            catch (...) {
+               LOG_ERROR(coreLogger_)
+                  << "Exception in MMEventCallback delivery";
+            }
+         }
+      });
+   } else {
+      std::unique_lock<std::shared_mutex> lock(notificationQueueMutex_);
+      notificationQueue_.reset();
+   }
+}
+
+
+void CMMCore::postNotification(mmi::Notification notification)
+{
+   std::shared_lock<std::shared_mutex> lock(notificationQueueMutex_);
+   if (notificationQueue_)
+      notificationQueue_->Push(std::move(notification));
 }
 
 
