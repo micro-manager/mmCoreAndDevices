@@ -7946,9 +7946,16 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_TH
  *
  * The caller is responsible for ensuring that the object pointed to by \p cb
  * remains valid until it is unregistered.
+ *
+ * Must not be called from within a callback handler.
  */
-void CMMCore::registerCallback(MMEventCallback* cb)
+void CMMCore::registerCallback(MMEventCallback* cb) MMCORE_LEGACY_THROW(CMMError)
 {
+   if (notificationDeliveryThread_.get_id() == std::this_thread::get_id()) {
+      throw CMMError(
+          "Cannot call registerCallback from within an MMEventCallback handler");
+   }
+
    std::lock_guard<std::mutex> guard(callbackMutex_);
 
    // Stop existing delivery thread if running

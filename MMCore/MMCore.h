@@ -178,7 +178,7 @@ public:
    void loadSystemState(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
    void saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
    void loadSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
-   void registerCallback(MMEventCallback* cb);
+   void registerCallback(MMEventCallback* cb) MMCORE_LEGACY_THROW(CMMError);
    ///@}
 
    /** \name Logging and log management. */

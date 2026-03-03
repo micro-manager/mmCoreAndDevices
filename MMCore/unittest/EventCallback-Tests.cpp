@@ -585,7 +585,59 @@ TEST_CASE("onPropertyChanged from Core property", "[EventCallback]") {
    CHECK(recs[0].s3 == "0");
 }
 
-// --- Negative test ---
+// --- Negative tests ---
+
+TEST_CASE("registerCallback throws when called from callback handler",
+          "[EventCallback]") {
+   StubGeneric dev;
+   MockAdapterWithDevices adapter{{"dev", &dev}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   std::mutex mu;
+   std::condition_variable cv;
+   bool threw = false;
+   bool done = false;
+
+   struct ReentrantCallback : MMEventCallback {
+      CMMCore& core;
+      std::mutex& mu;
+      std::condition_variable& cv;
+      bool& threw;
+      bool& done;
+
+      ReentrantCallback(CMMCore& c, std::mutex& m,
+                        std::condition_variable& v, bool& t, bool& d)
+          : core(c), mu(m), cv(v), threw(t), done(d) {}
+
+      void onPropertiesChanged() override {
+         bool caught = false;
+         try {
+            core.registerCallback(nullptr);
+         } catch (const CMMError&) {
+            caught = true;
+         }
+         {
+            std::lock_guard<std::mutex> lk(mu);
+            threw = caught;
+            done = true;
+         }
+         cv.notify_all();
+      }
+   };
+
+   ReentrantCallback cb(c, mu, cv, threw, done);
+   c.registerCallback(&cb);
+
+   dev.OnPropertiesChanged();
+
+   {
+      std::unique_lock<std::mutex> lk(mu);
+      REQUIRE(cv.wait_for(lk, std::chrono::milliseconds(5000),
+                          [&] { return done; }));
+   }
+   REQUIRE(threw);
+}
 
 TEST_CASE("No crash when no callback is registered", "[EventCallback]") {
    StubCamera cam;
