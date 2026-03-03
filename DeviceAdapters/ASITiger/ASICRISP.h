@@ -44,7 +44,7 @@ public:
     bool IsContinuousFocusLocked();
     int FullFocus();
     int IncrementalFocus();
-    int GetLastFocusScore(double& score);
+    int GetLastFocusScore(double& score) { return GetCurrentFocusScore(score); }
     int GetCurrentFocusScore(double& score);
     int GetOffset(double& offset);
     int SetOffset(double offset);

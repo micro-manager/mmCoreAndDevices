@@ -165,25 +165,18 @@ bool CCRISP::Busy() {
     return false;
 }
 
-int CCRISP::SetContinuousFocusing(bool state)
-{
-    bool focusingOn = false;
-    RETURN_ON_MM_ERROR( GetContinuousFocusing(focusingOn) );  // will update focusState_
-    if (focusingOn && !state)
-    {
+int CCRISP::SetContinuousFocusing(bool state) {
+    bool isFocusing = false;
+    RETURN_ON_MM_ERROR(GetContinuousFocusing(isFocusing)); // will update focusState_
+    if (isFocusing && !state) {
         // was on, turning off
         const std::string command = addressChar_ + "UL";
         RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
-    }
-    else if (!focusingOn && state)
-    {
+    } else if (!isFocusing && state) {
         // was off, turning on
-        if (focusState_ == g_CRISP_R)
-        {
+        if (focusState_ == g_CRISP_R) {
             return SetFocusState(g_CRISP_K);
-        }
-        else
-        {
+        } else {
             // need to move to ready state, then turn on
             RETURN_ON_MM_ERROR(SetFocusState(g_CRISP_R));
             RETURN_ON_MM_ERROR(SetFocusState(g_CRISP_K));
@@ -194,58 +187,46 @@ int CCRISP::SetContinuousFocusing(bool state)
 }
 
 // Update focusState_ from the controller and check if focus is locked or trying to lock ('F' or 'K' state).
-int CCRISP::GetContinuousFocusing(bool& state)
-{
-   RETURN_ON_MM_ERROR( UpdateFocusState() );
-   state = (focusState_ == g_CRISP_K) || (focusState_ == g_CRISP_F);
-   return DEVICE_OK;
+int CCRISP::GetContinuousFocusing(bool& state) {
+    RETURN_ON_MM_ERROR(UpdateFocusState());
+    state = (focusState_ == g_CRISP_K) || (focusState_ == g_CRISP_F);
+    return DEVICE_OK;
 }
 
 // Update focusState_ from the controller and check if focus is locked ('F' state).
-bool CCRISP::IsContinuousFocusLocked()
-{
+bool CCRISP::IsContinuousFocusLocked() {
     return (UpdateFocusState() == DEVICE_OK) && (focusState_ == g_CRISP_F);
 }
 
-int CCRISP::FullFocus()
-{
-   // Does a "one-shot" autofocus: locks and then unlocks again
-   RETURN_ON_MM_ERROR ( SetContinuousFocusing(true) );
+// Does a "one-shot" autofocus: locks and then unlocks again
+int CCRISP::FullFocus() {
+    RETURN_ON_MM_ERROR(SetContinuousFocusing(true));
 
-   const MM::MMTime startTime = GetCurrentMMTime();
-   const MM::MMTime wait(0, waitAfterLock_ * 1000L);
-   while (!IsContinuousFocusLocked() && ((GetCurrentMMTime() - startTime) < wait))
-   {
-      CDeviceUtils::SleepMs(25);
-   }
+    const MM::MMTime startTime = GetCurrentMMTime();
+    const MM::MMTime wait(0, waitAfterLock_ * 1000L);
+    while (!IsContinuousFocusLocked() && ((GetCurrentMMTime() - startTime) < wait)) {
+        CDeviceUtils::SleepMs(25);
+    }
 
-   CDeviceUtils::SleepMs(waitAfterLock_);
+    CDeviceUtils::SleepMs(waitAfterLock_);
 
-   if (!IsContinuousFocusLocked())
-   {
-      SetContinuousFocusing(false);
-      return ERR_CRISP_NOT_LOCKED;
-   }
+    if (!IsContinuousFocusLocked()) {
+        SetContinuousFocusing(false);
+        return ERR_CRISP_NOT_LOCKED;
+    }
 
-   return SetContinuousFocusing(false);
+    return SetContinuousFocusing(false);
 }
 
-int CCRISP::IncrementalFocus()
-{
-   return FullFocus();
+int CCRISP::IncrementalFocus() {
+    return FullFocus();
 }
 
-int CCRISP::GetLastFocusScore(double& score)
-{
-    score = 0.0; // init in case we can't read it
+int CCRISP::GetCurrentFocusScore(double& score) {
+    score = 0.0; // default to 0 if serial read fails
     const std::string command = addressChar_ + "LK Y?";
     RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
     return hub_->ParseAnswerAfterPosition3(score);
-}
-
-int CCRISP::GetCurrentFocusScore(double& score)
-{
-   return GetLastFocusScore(score);
 }
 
 int CCRISP::GetOffset(double& offset) {
@@ -254,12 +235,11 @@ int CCRISP::GetOffset(double& offset) {
     return hub_->ParseAnswerAfterPosition3(offset);
 }
 
-int CCRISP::SetOffset(double offset)
-{
-   std::ostringstream command;
-   command << addressChar_ << "LK Z=" << offset;
-   RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
-   return DEVICE_OK;
+int CCRISP::SetOffset(double offset) {
+    std::ostringstream command;
+    command << addressChar_ << "LK Z=" << offset;
+    RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
+    return DEVICE_OK;
 }
 
 int CCRISP::UpdateFocusState() {
