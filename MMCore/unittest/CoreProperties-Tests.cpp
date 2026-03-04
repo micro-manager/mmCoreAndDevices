@@ -97,6 +97,18 @@ TEST_CASE("Core TimeoutMs property") {
       c.setTimeoutMs(3000);
       CHECK(c.getTimeoutMs() == 3000);
    }
+
+   SECTION("setTimeoutMs ignores zero") {
+      c.setTimeoutMs(0);
+      CHECK(c.getTimeoutMs() == 5000);
+      CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
+   }
+
+   SECTION("setTimeoutMs ignores negative") {
+      c.setTimeoutMs(-1);
+      CHECK(c.getTimeoutMs() == 5000);
+      CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
+   }
 }
 
 // Bug: setTimeoutMs() is a simple inline setter that does not sync the
@@ -106,6 +118,24 @@ TEST_CASE("setTimeoutMs updates Core property", "[!shouldfail]") {
    CMMCore c;
    c.setTimeoutMs(3000);
    CHECK(c.getProperty("Core", "TimeoutMs") == "3000");
+}
+
+// Bug: setProperty("Core", "TimeoutMs", ...) does not reject non-positive
+// values. The property string is stored before Execute() calls setTimeoutMs(),
+// which silently ignores the value, leaving the property out of sync.
+TEST_CASE("setProperty Core-TimeoutMs with zero is ignored", "[!shouldfail]") {
+   CMMCore c;
+   c.setProperty("Core", "TimeoutMs", "0");
+   CHECK(c.getTimeoutMs() == 5000);
+   CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
+}
+
+TEST_CASE("setProperty Core-TimeoutMs with negative is ignored",
+      "[!shouldfail]") {
+   CMMCore c;
+   c.setProperty("Core", "TimeoutMs", "-1");
+   CHECK(c.getTimeoutMs() == 5000);
+   CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
 }
 
 // --- Device role properties ---
