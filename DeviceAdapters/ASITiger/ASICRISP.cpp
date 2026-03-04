@@ -335,7 +335,12 @@ int CCRISP::SetFocusState(const std::string& focusState) {
     if (focusState == focusState_) {
         return DEVICE_OK;
     }
-    return ForceSetFocusState(focusState);
+
+    RETURN_ON_MM_ERROR(ForceSetFocusState(focusState));
+
+    focusState_ = focusState;
+
+    return DEVICE_OK;
 }
 
 // Properties
@@ -694,9 +699,9 @@ void CCRISP::CreateStateProperty() {
 
 // Always read
 void CCRISP::CreateSNRProperty() {
-    std::string command = addressChar_;
     // check firmware version for both comm card and stage card
-    if (hub_ && hub_->FirmwareVersionAtLeast(3.53) && this->FirmwareVersionAtLeast(3.53)) {
+    std::string command = addressChar_;
+    if (hub_ && hub_->FirmwareVersionAtLeast(3.53) && FirmwareVersionAtLeast(3.53)) {
         command += "EX Y?";
         LogMessage("CRISP: firmware >= 3.53; using shortcut 'EX Y?' for SNR.", true);
     } else {
