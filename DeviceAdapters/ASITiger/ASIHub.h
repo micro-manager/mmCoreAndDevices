@@ -49,6 +49,9 @@ public:
 	// Communication base functions
    int ClearComPort();
 
+   // Return the Tiger Comm Card firmware version.
+   bool FirmwareVersionAtLeast(double minimumFirmwareVersion);
+
    // gets the response to a command but waits a certain time for the response to come instead of looking for a terminator
    // also doesn't necessarily wait for a complete response
    int QueryCommandUnterminatedResponse(const char *command, const long timeoutMs, unsigned long reply_length);

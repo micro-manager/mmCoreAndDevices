@@ -695,7 +695,8 @@ void CCRISP::CreateStateProperty() {
 // Always read
 void CCRISP::CreateSNRProperty() {
     std::string command = addressChar_;
-    if (FirmwareVersionAtLeast(3.53)) {
+    // check firmware version for both comm card and stage card
+    if (hub_ && hub_->FirmwareVersionAtLeast(3.53) && this->FirmwareVersionAtLeast(3.53)) {
         command += "EX Y?";
         LogMessage("CRISP: firmware >= 3.53; using shortcut 'EX Y?' for SNR.", true);
     } else {

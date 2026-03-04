@@ -92,6 +92,10 @@ int ASIHub::ClearComPort()
    return PurgeComPort(port_.c_str());
 }
 
+bool ASIHub::FirmwareVersionAtLeast(double minimumFirmwareVersion) {
+    return firmwareVersion_ > (minimumFirmwareVersion - 1e-6);
+}
+
 /**
    * Sends a command and gets the serial buffer (doesn't try to verify end of transmission)
    */
