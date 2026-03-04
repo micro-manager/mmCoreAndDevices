@@ -32,6 +32,7 @@ struct StubCamera : CCameraBase<StubCamera> {
    unsigned bitDepth = 8;
    int binning = 1;
    double exposure = 10.0;
+   bool capturing = false;
 
    int Initialize() override { return DEVICE_OK; }
    int Shutdown() override { return DEVICE_OK; }
@@ -77,7 +78,7 @@ struct StubCamera : CCameraBase<StubCamera> {
    }
    int StartSequenceAcquisition(double) override { return DEVICE_OK; }
    int StopSequenceAcquisition() override { return DEVICE_OK; }
-   bool IsCapturing() override { return false; }
+   bool IsCapturing() override { return capturing; }
 
    int PrepareForAcq() {
       return GetCoreCallback()->PrepareForAcq(this);
@@ -250,6 +251,58 @@ struct StubMagnifier : CMagnifierBase<StubMagnifier> {
    double GetMagnification() override { return magnification; }
 };
 
+struct StubAutoFocus : CAutoFocusBase<StubAutoFocus> {
+   std::string name = "StubAutoFocus";
+   bool continuousFocusing = false;
+   double offset = 0.0;
+   double lastScore = 0.0;
+   double currentScore = 0.0;
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SetContinuousFocusing(bool state) override {
+      continuousFocusing = state;
+      return DEVICE_OK;
+   }
+   int GetContinuousFocusing(bool& state) override {
+      state = continuousFocusing;
+      return DEVICE_OK;
+   }
+   bool IsContinuousFocusLocked() override { return false; }
+   int FullFocus() override { return DEVICE_OK; }
+   int IncrementalFocus() override { return DEVICE_OK; }
+   int GetLastFocusScore(double& score) override {
+      score = lastScore;
+      return DEVICE_OK;
+   }
+   int GetCurrentFocusScore(double& score) override {
+      score = currentScore;
+      return DEVICE_OK;
+   }
+   int GetOffset(double& o) override { o = offset; return DEVICE_OK; }
+   int SetOffset(double o) override { offset = o; return DEVICE_OK; }
+};
+
+struct StubImageProcessor : CImageProcessorBase<StubImageProcessor> {
+   std::string name = "StubImageProcessor";
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int Process(unsigned char*, unsigned, unsigned, unsigned) override {
+      return DEVICE_OK;
+   }
+};
+
 struct StubSLM : CSLMBase<StubSLM> {
    std::string name = "StubSLM";
    using CSLMBase::OnSLMExposureChanged;
@@ -281,6 +334,44 @@ struct StubSLM : CSLMBase<StubSLM> {
    unsigned GetBytesPerPixel() override { return bytesPerPixel; }
    int IsSLMSequenceable(bool& seq) const override {
       seq = false;
+      return DEVICE_OK;
+   }
+};
+
+struct StubGalvo : CGalvoBase<StubGalvo> {
+   std::string name = "StubGalvo";
+   double posX = 0.0;
+   double posY = 0.0;
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int PointAndFire(double, double, double) override { return DEVICE_OK; }
+   int SetSpotInterval(double) override { return DEVICE_OK; }
+   int SetPosition(double x, double y) override {
+      posX = x; posY = y;
+      return DEVICE_OK;
+   }
+   int GetPosition(double& x, double& y) override {
+      x = posX; y = posY;
+      return DEVICE_OK;
+   }
+   int SetIlluminationState(bool) override { return DEVICE_OK; }
+   double GetXRange() override { return 100.0; }
+   double GetYRange() override { return 100.0; }
+   int AddPolygonVertex(int, double, double) override { return DEVICE_OK; }
+   int DeletePolygons() override { return DEVICE_OK; }
+   int RunSequence() override { return DEVICE_OK; }
+   int LoadPolygons() override { return DEVICE_OK; }
+   int SetPolygonRepetitions(int) override { return DEVICE_OK; }
+   int RunPolygons() override { return DEVICE_OK; }
+   int StopSequence() override { return DEVICE_OK; }
+   int GetChannel(char* channelName) override {
+      CDeviceUtils::CopyLimitedString(channelName, "");
       return DEVICE_OK;
    }
 };
