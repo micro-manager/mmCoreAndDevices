@@ -11,8 +11,7 @@
 #include "ASIBase.h"
 
 // CRISP reflection based autofocusing unit (Nico, Nov 2011)
-class CRISP : public CAutoFocusBase<CRISP>, public ASIBase
-{
+class CRISP : public CAutoFocusBase<CRISP>, public ASIBase {
 public:
 	CRISP();
 	~CRISP();
@@ -66,11 +65,9 @@ public:
 	int GetInFocusRange(double& inFocusRange);
 	int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-	int GetFocusState(std::string& focusState);
+	int UpdateFocusState();
 	int SetFocusState(const std::string& focusState);
 	int ForceSetFocusState(const std::string& focusState);
 	int GetValue(const std::string& command, double& value);
@@ -82,7 +79,7 @@ private:
 	void CreateSetLogAmpAGCProperty();
 	void CreateSetLockOffsetProperty();
 
-	std::string axis_;
+	std::string axisLetter_;
 	std::string focusState_;
 	long waitAfterLock_;
 	int answerTimeoutMs_;

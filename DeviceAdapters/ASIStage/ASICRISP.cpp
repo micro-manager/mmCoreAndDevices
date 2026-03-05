@@ -25,7 +25,7 @@ namespace Props = Properties;
 
 CRISP::CRISP() :
 	ASIBase(this, ""),
-	axis_("Z"),
+	axisLetter_("Z"),
 	focusState_(""),
 	waitAfterLock_(1000),
 	answerTimeoutMs_(1000),
@@ -102,8 +102,8 @@ int CRISP::Initialize()
 		return ret;
 	}
 
-	// Read-only "AxisLetter" property, axis_ is set using a pre-init property named "Axis".
-	CreateProperty("AxisLetter", axis_.c_str(), MM::String, true);
+	// Read-only "AxisLetter" property, axisLetter_ is set using a pre-init property named "Axis".
+	CreateProperty("AxisLetter", axisLetter_.c_str(), MM::String, true);
 	
 	ret = GetVersion(firmwareVersion_);
 	if (ret != DEVICE_OK)
@@ -316,16 +316,13 @@ int CRISP::SetOffset(double offset)
 	return SetCommand(os.str().c_str());
 }
 
-int CRISP::GetFocusState(std::string& focusState)
-{
+int CRISP::UpdateFocusState() {
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
 	// Requests single char lock state description
 	std::string answer;
-	int ret = QueryCommand("LK X?", answer);
-	if (ret != DEVICE_OK)
-	{
+	if (const int ret = QueryCommand("LK X?", answer); ret != DEVICE_OK) {
 		return ERR_UNRECOGNIZED_ANSWER;
 	}
 
@@ -333,19 +330,19 @@ int CRISP::GetFocusState(std::string& focusState)
 	char test = answer.c_str()[3];
 	switch (test)
 	{
-		case 'I': focusState = g_CRISP_I; break;
-		case 'R': focusState = g_CRISP_R; break;
-		case 'D': focusState = g_CRISP_D; break;
-		case 'K': focusState = g_CRISP_K; break;  // trying to lock, goes to F when locked
-		case 'F': focusState = g_CRISP_F; break;  // this is read-only state
-		case 'N': focusState = g_CRISP_N; break;
-		case 'E': focusState = g_CRISP_E; break;
-		case 'G': focusState = g_CRISP_G; break;
+		case 'I': focusState_ = g_CRISP_I; break;
+		case 'R': focusState_ = g_CRISP_R; break;
+		case 'D': focusState_ = g_CRISP_D; break;
+		case 'K': focusState_ = g_CRISP_K; break;  // trying to lock, goes to F when locked
+		case 'F': focusState_ = g_CRISP_F; break;  // this is read-only state
+		case 'N': focusState_ = g_CRISP_N; break;
+		case 'E': focusState_ = g_CRISP_E; break;
+		case 'G': focusState_ = g_CRISP_G; break;
 		case 'H':
-		case 'C': focusState = g_CRISP_Cal; break;
+		case 'C': focusState_ = g_CRISP_Cal; break;
 		case 'o':
-		case 'l': focusState = g_CRISP_RFO; break;
-		case 'f': focusState = g_CRISP_f; break;
+		case 'l': focusState_ = g_CRISP_RFO; break;
+		case 'f': focusState_ = g_CRISP_f; break;
 		case '1':
 		case '2':
 		case '3':
@@ -355,34 +352,30 @@ int CRISP::GetFocusState(std::string& focusState)
 		case 'h':
 		case 'i':
 		case 'j':
-		case 't': focusState = g_CRISP_Cal; break;
-		case 'B': focusState = g_CRISP_B; break;
+		case 't': focusState_ = g_CRISP_Cal; break;
+		case 'B': focusState_ = g_CRISP_B; break;
 		case 'a':
 		case 'b':
 		case 'c':
 		case 'd':
-		case 'e': focusState = g_CRISP_C; break;
-		default:  focusState = g_CRISP_Unknown; break;
+		case 'e': focusState_ = g_CRISP_C; break;
+		default:  focusState_ = g_CRISP_Unknown; break;
 	}
 
 	return DEVICE_OK;
 }
 
 int CRISP::SetFocusState(const std::string& focusState) {
-	std::string currentState;
-	int result = GetFocusState(currentState);
-	if (result != DEVICE_OK) {
-		return result;
-	}
-
-	if (focusState == currentState) {
+	// avoid serial communication if already in the state
+	if (focusState == focusState_) {
 		return DEVICE_OK;
 	}
 
-	result = ForceSetFocusState(focusState);
-	if (result != DEVICE_OK) {
+	if (const int result = ForceSetFocusState(focusState); result != DEVICE_OK) {
 		return result;
 	}
+
+	focusState_ = focusState;
 
 	return DEVICE_OK;
 }
@@ -431,15 +424,8 @@ int CRISP::ForceSetFocusState(const std::string& focusState) {
 	return DEVICE_OK;
 }
 
-bool CRISP::IsContinuousFocusLocked()
-{
-	std::string focusState;
-	int ret = GetFocusState(focusState);
-	if (ret != DEVICE_OK)
-	{
-		return false;
-	}
-	return focusState == g_CRISP_F;
+bool CRISP::IsContinuousFocusLocked() {
+	return (UpdateFocusState() == DEVICE_OK) && (focusState_ == g_CRISP_F);
 }
 
 int CRISP::SetContinuousFocusing(bool state)
@@ -477,16 +463,12 @@ int CRISP::SetContinuousFocusing(bool state)
 	return DEVICE_OK;
 }
 
-int CRISP::GetContinuousFocusing(bool& state)
-{
-	std::string focusState;
-	int ret = GetFocusState(focusState);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
+// Update focusState_ from the controller and check if focus is locked or trying to lock ('F' or 'K' state).
+int CRISP::GetContinuousFocusing(bool& state) {
+	if (const int result = UpdateFocusState(); result != DEVICE_OK) {
+		return result;
 	}
-
-	state = ((focusState == g_CRISP_K) || (focusState == g_CRISP_F));
+	state = (focusState_ == g_CRISP_K) || (focusState_ == g_CRISP_F);
 	return DEVICE_OK;
 }
 
@@ -608,22 +590,15 @@ int CRISP::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	if (eAct == MM::BeforeGet)
-	{
-		int ret = GetFocusState(focusState_);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
+	if (eAct == MM::BeforeGet) {
+		if (const int result = UpdateFocusState(); result != DEVICE_OK) {
+			return result;
 		}
 		pProp->Set(focusState_.c_str());
-	}
-	else if (eAct == MM::AfterSet)
-	{
+	} else if (eAct == MM::AfterSet) {
 		pProp->Get(focusState_);
-		int ret = SetFocusState(focusState_);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
+		if (const int result = SetFocusState(focusState_); result != DEVICE_OK) {
+			return result;
 		}
 	}
 	return DEVICE_OK;
@@ -930,11 +905,11 @@ int CRISP::OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet)
 	{
-		pProp->Set(axis_.c_str());
+		pProp->Set(axisLetter_.c_str());
 	}
 	else if (eAct == MM::AfterSet)
 	{
-		pProp->Get(axis_);
+		pProp->Get(axisLetter_);
 	}
 	return DEVICE_OK;
 }
