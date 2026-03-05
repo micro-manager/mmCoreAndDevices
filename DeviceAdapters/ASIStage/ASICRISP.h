@@ -79,6 +79,8 @@ private:
 	// Properties
 	void CreateSumProperty();
 	void CreateDitherErrorProperty();
+	void CreateSetLogAmpAGCProperty();
+	void CreateSetLockOffsetProperty();
 
 	std::string axis_;
 	std::string focusState_;

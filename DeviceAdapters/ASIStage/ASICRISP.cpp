@@ -7,6 +7,22 @@
 
 #include "ASICRISP.h"
 
+namespace {
+namespace Properties {
+
+// Always read
+constexpr char Sum[] = "Sum";
+constexpr char DitherError[] = "Dither Error";
+
+// Advanced
+constexpr char SetLogAmpAGC[] = "Set LogAmpAGC (Advanced Users Only)";
+constexpr char SetLockOffset[] = "Set Lock Offset (Advanced Users Only)";
+
+} // namespace Properties
+
+namespace Props = Properties;
+} // namespace
+
 CRISP::CRISP() :
 	ASIBase(this, ""),
 	axis_("Z"),
@@ -253,11 +269,8 @@ int CRISP::Initialize()
 	// LK M requires firmware version 9.2n or higher.
 	// Enable these properties as a group to modify calibration settings.
 	if (version_ >= Version(9, 2, 'n')) {
-		pAct = new CPropertyAction(this, &CRISP::OnSetLogAmpAGC);
-		CreateProperty("Set LogAmpAGC (Advanced Users Only)", "0", MM::Integer, false, pAct);
-
-		pAct = new CPropertyAction(this, &CRISP::OnSetLockOffset);
-		CreateProperty("Set Lock Offset (Advanced Users Only)", "0", MM::Integer, false, pAct);
+		CreateSetLogAmpAGCProperty();
+		CreateSetLockOffsetProperty();
 	}
 
 	return DEVICE_OK;
@@ -1078,17 +1091,13 @@ int CRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 // Always read, not cached
 void CRISP::CreateSumProperty() {
-	const std::string propertyName = "Sum";
-
-	// Check if we can use the faster serial command
 	if (version_ >= Version(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
-		LogMessage("CRISP: firmware >= 9.2o; use LK T? for the "
-			+ propertyName + " property.", true);
+		LogMessage("CRISP: firmware >= 9.2o; using 'LK T?' for Sum.", true);
 
 		CreateIntegerProperty(
-			propertyName.c_str(), 0, true,
+			Props::Sum, 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					double sum{};
@@ -1099,18 +1108,17 @@ void CRISP::CreateSumProperty() {
 					pProp->Set(sum);
 				}
 				return DEVICE_OK;
-			}
-		));
+			})
+		);
 
 	} else { // Firmware < 9.2o
 
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
-		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
-			+ propertyName + " property.", true);
+		LogMessage("CRISP: firmware < 9.2o; using 'EXTRA X?' for Sum", true);
 
 		CreateIntegerProperty(
-			propertyName.c_str(), 0, true,
+			Props::Sum, 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					std::string answer;
@@ -1129,24 +1137,20 @@ void CRISP::CreateSumProperty() {
 					}
 				}
 				return DEVICE_OK;
-			}
-		));
+			})
+		);
 	}
 }
 
 // Always read, not cached
 void CRISP::CreateDitherErrorProperty() {
-	const std::string propertyName = "Dither Error";
-
-	// Check if we can use the faster serial command
 	if (version_ >= Version(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
-		LogMessage("CRISP: firmware >= 9.2o; use LK Y? for the "
-			+ propertyName + " property.", true);
+		LogMessage("CRISP: firmware >= 9.2o; using 'LK Y?' for Dither Error.", true);
 
 		CreateIntegerProperty(
-			propertyName.c_str(), 0, true,
+			Props::DitherError, 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					double ditherError{};
@@ -1157,18 +1161,17 @@ void CRISP::CreateDitherErrorProperty() {
 					pProp->Set(ditherError);
 				}
 				return DEVICE_OK;
-			}
-		));
+			})
+		);
 
 	} else { // Firmware < 9.2o
 
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
-		LogMessage("CRISP: firmware < 9.2o; use EXTRA X? for the "
-			+ propertyName + " property.", true);
+		LogMessage("CRISP: firmware < 9.2o; using 'EXTRA X?' for Dither Error.", true);
 
 		CreateIntegerProperty(
-			propertyName.c_str(), 0, true,
+			Props::DitherError, 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 				if (eAct == MM::BeforeGet) {
 					std::string answer;
@@ -1187,49 +1190,49 @@ void CRISP::CreateDitherErrorProperty() {
 					}
 				}
 				return DEVICE_OK;
-			}
-		));
+			})
+		);
 	}
 }
 
 // Advanced Properties
 
-int CRISP::OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		pProp->Set("0");
-	}
-	else if (eAct == MM::AfterSet)
-	{
-		double logAmpAGC;
-		pProp->Get(logAmpAGC);
-		if (logAmpAGC != 0.0)
-		{
-			std::ostringstream command;
-			command << std::fixed << "LK M=" << logAmpAGC;
-			return SetCommand(command.str());
-		}
-	}
-	return DEVICE_OK;
+void CRISP::CreateSetLogAmpAGCProperty() {
+	CreateIntegerProperty(
+		Props::SetLogAmpAGC, 0L, false,
+		new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+			if (eAct == MM::BeforeGet) {
+				pProp->Set(0L);
+			} else if (eAct == MM::AfterSet) {
+				long logAmpAGC = 0L;
+				pProp->Get(logAmpAGC);
+				if (logAmpAGC != 0L) {
+					return SetCommand("LK M=" + std::to_string(logAmpAGC));
+				}
+			}
+			return DEVICE_OK;
+		})
+	);
+
+	// No need to call UpdateProperty() because the value is always set to 0 to avoid updates
 }
 
-int CRISP::OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		pProp->Set("0");
-	}
-	else if (eAct == MM::AfterSet)
-	{
-		double offset;
-		pProp->Get(offset);
-		if (offset != 0.0)
-		{
-			std::ostringstream command;
-			command << std::fixed << "LK Z=" << offset;
-			return SetCommand(command.str());
-		}
-	}
-	return DEVICE_OK;
+void CRISP::CreateSetLockOffsetProperty() {
+	CreateIntegerProperty(
+		Props::SetLockOffset, 0L, false,
+		new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+			if (eAct == MM::BeforeGet) {
+				pProp->Set(0L);
+			} else if (eAct == MM::AfterSet) {
+				long offset = 0L;
+				pProp->Get(offset);
+				if (offset != 0L) {
+					return SetCommand("LK Z=" + std::to_string(offset));
+				}
+			}
+			return DEVICE_OK;
+		})
+	);
+
+	// No need to call UpdateProperty() because the value is always set to 0 to avoid updates
 }
