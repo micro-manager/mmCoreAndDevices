@@ -11,6 +11,7 @@ namespace {
 namespace Properties {
 
 // Always read
+constexpr char SignalNoiseRatio[] = "Signal Noise Ratio";
 constexpr char Sum[] = "Sum";
 constexpr char DitherError[] = "Dither Error";
 
@@ -254,15 +255,13 @@ int CRISP::Initialize()
 		CreateProperty(os.str().c_str(), "", MM::String, true, pActEx);
 	}
 
-	pAct = new CPropertyAction(this, &CRISP::OnSNR);
-	CreateProperty("Signal Noise Ratio", "", MM::Float, true, pAct);
-
 	pAct = new CPropertyAction(this, &CRISP::OnLogAmpAGC);
 	CreateProperty("LogAmpAGC", "", MM::Integer, true, pAct);
 
 	// Read-only Properties
 
 	// Always read, not cached
+	CreateSNRProperty();
 	CreateSumProperty();
 	CreateDitherErrorProperty();
 
@@ -322,7 +321,7 @@ int CRISP::UpdateFocusState() {
 
 	// Requests single char lock state description
 	std::string answer;
-	if (const int ret = QueryCommand("LK X?", answer); ret != DEVICE_OK) {
+	if (const int result = QueryCommand("LK X?", answer); result != DEVICE_OK) {
 		return ERR_UNRECOGNIZED_ANSWER;
 	}
 
@@ -914,21 +913,6 @@ int CRISP::OnAxis(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
-int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-	if (eAct == MM::BeforeGet)
-	{
-		double snr{};
-		int ret = GetValue("EXTRA Y?", snr);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
-		}
-		pProp->Set(snr);
-	}
-	return DEVICE_OK;
-}
-
 int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet) {
@@ -1038,6 +1022,32 @@ int CRISP::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 // Read-only Properties
+
+// Always read, not cached
+void CRISP::CreateSNRProperty() {
+	const bool isNewFirmware = (version_ >= Version(9, 5, 3));
+	const std::string command = isNewFirmware ? "EX Y?" : "EXTRA Y?";
+
+	if (isNewFirmware) {
+		LogMessage("CRISP: firmware >= 9.53; using shortcut 'EX Y?' for SNR.", true);
+	} else {
+		LogMessage("CRISP: firmware < 9.53; using full command 'EXTRA Y?' for SNR.", true);
+	}
+
+	CreateFloatProperty(
+		Props::SignalNoiseRatio, 0.0, true,
+		new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+			if (eAct == MM::BeforeGet) {
+				double snr{};
+				if (const int result = GetValue(command.c_str(), snr); result != DEVICE_OK) {
+					return result;
+				}
+				pProp->Set(snr);
+			}
+			return DEVICE_OK;
+		})
+	);
+}
 
 // Always read, not cached
 void CRISP::CreateSumProperty() {

@@ -10,7 +10,7 @@
 
 #include "ASIBase.h"
 
-// CRISP reflection based autofocusing unit (Nico, Nov 2011)
+// CRISP Autofocus (Nico, Nov 2011)
 class CRISP : public CAutoFocusBase<CRISP>, public ASIBase {
 public:
 	CRISP();
@@ -57,7 +57,6 @@ public:
 	int GetGainMultiplier(long& gainMult);
 	int OnFocusCurve(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFocusCurveData(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-	int OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetNumSkips(long& updateRate);
@@ -74,6 +73,7 @@ private:
 	int SetCommand(const std::string& command);
 
 	// Properties
+	void CreateSNRProperty();
 	void CreateSumProperty();
 	void CreateDitherErrorProperty();
 	void CreateSetLogAmpAGCProperty();
@@ -82,6 +82,7 @@ private:
 	std::string axisLetter_;
 	std::string focusState_;
 	long waitAfterLock_;
+
 	int answerTimeoutMs_;
 
 	// cached properties
