@@ -98,6 +98,11 @@ TEST_CASE("Core TimeoutMs property") {
       CHECK(c.getTimeoutMs() == 3000);
    }
 
+   SECTION("setTimeoutMs updates Core property") {
+      c.setTimeoutMs(3000);
+      CHECK(c.getProperty("Core", "TimeoutMs") == "3000");
+   }
+
    SECTION("setTimeoutMs ignores zero") {
       c.setTimeoutMs(0);
       CHECK(c.getTimeoutMs() == 5000);
@@ -109,33 +114,18 @@ TEST_CASE("Core TimeoutMs property") {
       CHECK(c.getTimeoutMs() == 5000);
       CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
    }
-}
 
-// Bug: setTimeoutMs() is a simple inline setter that does not sync the
-// "TimeoutMs" Core property. The property retains the old value until
-// the next Refresh.
-TEST_CASE("setTimeoutMs updates Core property", "[!shouldfail]") {
-   CMMCore c;
-   c.setTimeoutMs(3000);
-   CHECK(c.getProperty("Core", "TimeoutMs") == "3000");
-}
+   SECTION("setProperty Core-TimeoutMs with zero throws") {
+      CHECK_THROWS(c.setProperty("Core", "TimeoutMs", "0"));
+      CHECK(c.getTimeoutMs() == 5000);
+      CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
+   }
 
-// Bug: setProperty("Core", "TimeoutMs", ...) does not reject non-positive
-// values. The property string is stored before Execute() calls setTimeoutMs(),
-// which silently ignores the value, leaving the property out of sync.
-TEST_CASE("setProperty Core-TimeoutMs with zero is ignored", "[!shouldfail]") {
-   CMMCore c;
-   c.setProperty("Core", "TimeoutMs", "0");
-   CHECK(c.getTimeoutMs() == 5000);
-   CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
-}
-
-TEST_CASE("setProperty Core-TimeoutMs with negative is ignored",
-      "[!shouldfail]") {
-   CMMCore c;
-   c.setProperty("Core", "TimeoutMs", "-1");
-   CHECK(c.getTimeoutMs() == 5000);
-   CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
+   SECTION("setProperty Core-TimeoutMs with negative throws") {
+      CHECK_THROWS(c.setProperty("Core", "TimeoutMs", "-1"));
+      CHECK(c.getTimeoutMs() == 5000);
+      CHECK(c.getProperty("Core", "TimeoutMs") == "5000");
+   }
 }
 
 // --- Device role properties ---
@@ -562,17 +552,27 @@ TEST_CASE("Core Initialize property") {
       CHECK(devices[0] == "Core");
    }
 
-   SECTION("after setting to 0, device role properties return to defaults") {
+   SECTION("getProperty reflects state after setting to 1") {
       StubCamera cam;
       MockAdapterWithDevices adapter{{"cam", &cam}};
       CMMCore c;
-      adapter.LoadIntoCore(c);
-      c.setCameraDevice("cam");
+      c.loadMockDeviceAdapter("mock", &adapter);
+      c.loadDevice("cam", "mock", "cam");
 
+      c.setProperty("Core", "Initialize", "1");
+      CHECK(c.getProperty("Core", "Initialize") == "1");
+   }
+
+   SECTION("getProperty reflects state after setting to 1 then 0") {
+      StubCamera cam;
+      MockAdapterWithDevices adapter{{"cam", &cam}};
+      CMMCore c;
+      c.loadMockDeviceAdapter("mock", &adapter);
+      c.loadDevice("cam", "mock", "cam");
+
+      c.setProperty("Core", "Initialize", "1");
       c.setProperty("Core", "Initialize", "0");
-      CHECK(c.getCameraDevice().empty());
-      CHECK(c.getProperty("Core", "Camera") == "");
-      CHECK(c.getShutterDevice().empty());
+      CHECK(c.getProperty("Core", "Initialize") == "0");
    }
 }
 
