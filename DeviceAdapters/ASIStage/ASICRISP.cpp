@@ -517,37 +517,29 @@ int CRISP::FullFocus()
 	return SetContinuousFocusing(false);
 }
 
-int CRISP::IncrementalFocus()
-{
+int CRISP::IncrementalFocus() {
 	return FullFocus();
 }
 
-int CRISP::GetLastFocusScore(double& score)
-{
+int CRISP::GetCurrentFocusScore(double& score) {
 	// empty the Rx serial buffer before sending command
 	ClearPort();
 
 	score = 0;
 	// Get current value of the focus error as shown on LCD panel
 	std::string answer;
-	int ret = QueryCommand("LK Y?", answer);
-	if (ret != DEVICE_OK)
+	const int result = QueryCommand("LK Y?", answer);
+	if (result != DEVICE_OK)
 	{
-		return ret;
+		return result;
 	}
 
 	score = atof(answer.substr(2).c_str());
-	if (score == 0)
-	{
+	if (score == 0) {
 		return ERR_UNRECOGNIZED_ANSWER;
 	}
 
 	return DEVICE_OK;
-}
-
-int CRISP::GetCurrentFocusScore(double& score)
-{
-	return GetLastFocusScore(score);
 }
 
 int CRISP::GetValue(const std::string& command, double& value) {
