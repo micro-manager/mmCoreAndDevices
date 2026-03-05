@@ -163,9 +163,8 @@ int ASIHub::QueryCommandVerify(const char *command, const char *expectedReplyPre
 {
    RETURN_ON_MM_ERROR ( QueryCommand(command, replyTerminator, delayMs) );
    // if doesn't match expected prefix, then look for ASI error code
-   size_t len = strlen(expectedReplyPrefix);
-   if (serialAnswer_.length() < len ||
-         serialAnswer_.substr(0, len).compare(expectedReplyPrefix) != 0)
+   const size_t len = strlen(expectedReplyPrefix);
+   if (serialAnswer_.length() < len || serialAnswer_.substr(0, len) != expectedReplyPrefix)
    {
       return ParseErrorReply();
    }
@@ -176,7 +175,7 @@ int ASIHub::ParseErrorReply() const
 {
    if (serialAnswer_.length() > 3 && serialAnswer_.substr(0, 2).compare(":N") == 0)
    {
-      int errNo = atoi(serialAnswer_.substr(3).c_str());
+      const int errNo = atoi(serialAnswer_.substr(3).c_str());
       return ERR_ASICODE_OFFSET + errNo;
     }
     return ERR_UNRECOGNIZED_ANSWER;
@@ -184,67 +183,67 @@ int ASIHub::ParseErrorReply() const
 
 int ASIHub::ParseAnswerAfterEquals(double &val)
 {
-   size_t pos = serialAnswer_.find("=");
-   if ((pos == std::string::npos) || ((pos+1) >= serialAnswer_.length()))
+   const size_t pos = serialAnswer_.find("=");
+   if ((pos == std::string::npos) || ((pos + 1) >= serialAnswer_.length()))
    {
       return ERR_UNRECOGNIZED_ANSWER;
    }
-   val = atof(serialAnswer_.substr(serialAnswer_.find("=")+1).c_str());
+   val = atof(serialAnswer_.substr(pos + 1).c_str());
    return DEVICE_OK;
 }
 
 int ASIHub::ParseAnswerAfterEquals(long &val)
 {
-   size_t pos = serialAnswer_.find("=");
-   if ((pos == std::string::npos) || ((pos+1) >= serialAnswer_.length()))
+   const size_t pos = serialAnswer_.find("=");
+   if ((pos == std::string::npos) || ((pos + 1) >= serialAnswer_.length()))
    {
       return ERR_UNRECOGNIZED_ANSWER;
    }
-   val = atol(serialAnswer_.substr(serialAnswer_.find("=")+1).c_str());
+   val = atol(serialAnswer_.substr(pos + 1).c_str());
    return DEVICE_OK;
 }
 
 int ASIHub::ParseAnswerAfterEquals(unsigned int &val)
 {
-   size_t pos = serialAnswer_.find("=");
-   if ((pos == std::string::npos) || ((pos+1) >= serialAnswer_.length()))
+   const size_t pos = serialAnswer_.find("=");
+   if ((pos == std::string::npos) || ((pos + 1) >= serialAnswer_.length()))
    {
       return ERR_UNRECOGNIZED_ANSWER;
    }
-   val = atol(serialAnswer_.substr(serialAnswer_.find("=")+1).c_str());
+   val = atol(serialAnswer_.substr(pos + 1).c_str());
    return DEVICE_OK;
 }
 
 int ASIHub::ParseAnswerAfterUnderscore(unsigned int &val)
 {
-   size_t pos = serialAnswer_.find("_");
-   if ((pos == std::string::npos) || ((pos+1) >= serialAnswer_.length()))
+   const size_t pos = serialAnswer_.find("_");
+   if ((pos == std::string::npos) || ((pos + 1) >= serialAnswer_.length()))
    {
       return ERR_UNRECOGNIZED_ANSWER;
    }
-   val = atol(serialAnswer_.substr(serialAnswer_.find("_")+1).c_str());
+   val = atol(serialAnswer_.substr(pos + 1).c_str());
    return DEVICE_OK;
 }
 
 int ASIHub::ParseAnswerAfterColon(double &val)
 {
-   size_t pos = serialAnswer_.find(":");
-   if ((pos == std::string::npos) || ((pos+1) >= serialAnswer_.length()))
+   const size_t pos = serialAnswer_.find(":");
+   if ((pos == std::string::npos) || ((pos + 1) >= serialAnswer_.length()))
    {
       return ERR_UNRECOGNIZED_ANSWER;
    }
-   val = atof(serialAnswer_.substr(serialAnswer_.find(":")+1).c_str());
+   val = atof(serialAnswer_.substr(pos + 1).c_str());
    return DEVICE_OK;
 }
 
 int ASIHub::ParseAnswerAfterColon(long& val)
 {
-   size_t pos = serialAnswer_.find(":");
-   if ((pos == std::string::npos) || ((pos+1) >= serialAnswer_.length()))
+   const size_t pos = serialAnswer_.find(":");
+   if ((pos == std::string::npos) || ((pos + 1) >= serialAnswer_.length()))
    {
       return ERR_UNRECOGNIZED_ANSWER;
    }
-   val = atol(serialAnswer_.substr(serialAnswer_.find(":")+1).c_str());
+   val = atol(serialAnswer_.substr(pos + 1).c_str());
    return DEVICE_OK;
 }
 
