@@ -368,37 +368,26 @@ int CRISP::GetFocusState(std::string& focusState)
 	return DEVICE_OK;
 }
 
-int CRISP::SetFocusState(const std::string& focusState)
-{
+int CRISP::SetFocusState(const std::string& focusState) {
 	std::string currentState;
-	int ret = GetFocusState(currentState);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
+	int result = GetFocusState(currentState);
+	if (result != DEVICE_OK) {
+		return result;
 	}
 
-	if (focusState == currentState)
-	{
+	if (focusState == currentState) {
 		return DEVICE_OK;
 	}
 
-	return ForceSetFocusState(focusState);
+	result = ForceSetFocusState(focusState);
+	if (result != DEVICE_OK) {
+		return result;
+	}
+
+	return DEVICE_OK;
 }
 
-int CRISP::ForceSetFocusState(const std::string& focusState)
-{
-	std::string currentState;
-	int ret = GetFocusState(currentState);
-	if (ret != DEVICE_OK)
-	{
-		return ret;
-	}
-
-	if (focusState == currentState)
-	{
-		return DEVICE_OK;
-	}
-
+int CRISP::ForceSetFocusState(const std::string& focusState) {
 	if (focusState == g_CRISP_I)
 	{
 		// Idle (switch off LED)
@@ -464,24 +453,24 @@ int CRISP::SetContinuousFocusing(bool state)
 	if (focusingOn && !state)
 	{
 		// was on, turning off
-		return ForceSetFocusState(g_CRISP_R);
+		return SetFocusState(g_CRISP_R);
 	}
 	else if (!focusingOn && state)
 	{
 		// was off, turning on
 		if (focusState_ == g_CRISP_R)
 		{
-			return ForceSetFocusState(g_CRISP_K);
+			return SetFocusState(g_CRISP_K);
 		}
 		else
 		{
 			// need to move to ready state, then turn on
-			ret = ForceSetFocusState(g_CRISP_R);
+			ret = SetFocusState(g_CRISP_R);
 			if (ret != DEVICE_OK)
 			{
 				return ret;
 			}
-			return ForceSetFocusState(g_CRISP_K);
+			return SetFocusState(g_CRISP_K);
 		}
 	}
 	// if was already in state requested we don't need to do anything
@@ -510,8 +499,8 @@ int CRISP::FullFocus()
 		return ret;
 	}
 
-	MM::MMTime startTime = GetCurrentMMTime();
-	MM::MMTime wait(0, waitAfterLock_ * 1000);
+	const MM::MMTime startTime = GetCurrentMMTime();
+	const MM::MMTime wait(0, waitAfterLock_ * 1000L);
 	while (!IsContinuousFocusLocked() && ((GetCurrentMMTime() - startTime) < wait))
 	{
 		CDeviceUtils::SleepMs(25);
