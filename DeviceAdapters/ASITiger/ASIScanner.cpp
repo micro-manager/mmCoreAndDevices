@@ -299,10 +299,12 @@ int CScanner::Initialize()
    AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_0, 0);
    AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_1, 1);
    AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_2, 2);
-   if (FirmwareVersionAtLeast(3.14))
-	   {	//sin pattern was implemeted much later atleast firmware 3/14 needed
-		   AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_3, 3);
-	   }
+   if (FirmwareVersionAtLeast(3.14)) {
+       AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_3);
+   }
+   if (FirmwareVersionAtLeast(3.55)) {
+       AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_4);
+   }
    UpdateProperty(g_SAPatternXPropertyName);
    pAct = new CPropertyAction (this, &CScanner::OnSAAmplitudeY);
    CreateProperty(g_ScannerSAAmplitudeYPropertyName, "0", MM::Float, false, pAct);
@@ -325,10 +327,12 @@ int CScanner::Initialize()
    AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_0, 0);
    AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_1, 1);
    AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_2, 2);
-   if (FirmwareVersionAtLeast(3.14))
-	   {	//sin pattern was implemeted much later atleast firmware 3/14 needed
-		   AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_3, 3);
-	   }
+   if (FirmwareVersionAtLeast(3.14)) {
+       AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_3);
+   }
+   if (FirmwareVersionAtLeast(3.55)) {
+       AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_4);
+   }
    UpdateProperty(g_SAPatternYPropertyName);
 
    // generates a set of additional advanced properties that are rarely used
@@ -1786,6 +1790,7 @@ int CScanner::OnSAPatternX(MM::PropertyBase* pProp, MM::ActionType eAct)
          case 1: success = pProp->Set(g_SAPattern_1); break;
          case 2: success = pProp->Set(g_SAPattern_2); break;
 		 case 3: success = pProp->Set(g_SAPattern_3); break;
+         case 4: success = pProp->Set(g_SAPattern_4); break;
          default:success = 0;                      break;
       }
       if (!success)
@@ -1958,6 +1963,7 @@ int CScanner::OnSAPatternY(MM::PropertyBase* pProp, MM::ActionType eAct)
          case 1: success = pProp->Set(g_SAPattern_1); break;
          case 2: success = pProp->Set(g_SAPattern_2); break;
          case 3: success = pProp->Set(g_SAPattern_3); break;
+         case 4: success = pProp->Set(g_SAPattern_4); break;
 		 default:success = 0;                      break;
       }
       if (!success)

@@ -662,6 +662,7 @@ const char* const g_SAPattern_0 = "0 - Ramp";
 const char* const g_SAPattern_1 = "1 - Triangle";
 const char* const g_SAPattern_2 = "2 - Square";
 const char* const g_SAPattern_3 = "3 - Sine";
+const char* const g_SAPattern_4 = "4 - Variable Triangle";
 // single-axis clock source
 const char* const g_SAClkSrc_0 = "internal 4kHz clock";
 const char* const g_SAClkSrc_1 = "external clock";

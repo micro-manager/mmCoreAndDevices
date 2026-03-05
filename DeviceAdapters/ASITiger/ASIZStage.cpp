@@ -275,7 +275,7 @@ int CZStage::Initialize()
    // populate speedTruth_, which is whether the controller will tell us the actual speed
    if (FirmwareVersionAtLeast(3.27))
    {
-      speedTruth_ = ! hub_->IsDefinePresent(build, "SPEED UNTRUTH");
+      speedTruth_ = !hub_->IsDefinePresent(build, "SPEED UNTRUTH");
    }
    else  // before v3.27
    {
@@ -309,10 +309,12 @@ int CZStage::Initialize()
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_0);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_1);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_2);
-	  if (FirmwareVersionAtLeast(3.14))
-	   {	//sin pattern was implemeted much later atleast firmware 3/14 needed
-		   AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_3);
-	   }
+      if (FirmwareVersionAtLeast(3.14)) {
+          AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_3);
+      }
+      if (FirmwareVersionAtLeast(3.55)) {
+          AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_4);
+      }
       UpdateProperty(g_SAPatternPropertyName);
       // generates a set of additional advanced properties that are rarely used
       pAct = new CPropertyAction (this, &CZStage::OnSAAdvanced);
@@ -1735,6 +1737,7 @@ int CZStage::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
          case 1: success = pProp->Set(g_SAPattern_1); break;
          case 2: success = pProp->Set(g_SAPattern_2); break;
          case 3: success = pProp->Set(g_SAPattern_3); break;
+         case 4: success = pProp->Set(g_SAPattern_4); break;
 		 default:success = 0;                      break;
       }
       if (!success)
@@ -1752,6 +1755,8 @@ int CZStage::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
          tmp = 2;
       else if (tmpstr == g_SAPattern_3)
          tmp = 3;
+      else if (tmpstr == g_SAPattern_4)
+         tmp = 4;
 	  else
          return DEVICE_INVALID_PROPERTY_VALUE;
       // have to get current settings and then modify bits 0-2 from there

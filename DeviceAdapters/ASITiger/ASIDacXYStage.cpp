@@ -257,6 +257,9 @@ int CDACXYStage::Initialize()
 		if (FirmwareVersionAtLeast(3.14)) {
 			AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_3);
 		}
+		if (FirmwareVersionAtLeast(3.55)) {
+			AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_4);
+		}
 		UpdateProperty(g_SAPatternXPropertyName);
 
 		pAct = new CPropertyAction(this, &CDACXYStage::OnSAPatternY);
@@ -266,6 +269,9 @@ int CDACXYStage::Initialize()
 		AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_2);
 		if (FirmwareVersionAtLeast(3.14)) {
 			AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_3);
+		}
+		if (FirmwareVersionAtLeast(3.55)) {
+			AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_4);
 		}
 		UpdateProperty(g_SAPatternYPropertyName);
 
@@ -1341,6 +1347,7 @@ int CDACXYStage::OnSAPatternGeneric(MM::PropertyBase* pProp, MM::ActionType eAct
 		case 1: success = pProp->Set(g_SAPattern_1); break;
 		case 2: success = pProp->Set(g_SAPattern_2); break;
 		case 3: success = pProp->Set(g_SAPattern_3); break;
+		case 4: success = pProp->Set(g_SAPattern_4); break;
 		default:success = 0;                         break;
 		}
 		if (!success)
@@ -1367,6 +1374,10 @@ int CDACXYStage::OnSAPatternGeneric(MM::PropertyBase* pProp, MM::ActionType eAct
 		else if (tmpstr == g_SAPattern_3)
 		{
 			tmp = 3;
+		}
+		else if (tmpstr == g_SAPattern_4)
+		{
+			tmp = 4;
 		}
 		else
 		{
