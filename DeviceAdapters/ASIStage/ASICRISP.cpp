@@ -931,15 +931,13 @@ int CRISP::OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	if (eAct == MM::BeforeGet)
-	{
-		double val{};
-		int ret = GetValue("AL X?", val);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
+	if (eAct == MM::BeforeGet) {
+		double tmp{}; // NOTE: response is ":A X=1.000000", parse as double
+		if (const int result = GetValue("AL X?", tmp); result != DEVICE_OK) {
+			return result;
 		}
-		pProp->Set(val);
+		// cast to long to match integer property
+		pProp->Set(static_cast<long>(tmp));
 	}
 	return DEVICE_OK;
 }
@@ -1006,17 +1004,13 @@ int CRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CRISP::OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-	if (eAct == MM::BeforeGet)
-	{
-		double offset;
-		int ret = GetOffset(offset);
-		if (ret != DEVICE_OK)
-		{
-			return ret;
+	if (eAct == MM::BeforeGet) {
+		double offset; // NOTE: autofocus API requires double
+		if (const int result = GetOffset(offset); result != DEVICE_OK) {
+			return result;
 		}
-
-		if (!pProp->Set(offset))
-		{
+		// cast to long to match integer property
+		if (!pProp->Set(static_cast<long>(offset))) {
 			return DEVICE_INVALID_PROPERTY_VALUE;
 		}
 	}
