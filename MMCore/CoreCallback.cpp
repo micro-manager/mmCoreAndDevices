@@ -28,6 +28,7 @@
 #include "CircularBuffer.h"
 #include "CoreCallback.h"
 #include "DeviceManager.h"
+#include "Notification.h"
 
 #include "DeviceThreads.h"
 #include "DeviceUtils.h"
@@ -38,6 +39,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+
+namespace notif = mmcore::internal::notification;
 
 namespace mmcore {
 namespace internal {
@@ -330,11 +333,8 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
       }
    }
 
-   // Notify that sequence acquisition has stopped
-   if (core_->externalCallback_)
-   {
-      core_->externalCallback_->onSequenceAcquisitionStopped(camera->GetLabel().c_str());
-   }
+   core_->postNotification(
+      notif::SequenceAcquisitionStopped{camera->GetLabel()});
 
    return DEVICE_OK;
 }
@@ -355,12 +355,9 @@ int CoreCallback::PrepareForAcq(const MM::Device* caller)
       }
    }
 
-   if (core_->externalCallback_)
-   {
-      char label[MM::MaxStrLength];
-      caller->GetLabel(label);
-      core_->externalCallback_->onSequenceAcquisitionStarted(label);
-   }
+   char label[MM::MaxStrLength];
+   caller->GetLabel(label);
+   core_->postNotification(notif::SequenceAcquisitionStarted{label});
 
    return DEVICE_OK;
 }
@@ -370,8 +367,7 @@ int CoreCallback::PrepareForAcq(const MM::Device* caller)
  */
 int CoreCallback::OnPropertiesChanged(const MM::Device* /* caller */)
 {
-   if (core_->externalCallback_)
-      core_->externalCallback_->onPropertiesChanged();
+   core_->postNotification(notif::PropertiesChanged{});
 
    // TODO It is inconsistent that we do not update the system state cache in
    // this case. However, doing so would be time-consuming (if not unsafe).
@@ -384,129 +380,72 @@ int CoreCallback::OnPropertiesChanged(const MM::Device* /* caller */)
  */
 int CoreCallback::OnPropertyChanged(const MM::Device* device, const char* propName, const char* value)
 {
-   if (core_->externalCallback_) 
+   MMThreadGuard g(*pValueChangeLock_);
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   bool readOnly;
+   device->GetPropertyReadOnly(propName, readOnly);
+   const PropertySetting ps(label, propName, value, readOnly);
    {
-      MMThreadGuard g(*pValueChangeLock_);
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      bool readOnly;
-      device->GetPropertyReadOnly(propName, readOnly);
-      const PropertySetting* ps = new PropertySetting(label, propName, value, readOnly);
-      {
-         MMThreadGuard scg(core_->stateCacheLock_);
-         core_->stateCache_.addSetting(*ps);
-      }
-      core_->externalCallback_->onPropertyChanged(label, propName, value);
+      MMThreadGuard scg(core_->stateCacheLock_);
+      core_->stateCache_.addSetting(ps);
+   }
+   core_->postNotification(
+      notif::PropertyChanged{label, propName, value});
 
-      // Find all configs that contain this property and callback to indicate 
-      // that the config group changed
-      // TODO: Assess whether performance is better by maintaining a map tying
-      // property to configurations
-      std::vector<std::string> configGroups = 
-         core_->getAvailableConfigGroups ();
-      for (std::vector<std::string>::iterator it = configGroups.begin(); 
-            it != configGroups.end(); ++it) 
-      {
-         std::vector<std::string> configs = 
-            core_->getAvailableConfigs((*it).c_str());
-         bool found = false;
-         for (std::vector<std::string>::iterator itc = configs.begin();
-               itc != configs.end() && !found; itc++) 
-         {
-            Configuration config = 
-               core_->getConfigData((*it).c_str(), (*itc).c_str());
-            if (config.isPropertyIncluded(label, propName)) {
-               found = true;
-               // If we are part of this configuration, notify that it 
-               // was changed. Get the new config from cache rather 
-               // than by querying the hardware
-               std::string currentConfig = 
-                  core_->getCurrentConfigFromCache( (*it).c_str() );
-               OnConfigGroupChanged((*it).c_str(), currentConfig.c_str());
-            }
-         }
-      }
-          
-
-      // Check if pixel size was potentially affected.  If so, update from cache
-      std::vector<std::string> pixelSizeConfigs = core_->getAvailablePixelSizeConfigs();
-      bool found = false;
-      for (std::vector<std::string>::iterator itpsc = pixelSizeConfigs.begin();
-            itpsc != pixelSizeConfigs.end() && !found; itpsc++) 
-      {
-         Configuration pixelSizeConfig = core_->getPixelSizeConfigData( (*itpsc).c_str());
-         if (pixelSizeConfig.isPropertyIncluded(label, propName)) {
-            found = true;
-            double pixSizeUm;
-            try {
-               // update pixel size from cache
-               pixSizeUm = core_->getPixelSizeUm(true);
-               OnPixelSizeAffineChanged(core_->getPixelSizeAffine(true));
-            }
-            catch (const CMMError&) {
-               pixSizeUm = 0.0;
-            }
-            OnPixelSizeChanged(pixSizeUm);
+   // Find all configs that contain this property and notify that the
+   // config group changed.
+   // TODO: Assess whether performance is better by maintaining a map tying
+   // property to configurations
+   for (const auto& group : core_->getAvailableConfigGroups()) {
+      for (const auto& config : core_->getAvailableConfigs(group.c_str())) {
+         Configuration configData =
+            core_->getConfigData(group.c_str(), config.c_str());
+         if (configData.isPropertyIncluded(label, propName)) {
+            std::string currentConfig =
+               core_->getCurrentConfigFromCache(group.c_str());
+            core_->postNotification(
+               notif::ConfigGroupChanged{group, currentConfig});
+            break;
          }
       }
    }
 
-   return DEVICE_OK;
-}
-
-/**
- * Callback indicating that a configuration group has changed
- */
-int CoreCallback::OnConfigGroupChanged(const char* groupName, const char* newConfigName)
-{
-   if (core_->externalCallback_) {
-      core_->externalCallback_->onConfigGroupChanged(groupName, newConfigName);
+   // Check if pixel size was potentially affected. If so, update from cache.
+   for (const auto& psConfig : core_->getAvailablePixelSizeConfigs()) {
+      Configuration pixelSizeConfig =
+         core_->getPixelSizeConfigData(psConfig.c_str());
+      if (pixelSizeConfig.isPropertyIncluded(label, propName)) {
+         double pixSizeUm;
+         try {
+            pixSizeUm = core_->getPixelSizeUm(true);
+            std::vector<double> affine = core_->getPixelSizeAffine(true);
+            if (affine.size() == 6) {
+               core_->postNotification(notif::PixelSizeAffineChanged{
+                  affine[0], affine[1], affine[2],
+                  affine[3], affine[4], affine[5]});
+            }
+         }
+         catch (const CMMError&) {
+            pixSizeUm = 0.0;
+         }
+         core_->postNotification(notif::PixelSizeChanged{pixSizeUm});
+         break;
+      }
    }
 
    return DEVICE_OK;
 }
 
-/**
- * Callback indicating that Pixel Size has changed
- */
-int CoreCallback::OnPixelSizeChanged(double newPixelSizeUm)
-{
-   if (core_->externalCallback_) {
-      core_->externalCallback_->onPixelSizeChanged(newPixelSizeUm);
-   }
-
-   return DEVICE_OK;
-}
-
-/**
- * Callback indicating that Affine transform relating camera pixels
- * to stage movement (i.e. the real world) has changed
- */
-int CoreCallback::OnPixelSizeAffineChanged(std::vector<double> newPixelSizeAffine)
-{
-   if (core_->externalCallback_ && newPixelSizeAffine.size() == 6) {
-      core_->externalCallback_->onPixelSizeAffineChanged(newPixelSizeAffine[0],
-            newPixelSizeAffine[1],
-            newPixelSizeAffine[2],
-            newPixelSizeAffine[3],
-            newPixelSizeAffine[4],
-            newPixelSizeAffine[5]);
-   }
-
-   return DEVICE_OK;
-}
 
 /**
  * Handler for Stage position update
  */
 int CoreCallback::OnStagePositionChanged(const MM::Device* device, double pos)
 {
-   if (core_->externalCallback_) {
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onStagePositionChanged(label, pos);
-   }
-
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::StagePositionChanged{label, pos});
    return DEVICE_OK;
 }
 
@@ -515,12 +454,9 @@ int CoreCallback::OnStagePositionChanged(const MM::Device* device, double pos)
  */
 int CoreCallback::OnXYStagePositionChanged(const MM::Device* device, double xPos, double yPos)
 {
-   if (core_->externalCallback_) {
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onXYStagePositionChanged(label, xPos, yPos);
-   }
-
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::XYStagePositionChanged{label, xPos, yPos});
    return DEVICE_OK;
 }
 
@@ -530,11 +466,9 @@ int CoreCallback::OnXYStagePositionChanged(const MM::Device* device, double xPos
  */
 int CoreCallback::OnExposureChanged(const MM::Device* device, double newExposure)
 {
-   if (core_->externalCallback_) {
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onExposureChanged(label, newExposure);
-   }
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::ExposureChanged{label, newExposure});
    return DEVICE_OK;
 }
 
@@ -544,12 +478,9 @@ int CoreCallback::OnExposureChanged(const MM::Device* device, double newExposure
  */
 int CoreCallback::OnSLMExposureChanged(const MM::Device* device, double newExposure)
 {
-   if (core_->externalCallback_) {
-      MMThreadGuard g(*pValueChangeLock_);
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onSLMExposureChanged(label, newExposure);
-   }
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::SLMExposureChanged{label, newExposure});
    return DEVICE_OK;
 }
 
@@ -559,20 +490,20 @@ int CoreCallback::OnSLMExposureChanged(const MM::Device* device, double newExpos
  */
 int CoreCallback::OnMagnifierChanged(const MM::Device* /* device */)
 {
-   if (core_->externalCallback_) 
-   {
-      double pixSizeUm;
-      try 
-      {
-         // update pixel size from cache
-         pixSizeUm = core_->getPixelSizeUm(true);
-         OnPixelSizeAffineChanged(core_->getPixelSizeAffine(true));
+   double pixSizeUm;
+   try {
+      pixSizeUm = core_->getPixelSizeUm(true);
+      std::vector<double> affine = core_->getPixelSizeAffine(true);
+      if (affine.size() == 6) {
+         core_->postNotification(notif::PixelSizeAffineChanged{
+            affine[0], affine[1], affine[2],
+            affine[3], affine[4], affine[5]});
       }
-      catch (const CMMError&) {
-         pixSizeUm = 0.0;
-      }
-      OnPixelSizeChanged(pixSizeUm);
    }
+   catch (const CMMError&) {
+      pixSizeUm = 0.0;
+   }
+   core_->postNotification(notif::PixelSizeChanged{pixSizeUm});
    return DEVICE_OK;
 }
 
@@ -582,11 +513,9 @@ int CoreCallback::OnMagnifierChanged(const MM::Device* /* device */)
  */
 int CoreCallback::OnShutterOpenChanged(const MM::Device* device, bool state)
 {
-   if (core_->externalCallback_) {
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onShutterOpenChanged(label, state);
-   }
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::ShutterOpenChanged{label, state});
    return DEVICE_OK;
 }
 
