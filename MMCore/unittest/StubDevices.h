@@ -12,6 +12,7 @@
 
 struct StubGeneric : CGenericBase<StubGeneric> {
    std::string name = "StubGeneric";
+   using CGenericBase::OnPropertiesChanged;
 
    int Initialize() override { return DEVICE_OK; }
    int Shutdown() override { return DEVICE_OK; }
@@ -23,6 +24,7 @@ struct StubGeneric : CGenericBase<StubGeneric> {
 
 struct StubCamera : CCameraBase<StubCamera> {
    std::string name = "StubCamera";
+   using CCameraBase::OnExposureChanged;
    unsigned width = 512;
    unsigned height = 512;
    unsigned bytesPerPixel = 1;
@@ -77,6 +79,14 @@ struct StubCamera : CCameraBase<StubCamera> {
    int StopSequenceAcquisition() override { return DEVICE_OK; }
    bool IsCapturing() override { return false; }
 
+   int PrepareForAcq() {
+      return GetCoreCallback()->PrepareForAcq(this);
+   }
+
+   int AcqFinished(int statusCode = 0) {
+      return GetCoreCallback()->AcqFinished(this, statusCode);
+   }
+
    int InsertTestImage(
          const MM::CameraImageMetadata& md = MM::CameraImageMetadata{},
          const unsigned char* pixels = nullptr) {
@@ -98,6 +108,7 @@ private:
 
 struct StubStage : CStageBase<StubStage> {
    std::string name = "StubStage";
+   using CStageBase::OnStagePositionChanged;
    double positionUm = 0.0;
    long positionSteps = 0;
    double lowerLimit = -10000.0;
@@ -145,6 +156,7 @@ struct StubStage : CStageBase<StubStage> {
 
 struct StubXYStage : CXYStageBase<StubXYStage> {
    std::string name = "StubXYStage";
+   using CXYStageBase::OnXYStagePositionChanged;
    long posXSteps = 0;
    long posYSteps = 0;
    double stepSizeX = 1.0;
@@ -208,6 +220,7 @@ struct StubStateDevice : CStateDeviceBase<StubStateDevice> {
 
 struct StubShutter : CShutterBase<StubShutter> {
    std::string name = "StubShutter";
+   using CShutterBase::GetCoreCallback; // No OnShutterOpenChanged on device side
    bool open = false;
 
    int Initialize() override { return DEVICE_OK; }
@@ -224,6 +237,7 @@ struct StubShutter : CShutterBase<StubShutter> {
 
 struct StubMagnifier : CMagnifierBase<StubMagnifier> {
    std::string name = "StubMagnifier";
+   using CMagnifierBase::OnMagnifierChanged;
    double magnification = 1.0;
 
    int Initialize() override { return DEVICE_OK; }
@@ -234,4 +248,39 @@ struct StubMagnifier : CMagnifierBase<StubMagnifier> {
    }
 
    double GetMagnification() override { return magnification; }
+};
+
+struct StubSLM : CSLMBase<StubSLM> {
+   std::string name = "StubSLM";
+   using CSLMBase::OnSLMExposureChanged;
+   unsigned width = 64;
+   unsigned height = 64;
+   unsigned nComponents = 1;
+   unsigned bytesPerPixel = 1;
+   double exposure = 0.0;
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SetImage(unsigned char*) override { return DEVICE_OK; }
+   int SetImage(unsigned int*) override { return DEVICE_OK; }
+   int DisplayImage() override { return DEVICE_OK; }
+   int SetPixelsTo(unsigned char) override { return DEVICE_OK; }
+   int SetPixelsTo(unsigned char, unsigned char, unsigned char) override {
+      return DEVICE_OK;
+   }
+   int SetExposure(double e) override { exposure = e; return DEVICE_OK; }
+   double GetExposure() override { return exposure; }
+   unsigned GetWidth() override { return width; }
+   unsigned GetHeight() override { return height; }
+   unsigned GetNumberOfComponents() override { return nComponents; }
+   unsigned GetBytesPerPixel() override { return bytesPerPixel; }
+   int IsSLMSequenceable(bool& seq) const override {
+      seq = false;
+      return DEVICE_OK;
+   }
 };

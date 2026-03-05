@@ -39,6 +39,11 @@ TEST_CASE("StubMagnifier can be default-constructed") {
    CHECK(dev.magnification == 1.0);
 }
 
+TEST_CASE("StubSLM can be default-constructed") {
+   StubSLM dev;
+   CHECK(dev.width == 64);
+}
+
 TEST_CASE("StubGeneric can be loaded into CMMCore") {
    StubGeneric dev;
    MockAdapterWithDevices adapter{{"dev", &dev}};
@@ -93,4 +98,12 @@ TEST_CASE("StubMagnifier can be loaded into CMMCore") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    CHECK(c.getDeviceName("dev") == "StubMagnifier");
+}
+
+TEST_CASE("StubSLM can be loaded into CMMCore") {
+   StubSLM dev;
+   MockAdapterWithDevices adapter{{"dev", &dev}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   CHECK(c.getDeviceName("dev") == "StubSLM");
 }

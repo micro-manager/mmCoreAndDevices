@@ -51,6 +51,7 @@
 #include "ErrorCodes.h"
 #include "Logging/Logger.h"
 #include "MockDeviceAdapter.h"
+#include "Notification.h"
 
 #include "DeviceThreads.h"
 #include "MMDevice.h"
@@ -60,7 +61,9 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <shared_mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 class MMEventCallback;
@@ -90,6 +93,7 @@ namespace internal {
    class CPluginManager;
    class DeviceManager;
    class LogManager;
+   class NotificationQueue;
 } // namespace internal
 } // namespace mmcore
 
@@ -174,7 +178,7 @@ public:
    void loadSystemState(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
    void saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
    void loadSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
-   void registerCallback(MMEventCallback* cb);
+   void registerCallback(MMEventCallback* cb) MMCORE_LEGACY_THROW(CMMError);
    ///@}
 
    /** \name Logging and log management. */
@@ -711,7 +715,6 @@ private:
    MM::Core* callback_;                 // core services for devices
    mmcore::internal::ConfigGroupCollection* configGroups_;
    mmcore::internal::CorePropertyCollection* properties_;
-   MMEventCallback* externalCallback_;  // notification hook to the higher layer (e.g. GUI)
    PixelSizeConfigGroup* pixelSizeGroup_;
    mmcore::internal::CircularBuffer* cbuf_;
 
@@ -719,14 +722,19 @@ private:
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
 
-   // Must be unlocked when calling MMEventCallback or calling device methods
-   // or acquiring a module lock
+   // Must be unlocked when calling device methods or acquiring a module lock
    mutable MMThreadLock stateCacheLock_;
    mutable Configuration stateCache_; // Synchronized by stateCacheLock_
 
    // True while interpreting the config file (but not while rolling back on
    // failure):
    bool isLoadingSystemConfiguration_ = false;
+
+   std::mutex callbackMutex_; // Serializes registerCallback() calls
+   std::shared_mutex notificationQueueMutex_; // Protects notificationQueue_
+   std::shared_ptr<mmcore::internal::NotificationQueue>
+      notificationQueue_;
+   std::thread notificationDeliveryThread_;
 
 private:
    void InitializeErrorMessages();
@@ -757,4 +765,7 @@ private:
    void initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError);
    void initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<mmcore::internal::DeviceInstance>, std::string> > pDevices);
+
+   void postNotification(
+      mmcore::internal::Notification notification);
 };

@@ -27,7 +27,6 @@
 #include "Devices/DeviceInstances.h"
 #include "CoreUtils.h"
 #include "MMCore.h"
-#include "MMEventCallback.h"
 
 #include "DeviceUtils.h"
 
@@ -122,10 +121,6 @@ private:
 
    Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
    MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);
-
-   int OnConfigGroupChanged(const char* groupName, const char* newConfigName);
-   int OnPixelSizeChanged(double newPixelSizeUm);
-   int OnPixelSizeAffineChanged(std::vector<double> newPixelSizeAffine);
 };
 
 } // namespace internal

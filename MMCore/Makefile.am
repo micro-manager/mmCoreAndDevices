@@ -100,6 +100,8 @@ libMMCore_la_SOURCES = \
 	MMCore.cpp \
 	MMCore.h \
 	MockDeviceAdapter.h \
+	Notification.h \
+	NotificationQueue.h \
 	PluginManager.cpp \
 	PluginManager.h \
 	Semaphore.cpp \
