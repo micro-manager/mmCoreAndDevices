@@ -353,18 +353,6 @@ const char* const g_ScanSettlingTimePropertyName = "ScanSettlingTime(ms)";
 const char* const g_ScanOvershootDistancePropertyName = "ScanOvershootDistance(um)";
 const char* const g_ScanRetraceSpeedPercentPropertyName = "ScanRetraceSpeedPercent(%)";
 
-// CRISP property names
-const char* const g_CRISPWaitAfterLockPropertyName = "Wait ms after Lock";
-const char* const g_CRISPObjectiveNAPropertyName = "Objective NA";
-const char* const g_CRISPLockRangePropertyName = "Max Lock Range(mm)";
-const char* const g_CRISPCalibrationGainPropertyName = "Calibration Gain";
-const char* const g_CRISPCalibrationRangePropertyName = "Calibration Range(um)";
-const char* const g_CRISPLEDIntensityPropertyName = "LED Intensity";
-const char* const g_CRISPLoopGainMultiplierPropertyName = "GainMultiplier";
-const char* const g_CRISPNumberAveragesPropertyName = "Number of Averages";
-const char* const g_CRISPNumberSkipsPropertyName = "Number of Skips";
-const char* const g_CRISPInFocusRangePropertyName = "In Focus Range(um)";
-
 // ring buffer property names
 const char* const g_RB_DelayPropertyName = "RingBufferDelayBetweenPoints(ms)";
 const char* const g_RB_ModePropertyName = "RingBufferMode";
@@ -674,6 +662,7 @@ const char* const g_SAPattern_0 = "0 - Ramp";
 const char* const g_SAPattern_1 = "1 - Triangle";
 const char* const g_SAPattern_2 = "2 - Square";
 const char* const g_SAPattern_3 = "3 - Sine";
+const char* const g_SAPattern_4 = "4 - Variable Triangle";
 // single-axis clock source
 const char* const g_SAClkSrc_0 = "internal 4kHz clock";
 const char* const g_SAClkSrc_1 = "external clock";
@@ -723,7 +712,6 @@ const char* const g_FocusPolarityMicroManagerDefault = "Positive towards sample"
 const char* const g_AxisPolarityNormal = "Normal";  // used for other stages
 const char* const g_AxisPolarityReversed = "Reversed";  // used for other stages
 // CRISP states
-const char* const g_CRISPState = "CRISP State";
 const char* const g_CRISP_I = "Idle";
 const char* const g_CRISP_R = "Ready";  // LED on and ready to move to K/lock state
 const char* const g_CRISP_D = "Dim";

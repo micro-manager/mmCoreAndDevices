@@ -299,10 +299,12 @@ int CScanner::Initialize()
    AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_0, 0);
    AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_1, 1);
    AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_2, 2);
-   if (FirmwareVersionAtLeast(3.14))
-	   {	//sin pattern was implemeted much later atleast firmware 3/14 needed
-		   AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_3, 3);
-	   }
+   if (FirmwareVersionAtLeast(3.14)) {
+       AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_3);
+   }
+   if (FirmwareVersionAtLeast(3.55)) {
+       AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_4);
+   }
    UpdateProperty(g_SAPatternXPropertyName);
    pAct = new CPropertyAction (this, &CScanner::OnSAAmplitudeY);
    CreateProperty(g_ScannerSAAmplitudeYPropertyName, "0", MM::Float, false, pAct);
@@ -325,11 +327,19 @@ int CScanner::Initialize()
    AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_0, 0);
    AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_1, 1);
    AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_2, 2);
-   if (FirmwareVersionAtLeast(3.14))
-	   {	//sin pattern was implemeted much later atleast firmware 3/14 needed
-		   AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_3, 3);
-	   }
+   if (FirmwareVersionAtLeast(3.14)) {
+       AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_3);
+   }
+   if (FirmwareVersionAtLeast(3.55)) {
+       AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_4);
+   }
    UpdateProperty(g_SAPatternYPropertyName);
+
+   // rise time is used by variable waveforms
+   if (FirmwareVersionAtLeast(3.55)) {
+       CreateSingleAxisRiseTimeProperty('X', axisLetterX_);
+       CreateSingleAxisRiseTimeProperty('Y', axisLetterY_);
+   }
 
    // generates a set of additional advanced properties that are rarely used
    pAct = new CPropertyAction (this, &CScanner::OnSAAdvancedX);
@@ -1161,9 +1171,9 @@ int CScanner::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     if (eAct == MM::AfterSet)
     {
-        std::string tmpstr;
-        pProp->Get(tmpstr);
-        refreshProps_ = (tmpstr == g_YesState) ? true : false;
+        std::string tmp;
+        pProp->Get(tmp);
+        refreshProps_ = (tmp == g_YesState);
     }
     return DEVICE_OK;
 }
@@ -1786,6 +1796,7 @@ int CScanner::OnSAPatternX(MM::PropertyBase* pProp, MM::ActionType eAct)
          case 1: success = pProp->Set(g_SAPattern_1); break;
          case 2: success = pProp->Set(g_SAPattern_2); break;
 		 case 3: success = pProp->Set(g_SAPattern_3); break;
+         case 4: success = pProp->Set(g_SAPattern_4); break;
          default:success = 0;                      break;
       }
       if (!success)
@@ -1958,6 +1969,7 @@ int CScanner::OnSAPatternY(MM::PropertyBase* pProp, MM::ActionType eAct)
          case 1: success = pProp->Set(g_SAPattern_1); break;
          case 2: success = pProp->Set(g_SAPattern_2); break;
          case 3: success = pProp->Set(g_SAPattern_3); break;
+         case 4: success = pProp->Set(g_SAPattern_4); break;
 		 default:success = 0;                      break;
       }
       if (!success)
@@ -4010,4 +4022,40 @@ int CScanner::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, cons
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    }
    return DEVICE_OK;
+}
+
+void CScanner::CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter) {
+    const std::string propertyName = std::string("SingleAxis") + axisChar + "RiseTime(ms)";
+
+    // axisLetter is captured by value so that the lambda owns it's own copy
+    CreateFloatProperty(
+        propertyName.c_str(), 0.0, false,
+        new MM::ActionLambda([this, axisLetter](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            double tmp = 0.0;
+            if (eAct == MM::BeforeGet) {
+                if (!refreshProps_ && initialized_) {
+                    return DEVICE_OK;
+                }
+                const std::string query = "OS " + axisLetter + "?";
+                const std::string response = ":A " + axisLetter + "=";
+                const int result = hub_->QueryCommandVerify(query, response);
+                if (result != DEVICE_OK) {
+                    LogMessage("failed here " + response);
+                    return result;
+                }
+                //RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(query, response));
+                RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
+                if (!pProp->Set(tmp)) {
+                    return DEVICE_INVALID_PROPERTY_VALUE;
+                }
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(tmp);
+                const std::string command = "OS " + axisLetter + "=";
+                RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(tmp), ":A"));
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    UpdateProperty(propertyName.c_str());
 }

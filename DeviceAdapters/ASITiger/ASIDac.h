@@ -93,6 +93,14 @@ public:
 	int OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+	int GetMaxVolts(double& volts);
+	int GetMinVolts(double& volts);
+	int SetSignalmv(double millivolts);
+	int GetSignalmv(double& millivolts);
+
+	// Properties
+	void CreateSingleAxisRiseTimeProperty();
+
 	double unitMult_;
 	std::string axisLetter_;
 	double maxvolts_;
@@ -102,11 +110,6 @@ private:
 	bool ttl_trigger_supported_;
 	bool ttl_trigger_enabled_;
 	std::vector<double> sequence_; // carries data in volts
-
-	int GetMaxVolts(double &volts);
-	int GetMinVolts(double &volts);
-	int SetSignalmv(double millivolts);
-	int GetSignalmv(double& millivolts);
 };
 
 #endif // ASIDAC_H

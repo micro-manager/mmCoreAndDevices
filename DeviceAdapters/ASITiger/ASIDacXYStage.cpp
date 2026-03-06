@@ -257,6 +257,9 @@ int CDACXYStage::Initialize()
 		if (FirmwareVersionAtLeast(3.14)) {
 			AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_3);
 		}
+		if (FirmwareVersionAtLeast(3.55)) {
+			AddAllowedValue(g_SAPatternXPropertyName, g_SAPattern_4);
+		}
 		UpdateProperty(g_SAPatternXPropertyName);
 
 		pAct = new CPropertyAction(this, &CDACXYStage::OnSAPatternY);
@@ -267,7 +270,16 @@ int CDACXYStage::Initialize()
 		if (FirmwareVersionAtLeast(3.14)) {
 			AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_3);
 		}
+		if (FirmwareVersionAtLeast(3.55)) {
+			AddAllowedValue(g_SAPatternYPropertyName, g_SAPattern_4);
+		}
 		UpdateProperty(g_SAPatternYPropertyName);
+
+		// rise time is used by variable waveforms
+		if (FirmwareVersionAtLeast(3.55)) {
+			CreateSingleAxisRiseTimeProperty('X', axisLetterX_);
+			CreateSingleAxisRiseTimeProperty('Y', axisLetterY_);
+		}
 
 		// generates a set of additional advanced properties that are rarely used
 		pAct = new CPropertyAction(this, &CDACXYStage::OnSAAdvancedX);
@@ -564,9 +576,9 @@ int CDACXYStage::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAc
 {
 	if (eAct == MM::AfterSet)
 	{
-		std::string tmpstr;
-		pProp->Get(tmpstr);
-		refreshProps_ = (tmpstr == g_YesState) ? true : false;
+		std::string tmp;
+		pProp->Get(tmp);
+		refreshProps_ = (tmp == g_YesState);
 	}
 	return DEVICE_OK;
 }
@@ -1341,6 +1353,7 @@ int CDACXYStage::OnSAPatternGeneric(MM::PropertyBase* pProp, MM::ActionType eAct
 		case 1: success = pProp->Set(g_SAPattern_1); break;
 		case 2: success = pProp->Set(g_SAPattern_2); break;
 		case 3: success = pProp->Set(g_SAPattern_3); break;
+		case 4: success = pProp->Set(g_SAPattern_4); break;
 		default:success = 0;                         break;
 		}
 		if (!success)
@@ -1367,6 +1380,10 @@ int CDACXYStage::OnSAPatternGeneric(MM::PropertyBase* pProp, MM::ActionType eAct
 		else if (tmpstr == g_SAPattern_3)
 		{
 			tmp = 3;
+		}
+		else if (tmpstr == g_SAPattern_4)
+		{
+			tmp = 4;
 		}
 		else
 		{
@@ -1947,4 +1964,35 @@ int CDACXYStage::OnConversionFactorY(MM::PropertyBase* pProp, MM::ActionType eAc
 		pProp->Get(umToMvY_);
 	}
 	return DEVICE_OK;
+}
+
+void CDACXYStage::CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter) {
+	const std::string propertyName = std::string("SingleAxis") + axisChar + "RiseTime(ms)";
+
+	// axisLetter is captured by value so that the lambda owns it's own copy
+	CreateFloatProperty(
+		propertyName.c_str(), 0.0, false,
+		new MM::ActionLambda([this, axisLetter](MM::PropertyBase* pProp, MM::ActionType eAct) {
+			double tmp = 0.0;
+			if (eAct == MM::BeforeGet) {
+				if (!refreshProps_ && initialized_) {
+					return DEVICE_OK;
+				}
+				const std::string query = "OS " + axisLetter + "?";
+				const std::string response = ":A " + axisLetter + "=";
+				RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(query, response));
+				RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
+				if (!pProp->Set(tmp)) {
+					return DEVICE_INVALID_PROPERTY_VALUE;
+				}
+			} else if (eAct == MM::AfterSet) {
+				pProp->Get(tmp);
+				const std::string command = "OS " + axisLetter + "=";
+				RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(tmp), ":A"));
+			}
+			return DEVICE_OK;
+		})
+	);
+
+	UpdateProperty(propertyName.c_str());
 }

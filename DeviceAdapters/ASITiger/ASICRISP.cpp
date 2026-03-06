@@ -30,157 +30,156 @@
 #include <string>
 
 
-// NOTE: there are 7 "Always read" properties
-
 // shared properties not implemented for CRISP because as of mid-2017 only can have one per card
 
-///////////////////////////////////////////////////////////////////////////////
-// CCRISP
-//
+namespace {
+namespace Properties {
+
+// Software-only
+constexpr char WaitMsAfterLock[] = "Wait ms after Lock";
+
+// Read/Write
+constexpr char LEDIntensity[] = "LED Intensity";
+constexpr char ObjectiveNA[] = "Objective NA";
+constexpr char GainMultiplier[] = "GainMultiplier";
+constexpr char NumberAverages[] = "Number of Averages";
+constexpr char NumberSkips[] = "Number of Skips";
+constexpr char CalibrationGain[] = "Calibration Gain";
+constexpr char CalibrationRangeUm[] = "Calibration Range(um)";
+constexpr char InFocusRangeUm[] = "In Focus Range(um)";
+constexpr char MaxLockRangeMm[] = "Max Lock Range(mm)";
+
+// Always read
+constexpr char State[] = "CRISP State";
+constexpr char StateChar[] = "CRISP State Character";
+constexpr char SignalNoiseRatio[] = "Signal Noise Ratio";
+constexpr char LockOffset[] = "Lock Offset";
+constexpr char Sum[] = "Sum";
+constexpr char DitherError[] = "Dither Error";
+constexpr char LogAmpAGC[] = "LogAmpAGC";
+
+// Advanced
+constexpr char SetLogAmpAGC[] = "Set LogAmpAGC (Advanced Users Only)";
+constexpr char SetLockOffset[] = "Set Lock Offset (Advanced Users Only)";
+
+} // namespace Properties
+
+namespace Props = Properties;
+} // namespace
+
 CCRISP::CCRISP(const char* name) :
-   ASIPeripheralBase< ::CAutoFocusBase, CCRISP >(name),
-   axisLetter_(g_EmptyAxisLetterStr),    // value determined by extended name
-   waitAfterLock_(1000)
-{
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetter_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
-   }
+    ASIPeripheralBase<::CAutoFocusBase, CCRISP>(name),
+    axisLetter_(g_EmptyAxisLetterStr), // value determined by extended name
+    waitAfterLock_(1000L) {
+
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        axisLetter_ = GetAxisLetterFromExtName(name);
+        CreateStringProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), true);
+    }
 }
 
-int CCRISP::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CCRISP::Initialize() {
+    // call generic Initialize first, this gets hub
+    RETURN_ON_MM_ERROR(PeripheralInitialize());
 
-   // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-   std::ostringstream command;
-   command << g_CRISPDeviceDescription << " Axis=" << axisLetter_ << " HexAddr=" << addressString_;
-   CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
+    // create MM description; requires runtime values not
+    // available during the hardware configuration wizard
+    const std::string description = std::string(g_CRISPDeviceDescription)
+        + " Axis=" + axisLetter_ + " HexAddr=" + addressString_;
+    CreateStringProperty(MM::g_Keyword_Description, description.c_str(), true);
 
-   // create properties and corresponding action handlers
+    // refresh properties from controller every time - default is not to refresh
+    // (speeds things up by not redoing as much serial communication)
+    CreateRefreshPropertiesProperty();
+    CreateWaitAfterLockProperty();
 
-   CPropertyAction* pAct;
+    // create properties and corresponding action handlers
+    CPropertyAction* pAct;
 
-   // refresh properties from controller every time - default is not to refresh (speeds things up by not redoing so much serial comm)
-   pAct = new CPropertyAction (this, &CCRISP::OnRefreshProperties);
-   CreateProperty(g_RefreshPropValsPropertyName, g_NoState, MM::String, false, pAct);
-   AddAllowedValue(g_RefreshPropValsPropertyName, g_NoState);
-   AddAllowedValue(g_RefreshPropValsPropertyName, g_YesState);
+    pAct = new CPropertyAction(this, &CCRISP::OnNA);
+    CreateProperty(Props::ObjectiveNA, "0.8", MM::Float, false, pAct);
+    SetPropertyLimits(Props::ObjectiveNA, 0, 1.65);
+    UpdateProperty(Props::ObjectiveNA);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnFocusState);
-   CreateProperty (g_CRISPState, g_CRISP_I, MM::String, false, pAct);
-   AddAllowedValue(g_CRISPState, g_CRISP_I, 79);
-   AddAllowedValue(g_CRISPState, g_CRISP_R, 85);
-   AddAllowedValue(g_CRISPState, g_CRISP_D);
-   AddAllowedValue(g_CRISPState, g_CRISP_K, 83);
-   AddAllowedValue(g_CRISPState, g_CRISP_F);
-   AddAllowedValue(g_CRISPState, g_CRISP_N);
-   AddAllowedValue(g_CRISPState, g_CRISP_E);
-   AddAllowedValue(g_CRISPState, g_CRISP_G, 72);
-   AddAllowedValue(g_CRISPState, g_CRISP_SG, 67);
-   AddAllowedValue(g_CRISPState, g_CRISP_f, 102);
-   AddAllowedValue(g_CRISPState, g_CRISP_C, 97);
-   AddAllowedValue(g_CRISPState, g_CRISP_B, 66);
-   AddAllowedValue(g_CRISPState, g_CRISP_RFO, 111);
-   AddAllowedValue(g_CRISPState, g_CRISP_SSZ);
+    pAct = new CPropertyAction(this, &CCRISP::OnLockRange);
+    CreateProperty(Props::MaxLockRangeMm, "0.05", MM::Float, false, pAct);
+    UpdateProperty(Props::MaxLockRangeMm);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnWaitAfterLock);
-   CreateProperty(g_CRISPWaitAfterLockPropertyName, "1000", MM::Integer, false, pAct);
-   UpdateProperty(g_CRISPWaitAfterLockPropertyName);
+    pAct = new CPropertyAction(this, &CCRISP::OnCalGain);
+    CreateProperty(Props::CalibrationGain, "0", MM::Integer, false, pAct);
+    UpdateProperty(Props::CalibrationGain);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnNA);
-   CreateProperty(g_CRISPObjectiveNAPropertyName, "0.8", MM::Float, false, pAct);
-   SetPropertyLimits(g_CRISPObjectiveNAPropertyName, 0, 1.65);
-   UpdateProperty(g_CRISPObjectiveNAPropertyName);
+    pAct = new CPropertyAction(this, &CCRISP::OnCalRange);
+    CreateProperty(Props::CalibrationRangeUm, "0", MM::Float, false, pAct);
+    UpdateProperty(Props::CalibrationRangeUm);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnLockRange);
-   CreateProperty(g_CRISPLockRangePropertyName, "0.05", MM::Float, false, pAct);
-   UpdateProperty(g_CRISPLockRangePropertyName);
+    pAct = new CPropertyAction(this, &CCRISP::OnLEDIntensity);
+    CreateProperty(Props::LEDIntensity, "50", MM::Integer, false, pAct);
+    SetPropertyLimits(Props::LEDIntensity, 0, 100);
+    UpdateProperty(Props::LEDIntensity);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnCalGain);
-   CreateProperty(g_CRISPCalibrationGainPropertyName, "0", MM::Integer, false, pAct);
-   UpdateProperty(g_CRISPCalibrationGainPropertyName);
+    pAct = new CPropertyAction(this, &CCRISP::OnLoopGainMultiplier);
+    CreateProperty(Props::GainMultiplier, "10", MM::Integer, false, pAct);
+    SetPropertyLimits(Props::GainMultiplier, 0, 100);
+    UpdateProperty(Props::GainMultiplier);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnCalRange);
-   CreateProperty(g_CRISPCalibrationRangePropertyName, "0", MM::Float, false, pAct);
-   UpdateProperty(g_CRISPCalibrationRangePropertyName);
+    pAct = new CPropertyAction(this, &CCRISP::OnNumAvg);
+    CreateProperty(Props::NumberAverages, "1", MM::Integer, false, pAct);
+    SetPropertyLimits(Props::NumberAverages, 0, 8);
+    UpdateProperty(Props::NumberAverages);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnLEDIntensity);
-   CreateProperty(g_CRISPLEDIntensityPropertyName, "50", MM::Integer, false, pAct);
-   SetPropertyLimits(g_CRISPLEDIntensityPropertyName, 0, 100);
-   UpdateProperty(g_CRISPLEDIntensityPropertyName);
+    if (FirmwareVersionAtLeast(3.12)) {
+        pAct = new CPropertyAction(this, &CCRISP::OnNumSkips);
+        CreateProperty(Props::NumberSkips, "0", MM::Integer, false, pAct);
+        SetPropertyLimits(Props::NumberSkips, 0, 100);
+        UpdateProperty(Props::NumberSkips);
 
-   pAct = new CPropertyAction(this, &CCRISP::OnLoopGainMultiplier);
-   CreateProperty(g_CRISPLoopGainMultiplierPropertyName, "10", MM::Integer, false, pAct);
-   SetPropertyLimits(g_CRISPLoopGainMultiplierPropertyName, 0, 100);
-   UpdateProperty(g_CRISPLoopGainMultiplierPropertyName);
+        pAct = new CPropertyAction(this, &CCRISP::OnInFocusRange);
+        CreateProperty(Props::InFocusRangeUm, "0.1", MM::Float, false, pAct);
+        UpdateProperty(Props::InFocusRangeUm);
+    }
 
-   pAct = new CPropertyAction(this, &CCRISP::OnNumAvg);
-   CreateProperty(g_CRISPNumberAveragesPropertyName, "1", MM::Integer, false, pAct);
-   SetPropertyLimits(g_CRISPNumberAveragesPropertyName, 0, 8);
-   UpdateProperty(g_CRISPNumberAveragesPropertyName);
+    // Always read
+    CreateFocusStateProperty();
+    CreateStateProperty();
+    CreateSNRProperty();
+    CreateOffsetProperty();
+    CreateSumProperty();
+    CreateDitherErrorProperty();
+    CreateLogAmpAGCProperty();
 
-   if (FirmwareVersionAtLeast(3.12))
-   {
-    pAct = new CPropertyAction(this, &CCRISP::OnNumSkips);
-    CreateProperty(g_CRISPNumberSkipsPropertyName, "0", MM::Integer, false, pAct);
-    SetPropertyLimits(g_CRISPNumberSkipsPropertyName, 0, 100);
-    UpdateProperty(g_CRISPNumberSkipsPropertyName);
+    // LK M requires firmware version 3.39 or higher.
+    // Enable these properties as a group to modify calibration settings.
+    if (FirmwareVersionAtLeast(3.39)) {
+        CreateSetLogAmpAGCProperty();
+        CreateSetLockOffsetProperty();
+    }
 
-    pAct = new CPropertyAction(this, &CCRISP::OnInFocusRange);
-    CreateProperty(g_CRISPInFocusRangePropertyName, "0.1", MM::Float, false, pAct);
-    UpdateProperty(g_CRISPInFocusRangePropertyName);
-   }
-
-   // Always read
-   CreateStateProperty();
-   CreateSNRProperty();
-   CreateOffsetProperty();
-   CreateSumProperty();
-   CreateDitherErrorProperty();
-   CreateLogAmpAGCProperty();
-
-   // LK M requires firmware version 3.39 or higher.
-   // Enable these properties as a group to modify calibration settings.
-   if (FirmwareVersionAtLeast(3.39)) {
-       CreateSetLogAmpAGCProperty();
-       CreateSetLockOffsetProperty();
-   }
-
-   initialized_ = true;
-   return DEVICE_OK;
+    initialized_ = true;
+    return DEVICE_OK;
 }
 
-bool CCRISP::Busy()
-{
+bool CCRISP::Busy() {
     // not sure how to define it, Nico's ASIStage adapter hard-codes it false so I'll do same thing
     return false;
 }
 
-int CCRISP::SetContinuousFocusing(bool state)
-{
-    bool focusingOn = false;
-    RETURN_ON_MM_ERROR( GetContinuousFocusing(focusingOn) );  // will update focusState_
-    if (focusingOn && !state)
-    {
+int CCRISP::SetContinuousFocusing(bool state) {
+    bool isFocusing = false;
+    RETURN_ON_MM_ERROR(GetContinuousFocusing(isFocusing)); // will update focusState_
+    if (isFocusing && !state) {
         // was on, turning off
         const std::string command = addressChar_ + "UL";
         RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
-    }
-    else if (!focusingOn && state)
-    {
+    } else if (!isFocusing && state) {
         // was off, turning on
-        if (focusState_ == g_CRISP_R)
-        {
-            return ForceSetFocusState(g_CRISP_K);
-        }
-        else
-        {
+        if (focusState_ == g_CRISP_R) {
+            return SetFocusState(g_CRISP_K);
+        } else {
             // need to move to ready state, then turn on
-            RETURN_ON_MM_ERROR( ForceSetFocusState(g_CRISP_R) );
-            RETURN_ON_MM_ERROR( ForceSetFocusState(g_CRISP_K) );
+            RETURN_ON_MM_ERROR(SetFocusState(g_CRISP_R));
+            RETURN_ON_MM_ERROR(SetFocusState(g_CRISP_K));
         }
     }
     // if already in state requested we don't need to do anything
@@ -188,58 +187,46 @@ int CCRISP::SetContinuousFocusing(bool state)
 }
 
 // Update focusState_ from the controller and check if focus is locked or trying to lock ('F' or 'K' state).
-int CCRISP::GetContinuousFocusing(bool& state)
-{
-   RETURN_ON_MM_ERROR( UpdateFocusState() );
-   state = (focusState_ == g_CRISP_K) || (focusState_ == g_CRISP_F);
-   return DEVICE_OK;
+int CCRISP::GetContinuousFocusing(bool& state) {
+    RETURN_ON_MM_ERROR(UpdateFocusState());
+    state = (focusState_ == g_CRISP_K) || (focusState_ == g_CRISP_F);
+    return DEVICE_OK;
 }
 
 // Update focusState_ from the controller and check if focus is locked ('F' state).
-bool CCRISP::IsContinuousFocusLocked()
-{
+bool CCRISP::IsContinuousFocusLocked() {
     return (UpdateFocusState() == DEVICE_OK) && (focusState_ == g_CRISP_F);
 }
 
-int CCRISP::FullFocus()
-{
-   // Does a "one-shot" autofocus: locks and then unlocks again
-   RETURN_ON_MM_ERROR ( SetContinuousFocusing(true) );
+// Does a "one-shot" autofocus: locks and then unlocks again
+int CCRISP::FullFocus() {
+    RETURN_ON_MM_ERROR(SetContinuousFocusing(true));
 
-   MM::MMTime startTime = GetCurrentMMTime();
-   MM::MMTime wait(0, waitAfterLock_ * 1000);
-   while (!IsContinuousFocusLocked() && ((GetCurrentMMTime() - startTime) < wait))
-   {
-      CDeviceUtils::SleepMs(25);
-   }
+    const MM::MMTime startTime = GetCurrentMMTime();
+    const MM::MMTime wait(0, waitAfterLock_ * 1000L);
+    while (!IsContinuousFocusLocked() && ((GetCurrentMMTime() - startTime) < wait)) {
+        CDeviceUtils::SleepMs(25);
+    }
 
-   CDeviceUtils::SleepMs(waitAfterLock_);
+    CDeviceUtils::SleepMs(waitAfterLock_);
 
-   if (!IsContinuousFocusLocked())
-   {
-      SetContinuousFocusing(false);
-      return ERR_CRISP_NOT_LOCKED;
-   }
+    if (!IsContinuousFocusLocked()) {
+        SetContinuousFocusing(false);
+        return ERR_CRISP_NOT_LOCKED;
+    }
 
-   return SetContinuousFocusing(false);
+    return SetContinuousFocusing(false);
 }
 
-int CCRISP::IncrementalFocus()
-{
-   return FullFocus();
+int CCRISP::IncrementalFocus() {
+    return FullFocus();
 }
 
-int CCRISP::GetLastFocusScore(double& score)
-{
-    score = 0.0; // init in case we can't read it
+int CCRISP::GetCurrentFocusScore(double& score) {
+    score = 0.0; // default to 0 if serial read fails
     const std::string command = addressChar_ + "LK Y?";
     RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A"));
     return hub_->ParseAnswerAfterPosition3(score);
-}
-
-int CCRISP::GetCurrentFocusScore(double& score)
-{
-   return GetLastFocusScore(score);
 }
 
 int CCRISP::GetOffset(double& offset) {
@@ -248,12 +235,11 @@ int CCRISP::GetOffset(double& offset) {
     return hub_->ParseAnswerAfterPosition3(offset);
 }
 
-int CCRISP::SetOffset(double offset)
-{
-   std::ostringstream command;
-   command << addressChar_ << "LK Z=" << offset;
-   RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
-   return DEVICE_OK;
+int CCRISP::SetOffset(double offset) {
+    std::ostringstream command;
+    command << addressChar_ << "LK Z=" << offset;
+    RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command.str(), ":A"));
+    return DEVICE_OK;
 }
 
 int CCRISP::UpdateFocusState() {
@@ -344,58 +330,58 @@ int CCRISP::ForceSetFocusState(const std::string& focusState)
     }
 }
 
-int CCRISP::SetFocusState(const std::string& focusState)
-{
-    RETURN_ON_MM_ERROR ( UpdateFocusState() );
-    if (focusState == focusState_)
-    {
+int CCRISP::SetFocusState(const std::string& focusState) {
+    // avoid serial communication if already in the state
+    if (focusState == focusState_) {
         return DEVICE_OK;
     }
-    return ForceSetFocusState(focusState);
-}
 
-// action handlers
+    RETURN_ON_MM_ERROR(ForceSetFocusState(focusState));
 
-int CCRISP::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::AfterSet)
-    {
-        std::string tmpstr;
-        pProp->Get(tmpstr);
-        refreshProps_ = (tmpstr == g_YesState) ? true : false;
-    }
+    focusState_ = focusState;
+
     return DEVICE_OK;
 }
 
-// read this every time
-int CCRISP::OnFocusState(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      RETURN_ON_MM_ERROR( UpdateFocusState() );
-      pProp->Set(focusState_.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      std::string focusState;
-      pProp->Get(focusState);
-      RETURN_ON_MM_ERROR( SetFocusState(focusState) );
-   }
-   return DEVICE_OK;
+// Properties
+
+// Software-only property (no serial communication)
+void CCRISP::CreateRefreshPropertiesProperty() {
+    CreateStringProperty(
+        g_RefreshPropValsPropertyName, g_NoState, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::AfterSet) {
+                std::string tmp;
+                pProp->Get(tmp);
+                refreshProps_ = (tmp == g_YesState);
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    AddAllowedValue(g_RefreshPropValsPropertyName, g_NoState);
+    AddAllowedValue(g_RefreshPropValsPropertyName, g_YesState);
+
+    // No need to call UpdateProperty() because we already initialized
+    // refreshProps_ in the ASIBase constructor and CreateStringProperty()
 }
 
-// property value set in MM only, not read from nor written to controller
-int CCRISP::OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    if (eAct == MM::BeforeGet)
-    {
-        pProp->Set(waitAfterLock_);
-    }
-    else if (eAct == MM::AfterSet)
-    {
-        pProp->Get(waitAfterLock_);
-    }
-    return DEVICE_OK;
+// Software-only property (no serial communication)
+void CCRISP::CreateWaitAfterLockProperty() {
+    CreateIntegerProperty(
+        Props::WaitMsAfterLock, 1000L, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(waitAfterLock_);
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(waitAfterLock_);
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    // No need to call UpdateProperty() because we already initialized
+    // waitAfterLock_ in the constructor and CreateIntegerProperty()
 }
 
 int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -422,12 +408,10 @@ int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
       command << addressChar_ << "LR Y=" << tmp;
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A") );
       refreshOverride_ = true;
-      // also update the "Calibration Range(um)" property
-      UpdateProperty(g_CRISPCalibrationRangePropertyName);
-      // also update "In Focus Range(um)" property
-      if (FirmwareVersionAtLeast(3.12))
-      {
-          UpdateProperty(g_CRISPInFocusRangePropertyName);
+      // update dependent properties
+      UpdateProperty(Props::CalibrationRangeUm);
+      if (FirmwareVersionAtLeast(3.12)) {
+          UpdateProperty(Props::InFocusRangeUm);
       }
       // Note: do not return early on UpdateProperty errors
       refreshOverride_ = false; // must reach this point
@@ -520,7 +504,7 @@ int CCRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CCRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::ostringstream command;
-   double tmp = 0;
+   long tmp = 0L;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
@@ -656,13 +640,46 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 // Read-only Properties
 
 // Always read
-void CCRISP::CreateStateProperty() {
-    const char* propertyName = "CRISP State Character";
+void CCRISP::CreateFocusStateProperty() {
+    CreateStringProperty(
+        Props::State, "Idle", false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                RETURN_ON_MM_ERROR(UpdateFocusState());
+                pProp->Set(focusState_.c_str());
+            } else if (eAct == MM::AfterSet) {
+                std::string focusState;
+                pProp->Get(focusState);
+                RETURN_ON_MM_ERROR(SetFocusState(focusState));
+            }
+            return DEVICE_OK;
+        })
+    );
 
+    AddAllowedValue(Props::State, g_CRISP_I, 79);
+    AddAllowedValue(Props::State, g_CRISP_R, 85);
+    AddAllowedValue(Props::State, g_CRISP_D);
+    AddAllowedValue(Props::State, g_CRISP_K, 83);
+    AddAllowedValue(Props::State, g_CRISP_F);
+    AddAllowedValue(Props::State, g_CRISP_N);
+    AddAllowedValue(Props::State, g_CRISP_E);
+    AddAllowedValue(Props::State, g_CRISP_G, 72);
+    AddAllowedValue(Props::State, g_CRISP_SG, 67);
+    AddAllowedValue(Props::State, g_CRISP_f, 102);
+    AddAllowedValue(Props::State, g_CRISP_C, 97);
+    AddAllowedValue(Props::State, g_CRISP_B, 66);
+    AddAllowedValue(Props::State, g_CRISP_RFO, 111);
+    AddAllowedValue(Props::State, g_CRISP_SSZ);
+
+    UpdateProperty(Props::State);
+}
+
+// Always read
+void CCRISP::CreateStateProperty() {
     const std::string command = addressChar_ + "LK X?";
 
     CreateStringProperty(
-        propertyName, "", true,
+        Props::StateChar, "", true,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 char tmp = '\0';
@@ -677,15 +694,14 @@ void CCRISP::CreateStateProperty() {
         })
     );
 
-    UpdateProperty(propertyName);
+    UpdateProperty(Props::StateChar);
 }
 
 // Always read
 void CCRISP::CreateSNRProperty() {
-    const char* propertyName = "Signal Noise Ratio";
-
+    // check firmware version for both comm card and stage card
     std::string command = addressChar_;
-    if (FirmwareVersionAtLeast(3.53)) {
+    if (hub_ && hub_->FirmwareVersionAtLeast(3.53) && FirmwareVersionAtLeast(3.53)) {
         command += "EX Y?";
         LogMessage("CRISP: firmware >= 3.53; using shortcut 'EX Y?' for SNR.", true);
     } else {
@@ -694,7 +710,7 @@ void CCRISP::CreateSNRProperty() {
     }
 
     CreateFloatProperty(
-        propertyName, 0.0, true,
+        Props::SignalNoiseRatio, 0.0, true,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 double tmp = 0.0;
@@ -708,26 +724,25 @@ void CCRISP::CreateSNRProperty() {
         })
     );
 
-    UpdateProperty(propertyName);
+    UpdateProperty(Props::SignalNoiseRatio);
 }
 
 // Always read
 void CCRISP::CreateOffsetProperty() {
-    const char* propertyName = "Lock Offset";
-
     CreateIntegerProperty(
-        propertyName, 0L, true,
+        Props::LockOffset, 0L, true,
         new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 if (!refreshProps_ && initialized_ && !refreshOverride_) {
                     return DEVICE_OK;
                 }
-                double tmp = 0.0;
+                double tmp = 0.0; // NOTE: autofocus API requires double
                 const int result = GetOffset(tmp);
                 if (result != DEVICE_OK) {
                     return result;
                 }
-                if (!pProp->Set(tmp)) {
+                // convert to long for integer property
+                if (!pProp->Set(static_cast<long>(tmp))) {
                     return DEVICE_INVALID_PROPERTY_VALUE;
                 }
             }
@@ -735,12 +750,11 @@ void CCRISP::CreateOffsetProperty() {
         })
     );
 
-    UpdateProperty(propertyName);
+    UpdateProperty(Props::LockOffset);
 }
 
 // Always read
 void CCRISP::CreateSumProperty() {
-    const char* propertyName = "Sum";
 
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
@@ -750,7 +764,7 @@ void CCRISP::CreateSumProperty() {
         const std::string command = addressChar_ + "LK T?";
 
         CreateIntegerProperty(
-            propertyName, 0L, true,
+            Props::Sum, 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
@@ -773,11 +787,11 @@ void CCRISP::CreateSumProperty() {
         const std::string command = addressChar_ + "EXTRA X?";
 
         CreateIntegerProperty(
-            propertyName, 0L, true,
+            Props::Sum, 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
-                    std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
+                    const std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
                     if (vReply.size() <= 2) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
                     }
@@ -790,12 +804,11 @@ void CCRISP::CreateSumProperty() {
         );
     }
 
-    UpdateProperty(propertyName);
+    UpdateProperty(Props::Sum);
 }
 
 // Always read
 void CCRISP::CreateDitherErrorProperty() {
-    const char* propertyName = "Dither Error";
 
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
@@ -805,7 +818,7 @@ void CCRISP::CreateDitherErrorProperty() {
         const std::string command = addressChar_ + "LK Y?";
 
         CreateIntegerProperty(
-            propertyName, 0L, true,
+            Props::DitherError, 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
@@ -828,11 +841,11 @@ void CCRISP::CreateDitherErrorProperty() {
         const std::string command = addressChar_ + "EXTRA X?";
 
         CreateIntegerProperty(
-            propertyName, 0L, true,
+            Props::DitherError, 0L, true,
             new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommand(command));
-                    std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
+                    const std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
                     if (vReply.size() <= 2) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
                     }
@@ -845,23 +858,22 @@ void CCRISP::CreateDitherErrorProperty() {
         );
     }
 
-    UpdateProperty(propertyName);
+    UpdateProperty(Props::DitherError);
 }
 
 // Always read
 void CCRISP::CreateLogAmpAGCProperty() {
-    const char* propertyName = "LogAmpAGC";
-
     const std::string command = addressChar_ + "AL X?";
 
     CreateIntegerProperty(
-        propertyName, 0L, true,
+        Props::LogAmpAGC, 0L, true,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
-                long tmp = 0;
+                double tmp = 0.0; // NOTE: response is ":A X=1.000000", parse as double
                 RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command, ":A X="));
                 RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
-                if (!pProp->Set(tmp)) {
+                // convert to long for integer property
+                if (!pProp->Set(static_cast<long>(tmp))) {
                     return DEVICE_INVALID_PROPERTY_VALUE;
                 }
             }
@@ -869,25 +881,23 @@ void CCRISP::CreateLogAmpAGCProperty() {
         })
     );
 
-    UpdateProperty(propertyName);
+    UpdateProperty(Props::LogAmpAGC);
 }
 
 // Advanced Properties
 
 void CCRISP::CreateSetLogAmpAGCProperty() {
-    const char* propertyName = "Set LogAmpAGC (Advanced Users Only)";
-
     const std::string command = addressChar_ + "LK M=";
 
     CreateIntegerProperty(
-        propertyName, 0L, false,
+        Props::SetLogAmpAGC, 0L, false,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
-                pProp->Set("0");
+                pProp->Set(0L);
             } else if (eAct == MM::AfterSet) {
-                double logAmpAGC = 0.0;
+                long logAmpAGC = 0L;
                 pProp->Get(logAmpAGC);
-                if (logAmpAGC != 0.0) {
+                if (logAmpAGC != 0L) {
                     RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(logAmpAGC), ":A"));
                 }
             }
@@ -899,26 +909,24 @@ void CCRISP::CreateSetLogAmpAGCProperty() {
 }
 
 void CCRISP::CreateSetLockOffsetProperty() {
-    const char* propertyName = "Set Lock Offset (Advanced Users Only)";
-
     const std::string command = addressChar_ + "LK Z=";
 
     CreateIntegerProperty(
-        propertyName, 0L, false,
+        Props::SetLockOffset, 0L, false,
         new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
-                pProp->Set("0");
+                pProp->Set(0L);
             } else if (eAct == MM::AfterSet) {
-                double offset = 0.0;
+                long offset = 0L;
                 pProp->Get(offset);
-                if (offset != 0.0) {
+                if (offset != 0L) {
                     refreshOverride_ = true;
                     const int result = hub_->QueryCommandVerify(command + std::to_string(offset), ":A");
                     if (result != DEVICE_OK) {
                         refreshOverride_ = false;
                         return result;
                     }
-                    UpdateProperty("Lock Offset");
+                    UpdateProperty(Props::LockOffset);
                     refreshOverride_ = false;
                 }
             }

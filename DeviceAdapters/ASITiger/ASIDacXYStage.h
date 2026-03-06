@@ -143,6 +143,16 @@ public:
 	int OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+	// private helper functions
+	int OnSaveJoystickSettings();
+
+	// DAC helpers
+	int GetMaxVolts(double& volts, const std::string& axisLetter);
+	int GetMinVolts(double& volts, const std::string& axisLetter);
+
+	// Properties
+	void CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter);
+
 	std::string axisLetterX_;
 	std::string axisLetterY_;
 	double maxvoltsX_; // X axis limits
@@ -153,19 +163,10 @@ private:
 	long ring_buffer_capacity_;
 	bool ttl_trigger_supported_;
 	bool ttl_trigger_enabled_;
+	long umToMvX_; // microns to millivolts conversion factors
+	long umToMvY_;
 	std::vector<double> sequenceX_;
 	std::vector<double> sequenceY_;
-	
-	// microns to millivolts conversion factor
-	long umToMvX_;
-	long umToMvY_;
-
-	// private helper functions
-	int OnSaveJoystickSettings();
-
-	// DAC helpers
-	int GetMaxVolts(double& volts, const std::string& axisLetter);
-	int GetMinVolts(double& volts, const std::string& axisLetter);
 };
 
 #endif // ASIDACXYSTAGE_H
