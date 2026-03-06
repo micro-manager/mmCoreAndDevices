@@ -39,9 +39,24 @@ TEST_CASE("StubMagnifier can be default-constructed") {
    CHECK(dev.magnification == 1.0);
 }
 
+TEST_CASE("StubAutoFocus can be default-constructed") {
+   StubAutoFocus dev;
+   CHECK(dev.offset == 0.0);
+}
+
+TEST_CASE("StubImageProcessor can be default-constructed") {
+   StubImageProcessor dev;
+   CHECK(dev.name == "StubImageProcessor");
+}
+
 TEST_CASE("StubSLM can be default-constructed") {
    StubSLM dev;
    CHECK(dev.width == 64);
+}
+
+TEST_CASE("StubGalvo can be default-constructed") {
+   StubGalvo dev;
+   CHECK(dev.posX == 0.0);
 }
 
 TEST_CASE("StubGeneric can be loaded into CMMCore") {
@@ -100,10 +115,34 @@ TEST_CASE("StubMagnifier can be loaded into CMMCore") {
    CHECK(c.getDeviceName("dev") == "StubMagnifier");
 }
 
+TEST_CASE("StubAutoFocus can be loaded into CMMCore") {
+   StubAutoFocus dev;
+   MockAdapterWithDevices adapter{{"dev", &dev}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   CHECK(c.getDeviceName("dev") == "StubAutoFocus");
+}
+
+TEST_CASE("StubImageProcessor can be loaded into CMMCore") {
+   StubImageProcessor dev;
+   MockAdapterWithDevices adapter{{"dev", &dev}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   CHECK(c.getDeviceName("dev") == "StubImageProcessor");
+}
+
 TEST_CASE("StubSLM can be loaded into CMMCore") {
    StubSLM dev;
    MockAdapterWithDevices adapter{{"dev", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
    CHECK(c.getDeviceName("dev") == "StubSLM");
+}
+
+TEST_CASE("StubGalvo can be loaded into CMMCore") {
+   StubGalvo dev;
+   MockAdapterWithDevices adapter{{"dev", &dev}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   CHECK(c.getDeviceName("dev") == "StubGalvo");
 }
