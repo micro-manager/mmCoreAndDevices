@@ -153,6 +153,12 @@ public:
    int OnVectorY(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterY_); }
 
 private:
+    int SetIlluminationStateHelper(bool on);
+    int OnSaveJoystickSettings();
+
+    // Properties
+    void CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter);
+
    std::string axisLetterX_;
    std::string axisLetterY_;
    double unitMultX_;  // units per degree
@@ -174,13 +180,13 @@ private:
    unsigned int axisIndexX_;
    unsigned int axisIndexY_;
 
-   struct saStateType {
+   struct SingleAxisState {
       long mode;
       long pattern;
    };
 
-   saStateType saStateX_;
-   saStateType saStateY_;
+   SingleAxisState saStateX_;
+   SingleAxisState saStateY_;
 
    // for polygons
    std::vector<std::pair<double,double> > polygons_;
@@ -194,9 +200,6 @@ private:
 
    bool dac4ch_;
    bool signalDAC_;
-   
-   int SetIlluminationStateHelper(bool on);
-   int OnSaveJoystickSettings();
 };
 
 #endif // ASISCANNER_H

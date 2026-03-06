@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp and others
-//
 
 #include "ASIZStage.h"
 #include "ASITiger.h"
@@ -40,9 +38,9 @@
 //
 CZStage::CZStage(const char* name) :
    ASIPeripheralBase< ::CStageBase, CZStage >(name),
+   axisLetter_(g_EmptyAxisLetterStr),   // value determined by extended name
    unitMult_(g_StageDefaultUnitMult),  // later will try to read actual setting
    stepSizeUm_(g_StageMinStepSize),    // we'll use 1 nm as our smallest possible step size, this is somewhat arbitrary and doesn't change during the program
-   axisLetter_(g_EmptyAxisLetterStr),   // value determined by extended name
    advancedPropsEnabled_(false),
    speedTruth_(false),
    lastSpeed_(1.0),
@@ -291,12 +289,15 @@ int CZStage::Initialize()
       pAct = new CPropertyAction (this, &CZStage::OnSAAmplitude);
       CreateProperty(g_SAAmplitudePropertyName, "0", MM::Float, false, pAct);
       UpdateProperty(g_SAAmplitudePropertyName);
+
       pAct = new CPropertyAction (this, &CZStage::OnSAOffset);
       CreateProperty(g_SAOffsetPropertyName, "0", MM::Float, false, pAct);
       UpdateProperty(g_SAOffsetPropertyName);
+
       pAct = new CPropertyAction (this, &CZStage::OnSAPeriod);
       CreateProperty(g_SAPeriodPropertyName, "0", MM::Integer, false, pAct);
       UpdateProperty(g_SAPeriodPropertyName);
+
       pAct = new CPropertyAction (this, &CZStage::OnSAMode);
       CreateProperty(g_SAModePropertyName, g_SAMode_0, MM::String, false, pAct);
       AddAllowedValue(g_SAModePropertyName, g_SAMode_0);
@@ -304,6 +305,7 @@ int CZStage::Initialize()
       AddAllowedValue(g_SAModePropertyName, g_SAMode_2);
       AddAllowedValue(g_SAModePropertyName, g_SAMode_3);
       UpdateProperty(g_SAModePropertyName);
+
       pAct = new CPropertyAction (this, &CZStage::OnSAPattern);
       CreateProperty(g_SAPatternPropertyName, g_SAPattern_0, MM::String, false, pAct);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_0);
@@ -316,6 +318,12 @@ int CZStage::Initialize()
           AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_4);
       }
       UpdateProperty(g_SAPatternPropertyName);
+
+      // rise time is used by variable waveforms
+      if (FirmwareVersionAtLeast(3.55)) {
+          CreateSingleAxisRiseTimeProperty();
+      }
+
       // generates a set of additional advanced properties that are rarely used
       pAct = new CPropertyAction (this, &CZStage::OnSAAdvanced);
       CreateProperty(g_AdvancedSAPropertiesPropertyName, g_NoState, MM::String, false, pAct);
@@ -2238,4 +2246,34 @@ int CZStage::OnTTLInputMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       RETURN_ON_MM_ERROR ( hub_->UpdateSharedProperties(addressChar_, pProp->GetName(), tmpstr.c_str()) );
    }
    return DEVICE_OK;
+}
+
+void CZStage::CreateSingleAxisRiseTimeProperty() {
+    const char* const propertyName = "SingleAxisRiseTime(ms)";
+
+    CreateFloatProperty(
+        propertyName, 0.0, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            double tmp = 0.0;
+            if (eAct == MM::BeforeGet) {
+                if (!refreshProps_ && initialized_) {
+                    return DEVICE_OK;
+                }
+                const std::string query = "OS " + axisLetter_ + "?";
+                const std::string response = ":A " + axisLetter_ + "=";
+                RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(query, response));
+                RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
+                if (!pProp->Set(tmp)) {
+                    return DEVICE_INVALID_PROPERTY_VALUE;
+                }
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(tmp);
+                const std::string command = "OS " + axisLetter_ + "=";
+                RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(tmp), ":A"));
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    UpdateProperty(propertyName);
 }

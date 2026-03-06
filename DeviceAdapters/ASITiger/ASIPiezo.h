@@ -114,17 +114,20 @@ public:
    int OnVector				  (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+    int OnSaveJoystickSettings();
+
+    // Properties
+    void CreateSingleAxisRiseTimeProperty();
+
+    std::string axisLetter_;
    double unitMult_;
    double stepSizeUm_;
-   std::string axisLetter_;
    bool ring_buffer_supported_;
    long ring_buffer_capacity_;
    bool ttl_trigger_supported_;
    bool ttl_trigger_enabled_;
    bool runningFastSequence_;
    std::vector<double> sequence_;
-
-   int OnSaveJoystickSettings();
 };
 
 #endif // ASIPIEZO_H

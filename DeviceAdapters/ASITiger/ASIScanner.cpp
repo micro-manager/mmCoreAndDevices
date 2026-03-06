@@ -335,6 +335,12 @@ int CScanner::Initialize()
    }
    UpdateProperty(g_SAPatternYPropertyName);
 
+   // rise time is used by variable waveforms
+   if (FirmwareVersionAtLeast(3.55)) {
+       CreateSingleAxisRiseTimeProperty('X', axisLetterX_);
+       CreateSingleAxisRiseTimeProperty('Y', axisLetterY_);
+   }
+
    // generates a set of additional advanced properties that are rarely used
    pAct = new CPropertyAction (this, &CScanner::OnSAAdvancedX);
    CreateProperty(g_AdvancedSAPropertiesXPropertyName, g_NoState, MM::String, false, pAct);
@@ -4016,4 +4022,40 @@ int CScanner::OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, cons
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    }
    return DEVICE_OK;
+}
+
+void CScanner::CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter) {
+    const std::string propertyName = std::string("SingleAxis") + axisChar + "RiseTime(ms)";
+
+    // axisLetter is captured by value so that the lambda owns it's own copy
+    CreateFloatProperty(
+        propertyName.c_str(), 0.0, false,
+        new MM::ActionLambda([this, axisLetter](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            double tmp = 0.0;
+            if (eAct == MM::BeforeGet) {
+                if (!refreshProps_ && initialized_) {
+                    return DEVICE_OK;
+                }
+                const std::string query = "OS " + axisLetter + "?";
+                const std::string response = ":A " + axisLetter + "=";
+                const int result = hub_->QueryCommandVerify(query, response);
+                if (result != DEVICE_OK) {
+                    LogMessage("failed here " + response);
+                    return result;
+                }
+                //RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(query, response));
+                RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
+                if (!pProp->Set(tmp)) {
+                    return DEVICE_INVALID_PROPERTY_VALUE;
+                }
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(tmp);
+                const std::string command = "OS " + axisLetter + "=";
+                RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(tmp), ":A"));
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    UpdateProperty(propertyName.c_str());
 }

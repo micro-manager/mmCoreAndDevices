@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h and others
-//
 
 #ifndef ASIZSTAGE_H
 #define ASIZSTAGE_H
@@ -29,8 +27,7 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CZStage : public ASIPeripheralBase<CStageBase, CZStage>
-{
+class CZStage : public ASIPeripheralBase<CStageBase, CZStage> {
 public:
    CZStage(const char* name);
    ~CZStage() { }
@@ -53,7 +50,7 @@ public:
    int SetRelativePositionUm(double d);
    int GetLimits(double& min, double& max);
    int SetOrigin();
-   int 	Move (double velocity);
+   int Move(double velocity);
 
    bool IsContinuousFocusDrive() const {return false;}  // todo figure out what this means and if it's accurate
 
@@ -122,9 +119,14 @@ public:
    int OnTTLInputMode         (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+    int OnSaveJoystickSettings();
+
+    // Properties
+    void CreateSingleAxisRiseTimeProperty();
+
+    std::string axisLetter_;
    double unitMult_;
    double stepSizeUm_;
-   std::string axisLetter_;
    bool advancedPropsEnabled_;
    bool speedTruth_;
    double lastSpeed_;
@@ -133,10 +135,8 @@ private:
    bool ttl_trigger_supported_;
    bool ttl_trigger_enabled_;
    bool runningFastSequence_;
-   std::vector<double> sequence_;
    unsigned int axisIndex_;
-
-   int OnSaveJoystickSettings();
+   std::vector<double> sequence_;
 };
 
 #endif // ASIZSTAGE_H

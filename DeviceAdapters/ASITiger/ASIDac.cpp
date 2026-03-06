@@ -157,13 +157,16 @@ int CDAC::Initialize()
 		CreateProperty(g_SAAmplitudeDACPropertyName, "0", MM::Float, false, pAct);
 		SetPropertyLimits(g_SAAmplitudeDACPropertyName, 0, (maxvolts_ - minvolts_) * 1000);
 		UpdateProperty(g_SAAmplitudeDACPropertyName);
+
 		pAct = new CPropertyAction(this, &CDAC::OnSAOffset);
 		CreateProperty(g_SAOffsetDACPropertyName, "0", MM::Float, false, pAct);
 		SetPropertyLimits(g_SAOffsetDACPropertyName, minvolts_ * 1000, maxvolts_ * 1000);
 		UpdateProperty(g_SAOffsetDACPropertyName);
+
 		pAct = new CPropertyAction(this, &CDAC::OnSAPeriod);
 		CreateProperty(g_SAPeriodPropertyName, "0", MM::Integer, false, pAct);
 		UpdateProperty(g_SAPeriodPropertyName);
+
 		pAct = new CPropertyAction(this, &CDAC::OnSAMode);
 		CreateProperty(g_SAModePropertyName, g_SAMode_0, MM::String, false, pAct);
 		AddAllowedValue(g_SAModePropertyName, g_SAMode_0);
@@ -171,6 +174,7 @@ int CDAC::Initialize()
 		AddAllowedValue(g_SAModePropertyName, g_SAMode_2);
 		AddAllowedValue(g_SAModePropertyName, g_SAMode_3);
 		UpdateProperty(g_SAModePropertyName);
+
 		pAct = new CPropertyAction(this, &CDAC::OnSAPattern);
 		CreateProperty(g_SAPatternPropertyName, g_SAPattern_0, MM::String, false, pAct);
 		AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_0);
@@ -183,6 +187,12 @@ int CDAC::Initialize()
 			AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_4);
 		}
 		UpdateProperty(g_SAPatternPropertyName);
+
+		// rise time is used by variable waveforms
+		if (FirmwareVersionAtLeast(3.55)) {
+			CreateSingleAxisRiseTimeProperty();
+		}
+
 		// generates a set of additional advanced properties that are rarely used
 		pAct = new CPropertyAction(this, &CDAC::OnSAAdvanced);
 		CreateProperty(g_AdvancedSAPropertiesPropertyName, g_NoState, MM::String, false, pAct);
@@ -1330,3 +1340,32 @@ int CDAC::OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct)
 	return DEVICE_OK;
 }
 
+void CDAC::CreateSingleAxisRiseTimeProperty() {
+	const char* const propertyName = "SingleAxisRiseTime(ms)";
+
+	CreateFloatProperty(
+		propertyName, 0.0, false,
+		new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+			double tmp = 0.0;
+			if (eAct == MM::BeforeGet) {
+				if (!refreshProps_ && initialized_) {
+					return DEVICE_OK;
+				}
+				const std::string query = "OS " + axisLetter_ + "?";
+				const std::string response = ":A " + axisLetter_ + "=";
+				RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(query, response));
+				RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
+				if (!pProp->Set(tmp)) {
+					return DEVICE_INVALID_PROPERTY_VALUE;
+				}
+			} else if (eAct == MM::AfterSet) {
+				pProp->Get(tmp);
+				const std::string command = "OS " + axisLetter_ + "=";
+				RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(tmp), ":A"));
+			}
+			return DEVICE_OK;
+		})
+	);
+
+	UpdateProperty(propertyName);
+}

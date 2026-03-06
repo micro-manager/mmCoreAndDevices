@@ -150,6 +150,9 @@ private:
 	int GetMaxVolts(double& volts, const std::string& axisLetter);
 	int GetMinVolts(double& volts, const std::string& axisLetter);
 
+	// Properties
+	void CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter);
+
 	std::string axisLetterX_;
 	std::string axisLetterY_;
 	double maxvoltsX_; // X axis limits
