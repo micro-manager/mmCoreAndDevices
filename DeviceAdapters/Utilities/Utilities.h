@@ -916,4 +916,44 @@ private:
 };
 
 
+class StageStateDevice : public CStateDeviceBase<StageStateDevice>
+{
+public:
+   StageStateDevice();
+   virtual ~StageStateDevice();
+
+   virtual int Initialize();
+   virtual int Shutdown();
+   virtual void GetName(char* name) const;
+   virtual bool Busy();
+
+   virtual unsigned long GetNumberOfPositions() const;
+
+private:
+   double PositionForState(long state) const;
+
+   // Pre-init property action handlers
+   int OnNumberOfPositions(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPositionMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   // Post-init property action handlers
+   int OnPhysicalStage(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPosition0(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPositionSpacing(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnIndividualPosition(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
+   int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   unsigned int numberOfPositions_;
+   bool equallySpaced_;
+   std::string stageDeviceLabel_;
+   double position0Um_;
+   double positionSpacingUm_;
+   std::vector<double> positionsUm_;
+   long currentPosition_;
+   bool initialized_;
+   MM::MMTime lastChangeTime_;
+};
+
+
 #endif //_UTILITIES_H_
