@@ -88,6 +88,37 @@ when `long` was 32-bit on all platforms we supported. Device adapters should
 assume that `long` cannot handle values outside of the range of
 `std::int32_t` (and same for `unsigned long` and `std::uint32_t`).
 
+### Recent source-incompatible changes
+
+The following table lists source-breaking changes to MMDevice that required
+updates in device adapter code. Note the reverse-chronological order.
+
+| Date | PR | Change | Fix |
+| ---- | -- | ------ | --- |
+| 2026-02-26 | [#861](https://github.com/micro-manager/mmCoreAndDevices/pull/861) | Removed `GetPixelSizeUm()`, `GetComponentName()`, `PrepareSequenceAcqusition()` from `MM::Camera` interface. Removed `doProcess` parameter from `InsertImage()`. Added `UsesOnStagePositionChanged()` / `UsesOnXYStagePositionChanged()` to stage interfaces. DIV bumped to 75. | Remove `doProcess` argument from `InsertImage()` calls. Override `UsesOn[XY]StagePositionChanged()` if your stage uses position-changed callbacks. |
+| 2026-02-19 | [#853](https://github.com/micro-manager/mmCoreAndDevices/pull/853) | Made `GetComponentName()` `final` | Remove override. |
+| 2026-02-19 | [#852](https://github.com/micro-manager/mmCoreAndDevices/pull/852) | Made `PrepareSequenceAcqusition()` `final` | Remove override. |
+| 2026-02-19 | [#845](https://github.com/micro-manager/mmCoreAndDevices/pull/845) | Moved `ImageMetadata.h` from MMDevice to MMCore | Remove `#include "ImageMetadata.h"` from adapter code. |
+| 2026-02-19 | [#843](https://github.com/micro-manager/mmCoreAndDevices/pull/843) | Replaced `Metadata` with `MM::CameraImageMetadata` for camera image metadata. Removed `#include "ImageMetadata.h"` from `MMDevice.h`. | Use `MM::CameraImageMetadata` and `AddTag()` instead of `Metadata` and `PutImageTag()`. Use `md.Serialize()` (returns `const char*`) instead of `md.Serialize().c_str()`. |
+| 2026-02-09 | [#832](https://github.com/micro-manager/mmCoreAndDevices/pull/832) | Removed `GetTagKeys()` and `GetTagValue()` from `CCameraBase` | Stop calling these methods. |
+| 2026-02-06 | [#827](https://github.com/micro-manager/mmCoreAndDevices/pull/827) | Removed `ImgBuffer::SetMetadata()` and `GetMetadata()` | Stop calling these methods. |
+| 2025-10-30 | [#771](https://github.com/micro-manager/mmCoreAndDevices/pull/771) | Deleted `_t()` timing macro | Remove uses of `_t()`. |
+| 2025-09-26 | [#752](https://github.com/micro-manager/mmCoreAndDevices/pull/752) | Made `GetPixelSizeUm()` `final` in camera base classes | Remove override of `GetPixelSizeUm()`. |
+| 2025-09-25 | [#753](https://github.com/micro-manager/mmCoreAndDevices/pull/753) | Removed `using` declarations for `CreateProperty`, `SetAllowedValues`, `SetProperty` from `CCameraBase` (reverted from public to protected) | No change needed if calling from within the class hierarchy (normal case). |
+| 2025-09-25 | [#590](https://github.com/micro-manager/mmCoreAndDevices/pull/590) | Split `CCameraBase` into `CCameraBase` (new; cameras correctly implementing sequence acquisition) and `CLegacyCameraBase` (cameras relying on deprecated snap-thread behavior, or parts of it) | Cameras using the old snap-thread pattern: change base class to `CLegacyCameraBase<T>`. New `CCameraBase` also requires implementing `Busy()`. |
+| 2025-08-15 | [#710](https://github.com/micro-manager/mmCoreAndDevices/pull/710), [#715](https://github.com/micro-manager/mmCoreAndDevices/pull/715), [#717](https://github.com/micro-manager/mmCoreAndDevices/pull/717) | Removed deprecated Core callback functions (`GetXYPosition`, `ClearImageBuffer`, `InsertImage(ImgBuffer)`, `InsertMultiChannel`, `GetImage`, `GetImageDimensions`, `SetFocusPosition`, `MoveFocus`, `SetXYPosition`, `MoveXYStage`, `SetExposure`, `GetExposure`, `SetConfig`, `GetCurrentConfig`, `GetChannelConfig`, `GetImageProcessor`, `GetAutoFocus`, `GetStateDevice`, `NextPostedError`, `PostError`, `ClearPostedErrors`). Removed `HDEVMODULE` type, `GetModuleHandle()`, `SetModuleHandle()`. DIV bumped to 74. | Remove calls to these functions. For `ClearImageBuffer`: just stop acquisition on any `InsertImage()` error. |
+| 2024-01-24 | [#435](https://github.com/micro-manager/mmCoreAndDevices/pull/435) | Replaced `MODULE_EXPORTS` preprocessor macro with `MMDEVICE_CLIENT_BUILD` (with inverted logic; adapters no longer need to define any macro). | Remove `MODULE_EXPORTS` from preprocessor definitions. |
+| 2024-01-22 | [#433](https://github.com/micro-manager/mmCoreAndDevices/pull/433) | Removed `gettimeofday()` shim, `DELTA_EPOCH_IN_MICROSECS` macro, and `struct timezone` from `DeviceUtils.h`. Removed transitive `<windows.h>` include. | Remove uses of `gettimeofday()`. Add explicit `<windows.h>` include if needed for Windows-specific types. |
+| 2023-08-26 | [#367](https://github.com/micro-manager/mmCoreAndDevices/pull/367) | Deleted `FixSnprintf.h` and removed its `#include` from `MMDevice.h`. | Remove `#include "FixSnprintf.h"` from adapter code. |
+| 2022-10-27 | [#277](https://github.com/micro-manager/mmCoreAndDevices/pull/277), [#278](https://github.com/micro-manager/mmCoreAndDevices/pull/278), [#279](https://github.com/micro-manager/mmCoreAndDevices/pull/279), [#280](https://github.com/micro-manager/mmCoreAndDevices/pull/280), [#281](https://github.com/micro-manager/mmCoreAndDevices/pull/281) | `MM::MMTime` overhaul: removed `MMTime(std::string)` constructor, made constructors `explicit`, made `sec_`/`uSec_` data members private, replaced `serialize()` with `toString()`, changed `fromUs()` parameter from `double` to `long long`, removed `MM::g_Keyword_Metadata_StartTime` constant. | Use `MM::MMTime{}` or `MM::MMTime(0)` instead of implicit conversions. Access time via `getMicroseconds()`, `fromUs()`, `fromMs()`. Use `toString()` instead of `serialize()`. Remove references to `g_Keyword_Metadata_StartTime`. |
+| 2021-02-14 | [SVN r17423](https://github.com/micro-manager/mmCoreAndDevices/commit/8687ddb51) | Removed unused `AcqBefore()`, `AcqAfter()`, `AcqBeforeFrame()`, `AcqAfterFrame()`, `AcqBeforeStack()`, `AcqAfterStack()` from `MM::Device` and `CDeviceBase`. DIV bumped to 70. | Remove overrides of these methods. |
+| 2017-01-30 | [SVN r16281](https://github.com/micro-manager/mmCoreAndDevices/commit/e348a6f1a) | Removed `FrameBuffer` class from `ImgBuffer.h`. | Remove uses of `FrameBuffer`. |
+| 2016-01-06 | [SVN r15892](https://github.com/micro-manager/mmCoreAndDevices/commit/f53fa08d2) | `Property`, `StringProperty`, `FloatProperty`, `IntegerProperty` constructors now require a `name` parameter. | Use `CreateProperty()` and family instead of direct constructor call. |
+
+> This table covers changes since early 2016. History back to 2014 has been
+> reviewed; the next source-breaking changes before this period were in
+> mid-2014 (DIV 55–61 era).
+
 ## Device Interface Version policy
 
 _This section is for MMDevice/MMCore maintainers._
