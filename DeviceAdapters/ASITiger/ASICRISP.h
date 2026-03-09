@@ -63,6 +63,8 @@ struct CommandTable {
     // Advanced
     const Command setLogAmpAGC;
     const Command setLockOffset;
+    // MM Autofocus API
+    const Command focusScore;
 };
 
 // ASI CRISP Autofocus Device

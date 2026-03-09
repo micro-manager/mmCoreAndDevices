@@ -26,7 +26,6 @@
 #include "DeviceUtils.h"
 #include "DeviceBase.h"
 #include "MMDevice.h"
-#include <sstream>
 
 
 // shared properties not implemented for CRISP because as of mid-2017 only can have one per card
@@ -115,6 +114,7 @@ CommandTable CCRISP::BuildCommandTable(std::string_view cardAddress) const {
         /* .logAmpAGC =          */ { a + "AL X?",  ":A X=",  "-",          "-"  },
         /* .setLogAmpAGC =       */ { "-",          "-",      a + "LK M=",  ":A" }, // Advanced
         /* .setLockOffset =      */ { "-",          "-",      a + "LK Z=",  ":A" },
+        /* .focusScore =         */ { a + "LK Y?",  ":A",     "-",          "-"  }, // MM Autofocus API
     };
 }
 
@@ -304,120 +304,105 @@ int CCRISP::IncrementalFocus() {
 
 int CCRISP::GetCurrentFocusScore(double& score) {
     score = 0.0; // default to 0 if serial read fails
-    const std::string command = addressChar_ + "LK Y?";
-    if (const int error = hub_->QueryCommandVerify(command, ":A")) {
+    const Command& cmd = commands_->focusScore;
+    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
         return error;
     }
     return hub_->ParseAnswerAfterPosition3(score);
 }
 
 int CCRISP::GetOffset(double& offset) {
-    const std::string command = addressChar_ + "LK Z?";
-    if (const int error = hub_->QueryCommandVerify(command, ":A")) {
+    const Command& cmd = commands_->lockOffset;
+    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
         return error;
     }
     return hub_->ParseAnswerAfterPosition3(offset);
 }
 
 int CCRISP::SetOffset(double offset) {
-    std::ostringstream command;
-    command << addressChar_ << "LK Z=" << offset;
-    if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+    const Command& cmd = commands_->setLockOffset;
+    const std::string command = cmd.set + std::to_string(offset);
+    if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
         return error;
     }
     return DEVICE_OK;
 }
 
 int CCRISP::UpdateFocusState() {
-   const std::string command = addressChar_ + "LK X?";
-   if (const int error = hub_->QueryCommandVerify(command, ":A")) {
-       return error;
-   }
+    // get the state
+    const Command& cmd = commands_->state;
+    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
+        return error;
+    }
 
-   char state = '\0';
-   if (const int error = hub_->GetAnswerCharAtPosition3(state)) {
-       return error;
-   }
-   switch (state)
-   {
-      case 'I': focusState_ = g_CRISP_I; break;
-      case 'R': focusState_ = g_CRISP_R; break;
-      case 'D': focusState_ = g_CRISP_D; break;
-      case 'K': focusState_ = g_CRISP_K; break;  // trying to lock, goes to F when locked
-      case 'F': focusState_ = g_CRISP_F; break;  // this is read-only state
-      case 'N': focusState_ = g_CRISP_N; break;
-      case 'E': focusState_ = g_CRISP_E; break;
-      case 'G': focusState_ = g_CRISP_G; break;
-      case 'H':
-      case 'C': focusState_ = g_CRISP_Cal; break;
-      case 'o':
-      case 'l': focusState_ = g_CRISP_RFO; break;
-      case 'f': focusState_ = g_CRISP_f; break;
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case 'g':
-      case 'h':
-      case 'i':
-      case 'j':
-      case 't': focusState_ = g_CRISP_Cal; break;
-      case 'B': focusState_ = g_CRISP_B; break;
-      case 'a':
-      case 'b':
-      case 'c':
-      case 'd':
-      case 'e': focusState_ = g_CRISP_C; break;
-      default:  focusState_ = g_CRISP_Unknown; break;
-   }
-   return DEVICE_OK;
+    // get the state character
+    char state = '\0';
+    if (const int error = hub_->GetAnswerCharAtPosition3(state)) {
+        return error;
+    }
+
+    switch (state) {
+        case 'I': focusState_ = g_CRISP_I; break;
+        case 'R': focusState_ = g_CRISP_R; break;
+        case 'D': focusState_ = g_CRISP_D; break;
+        case 'K': focusState_ = g_CRISP_K; break;  // trying to lock, goes to F when locked
+        case 'F': focusState_ = g_CRISP_F; break;  // this is read-only state
+        case 'N': focusState_ = g_CRISP_N; break;
+        case 'E': focusState_ = g_CRISP_E; break;
+        case 'G': focusState_ = g_CRISP_G; break;
+        case 'H':
+        case 'C': focusState_ = g_CRISP_Cal; break;
+        case 'o':
+        case 'l': focusState_ = g_CRISP_RFO; break;
+        case 'f': focusState_ = g_CRISP_f; break;
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case 'g':
+        case 'h':
+        case 'i':
+        case 'j':
+        case 't': focusState_ = g_CRISP_Cal; break;
+        case 'B': focusState_ = g_CRISP_B; break;
+        case 'a':
+        case 'b':
+        case 'c':
+        case 'd':
+        case 'e': focusState_ = g_CRISP_C; break;
+        default:  focusState_ = g_CRISP_Unknown; break;
+    }
+
+    return DEVICE_OK;
 }
 
-int CCRISP::ForceSetFocusState(const std::string& focusState)
-{
-    std::ostringstream command;
-    if (focusState == g_CRISP_R)
-    {
-        command << addressChar_ << "LK F=85";
-    }
-    else if (focusState == g_CRISP_K)
-    {
-        command << addressChar_ << "LK F=83";
-    }
-    else if (focusState == g_CRISP_I)  // Idle (switch off LED)
-    {
-        command << addressChar_ << "LK F=79";
-    }
-    else if (focusState == g_CRISP_G) // log-amp calibration
-    {
-        command << addressChar_ << "LK F=72";
-    }
-    else if (focusState == g_CRISP_SG) // gain_cal (servo) calibration
-    {
-        command << addressChar_ << "LK F=67";
-    }
-    else if (focusState == g_CRISP_f) // dither
-    {
-        command << addressChar_ << "LK F=102";
-    }
-    else if (focusState == g_CRISP_RFO) // reset focus offset
-    {
-        command << addressChar_ << "LK F=111";
-    }
-    else if (focusState == g_CRISP_SSZ) // save settings to controller (least common, should be checked last)
-    {
-        command << addressChar_ << "SS Z";
+// TODO: make a table to precompute commands
+int CCRISP::ForceSetFocusState(const std::string& focusState) {
+    std::string command = "";
+    if (focusState == g_CRISP_R) {
+        command = "LK F=85";
+    } else if (focusState == g_CRISP_K) {
+        command = "LK F=83";
+    } else if (focusState == g_CRISP_I) {
+        command = "LK F=79"; // Idle (switch off LED)
+    } else if (focusState == g_CRISP_G) {
+        command = "LK F=72"; // log-amp calibration
+    } else if (focusState == g_CRISP_SG) {
+        command = "LK F=67"; // gain_cal (servo) calibration
+    } else if (focusState == g_CRISP_f) {
+        command = "LK F=102"; // dither
+    } else if (focusState == g_CRISP_RFO) {
+        command = "LK F=111"; // reset focus offset
+    } else if (focusState == g_CRISP_SSZ) {
+        command = "SS Z"; // save settings to controller (least common, should be checked last)
     }
 
-    if (command.str().empty())
-    {
+    if (command.empty()) {
         return DEVICE_OK; // don't complain if we try to use an unknown state
     }
-    else
-    {
-        return hub_->QueryCommandVerify(command.str(), ":A");
-    }
+
+    return hub_->QueryCommandVerify(addressChar_ + command, ":A");
 }
 
 int CCRISP::SetFocusState(const std::string& focusState) {
