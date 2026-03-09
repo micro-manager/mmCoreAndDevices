@@ -8247,6 +8247,7 @@ void CMMCore::setChannelGroupInternal(const std::string& group)
 {
    channelGroup_ = group;
    LOG_INFO(coreLogger_) << "Channel group set to " << group;
+   // We have a specific notification in addition to PropertyChanged
    postNotification(notif::ChannelGroupChanged{channelGroup_});
 }
 

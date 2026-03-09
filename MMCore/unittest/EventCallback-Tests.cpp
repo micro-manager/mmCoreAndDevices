@@ -554,19 +554,335 @@ TEST_CASE(
    REQUIRE(cb.waitFor(CBType::SystemConfigurationLoaded));
 }
 
-TEST_CASE("onPropertyChanged from Core property", "[EventCallback]") {
+TEST_CASE("onPropertyChanged from AutoShutter", "[EventCallback]") {
    RecordingCallback cb;
    CMMCore c;
    c.registerCallback(&cb);
 
-   c.setProperty("Core", "AutoShutter", "0");
+   SECTION("via setProperty") {
+      c.setProperty("Core", "AutoShutter", "0");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "AutoShutter");
+      CHECK(recs[0].s3 == "0");
+   }
+
+   SECTION("via setAutoShutter") {
+      c.setAutoShutter(false);
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "AutoShutter");
+      CHECK(recs[0].s3 == "0");
+   }
+}
+
+TEST_CASE("onPropertyChanged from TimeoutMs", "[EventCallback]") {
+   RecordingCallback cb;
+   CMMCore c;
+   c.registerCallback(&cb);
+
+   SECTION("via setProperty") {
+      c.setProperty("Core", "TimeoutMs", "10000");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "TimeoutMs");
+      CHECK(recs[0].s3 == "10000");
+   }
+
+   SECTION("via setTimeoutMs") {
+      c.setTimeoutMs(10000);
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "TimeoutMs");
+      CHECK(recs[0].s3 == "10000");
+   }
+}
+
+TEST_CASE("onPropertyChanged from ChannelGroup", "[EventCallback]") {
+   RecordingCallback cb;
+   CMMCore c;
+   c.defineConfig("Channel", "Ch1");
+   c.registerCallback(&cb);
+
+   SECTION("via setProperty") {
+      c.setProperty("Core", "ChannelGroup", "Channel");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "ChannelGroup");
+      CHECK(recs[0].s3 == "Channel");
+   }
+
+   SECTION("via setChannelGroup") {
+      c.setChannelGroup("Channel");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "ChannelGroup");
+      CHECK(recs[0].s3 == "Channel");
+   }
+}
+
+TEST_CASE("onPropertyChanged from device role properties",
+          "[EventCallback]") {
+   SECTION("Camera") {
+      StubCamera cam;
+      MockAdapterWithDevices adapter{{"cam", &cam}};
+      RecordingCallback cb;
+      CMMCore c;
+      adapter.LoadIntoCore(c);
+      c.registerCallback(&cb);
+
+      c.setProperty("Core", "Camera", "cam");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "Camera");
+      CHECK(recs[0].s3 == "cam");
+
+      cb.clear();
+      c.setCameraDevice("");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "Camera");
+      CHECK(recs[0].s3 == "");
+   }
+
+   SECTION("Shutter") {
+      StubShutter sh;
+      MockAdapterWithDevices adapter{{"sh", &sh}};
+      RecordingCallback cb;
+      CMMCore c;
+      adapter.LoadIntoCore(c);
+      c.registerCallback(&cb);
+
+      c.setProperty("Core", "Shutter", "sh");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "Shutter");
+      CHECK(recs[0].s3 == "sh");
+
+      cb.clear();
+      c.setShutterDevice("");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "Shutter");
+      CHECK(recs[0].s3 == "");
+   }
+
+   SECTION("Focus") {
+      StubStage stage;
+      MockAdapterWithDevices adapter{{"stage", &stage}};
+      RecordingCallback cb;
+      CMMCore c;
+      adapter.LoadIntoCore(c);
+      c.registerCallback(&cb);
+
+      c.setProperty("Core", "Focus", "stage");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "Focus");
+      CHECK(recs[0].s3 == "stage");
+
+      cb.clear();
+      c.setFocusDevice("");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "Focus");
+      CHECK(recs[0].s3 == "");
+   }
+
+   SECTION("XYStage") {
+      StubXYStage xy;
+      MockAdapterWithDevices adapter{{"xy", &xy}};
+      RecordingCallback cb;
+      CMMCore c;
+      adapter.LoadIntoCore(c);
+      c.registerCallback(&cb);
+
+      c.setProperty("Core", "XYStage", "xy");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "XYStage");
+      CHECK(recs[0].s3 == "xy");
+
+      cb.clear();
+      c.setXYStageDevice("");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "XYStage");
+      CHECK(recs[0].s3 == "");
+   }
+
+   SECTION("AutoFocus") {
+      StubAutoFocus af;
+      MockAdapterWithDevices adapter{{"af", &af}};
+      RecordingCallback cb;
+      CMMCore c;
+      adapter.LoadIntoCore(c);
+      c.registerCallback(&cb);
+
+      c.setProperty("Core", "AutoFocus", "af");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "AutoFocus");
+      CHECK(recs[0].s3 == "af");
+
+      cb.clear();
+      c.setAutoFocusDevice("");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "AutoFocus");
+      CHECK(recs[0].s3 == "");
+   }
+
+   SECTION("ImageProcessor") {
+      StubImageProcessor ip;
+      MockAdapterWithDevices adapter{{"ip", &ip}};
+      RecordingCallback cb;
+      CMMCore c;
+      adapter.LoadIntoCore(c);
+      c.registerCallback(&cb);
+
+      c.setProperty("Core", "ImageProcessor", "ip");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "ImageProcessor");
+      CHECK(recs[0].s3 == "ip");
+
+      cb.clear();
+      c.setImageProcessorDevice("");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "ImageProcessor");
+      CHECK(recs[0].s3 == "");
+   }
+
+   SECTION("SLM") {
+      StubSLM slm;
+      MockAdapterWithDevices adapter{{"slm", &slm}};
+      RecordingCallback cb;
+      CMMCore c;
+      adapter.LoadIntoCore(c);
+      c.registerCallback(&cb);
+
+      c.setProperty("Core", "SLM", "slm");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "SLM");
+      CHECK(recs[0].s3 == "slm");
+
+      cb.clear();
+      c.setSLMDevice("");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "SLM");
+      CHECK(recs[0].s3 == "");
+   }
+
+   SECTION("Galvo") {
+      StubGalvo galvo;
+      MockAdapterWithDevices adapter{{"galvo", &galvo}};
+      RecordingCallback cb;
+      CMMCore c;
+      adapter.LoadIntoCore(c);
+      c.registerCallback(&cb);
+
+      c.setProperty("Core", "Galvo", "galvo");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      auto recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "Galvo");
+      CHECK(recs[0].s3 == "galvo");
+
+      cb.clear();
+      c.setGalvoDevice("");
+
+      REQUIRE(cb.waitFor(CBType::PropertyChanged));
+      recs = cb.records(CBType::PropertyChanged);
+      REQUIRE(recs.size() >= 1);
+      CHECK(recs[0].s1 == "Core");
+      CHECK(recs[0].s2 == "Galvo");
+      CHECK(recs[0].s3 == "");
+   }
+}
+
+TEST_CASE("onPropertyChanged from Initialize", "[EventCallback]") {
+   StubGeneric dev;
+   MockAdapterWithDevices adapter{{"dev", &dev}};
+   RecordingCallback cb;
+   CMMCore c;
+   c.loadMockDeviceAdapter("mock", &adapter);
+   c.loadDevice("dev", "mock", "dev");
+   c.registerCallback(&cb);
+
+   c.setProperty("Core", "Initialize", "1");
 
    REQUIRE(cb.waitFor(CBType::PropertyChanged));
    auto recs = cb.records(CBType::PropertyChanged);
    REQUIRE(recs.size() >= 1);
    CHECK(recs[0].s1 == "Core");
-   CHECK(recs[0].s2 == "AutoShutter");
-   CHECK(recs[0].s3 == "0");
+   CHECK(recs[0].s2 == "Initialize");
+   CHECK(recs[0].s3 == "1");
 }
 
 // --- Negative tests ---
