@@ -18,7 +18,6 @@
 
 #include "GenericSink.h"
 
-#include <exception>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -96,22 +95,23 @@ public:
 
    virtual void Consume(const PacketArrayType& packets)
    {
+      std::clog.clear();
       WritePacketsToStream<UFormatter>(std::clog,
             packets.Begin(), packets.End(), this->GetFilter());
-      try
+      std::clog.flush();
+      if (std::clog.fail())
       {
-         std::clog.flush();
-      }
-      catch (const std::ios_base::failure& e)
-      {
+         std::clog.clear();
          if (!hadError_)
          {
             hadError_ = true;
-            // There's not much we can do if stderr is failing on us. But let's
-            // try anyway in a manner that doesn't throw.
-            std::cerr << "Logging: cannot write to stderr: " <<
-               e.what() << '\n';
+            // Probably futile but try anyway:
+            std::cerr << "Logging: cannot write to stderr\n";
          }
+      }
+      else
+      {
+         hadError_ = false;
       }
    }
 };
@@ -145,20 +145,22 @@ public:
 
    virtual void Consume(const PacketArrayType& packets)
    {
+      fileStream_.clear();
       WritePacketsToStream<UFormatter>(fileStream_,
             packets.Begin(), packets.End(), this->GetFilter());
-      try
+      fileStream_.flush();
+      if (fileStream_.fail())
       {
-         fileStream_.flush();
-      }
-      catch (const std::ios_base::failure& e)
-      {
+         fileStream_.clear();
          if (!hadError_)
          {
             hadError_ = true;
-            std::cerr << "Logging: cannot write to file " << filename_ <<
-               ": " << e.what() << '\n';
+            std::cerr << "Logging: cannot write to file " << filename_ << '\n';
          }
+      }
+      else
+      {
+         hadError_ = false;
       }
    }
 };
