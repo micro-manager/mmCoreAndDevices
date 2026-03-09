@@ -48,8 +48,7 @@ StageStateDevice::StageStateDevice() :
    CreateIntegerProperty("NumberOfPositions",
       static_cast<long>(numberOfEngagedPositions_),
       false, pAct, true);
-   for (int i = 2; i <= 10; ++i)
-      AddAllowedValue("NumberOfPositions", std::to_string(i).c_str());
+   SetPropertyLimits("NumberOfPositions", 2, 64);
 
    pAct = new CPropertyAction(this, &StageStateDevice::OnPositionMode);
    CreateStringProperty("Position Mode", g_EquallySpaced, false, pAct, true);
