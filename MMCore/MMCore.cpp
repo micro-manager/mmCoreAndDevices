@@ -108,7 +108,7 @@ namespace notif = mmcore::internal::notification;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 12, MMCore_versionMinor = 1, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 12, MMCore_versionMinor = 2, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2585,6 +2585,8 @@ void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
                logError("CMMCore::snapImage", getDeviceErrorText(sret, shutter).c_str());
                throw CMMError(getDeviceErrorText(sret, shutter).c_str(), MMERR_DEVICE_GENERIC);
             }
+            postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), true});
             waitForDevice(shutter);
          }
 
@@ -2610,6 +2612,8 @@ void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
                logError("CMMCore::snapImage", getDeviceErrorText(sret, shutter).c_str());
                throw CMMError(getDeviceErrorText(sret, shutter).c_str(), MMERR_DEVICE_GENERIC);
             }
+            postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), false});
             waitForDevice(shutter);
          }
          postNotification(notif::ImageSnapped{camera->GetLabel()});
@@ -2672,6 +2676,8 @@ void CMMCore::setShutterOpen(const char* shutterLabel, bool state) MMCORE_LEGACY
          logError("CMMCore::setShutterOpen()", getDeviceErrorText(ret, pShutter).c_str());
          throw CMMError(getDeviceErrorText(ret, pShutter).c_str(), MMERR_DEVICE_GENERIC);
       }
+
+      postNotification(notif::ShutterOpenChanged{shutterLabel, state});
 
       if (pShutter->HasProperty(MM::g_Keyword_State))
       {

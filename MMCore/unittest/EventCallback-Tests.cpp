@@ -481,6 +481,89 @@ TEST_CASE("onPixelSizeChanged from magnifier change",
 
 // --- Core-originated callback tests ---
 
+TEST_CASE("onShutterOpenChanged from setShutterOpen", "[EventCallback]") {
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"shutter", &shutter}};
+   RecordingCallback cb;
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.registerCallback(&cb);
+
+   c.setShutterOpen("shutter", true);
+
+   REQUIRE(cb.waitFor(CBType::ShutterOpenChanged));
+   auto recs = cb.records(CBType::ShutterOpenChanged);
+   REQUIRE(recs.size() >= 1);
+   CHECK(recs[0].s1 == "shutter");
+   CHECK(recs[0].b1 == true);
+}
+
+TEST_CASE("onShutterOpenChanged from snapImage with auto-shutter",
+          "[EventCallback]") {
+   StubCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   RecordingCallback cb;
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+   c.registerCallback(&cb);
+
+   c.snapImage();
+
+   REQUIRE(cb.waitForCount(CBType::ShutterOpenChanged, 2));
+   auto recs = cb.records(CBType::ShutterOpenChanged);
+   REQUIRE(recs.size() >= 2);
+   CHECK(recs[0].s1 == "shutter");
+   CHECK(recs[0].b1 == true);
+   CHECK(recs[1].s1 == "shutter");
+   CHECK(recs[1].b1 == false);
+}
+
+TEST_CASE("onShutterOpenChanged from AcqFinished", "[EventCallback]") {
+   StubCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   RecordingCallback cb;
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+   c.registerCallback(&cb);
+
+   cam.AcqFinished();
+
+   REQUIRE(cb.waitFor(CBType::ShutterOpenChanged));
+   auto recs = cb.records(CBType::ShutterOpenChanged);
+   REQUIRE(recs.size() >= 1);
+   CHECK(recs[0].s1 == "shutter");
+   CHECK(recs[0].b1 == false);
+}
+
+TEST_CASE("onShutterOpenChanged from PrepareForAcq", "[EventCallback]") {
+   StubCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   RecordingCallback cb;
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+   c.registerCallback(&cb);
+
+   cam.PrepareForAcq();
+
+   REQUIRE(cb.waitFor(CBType::ShutterOpenChanged));
+   auto recs = cb.records(CBType::ShutterOpenChanged);
+   REQUIRE(recs.size() >= 1);
+   CHECK(recs[0].s1 == "shutter");
+   CHECK(recs[0].b1 == true);
+}
+
 TEST_CASE("onImageSnapped from snapImage", "[EventCallback]") {
    StubCamera cam;
    MockAdapterWithDevices adapter{{"cam", &cam}};
