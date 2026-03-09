@@ -944,7 +944,7 @@ private:
    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   unsigned int numberOfPositions_;
+   unsigned int numberOfEngagedPositions_;
    bool equallySpaced_;
    std::string stageDeviceLabel_;
    double position0Um_;

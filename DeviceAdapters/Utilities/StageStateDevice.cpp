@@ -35,18 +35,18 @@ static const char* g_Individual = "Individual";
 
 
 StageStateDevice::StageStateDevice() :
-   numberOfPositions_(4),
+   numberOfEngagedPositions_(4),
    equallySpaced_(true),
    position0Um_(0.0),
    positionSpacingUm_(1000.0),
-   currentPosition_(0),
+   currentPosition_(4),
    initialized_(false),
    lastChangeTime_(0, 0)
 {
    CPropertyAction* pAct = new CPropertyAction(this,
       &StageStateDevice::OnNumberOfPositions);
    CreateIntegerProperty("NumberOfPositions",
-      static_cast<long>(numberOfPositions_),
+      static_cast<long>(numberOfEngagedPositions_),
       false, pAct, true);
    for (int i = 2; i <= 10; ++i)
       AddAllowedValue("NumberOfPositions", std::to_string(i).c_str());
@@ -108,8 +108,8 @@ int StageStateDevice::Initialize()
    }
    else
    {
-      positionsUm_.resize(numberOfPositions_, 0.0);
-      for (unsigned int i = 0; i < numberOfPositions_; ++i)
+      positionsUm_.resize(numberOfEngagedPositions_, 0.0);
+      for (unsigned int i = 0; i < numberOfEngagedPositions_; ++i)
       {
          CPropertyActionEx* pActEx = new CPropertyActionEx(this,
             &StageStateDevice::OnIndividualPosition, i);
@@ -121,19 +121,22 @@ int StageStateDevice::Initialize()
    }
 
    // Position labels
-   for (unsigned int i = 0; i < numberOfPositions_; ++i)
+   for (unsigned int i = 0; i < numberOfEngagedPositions_; ++i)
       SetPositionLabel(i, std::to_string(i).c_str());
+   SetPositionLabel(numberOfEngagedPositions_, "Disengaged");
+
+   currentPosition_ = static_cast<long>(numberOfEngagedPositions_);
 
    // State property
    pAct = new CPropertyAction(this, &StageStateDevice::OnState);
-   ret = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct);
+   ret = CreateIntegerProperty(MM::g_Keyword_State, currentPosition_, false, pAct);
    if (ret != DEVICE_OK)
       return ret;
-   SetPropertyLimits(MM::g_Keyword_State, 0, numberOfPositions_ - 1);
+   SetPropertyLimits(MM::g_Keyword_State, 0, numberOfEngagedPositions_);
 
    // Label property
    pAct = new CPropertyAction(this, &StageStateDevice::OnLabel);
-   ret = CreateStringProperty(MM::g_Keyword_Label, "0", false, pAct);
+   ret = CreateStringProperty(MM::g_Keyword_Label, "Disengaged", false, pAct);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -141,6 +144,7 @@ int StageStateDevice::Initialize()
    ret = CreateIntegerProperty(MM::g_Keyword_Closed_Position, 0, false);
    if (ret != DEVICE_OK)
       return ret;
+   SetPropertyLimits(MM::g_Keyword_Closed_Position, 0, numberOfEngagedPositions_ - 1);
 
    initialized_ = true;
    return DEVICE_OK;
@@ -180,7 +184,7 @@ bool StageStateDevice::Busy()
 
 unsigned long StageStateDevice::GetNumberOfPositions() const
 {
-   return numberOfPositions_;
+   return numberOfEngagedPositions_ + 1;
 }
 
 
@@ -197,13 +201,13 @@ int StageStateDevice::OnNumberOfPositions(MM::PropertyBase* pProp, MM::ActionTyp
 {
    if (eAct == MM::BeforeGet)
    {
-      pProp->Set(static_cast<long>(numberOfPositions_));
+      pProp->Set(static_cast<long>(numberOfEngagedPositions_));
    }
    else if (eAct == MM::AfterSet)
    {
       long num;
       pProp->Get(num);
-      numberOfPositions_ = static_cast<unsigned int>(num);
+      numberOfEngagedPositions_ = static_cast<unsigned int>(num);
    }
    return DEVICE_OK;
 }
@@ -234,6 +238,8 @@ int StageStateDevice::OnPhysicalStage(MM::PropertyBase* pProp, MM::ActionType eA
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(stageDeviceLabel_);
+      currentPosition_ = static_cast<long>(numberOfEngagedPositions_);
+      SetProperty(MM::g_Keyword_State, std::to_string(currentPosition_).c_str());
    }
    return DEVICE_OK;
 }
@@ -248,6 +254,8 @@ int StageStateDevice::OnPosition0(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(position0Um_);
+      currentPosition_ = static_cast<long>(numberOfEngagedPositions_);
+      SetProperty(MM::g_Keyword_State, std::to_string(currentPosition_).c_str());
    }
    return DEVICE_OK;
 }
@@ -262,6 +270,8 @@ int StageStateDevice::OnPositionSpacing(MM::PropertyBase* pProp, MM::ActionType 
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(positionSpacingUm_);
+      currentPosition_ = static_cast<long>(numberOfEngagedPositions_);
+      SetProperty(MM::g_Keyword_State, std::to_string(currentPosition_).c_str());
    }
    return DEVICE_OK;
 }
@@ -276,6 +286,8 @@ int StageStateDevice::OnIndividualPosition(MM::PropertyBase* pProp, MM::ActionTy
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(positionsUm_[index]);
+      currentPosition_ = static_cast<long>(numberOfEngagedPositions_);
+      SetProperty(MM::g_Keyword_State, std::to_string(currentPosition_).c_str());
    }
    return DEVICE_OK;
 }
@@ -290,6 +302,9 @@ int StageStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(currentPosition_);
+
+      if (currentPosition_ == static_cast<long>(numberOfEngagedPositions_))
+         return DEVICE_OK;
 
       bool gateOpen;
       GetGateOpen(gateOpen);
