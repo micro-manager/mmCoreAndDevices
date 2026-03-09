@@ -24,20 +24,13 @@
 
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////
-// Header version
-// If any of the class definitions changes, the interface version
-// must be incremented
+// Device Interface Version — see README.md for the full versioning policy.
+// Must be incremented for any binary-incompatible change.
 #define DEVICE_INTERFACE_VERSION 75
-///////////////////////////////////////////////////////////////////////////////
 
-// N.B.
-//
-// Never add parameters or return values that are not POD
-// (http://stackoverflow.com/a/146454) to any method of class Device and its
-// derived classes defined in this file. For example, a std::string parameter
-// is not acceptable (use const char*). This is to prevent inter-DLL
-// incompatibilities.
+// N.B. Method parameters and return values in Device and its derived
+// classes must be POD types or pointers (no std::string, etc.) to
+// maintain binary compatibility across compilers and runtimes.
 
 #include "MMDeviceConstants.h"
 #include "DeviceUtils.h"
