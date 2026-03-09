@@ -26,6 +26,43 @@
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
+#include <optional>
+#include <string_view>
+
+
+// The serial command set for a device property.
+// Note: Empty strings indicate the operation is not supported.
+struct Command {
+    const std::string get;   // read from hardware "LR Z?"
+    const std::string set;   // write to hardware "LR Z="
+    const std::string reply; // expected reply ":A"
+};
+
+// The command table for CRISP.
+// Each device property has a serial command set.
+struct CommandTable {
+    // Read/write
+    const Command ledIntensity;
+    const Command objectiveNA;
+    const Command gainMultiplier;
+    const Command numberAverages;
+    const Command numberSkips;
+    const Command calibrationGain;
+    const Command calibrationRangeUm;
+    const Command inFocusRangeUm;
+    const Command maxLockRangeMm;
+    // Read-only
+    const Command state;
+    const Command stateChar;
+    const Command signalNoiseRatio;
+    const Command lockOffset;
+    const Command sum;
+    const Command ditherError;
+    const Command logAmpAGC;
+    // Advanced
+    const Command setLogAmpAGC;
+    const Command setLockOffset;
+};
 
 // ASI CRISP Autofocus Device
 // Documentation: https://asiimaging.com/docs/crisp_manual
@@ -34,11 +71,11 @@ public:
     explicit CCRISP(const char* name);
     ~CCRISP() = default;
 
-    // Device API
+    // MM Device API
     int Initialize();
     bool Busy();
 
-    // Autofocus API
+    // MM Autofocus API
     int SetContinuousFocusing(bool state);
     int GetContinuousFocusing(bool& state);
     bool IsContinuousFocusLocked();
@@ -66,22 +103,33 @@ private:
     int SetFocusState(const std::string& focusState);
     int ForceSetFocusState(const std::string& focusState);
 
+    CommandTable BuildCommandTable(std::string_view cardAddress) const;
+    void LogFirmwareSupport(const bool hasLockQueries, const bool hasExShortcut) const;
+
     // Properties
+
+    // Software-only
     void CreateRefreshPropertiesProperty();
     void CreateWaitAfterLockProperty();
+    // Read-only
     void CreateFocusStateProperty();
     void CreateStateProperty();
     void CreateSNRProperty();
-    void CreateOffsetProperty();
+    void CreateLockOffsetProperty();
     void CreateSumProperty();
     void CreateDitherErrorProperty();
     void CreateLogAmpAGCProperty();
+    // Advanced
     void CreateSetLogAmpAGCProperty();
     void CreateSetLockOffsetProperty();
 
     std::string axisLetter_;
     std::string focusState_;
     long waitAfterLock_;
+
+    // The CommandTable is created in Initialize() once we know the card address and firmware version.
+    // std::optional allows the table to be late-initialized while keeping its members const for immutability.
+    std::optional<CommandTable> commands_;
 };
 
 #endif // ASICRISP_H

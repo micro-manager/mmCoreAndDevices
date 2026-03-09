@@ -19,9 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp
-//
-//
 
 #include "ASITiger.h"
 #include "ASIHub.h"
@@ -76,7 +73,6 @@ ASIHub::ASIHub() :
    AddAllowedValue(g_SerialCommandOnlySendChangedPropertyName, g_NoState);
    AddAllowedValue(g_SerialCommandOnlySendChangedPropertyName, g_YesState);
 
-
    // change serial terminator, mainly useful for direct communication with filter wheel card
    pAct = new CPropertyAction (this, &ASIHub::OnSerialTerminator);
    CreateProperty(g_SerialTerminatorPropertyName, g_SerialTerminator_0, MM::String, false, pAct);
@@ -87,20 +83,12 @@ ASIHub::ASIHub() :
    AddAllowedValue(g_SerialTerminatorPropertyName, g_SerialTerminator_4);
 }
 
-int ASIHub::ClearComPort()
-{
-   return PurgeComPort(port_.c_str());
+int ASIHub::ClearComPort() {
+    return PurgeComPort(port_.c_str());
 }
 
-bool ASIHub::FirmwareVersionAtLeast(double minimumFirmwareVersion) {
-    return firmwareVersion_ > (minimumFirmwareVersion - 1e-6);
-}
-
-/**
-   * Sends a command and gets the serial buffer (doesn't try to verify end of transmission)
-   */
-int ASIHub::QueryCommandUnterminatedResponse(const char *command, const long timeoutMs, unsigned long reply_length)
-{
+// Sends a command and gets the serial buffer (doesn't try to verify end of transmission)
+int ASIHub::QueryCommandUnterminatedResponse(const char *command, const long timeoutMs, unsigned long replyLength) {
    RETURN_ON_MM_ERROR ( ClearComPort() );
    RETURN_ON_MM_ERROR ( SendSerialCommand(port_.c_str(), command, "\r") );
    serialCommand_ = command;
@@ -112,8 +100,7 @@ int ASIHub::QueryCommandUnterminatedResponse(const char *command, const long tim
    MM::TimeoutMs timerOut(GetCurrentMMTime(), timeoutMs);
    serialAnswer_ = "";
 
-   while (ret == DEVICE_OK && total_read < reply_length && !timerOut.expired(GetCurrentMMTime()))
-   {
+   while (ret == DEVICE_OK && total_read < replyLength && !timerOut.expired(GetCurrentMMTime())) {
       ret = ReadFromComPort(port_.c_str(), (unsigned char*)rcvBuf, MM::MaxStrLength, read);
 	  total_read += read;
    }
@@ -658,9 +645,9 @@ int ASIHub::OnSerialCommandRepeatPeriod(MM::PropertyBase* pProp, MM::ActionType 
 int ASIHub::OnSerialCommandOnlySendChanged(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::AfterSet) {
-      std::string tmpstr;
-      pProp->Get(tmpstr);
-      serialOnlySendChanged_ = (tmpstr == g_YesState) ? true : false;
+      std::string tmp;
+      pProp->Get(tmp);
+      serialOnlySendChanged_ = (tmp == g_YesState);
    }
    return DEVICE_OK;
 }

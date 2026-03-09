@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h
-//
 
 #ifndef ASIBASE_H
 #define ASIBASE_H
@@ -54,25 +52,25 @@
 ////////////////////////////////////////////////////////////////
 
 template <template <typename> class TDeviceBase, class UConcreteDevice>
-class ASIBase : public TDeviceBase<UConcreteDevice>
-{
+class ASIBase : public TDeviceBase<UConcreteDevice> {
 public:
-   ASIBase(const char* name) :
-      initialized_(false),
-      firmwareVersion_(0.0)
-   {
-      this->InitializeDefaultErrorMessages();
-      InitializeASIErrorMessages();
+    explicit ASIBase(const char* name) :
+        initialized_(false),
+        firmwareVersion_(0.0) {
 
-      // note that this name is different from the label that MM uses in e.g. SetProperty()
+        this->InitializeDefaultErrorMessages();
+        InitializeASIErrorMessages();
 
-      // name property will be used to re-create the object by calling CreateDevice again with this parameter
-      // if name isn't specified then skip this step (=> method for parent objects to delay setting name until child created)
-      if (strcmp(name, "") != 0)
-         this->CreateProperty(MM::g_Keyword_Name, name, MM::String, true);
-   }
+        // note that this name is different from the label that MM uses in e.g. SetProperty()
 
-   virtual ~ASIBase() { }
+        // name property will be used to re-create the object by calling CreateDevice again with this parameter
+        // if name isn't specified then skip this step (=> method for parent objects to delay setting name until child created)
+        if (strcmp(name, "") != 0) {
+            this->CreateProperty(MM::g_Keyword_Name, name, MM::String, true);
+        }
+    }
+
+    virtual ~ASIBase() = default;
 
    int Shutdown()
    {
@@ -90,18 +88,21 @@ public:
       CDeviceUtils::CopyLimitedString(pszName, name);
    }
 
-   bool Busy() { return false; } // should be implemented in child class
+    bool Busy() { 
+        // default: hardware is always ready; override in derived class if the hardware requires it
+        return false;
+    }
+
+    // Return true if the firmware version is at least the minimum version.
+    bool FirmwareVersionAtLeast(const double minVersion) const {
+        return firmwareVersion_ > (minVersion - 1e-6); // subtract a tiny epsilon to account for floating-point errors
+    }
 
 protected:
    bool initialized_;      // used to signal that device properties have been read from controller
    double firmwareVersion_; // firmware version
    std::string firmwareDate_;    // firmware compile date
    std::string firmwareBuild_;   // firmware build name
-
-   bool FirmwareVersionAtLeast(double minimumFirmwareVersion)
-   {
-      return firmwareVersion_ > (minimumFirmwareVersion - 1e-6);  // 1e-6 to make sure match is counted as OK despite possible floating point arithmetic issues
-   }
 
    void InitializeASIErrorMessages()
    {

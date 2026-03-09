@@ -19,9 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp, ASIFW1000.cpp, Arduino.cpp, and DemoCamera.cpp
-//
-//
 
 #include "ASITiger.h"
 #include "ASITigerComm.h"
@@ -31,7 +28,6 @@
 #include "DeviceBase.h"
 #include "ModuleInterface.h"
 #include <iostream>
-#include <assert.h>
 #include <vector>
 
 
@@ -116,8 +112,8 @@ MM::DeviceDetectionStatus CTigerCommHub::DetectDevice()
         return MM::CanCommunicate;
     }
 
-    MM::DeviceDetectionStatus result = MM::Misconfigured;
     char savedTimeout[MM::MaxStrLength];
+    MM::DeviceDetectionStatus result = MM::Misconfigured;
 
     try
     {
@@ -257,11 +253,14 @@ int CTigerCommHub::DetectInstalledDevices()
              }
              break;
          case 'p':  // piezo focus like ADEPT
+             [[fallthrough]];
          case 'a':  // generic piezo axis
             name = g_PiezoDeviceName;
             break;
          case 'z':  // ZMotor like LS50, Z scope focus, etc.
+             [[fallthrough]];
          case 'l':  // generic linear motorized stage
+             [[fallthrough]];
          case 't': // rotational stage, for now treat as linear stage but may make own device adapter later (not discrete but partially a "clocked device" per firmware notation)
             name = g_ZStageDeviceName;
             break;
@@ -305,8 +304,7 @@ int CTigerCommHub::DetectInstalledDevices()
             ret = QueryCommandVerify(command.str(), "TGPMT");
             if (ret == ERR_UNRECOGNIZED_ANSWER)
             { 
-		// error, guess 2 as reasonable default
-            	channels = 2;
+                channels = 2; // error, guess 2 as reasonable default
             }
             else
             {

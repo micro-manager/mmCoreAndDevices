@@ -67,6 +67,7 @@ constexpr char SetLockOffset[] = "Set Lock Offset (Advanced Users Only)";
 namespace Props = Properties;
 } // namespace
 
+
 CCRISP::CCRISP(const char* name) :
     ASIPeripheralBase<::CAutoFocusBase, CCRISP>(name),
     axisLetter_(g_EmptyAxisLetterStr), // value determined by extended name
@@ -79,9 +80,73 @@ CCRISP::CCRISP(const char* name) :
     }
 }
 
+CommandTable CCRISP::BuildCommandTable(std::string_view cardAddress) const {
+    // create local owned copy to use + for table alignment
+    const std::string a(cardAddress);
+
+    // select serial commands based on firmware version
+    const bool hasLockQueries = FirmwareVersionAtLeast(3.40);
+    const bool hasExShortcut = hub_ && hub_->FirmwareVersionAtLeast(3.53) // Tiger Comm has "EX"
+                                    && FirmwareVersionAtLeast(3.53);      // Stage Card has "EX"
+
+    const std::string snr =    hasExShortcut  ? "EX Y?" : "EXTRA Y?";
+    const std::string sum =    hasLockQueries ? "LK T?" : "EXTRA X?";
+    const std::string dither = hasLockQueries ? "LK Y?" : "EXTRA X?";
+    const std::string reply =  hasLockQueries ? ":A"    : ""; // same for both sum and dither
+
+    LogFirmwareSupport(hasLockQueries, hasExShortcut);
+
+    return CommandTable {        //   get           set           reply
+        /* .ledIntensity =       */ { a + "UL X?",  a + "UL X=",  ":A X=" }, // Read/write
+        /* .objectiveNA =        */ { a + "LR Y?",  a + "LR Y=",  ":A Y=" },
+        /* .gainMultiplier =     */ { a + "LR T?",  a + "LR T=",  ":A T=" },
+        /* .numberAverages =     */ { a + "RT F?",  a + "RT F=",  ":A F=" },
+        /* .numberSkips =        */ { a + "UL Y?",  a + "UL Y=",  ":A Y=" },
+        /* .calibrationGain =    */ { a + "LR X?",  a + "LR X=",  ":A X=" },
+        /* .calibrationRangeUm = */ { a + "LR F?",  a + "LR F=",  ":A F=" },
+        /* .inFocusRangeUm =     */ { a + "AL Z?",  a + "AL Z=",  ":A Z=" },
+        /* .maxLockRangeMm =     */ { a + "LR Z?",  a + "LR Z=",  ":A Z=" },
+        /* .state =              */ { a + "LK X?",  "",           ":A"    }, // Read-only
+        /* .stateChar =          */ { a + "LK X?",  "",           ":A"    },
+        /* .signalNoiseRatio =   */ { a + snr,      "",           ""      },
+        /* .lockOffset =         */ { a + "LK Z?",  "",           ":A Z=" },
+        /* .sum =                */ { a + sum,      "",           reply   },
+        /* .ditherError =        */ { a + dither,   "",           reply   },
+        /* .logAmpAGC =          */ { a + "AL X?",  "",           ":A X=" },
+        /* .setLogAmpAGC =       */ { "",           a + "LK M=",  ":A"    }, // Advanced
+        /* .setLockOffset =      */ { "",           a + "LK Z=",  ":A"    },
+    };
+}
+
+void CCRISP::LogFirmwareSupport(const bool hasLockQueries, const bool hasExShortcut) const {
+    // use LOCK command instead of EXTRA
+    LogMessage(hasLockQueries ?
+        "CRISP: firmware >= 3.40; using 'LK T?' for Sum." :
+        "CRISP: firmware < 3.40; using legacy 'EXTRA X?' for Sum.", false);
+    LogMessage(hasLockQueries ?
+        "CRISP: firmware >= 3.40; using 'LK Y?' for Dither Error." :
+        "CRISP: firmware < 3.40; using legacy 'EXTRA X?' for Dither Error.", false);
+
+    // Tiger Comm and Stage Card firmware required for shortcut
+    if (hasExShortcut) {
+        LogMessage("CRISP: firmware >= 3.53; using 'EX Y?' for SNR.", false);
+    } else {
+        if (FirmwareVersionAtLeast(3.53)) { // Stage Card has "EX"
+            LogMessage("CRISP: Stage Card is >= 3.53 but Tiger Comm < 3.53; "
+                       "falling back to 'EXTRA Y?' for SNR.", false);
+        } else {
+            LogMessage("CRISP: firmware < 3.53; using legacy 'EXTRA Y?' for SNR.", false);
+        }
+    }
+}
+
 int CCRISP::Initialize() {
     // call generic Initialize first, this gets hub
     RETURN_ON_MM_ERROR(PeripheralInitialize());
+
+    // create CommandTable after PeripheralInitialize()
+    // gets the card address and firmware version
+    commands_.emplace(BuildCommandTable(addressChar_));
 
     // create MM description; requires runtime values not
     // available during the hardware configuration wizard
@@ -144,7 +209,7 @@ int CCRISP::Initialize() {
     CreateFocusStateProperty();
     CreateStateProperty();
     CreateSNRProperty();
-    CreateOffsetProperty();
+    CreateLockOffsetProperty();
     CreateSumProperty();
     CreateDitherErrorProperty();
     CreateLogAmpAGCProperty();
@@ -383,6 +448,8 @@ void CCRISP::CreateWaitAfterLockProperty() {
     // No need to call UpdateProperty() because we already initialized
     // waitAfterLock_ in the constructor and CreateIntegerProperty()
 }
+
+// Read/write Properties
 
 int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -703,10 +770,8 @@ void CCRISP::CreateSNRProperty() {
     std::string command = addressChar_;
     if (hub_ && hub_->FirmwareVersionAtLeast(3.53) && FirmwareVersionAtLeast(3.53)) {
         command += "EX Y?";
-        LogMessage("CRISP: firmware >= 3.53; using shortcut 'EX Y?' for SNR.", true);
     } else {
         command += "EXTRA Y?";
-        LogMessage("CRISP: firmware < 3.53; using full 'EXTRA Y?' for SNR.", true);
     }
 
     CreateFloatProperty(
@@ -728,7 +793,7 @@ void CCRISP::CreateSNRProperty() {
 }
 
 // Always read
-void CCRISP::CreateOffsetProperty() {
+void CCRISP::CreateLockOffsetProperty() {
     CreateIntegerProperty(
         Props::LockOffset, 0L, true,
         new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -759,8 +824,6 @@ void CCRISP::CreateSumProperty() {
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
         // The command responds with => ":A 0 \r\n"
-        LogMessage("CRISP: firmware >= 3.40; using 'LK T?' for Sum.", true);
-
         const std::string command = addressChar_ + "LK T?";
 
         CreateIntegerProperty(
@@ -782,8 +845,6 @@ void CCRISP::CreateSumProperty() {
 
         // The old version uses the EXTRA command and requires parsing
         // The command responds with => "I    0    0 \r\n"
-        LogMessage("CRISP: firmware < 3.40; using 'EXTRA X?' for Sum", true);
-
         const std::string command = addressChar_ + "EXTRA X?";
 
         CreateIntegerProperty(
@@ -813,8 +874,6 @@ void CCRISP::CreateDitherErrorProperty() {
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
         // The command responds with => ":A 0 \r\n"
-        LogMessage("CRISP: firmware >= 3.40; using 'LK Y?' for Dither Error.", true);
-
         const std::string command = addressChar_ + "LK Y?";
 
         CreateIntegerProperty(
@@ -836,8 +895,6 @@ void CCRISP::CreateDitherErrorProperty() {
 
         // The old version uses the EXTRA command and requires parsing
         // The command responds with => "I    0    0 \r\n"
-        LogMessage("CRISP: firmware < 3.40; using 'EXTRA X?' for Dither Error.", true);
-
         const std::string command = addressChar_ + "EXTRA X?";
 
         CreateIntegerProperty(
