@@ -47,6 +47,7 @@ device adapter (by statically linking to MMDevice). At runtime, MMCore checks
 that the device adapter's DIV exactly matches its own. On mismatch, MMCore
 refuses to load the adapter with an error message stating both version numbers.
 The DIV is the only version number adapter authors and users need to care about.
+See [DIV history](#div-history) for a complete list.
 
 ### Cross-runtime compatibility
 
@@ -246,3 +247,42 @@ work correctly with the default.
 MMCoreJ (Java) and pymmcore (Python) public APIs. Removal of definitions must
 be coordinated with all those projects. Changing an existing definition (as
 opposed to removal) is almost never a good idea, even if it contains a typo.
+
+<a id="div-history"></a>
+
+## Device Interface Version history
+
+| DIV | First Nightly | Last Nightly | PR | Reason |
+| --- | ------------- | ------------ | -- | ------ |
+| 75 | 2026-02-26 | —          | [#861](https://github.com/micro-manager/mmCoreAndDevices/pull/861) | Removed 3 camera functions, `doProcess` from `InsertImage`; stage position-changed signaling |
+| 74 | 2025-08-15 | 2026-02-25 | [#710](https://github.com/micro-manager/mmCoreAndDevices/pull/710), [#697](https://github.com/micro-manager/mmCoreAndDevices/pull/697) | Removed deprecated Core callbacks; `OnShutterOpenChanged` callback |
+| 73 | 2025-03-18 | 2025-08-14 | [#602](https://github.com/micro-manager/mmCoreAndDevices/pull/602) | Renamed pump methods to include units |
+| 72 | — | — | [#462](https://github.com/micro-manager/mmCoreAndDevices/pull/462) | Pump API; superseded by 73 same day (not in any nightly build) |
+| 71 | 2022-10-31 | 2025-03-10 | [#289](https://github.com/micro-manager/mmCoreAndDevices/pull/289) | Belated bump for `MMTime` struct layout change ([#281](https://github.com/micro-manager/mmCoreAndDevices/pull/281), 2022-10-26) |
+| 70 | 2021-02-13 | 2022-10-30 (Windows), 2022-10-25 (macOS) | [SVN r17423](https://github.com/micro-manager/mmCoreAndDevices/commit/8687ddb51) | Removed unused `Acq*` functions |
+| 69 | 2018-07-12 | 2021-02-12 | [SVN r16724](https://github.com/micro-manager/mmCoreAndDevices/commit/1a9938168) | Z stage linear sequence interface |
+| 68 | 2017-11-07 | 2018-07-11 | [SVN r16531](https://github.com/micro-manager/mmCoreAndDevices/commit/285a9fbb2) | 32-bit grayscale images (new `InsertImage` overload) (belated bump for [SVN r16466](https://github.com/micro-manager/mmCoreAndDevices/commit/d85d92d94), 2017-08-23) |
+| 67 | 2016-06-09 | 2017-08-22 | [SVN r16045](https://github.com/micro-manager/mmCoreAndDevices/commit/2cafb3481) | `SupportsDeviceDetection()` |
+| 66 | 2016-06-08 | 2016-06-08 | [SVN r16043](https://github.com/micro-manager/mmCoreAndDevices/commit/6378720c9) | Multiple simultaneous ROI support |
+| 65 | 2015-05-28 | 2016-06-07 | [SVN r15480](https://github.com/micro-manager/mmCoreAndDevices/commit/b98858d3b) | Galvo `GetXMinimum()`, `GetYMinimum()` |
+| 64 | 2015-05-15 | 2015-05-27 | [SVN r15439](https://github.com/micro-manager/mmCoreAndDevices/commit/6fdcdc274) | Focus direction methods |
+| 63 | 2015-05-05 | 2015-05-14 | [SVN r15408](https://github.com/micro-manager/mmCoreAndDevices/commit/ae4ced454) | Stage `Home()`, `Stop()` |
+| 62 | 2015-05-01 | 2015-05-04 | [SVN r15387](https://github.com/micro-manager/mmCoreAndDevices/commit/38cfde8ef) | XY stage `SetXOrigin()`, `SetYOrigin()` |
+| 61 | 2014-08-01 | 2015-04-30 | [SVN r14057](https://github.com/micro-manager/mmCoreAndDevices/commit/aac034a5c) | Removed deprecated callback functions |
+| 60 | 2014-06-17 | 2014-07-31 | [SVN r13639](https://github.com/micro-manager/mmCoreAndDevices/commit/cff69f1c2) | `OnSLMExposureChanged` callback |
+| 59 | 2014-05-14 | 2014-06-16 | [SVN r13407](https://github.com/micro-manager/mmCoreAndDevices/commit/1a3c3c884) | Fixed peripheral device double-deletion semantics |
+| 58 | —          | —          | [SVN r13396](https://github.com/micro-manager/mmCoreAndDevices/commit/b3781c0a9) | `MM::Generic` device type; superseded by 59 same day |
+| 57 | 2014-01-24 | 2014-05-13 | [SVN r12652](https://github.com/micro-manager/mmCoreAndDevices/commit/97beb0f6c) | SLM sequence functions |
+| 56 | 2014-01-19 | 2014-01-23 | [SVN r12626](https://github.com/micro-manager/mmCoreAndDevices/commit/bbf1b852c) | SLM `SetExposure()`, `GetExposure()` (belated bump for [SVN r12571](https://github.com/micro-manager/mmCoreAndDevices/commit/90d45dc45), 2014-01-15) |
+| 55 | 2013-12-21 | 2014-01-14 | [SVN r12440](https://github.com/micro-manager/mmCoreAndDevices/commit/d9d939aed) | `OnMagnifierChanged` callback |
+| 54 | 2013-10-22 | 2013-12-20 | [SVN r11996](https://github.com/micro-manager/mmCoreAndDevices/commit/0058a1202) | Avoid `std::string` for `AddTag()` parameter |
+
+> All nightly build dates prior to DIV 70 are based on commit times and the
+> actual nightly builds should be verified if you need exact data. Gaps between
+> the date ranges indicate where binary compatibility was broken but the DIV
+> failed to change (as noted in remarks), or where nightly builds did not occur.
+>
+> Nightly build dates prior to DIV 71 are for MM 1.4 only. MM 2.x DIV prior to
+> 71 tracked MM 1.4 with an irregular delay; it is best to check the nightly
+> builds themselves if you need the actual dates for any of the MM 2.x branches
+> ("beta", "gamma") in this period.
