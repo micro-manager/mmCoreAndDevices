@@ -254,7 +254,6 @@ int StageStateDevice::OnPosition0(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(position0Um_);
-      currentPosition_ = static_cast<long>(numberOfEngagedPositions_);
       SetProperty(MM::g_Keyword_State, std::to_string(currentPosition_).c_str());
    }
    return DEVICE_OK;
@@ -270,7 +269,6 @@ int StageStateDevice::OnPositionSpacing(MM::PropertyBase* pProp, MM::ActionType 
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(positionSpacingUm_);
-      currentPosition_ = static_cast<long>(numberOfEngagedPositions_);
       SetProperty(MM::g_Keyword_State, std::to_string(currentPosition_).c_str());
    }
    return DEVICE_OK;
@@ -286,7 +284,6 @@ int StageStateDevice::OnIndividualPosition(MM::PropertyBase* pProp, MM::ActionTy
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(positionsUm_[index]);
-      currentPosition_ = static_cast<long>(numberOfEngagedPositions_);
       SetProperty(MM::g_Keyword_State, std::to_string(currentPosition_).c_str());
    }
    return DEVICE_OK;
