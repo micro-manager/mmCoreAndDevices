@@ -27,6 +27,7 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include <optional>
+#include <string>
 #include <string_view>
 
 
