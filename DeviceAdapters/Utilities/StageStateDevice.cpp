@@ -35,11 +35,11 @@ static const char* g_Individual = "Individual";
 
 
 StageStateDevice::StageStateDevice() :
-   numberOfEngagedPositions_(4),
+   numberOfEngagedPositions_(2),
    equallySpaced_(true),
    position0Um_(0.0),
-   positionSpacingUm_(1000.0),
-   currentPosition_(4),
+   positionSpacingUm_(1.0),
+   currentPosition_(2),
    initialized_(false),
    lastChangeTime_(0, 0)
 {
