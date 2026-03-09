@@ -18,6 +18,7 @@ mmcore_test_sources = files(
     'ImageMetadataTags-Tests.cpp',
     'Logger-Tests.cpp',
     'LoggingSplitEntryIntoLines-Tests.cpp',
+    'LoggingStreamSink-Tests.cpp',
     'MockDeviceAdapter-Tests.cpp',
     'Notification-Tests.cpp',
     'PixelSize-Tests.cpp',
