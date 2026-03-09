@@ -32,11 +32,11 @@
 
 
 // The serial command set for a device property.
-// Note: Empty strings indicate the operation is not supported.
 struct Command {
-    const std::string get;   // read from hardware "LR Z?"
-    const std::string set;   // write to hardware "LR Z="
-    const std::string reply; // expected reply ":A"
+    const std::string get;      // read from hardware (e.g. "2LR Z?")
+    const std::string getReply; // reply from get (e.g. ":A Z=")
+    const std::string set;      // write to hardware (e.g. "2LR Z=")
+    const std::string setReply; // reply from set (e.g. ":A")
 };
 
 // The command table for CRISP.

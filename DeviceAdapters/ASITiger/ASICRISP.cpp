@@ -95,25 +95,26 @@ CommandTable CCRISP::BuildCommandTable(std::string_view cardAddress) const {
 
     LogFirmwareSupport(hasLockQueries, hasExShortcut);
 
-    return CommandTable {        //   get           set           reply
-        /* .ledIntensity =       */ { a + "UL X?",  a + "UL X=",  ":A X=" }, // Read/write
-        /* .objectiveNA =        */ { a + "LR Y?",  a + "LR Y=",  ":A Y=" },
-        /* .gainMultiplier =     */ { a + "LR T?",  a + "LR T=",  ":A T=" },
-        /* .numberAverages =     */ { a + "RT F?",  a + "RT F=",  ":A F=" },
-        /* .numberSkips =        */ { a + "UL Y?",  a + "UL Y=",  ":A Y=" },
-        /* .calibrationGain =    */ { a + "LR X?",  a + "LR X=",  ":A X=" },
-        /* .calibrationRangeUm = */ { a + "LR F?",  a + "LR F=",  ":A F=" },
-        /* .inFocusRangeUm =     */ { a + "AL Z?",  a + "AL Z=",  ":A Z=" },
-        /* .maxLockRangeMm =     */ { a + "LR Z?",  a + "LR Z=",  ":A Z=" },
-        /* .state =              */ { a + "LK X?",  "",           ":A"    }, // Read-only
-        /* .stateChar =          */ { a + "LK X?",  "",           ":A"    },
-        /* .signalNoiseRatio =   */ { a + snr,      "",           ""      },
-        /* .lockOffset =         */ { a + "LK Z?",  "",           ":A Z=" },
-        /* .sum =                */ { a + sum,      "",           reply   },
-        /* .ditherError =        */ { a + dither,   "",           reply   },
-        /* .logAmpAGC =          */ { a + "AL X?",  "",           ":A X=" },
-        /* .setLogAmpAGC =       */ { "",           a + "LK M=",  ":A"    }, // Advanced
-        /* .setLockOffset =      */ { "",           a + "LK Z=",  ":A"    },
+    // Note: "-" indicates the operation is not supported.
+    return CommandTable {        //   get           getReply  set           setReply
+        /* .ledIntensity =       */ { a + "UL X?",  ":A X=",  a + "UL X=",  ":A" }, // Read/write
+        /* .objectiveNA =        */ { a + "LR Y?",  ":A Y=",  a + "LR Y=",  ":A" },
+        /* .gainMultiplier =     */ { a + "LR T?",  ":A T=",  a + "LR T=",  ":A" },
+        /* .numberAverages =     */ { a + "RT F?",  ":A F=",  a + "RT F=",  ":A" },
+        /* .numberSkips =        */ { a + "UL Y?",  ":A Y=",  a + "UL Y=",  ":A" },
+        /* .calibrationGain =    */ { a + "LR X?",  ":A X=",  a + "LR X=",  ":A" },
+        /* .calibrationRangeUm = */ { a + "LR F?",  ":A F=",  a + "LR F=",  ":A" },
+        /* .inFocusRangeUm =     */ { a + "AL Z?",  ":A Z=",  a + "AL Z=",  ":A" },
+        /* .maxLockRangeMm =     */ { a + "LR Z?",  ":A Z=",  a + "LR Z=",  ":A" },
+        /* .state =              */ { a + "LK X?",  ":A",     a + "LK F=",  ":A" },
+        /* .stateChar =          */ { a + "LK X?",  ":A",     "-",          "-"  }, // Read-only
+        /* .signalNoiseRatio =   */ { a + snr,      "",       "-",          "-"  },
+        /* .lockOffset =         */ { a + "LK Z?",  ":A",     "-",          "-"  },
+        /* .sum =                */ { a + sum,      reply,    "-",          "-"  },
+        /* .ditherError =        */ { a + dither,   reply,    "-",          "-"  },
+        /* .logAmpAGC =          */ { a + "AL X?",  ":A X=",  "-",          "-"  },
+        /* .setLogAmpAGC =       */ { "-",          "-",      a + "LK M=",  ":A" }, // Advanced
+        /* .setLockOffset =      */ { "-",          "-",      a + "LK Z=",  ":A" },
     };
 }
 
@@ -479,15 +480,14 @@ void CCRISP::CreateWaitAfterLockProperty() {
 
 int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    double tmp = 0;
+   const Command& cmd = commands_->objectiveNA;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      command << addressChar_ << "LR Y?";
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A Y=")) {
+      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
           return error;
       }
       if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -500,8 +500,8 @@ int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "LR Y=" << tmp;
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      const std::string command = cmd.set + std::to_string(tmp);
+      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
           return error;
       }
       refreshOverride_ = true;
@@ -518,15 +518,14 @@ int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CCRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    double tmp = 0;
+   const Command& cmd = commands_->calibrationGain;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      command << addressChar_ << "LR X?";
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A X=")) {
+      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
           return error;
       }
       if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -539,8 +538,8 @@ int CCRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "LR X=" << tmp;
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      const std::string command = cmd.set + std::to_string(tmp);
+      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
           return error;
       }
    }
@@ -550,15 +549,14 @@ int CCRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 // The LR F command uses millimeters, convert the value to microns for the Micro-Manager property.
 int CCRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-    std::ostringstream command;
     double tmp = 0;
+    const Command& cmd = commands_->calibrationRangeUm;
     if (eAct == MM::BeforeGet)
     {
         if (!refreshProps_ && initialized_ && !refreshOverride_) {
             return DEVICE_OK;
         }
-        command << addressChar_ << "LR F?";
-        if (const int error = hub_->QueryCommandVerify(command.str(), ":A F=")) {
+        if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
             return error;
         }
         if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -571,8 +569,8 @@ int CCRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
     else if (eAct == MM::AfterSet)
     {
         pProp->Get(tmp);
-        command << addressChar_ << "LR F=" << tmp / 1000.0;
-        if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+        const std::string command = cmd.set + std::to_string(tmp / 1000.0);
+        if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
             return error;
         }
     }
@@ -581,15 +579,14 @@ int CCRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CCRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    double tmp = 0;
+   const Command& cmd = commands_->maxLockRangeMm;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      command << addressChar_ << "LR Z?";
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A Z=")) {
+      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
           return error;
       }
       if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -602,8 +599,8 @@ int CCRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "LR Z=" << tmp;
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      const std::string command = cmd.set + std::to_string(tmp);
+      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
           return error;
       }
    }
@@ -612,15 +609,14 @@ int CCRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CCRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    long tmp = 0;
+   const Command& cmd = commands_->ledIntensity;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      command << addressChar_ << "UL X?";
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A X=")) {
+      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
           return error;
       }
       if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -633,8 +629,8 @@ int CCRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "UL X=" << tmp;
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      const std::string command = cmd.set + std::to_string(tmp);
+      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
           return error;
       }
    }
@@ -643,15 +639,14 @@ int CCRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    long tmp = 0;
+   const Command& cmd = commands_->gainMultiplier;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      command << addressChar_ << "LR T?";
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
           return error;
       }
       if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -664,8 +659,8 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "LR T=" << tmp;
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      const std::string command = cmd.set + std::to_string(tmp);
+      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
           return error;
       }
    }
@@ -674,15 +669,14 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CCRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    long tmp = 0;
+   const Command& cmd = commands_->numberAverages;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      command << addressChar_ << "RT F?";
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A F=")) {
+      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
           return error;
       }
       if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -695,8 +689,8 @@ int CCRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "RT F=" << tmp;
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      const std::string command = cmd.set + std::to_string(tmp);
+      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
           return error;
       }
    }
@@ -705,15 +699,14 @@ int CCRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CCRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    long tmp = 0;
+   const Command& cmd = commands_->numberSkips;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      command << addressChar_ << "UL Y?";
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A Y=")) {
+      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
           return error;
       }
       if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -726,8 +719,8 @@ int CCRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "UL Y=" << tmp;
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      const std::string command = cmd.set + std::to_string(tmp);
+      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
           return error;
       }
    }
@@ -737,15 +730,14 @@ int CCRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
 // The AL Z command uses millimeters, convert the value to microns for the Micro-Manager property.
 int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command;
    double tmp = 0.0;
+   const Command& cmd = commands_->inFocusRangeUm;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_ && !refreshOverride_) {
           return DEVICE_OK;
       }
-      command << addressChar_ << "AL Z?";
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A Z=")) {
+      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
           return error;
       }
       if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -758,8 +750,8 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(tmp);
-      command << addressChar_ << "AL Z=" << tmp / 1000.0;
-      if (const int error = hub_->QueryCommandVerify(command.str(), ":A")) {
+      const std::string command = cmd.set + std::to_string(tmp / 1000.0);
+      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
           return error;
       }
    }
@@ -809,14 +801,13 @@ void CCRISP::CreateFocusStateProperty() {
 
 // Always read
 void CCRISP::CreateStateProperty() {
-    const std::string command = addressChar_ + "LK X?";
-
     CreateStringProperty(
         Props::StateChar, "", true,
-        new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 char tmp = '\0';
-                if (const int error = hub_->QueryCommandVerify(command, ":A")) {
+                const Command& cmd = commands_->stateChar;
+                if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
                     return error;
                 }
                 if (const int error = hub_->GetAnswerCharAtPosition3(tmp)) {
@@ -836,20 +827,13 @@ void CCRISP::CreateStateProperty() {
 
 // Always read
 void CCRISP::CreateSNRProperty() {
-    // check firmware version for both comm card and stage card
-    std::string command = addressChar_;
-    if (hub_ && hub_->FirmwareVersionAtLeast(3.53) && FirmwareVersionAtLeast(3.53)) {
-        command += "EX Y?";
-    } else {
-        command += "EXTRA Y?";
-    }
-
     CreateFloatProperty(
         Props::SignalNoiseRatio, 0.0, true,
-        new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 double tmp = 0.0;
-                if (const int error = hub_->QueryCommand(command)) {
+                const Command& cmd = commands_->signalNoiseRatio;
+                if (const int error = hub_->QueryCommand(cmd.get)) {
                     return error;
                 }
                 if (const int error = hub_->ParseAnswerAfterPosition(0, tmp)) {
@@ -875,7 +859,7 @@ void CCRISP::CreateLockOffsetProperty() {
                 if (!refreshProps_ && initialized_ && !refreshOverride_) {
                     return DEVICE_OK;
                 }
-                double tmp = 0.0; // NOTE: autofocus API requires double
+                double tmp = 0.0; // Note: autofocus API requires double
                 if (const int error = GetOffset(tmp)) {
                     return error;
                 }
@@ -897,14 +881,13 @@ void CCRISP::CreateSumProperty() {
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
         // The command responds with => ":A 0 \r\n"
-        const std::string command = addressChar_ + "LK T?";
-
         CreateIntegerProperty(
             Props::Sum, 0, true,
-            new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
-                    if (const int error = hub_->QueryCommandVerify(command, ":A")) {
+                    const Command& cmd = commands_->sum;
+                    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
                         return error;
                     }
                     if (const int error = hub_->ParseAnswerAfterPosition3(tmp)) {
@@ -922,20 +905,19 @@ void CCRISP::CreateSumProperty() {
 
         // The old version uses the EXTRA command and requires parsing
         // The command responds with => "I    0    0 \r\n"
-        const std::string command = addressChar_ + "EXTRA X?";
-
         CreateIntegerProperty(
             Props::Sum, 0, true,
-            new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
-                    if (const int error = hub_->QueryCommand(command)) {
+                    const Command& cmd = commands_->sum;
+                    if (const int error = hub_->QueryCommand(cmd.get)) {
                         return error;
                     }
-                    const std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
-                    if (vReply.size() <= 2) {
+                    const std::vector<std::string> reply = hub_->SplitAnswerOnSpace();
+                    if (reply.size() <= 2) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
                     }
-                    if (!pProp->Set(vReply[1].c_str())) {
+                    if (!pProp->Set(reply[1].c_str())) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
                     }
                 }
@@ -953,14 +935,13 @@ void CCRISP::CreateDitherErrorProperty() {
     if (FirmwareVersionAtLeast(3.40)) {
         // The LOCK command can query the value directly
         // The command responds with => ":A 0 \r\n"
-        const std::string command = addressChar_ + "LK Y?";
-
         CreateIntegerProperty(
             Props::DitherError, 0, true,
-            new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
-                    if (const int error = hub_->QueryCommandVerify(command, ":A")) {
+                    const Command& cmd = commands_->ditherError;
+                    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
                         return error;
                     }
                     if (const int error = hub_->ParseAnswerAfterPosition3(tmp)) {
@@ -978,20 +959,19 @@ void CCRISP::CreateDitherErrorProperty() {
 
         // The old version uses the EXTRA command and requires parsing
         // The command responds with => "I    0    0 \r\n"
-        const std::string command = addressChar_ + "EXTRA X?";
-
         CreateIntegerProperty(
             Props::DitherError, 0, true,
-            new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
-                    if (const int error = hub_->QueryCommand(command)) {
+                    const Command& cmd = commands_->ditherError;
+                    if (const int error = hub_->QueryCommand(cmd.get)) {
                         return error;
                     }
-                    const std::vector<std::string> vReply = hub_->SplitAnswerOnSpace();
-                    if (vReply.size() <= 2) {
+                    const std::vector<std::string> reply = hub_->SplitAnswerOnSpace();
+                    if (reply.size() <= 2) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
                     }
-                    if (!pProp->Set(vReply[2].c_str())) {
+                    if (!pProp->Set(reply[2].c_str())) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
                     }
                 }
@@ -1005,14 +985,13 @@ void CCRISP::CreateDitherErrorProperty() {
 
 // Always read
 void CCRISP::CreateLogAmpAGCProperty() {
-    const std::string command = addressChar_ + "AL X?";
-
     CreateIntegerProperty(
         Props::LogAmpAGC, 0, true,
-        new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
-                double tmp = 0.0; // NOTE: response is ":A X=1.000000", parse as double
-                if (const int error = hub_->QueryCommandVerify(command, ":A X=")) {
+                double tmp = 0.0; // Note: response is ":A X=1.000000", parse as double
+                const Command& cmd = commands_->logAmpAGC;
+                if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
                     return error;
                 }
                 if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
@@ -1044,7 +1023,7 @@ void CCRISP::CreateSetLogAmpAGCProperty() {
                 if (logAmpAGC != 0) {
                     const Command& cmd = commands_->setLogAmpAGC;
                     const std::string command = cmd.set + std::to_string(logAmpAGC);
-                    if (const int error = hub_->QueryCommandVerify(command, cmd.reply)) {
+                    if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
                         return error;
                     }
                 }
@@ -1068,7 +1047,7 @@ void CCRISP::CreateSetLockOffsetProperty() {
                 if (offset != 0) {
                     const Command& cmd = commands_->setLockOffset;
                     const std::string command = cmd.set + std::to_string(offset);
-                    if (const int error = hub_->QueryCommandVerify(command, cmd.reply)) {
+                    if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
                         return error;
                     }
                     refreshOverride_ = true;
