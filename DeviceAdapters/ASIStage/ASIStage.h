@@ -62,7 +62,6 @@ const char* const g_Open = "Open";
 const char* const g_Closed = "Closed";
 
 // CRISP states
-const char* const g_CRISPState = "CRISP State";
 const char* const g_CRISP_I = "Idle";
 const char* const g_CRISP_R = "Ready";
 const char* const g_CRISP_D = "Dim";
@@ -79,9 +78,6 @@ const char* const g_CRISP_B = "Balance";
 const char* const g_CRISP_RFO = "Reset Focus Offset";
 const char* const g_CRISP_SSZ = "Save to Controller";
 const char* const g_CRISP_Unknown = "Unknown";
-
-const char* const g_CRISPOffsetPropertyName = "Lock Offset";
-const char* const g_CRISPStatePropertyName = "CRISP State Character";
 
 MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, const std::string& port, double answerTimeoutMs);
 void LogDeviceError(MM::Device& device, MM::Core& core, int errorCode);
