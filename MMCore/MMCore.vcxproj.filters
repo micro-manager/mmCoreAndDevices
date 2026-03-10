@@ -63,9 +63,6 @@
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
-    <ClCompile Include="LoadableModules\LoadedModuleImplWindows.cpp">
-      <Filter>Source Files\LoadableModules</Filter>
-    </ClCompile>
     <ClCompile Include="LoadableModules\LoadedModule.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
@@ -114,7 +111,7 @@
     <ClCompile Include="Devices\XYStageInstance.cpp">
       <Filter>Source Files\Devices</Filter>
     </ClCompile>
-    <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp">
+    <ClCompile Include="LibraryInfo\LibraryPaths.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LogManager.cpp">
@@ -243,9 +240,6 @@
       <Filter>Header Files\Devices</Filter>
     </ClInclude>
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h">
-      <Filter>Header Files\LoadableModules</Filter>
-    </ClInclude>
-    <ClInclude Include="LoadableModules\LoadedModuleImplWindows.h">
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
     <ClInclude Include="LoadableModules\LoadedModule.h">
