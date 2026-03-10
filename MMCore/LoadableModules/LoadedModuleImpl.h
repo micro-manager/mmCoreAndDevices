@@ -46,3 +46,50 @@ protected:
 
 } // namespace internal
 } // namespace mmcore
+
+#ifndef _WIN32
+
+namespace mmcore {
+namespace internal {
+
+class LoadedModuleImplUnix : public LoadedModuleImpl
+{
+public:
+   explicit LoadedModuleImplUnix(const std::string& filename);
+   virtual void Unload();
+
+   virtual void* GetFunction(const char* funcName);
+
+private:
+   void* handle_;
+};
+
+} // namespace internal
+} // namespace mmcore
+
+#endif // !defined(_WIN32)
+
+#ifdef _WIN32
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+namespace mmcore {
+namespace internal {
+
+class LoadedModuleImplWindows: public LoadedModuleImpl
+{
+public:
+   explicit LoadedModuleImplWindows(const std::string& filename);
+   virtual void Unload();
+
+   virtual void* GetFunction(const char* funcName);
+
+private:
+   HMODULE handle_;
+};
+
+} // namespace internal
+} // namespace mmcore
+
+#endif // _WIN32

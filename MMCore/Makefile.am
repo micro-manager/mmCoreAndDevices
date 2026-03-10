@@ -31,7 +31,7 @@ libMMCore_la_SOURCES = \
 	Devices/CameraInstance.h \
 	Devices/DeviceInstance.cpp \
 	Devices/DeviceInstance.h \
-	Devices/GenericDeviceInstance.h \
+	Devices/DeviceInstanceBase.h \
 	Devices/DeviceInstances.h \
 	Devices/GalvoInstance.cpp \
 	Devices/GalvoInstance.h \
@@ -66,8 +66,8 @@ libMMCore_la_SOURCES = \
 	FrameBuffer.cpp \
 	FrameBuffer.h \
 	ImageMetadata.h \
+	LibraryInfo/LibraryPaths.cpp \
 	LibraryInfo/LibraryPaths.h \
-	LibraryInfo/LibraryPathsUnix.cpp \
 	LoadableModules/LoadedDeviceAdapter.cpp \
 	LoadableModules/LoadedDeviceAdapter.h \
 	LoadableModules/LoadedDeviceAdapterImpl.h \
@@ -79,8 +79,6 @@ libMMCore_la_SOURCES = \
 	LoadableModules/LoadedModule.h \
 	LoadableModules/LoadedModuleImpl.cpp \
 	LoadableModules/LoadedModuleImpl.h \
-	LoadableModules/LoadedModuleImplUnix.cpp \
-	LoadableModules/LoadedModuleImplUnix.h \
 	LogManager.cpp \
 	LogManager.h \
 	Logging/GenericStreamSink.h \
