@@ -31,7 +31,7 @@ libMMCore_la_SOURCES = \
 	Devices/CameraInstance.h \
 	Devices/DeviceInstance.cpp \
 	Devices/DeviceInstance.h \
-	Devices/GenericDeviceInstance.h \
+	Devices/DeviceInstanceBase.h \
 	Devices/DeviceInstances.h \
 	Devices/GalvoInstance.cpp \
 	Devices/GalvoInstance.h \

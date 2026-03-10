@@ -147,6 +147,7 @@
     <ClInclude Include="Devices\VolumetricPumpInstance.h" />
     <ClInclude Include="Devices\XYStageInstance.h" />
     <ClInclude Include="Error.h" />
+    <ClInclude Include="ErrorCodes.h" />
     <ClInclude Include="FrameBuffer.h" />
     <ClInclude Include="ImageMetadata.h" />
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
@@ -173,6 +174,8 @@
     <ClInclude Include="MMCore.h" />
     <ClInclude Include="MMEventCallback.h" />
     <ClInclude Include="MockDeviceAdapter.h" />
+    <ClInclude Include="Notification.h" />
+    <ClInclude Include="NotificationQueue.h" />
     <ClInclude Include="PluginManager.h" />
     <ClInclude Include="Semaphore.h" />
     <ClInclude Include="Task.h" />
