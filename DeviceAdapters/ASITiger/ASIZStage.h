@@ -29,9 +29,9 @@
 
 class CZStage : public ASIPeripheralBase<CStageBase, CZStage> {
 public:
-   CZStage(const char* name);
-   ~CZStage() { }
-  
+    explicit CZStage(const char* name);
+    ~CZStage() = default;
+
    // Device API
    int Initialize();
    bool Busy();

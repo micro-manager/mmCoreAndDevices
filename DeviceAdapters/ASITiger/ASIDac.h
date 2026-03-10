@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 08/2019
 //
-// BASED ON:      ASIStage.h and others
-//
 
 #ifndef ASIDAC_H
 #define ASIDAC_H
@@ -32,8 +30,8 @@
 class CDAC : public ASIPeripheralBase<CSignalIOBase, CDAC>
 {
 public:
-	CDAC(const char* name);
-	~CDAC() { }
+    explicit CDAC(const char* name);
+    ~CDAC() = default;
 
 	// Device API
 	int Initialize();

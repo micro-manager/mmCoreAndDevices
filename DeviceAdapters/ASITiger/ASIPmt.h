@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 04/2016
 //
-// BASED ON:      ASIStage.h and others
-//
 
 #ifndef ASIPMT_H
 #define ASIPMT_H
@@ -32,8 +30,8 @@
 class CPMT : public ASIPeripheralBase<CSignalIOBase, CPMT>
 {
 public:
-   CPMT(const char* name);
-   ~CPMT() { }
+    explicit CPMT(const char* name);
+    ~CPMT() = default;
 
    // Device API
    int Initialize();

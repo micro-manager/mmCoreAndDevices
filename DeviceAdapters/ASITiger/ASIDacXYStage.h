@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Brandon Simpson (brandon@asiimaging.com) 2/2022
 //
-// BASED ON:      ASIStage.cpp and others
-//
 
 #ifndef ASIDACXYSTAGE_H
 #define ASIDACXYSTAGE_H
@@ -32,8 +30,8 @@
 class CDACXYStage : public ASIPeripheralBase<CXYStageBase, CDACXYStage>
 {
 public:
-	CDACXYStage(const char* name);
-	~CDACXYStage() { }
+    explicit CDACXYStage(const char* name);
+    ~CDACXYStage() = default;
 
 	// Device API
 	int Initialize();

@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      MicroPoint.h and others
-//
 
 #ifndef ASISCANNER_H
 #define ASISCANNER_H
@@ -32,8 +30,8 @@
 class CScanner : public ASIPeripheralBase<CGalvoBase, CScanner>
 {
 public:
-   CScanner(const char* name);
-   ~CScanner() { }
+    explicit CScanner(const char* name);
+    ~CScanner() = default;
 
    // Device API
    int Initialize();

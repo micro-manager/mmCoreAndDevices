@@ -18,10 +18,7 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
-//				  Modified for Tunable lens by Vik (vik@asiimaging.com)	05/2017
-//					
-//
-// BASED ON:      ASIStage.h and others
+//                Modified for Tunable lens by Vik (vik@asiimaging.com)	05/2017
 //
 
 #ifndef ASILENS_H
@@ -34,9 +31,9 @@
 class CLens : public ASIPeripheralBase<CStageBase, CLens>
 {
 public:
-   CLens(const char* name);
-   ~CLens() { }
-  
+    explicit CLens(const char* name);
+    ~CLens() = default;
+
    // Device API
    int Initialize();
    bool Busy();

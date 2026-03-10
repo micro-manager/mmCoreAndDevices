@@ -42,8 +42,8 @@
 class ASIHub : public ASIBase<HubBase, ASIHub>
 {
 public:
-	ASIHub();
-	~ASIHub() { }
+    explicit ASIHub();
+    ~ASIHub() = default;
 
    // Clear the serial buffers.
    int ClearComPort();

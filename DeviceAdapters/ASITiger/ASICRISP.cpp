@@ -115,7 +115,7 @@ CommandTable CCRISP::BuildCommandTable(std::string_view cardAddress) const {
         /* .setLogAmpAGC =       */ { "-",          "-",      a + "LK M=",  ":A" }, // Advanced
         /* .setLockOffset =      */ { "-",          "-",      a + "LK Z=",  ":A" },
         /* .focusScore =         */ { a + "LK Y?",  ":A",     "-",          "-"  }, // MM Autofocus API
-        /* .unlock =             */ { "",           "-",      a + "UL",     ":A" },
+        /* .unlock =             */ { "-",          "-",      a + "UL",     ":A" },
     };
 }
 

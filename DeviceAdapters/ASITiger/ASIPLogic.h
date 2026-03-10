@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 05/2014
 //
-// BASED ON:      ASIStage.h and others
-//
 
 #ifndef ASIPLOGIC_H
 #define ASIPLOGIC_H
@@ -32,9 +30,9 @@
 class CPLogic : public ASIPeripheralBase<CShutterBase, CPLogic>
 {
 public:
-   CPLogic(const char* name);
-   ~CPLogic() { }
-  
+    explicit CPLogic(const char* name);
+    ~CPLogic() = default;
+
    // Device API
    int Initialize();
    bool Busy() { return false; }

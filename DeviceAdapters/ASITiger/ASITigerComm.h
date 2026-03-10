@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h, ASIFW1000.h, Arduino.h, and DemoCamera.h
-//
 
 #ifndef ASITIGERCOMM_H
 #define ASITIGERCOMM_H
@@ -47,8 +45,8 @@
 class CTigerCommHub : public ASIHub
 {
 public:
-   CTigerCommHub();
-   ~CTigerCommHub() { }
+    explicit CTigerCommHub();
+    ~CTigerCommHub() = default;
 
    // Device API
    int Initialize();
