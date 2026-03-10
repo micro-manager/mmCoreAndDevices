@@ -383,7 +383,7 @@ int CoreCallback::OnPropertiesChanged(const MM::Device* /* caller */)
  */
 int CoreCallback::OnPropertyChanged(const MM::Device* device, const char* propName, const char* value)
 {
-   std::lock_guard<std::mutex> g(valueChangeLock_);
+   std::lock_guard<std::mutex> g(onPropertyChangedLock_);
    char label[MM::MaxStrLength];
    device->GetLabel(label);
    bool readOnly;

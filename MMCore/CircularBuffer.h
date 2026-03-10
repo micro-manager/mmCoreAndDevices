@@ -77,8 +77,12 @@ public:
 private:
    void ClearLocked();
 
-   mutable std::mutex bufferLock_;
+   // Serializes InsertImage calls so that the pixel copy can occur
+   // without holding bufferLock_.
    mutable std::mutex insertLock_;
+
+   // Guards all mutable state below except where noted.
+   mutable std::mutex bufferLock_;
 
    unsigned int width_;
    unsigned int height_;
@@ -93,11 +97,12 @@ private:
    long insertIndex_;
    long saveIndex_;
 
-   unsigned long memorySizeMB_;
    bool overflow_;
    bool overwriteData_;
    std::vector<FrameBuffer> frameArray_;
 
+   // Effectively const after construction.
+   unsigned long memorySizeMB_;
    std::shared_ptr<ThreadPool> threadPool_;
    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };

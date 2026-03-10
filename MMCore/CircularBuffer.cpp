@@ -55,9 +55,9 @@ CircularBuffer::CircularBuffer(unsigned int memorySizeMB) :
    imageCounter_(0), 
    insertIndex_(0), 
    saveIndex_(0), 
-   memorySizeMB_(memorySizeMB), 
    overflow_(false),
    overwriteData_(false),
+   memorySizeMB_(memorySizeMB),
    threadPool_(std::make_shared<ThreadPool>()),
    tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
