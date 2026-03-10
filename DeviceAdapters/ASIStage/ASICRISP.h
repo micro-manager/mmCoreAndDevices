@@ -16,7 +16,7 @@ public:
 	CRISP();
 	~CRISP();
 
-	// MMDevice API
+	// MM Device API
 	bool Busy();
 	void GetName(char* name) const;
 
@@ -26,7 +26,7 @@ public:
 	bool SupportsDeviceDetection();
 	MM::DeviceDetectionStatus DetectDevice();
 
-	// AutoFocus API
+	// MM AutoFocus API
 	int SetContinuousFocusing(bool state);
 	int GetContinuousFocusing(bool& state);
 	bool IsContinuousFocusLocked();
@@ -43,7 +43,6 @@ public:
 	int OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNA(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetObjectiveNA(double& objNA);
-	int OnWaitAfterLock(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetLockRange(double& lockRange);
 	int OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -57,25 +56,32 @@ public:
 	int GetGainMultiplier(long& gainMult);
 	int OnFocusCurve(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFocusCurveData(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-	int OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetNumSkips(long& updateRate);
 	int OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetInFocusRange(double& inFocusRange);
-	int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
 	int UpdateFocusState();
 	int SetFocusState(const std::string& focusState);
 	int ForceSetFocusState(const std::string& focusState);
+
+	// Serial Communication Helpers
 	int GetValue(const std::string& command, double& value);
 	int SetCommand(const std::string& command);
 
 	// Properties
+
+	// Software-only
+	void CreateWaitAfterLockProperty();
+	// Read-only
+	void CreateStateProperty();
 	void CreateSNRProperty();
+	void CreateLockOffsetProperty();
 	void CreateSumProperty();
 	void CreateDitherErrorProperty();
+	void CreateLogAmpAGCProperty();
+	// Advanced
 	void CreateSetLogAmpAGCProperty();
 	void CreateSetLockOffsetProperty();
 
