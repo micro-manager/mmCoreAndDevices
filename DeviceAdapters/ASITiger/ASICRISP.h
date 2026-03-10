@@ -65,6 +65,7 @@ struct CommandTable {
     const Command setLockOffset;
     // MM Autofocus API
     const Command focusScore;
+    const Command unlock;
 };
 
 // ASI CRISP Autofocus Device

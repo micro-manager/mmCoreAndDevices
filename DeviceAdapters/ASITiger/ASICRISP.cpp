@@ -115,6 +115,7 @@ CommandTable CCRISP::BuildCommandTable(std::string_view cardAddress) const {
         /* .setLogAmpAGC =       */ { "-",          "-",      a + "LK M=",  ":A" }, // Advanced
         /* .setLockOffset =      */ { "-",          "-",      a + "LK Z=",  ":A" },
         /* .focusScore =         */ { a + "LK Y?",  ":A",     "-",          "-"  }, // MM Autofocus API
+        /* .unlock =             */ { "",           "-",      a + "UL",     ":A" },
     };
 }
 
@@ -240,8 +241,8 @@ int CCRISP::SetContinuousFocusing(bool state) {
     }
     if (isFocusing && !state) {
         // was on, turn off
-        const std::string command = addressChar_ + "UL";
-        if (const int error = hub_->QueryCommandVerify(command, ":A")) {
+        const Command& cmd = commands_->unlock;
+        if (const int error = hub_->QueryCommandVerify(cmd.set, cmd.setReply)) {
             return error;
         }
     } else if (!isFocusing && state) {
