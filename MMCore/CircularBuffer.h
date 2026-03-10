@@ -28,11 +28,11 @@
 #include "ErrorCodes.h"
 #include "FrameBuffer.h"
 
-#include "DeviceThreads.h"
 #include "MMDevice.h"
 
 #include <chrono>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace mmcore {
@@ -57,9 +57,9 @@ public:
    unsigned long GetFreeSize() const;
    unsigned long GetRemainingImageCount() const;
 
-   unsigned int Width() const {MMThreadGuard guard(g_bufferLock); return width_;}
-   unsigned int Height() const {MMThreadGuard guard(g_bufferLock); return height_;}
-   unsigned int Depth() const {MMThreadGuard guard(g_bufferLock); return pixDepth_;}
+   unsigned int Width() const {std::lock_guard<std::mutex> guard(bufferLock_); return width_;}
+   unsigned int Height() const {std::lock_guard<std::mutex> guard(bufferLock_); return height_;}
+   unsigned int Depth() const {std::lock_guard<std::mutex> guard(bufferLock_); return pixDepth_;}
 
    bool InsertImage(const unsigned char* pixArray,
       unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
@@ -72,12 +72,18 @@ public:
    const ImgBuffer* GetNextImageBuffer(unsigned channel);
    void Clear(); 
 
-   bool Overflow() {MMThreadGuard guard(g_bufferLock); return overflow_;}
-
-   mutable MMThreadLock g_bufferLock;
-   mutable MMThreadLock g_insertLock;
+   bool Overflow() {std::lock_guard<std::mutex> guard(bufferLock_); return overflow_;}
 
 private:
+   void ClearLocked();
+
+   // Serializes InsertImage calls so that the pixel copy can occur
+   // without holding bufferLock_.
+   mutable std::mutex insertLock_;
+
+   // Guards all mutable state below except where noted.
+   mutable std::mutex bufferLock_;
+
    unsigned int width_;
    unsigned int height_;
    unsigned int pixDepth_;
@@ -91,11 +97,12 @@ private:
    long insertIndex_;
    long saveIndex_;
 
-   unsigned long memorySizeMB_;
    bool overflow_;
    bool overwriteData_;
    std::vector<FrameBuffer> frameArray_;
 
+   // Effectively const after construction.
+   unsigned long memorySizeMB_;
    std::shared_ptr<ThreadPool> threadPool_;
    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };

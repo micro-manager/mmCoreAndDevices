@@ -23,12 +23,12 @@
 #include "../Logging/Logger.h"
 #include "LoadedDeviceAdapterImpl.h"
 
-#include "DeviceThreads.h"
 #include "MMDevice.h"
 #include "ModuleInterface.h"
 
 #include <cstring>
 #include <memory>
+#include <mutex>
 
 class CMMCore;
 
@@ -56,7 +56,7 @@ public:
 
    // The "module lock", used to synchronize _most_ access to the device
    // adapter.
-   MMThreadLock* GetLock();
+   std::recursive_mutex& GetLock();
 
    std::vector<std::string> GetAvailableDeviceNames() const;
    std::string GetDeviceDescription(const std::string& deviceName) const;
@@ -100,7 +100,7 @@ private:
    void CheckInterfaceVersion() const;
 
    const std::string name_;
-   MMThreadLock lock_;
+   std::recursive_mutex lock_;
    std::unique_ptr<LoadedDeviceAdapterImpl> impl_;
 };
 

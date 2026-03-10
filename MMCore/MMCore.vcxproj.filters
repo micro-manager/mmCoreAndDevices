@@ -63,9 +63,6 @@
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
-    <ClCompile Include="LoadableModules\LoadedModuleImplWindows.cpp">
-      <Filter>Source Files\LoadableModules</Filter>
-    </ClCompile>
     <ClCompile Include="LoadableModules\LoadedModule.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
@@ -114,7 +111,7 @@
     <ClCompile Include="Devices\XYStageInstance.cpp">
       <Filter>Source Files\Devices</Filter>
     </ClCompile>
-    <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp">
+    <ClCompile Include="LibraryInfo\LibraryPaths.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LogManager.cpp">
@@ -245,9 +242,6 @@
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h">
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
-    <ClInclude Include="LoadableModules\LoadedModuleImplWindows.h">
-      <Filter>Header Files\LoadableModules</Filter>
-    </ClInclude>
     <ClInclude Include="LoadableModules\LoadedModule.h">
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
@@ -308,7 +302,19 @@
     <ClInclude Include="Logging\GenericPacketArray.h">
       <Filter>Header Files\Logging</Filter>
     </ClInclude>
+    <ClInclude Include="ErrorCodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Notification.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NotificationQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Semaphore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SynchronizedConfiguration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Task.h">

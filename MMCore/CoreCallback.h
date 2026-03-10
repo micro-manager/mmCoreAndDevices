@@ -117,7 +117,10 @@ public:
 
 private:
    CMMCore* core_;
-   MMThreadLock* pValueChangeLock_;
+   // Serializes OnPropertyChanged calls to reduce (but not eliminate)
+   // races between the state cache update and the subsequent config
+   // lookups used to determine which notifications to post.
+   std::mutex onPropertyChangedLock_;
 
    Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
    MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);

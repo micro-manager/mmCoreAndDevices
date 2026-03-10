@@ -53,7 +53,6 @@
 #include "MockDeviceAdapter.h"
 #include "Notification.h"
 
-#include "DeviceThreads.h"
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
 
@@ -61,6 +60,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -69,6 +69,7 @@
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
+class SynchronizedConfiguration;
 
 class CMMCore;
 
@@ -712,20 +713,18 @@ private:
    long timeoutMs_;
    bool autoShutter_;
    bool initialized_ = false;
-   std::vector<double> *nullAffine_;
-   MM::Core* callback_;                 // core services for devices
-   mmcore::internal::ConfigGroupCollection* configGroups_;
-   mmcore::internal::CorePropertyCollection* properties_;
-   PixelSizeConfigGroup* pixelSizeGroup_;
-   mmcore::internal::CircularBuffer* cbuf_;
+   std::vector<double> nullAffine_;
+   std::unique_ptr<mmcore::internal::ConfigGroupCollection> configGroups_;
+   std::unique_ptr<PixelSizeConfigGroup> pixelSizeGroup_;
+   std::unique_ptr<mmcore::internal::CorePropertyCollection> properties_;
+   std::unique_ptr<mmcore::internal::CircularBuffer> cbuf_;
+   std::unique_ptr<MM::Core> callback_;
 
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
 
-   // Must be unlocked when calling device methods or acquiring a module lock
-   mutable MMThreadLock stateCacheLock_;
-   mutable Configuration stateCache_; // Synchronized by stateCacheLock_
+   std::unique_ptr<SynchronizedConfiguration> stateCache_;
 
    // True while interpreting the config file (but not while rolling back on
    // failure):

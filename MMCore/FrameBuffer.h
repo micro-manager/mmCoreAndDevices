@@ -27,7 +27,7 @@ namespace internal {
 
 class ImgBuffer
 {
-   unsigned char* pixels_;
+   std::unique_ptr<unsigned char[]> pixels_;
    unsigned int width_;
    unsigned int height_;
    unsigned int pixDepth_;
