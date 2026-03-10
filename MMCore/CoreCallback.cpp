@@ -29,6 +29,7 @@
 #include "CoreCallback.h"
 #include "DeviceManager.h"
 #include "Notification.h"
+#include "SynchronizedConfiguration.h"
 
 #include "DeviceUtils.h"
 #include "ImgBuffer.h"
@@ -388,10 +389,7 @@ int CoreCallback::OnPropertyChanged(const MM::Device* device, const char* propNa
    bool readOnly;
    device->GetPropertyReadOnly(propName, readOnly);
    const PropertySetting ps(label, propName, value, readOnly);
-   {
-      std::lock_guard<std::mutex> scg(core_->stateCacheLock_);
-      core_->stateCache_.addSetting(ps);
-   }
+   core_->stateCache_->addSetting(ps);
    core_->postNotification(
       notif::PropertyChanged{label, propName, value});
 

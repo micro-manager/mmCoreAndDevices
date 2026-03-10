@@ -178,6 +178,7 @@
     <ClInclude Include="NotificationQueue.h" />
     <ClInclude Include="PluginManager.h" />
     <ClInclude Include="Semaphore.h" />
+    <ClInclude Include="SynchronizedConfiguration.h" />
     <ClInclude Include="Task.h" />
     <ClInclude Include="TaskSet.h" />
     <ClInclude Include="TaskSet_CopyMemory.h" />

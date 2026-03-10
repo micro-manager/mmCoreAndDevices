@@ -104,6 +104,7 @@ libMMCore_la_SOURCES = \
 	PluginManager.h \
 	Semaphore.cpp \
 	Semaphore.h \
+	SynchronizedConfiguration.h \
 	Task.cpp \
 	Task.h \
 	TaskSet.cpp \
