@@ -25,25 +25,21 @@ namespace mmcore {
 namespace internal {
 
 ImgBuffer::ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
-   pixels_(0), width_(xSize), height_(ySize), pixDepth_(pixDepth)
+   pixels_(new unsigned char[xSize * ySize * pixDepth]()),
+   width_(xSize), height_(ySize), pixDepth_(pixDepth)
 {
-   pixels_ = new unsigned char[xSize * ySize * pixDepth];
-   memset(pixels_, 0, xSize * ySize * pixDepth);
 }
 
-ImgBuffer::~ImgBuffer()
-{
-   delete[] pixels_;
-}
+ImgBuffer::~ImgBuffer() = default;
 
 const unsigned char* ImgBuffer::GetPixels() const
 {
-   return pixels_;
+   return pixels_.get();
 }
 
 void ImgBuffer::SetPixels(const void* pix)
 {
-   memcpy((void*)pixels_, pix, width_ * height_ * pixDepth_);
+   memcpy((void*)pixels_.get(), pix, width_ * height_ * pixDepth_);
 }
 
 void ImgBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
@@ -51,8 +47,7 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
    // re-allocate internal buffer if it is not big enough
    if (width_ * height_ * pixDepth_ < xSize * ySize * pixDepth)
    {
-      delete[] pixels_;
-      pixels_ = new unsigned char [xSize * ySize * pixDepth];
+      pixels_.reset(new unsigned char[xSize * ySize * pixDepth]);
    }
 
    width_ = xSize;
@@ -65,14 +60,13 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize)
    // re-allocate internal buffer if it is not big enough
    if (width_ * height_ < xSize * ySize)
    {
-      delete[] pixels_;
-      pixels_ = new unsigned char[xSize * ySize * pixDepth_];
+      pixels_.reset(new unsigned char[xSize * ySize * pixDepth_]);
    }
 
    width_ = xSize;
    height_ = ySize;
 
-   memset(pixels_, 0, width_ * height_ * pixDepth_);
+   memset(pixels_.get(), 0, width_ * height_ * pixDepth_);
 }
 
 void ImgBuffer::SetMetadata(const Metadata& md)

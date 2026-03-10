@@ -33,10 +33,10 @@ typedef LoadedModuleImplWindows PlatformLoadedModuleImpl;
 typedef LoadedModuleImplUnix PlatformLoadedModuleImpl;
 #endif
 
-LoadedModuleImpl*
+std::unique_ptr<LoadedModuleImpl>
 LoadedModuleImpl::NewPlatformImpl(const std::string& filename)
 {
-   return new PlatformLoadedModuleImpl(filename);
+   return std::make_unique<PlatformLoadedModuleImpl>(filename);
 }
 
 } // namespace internal

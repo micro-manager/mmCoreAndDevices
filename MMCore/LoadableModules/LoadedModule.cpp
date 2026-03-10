@@ -42,10 +42,7 @@ LoadedModule::LoadedModule(const std::string& filename) :
 }
 
 
-LoadedModule::~LoadedModule()
-{
-   delete pImpl_;
-}
+LoadedModule::~LoadedModule() = default;
 
 
 void

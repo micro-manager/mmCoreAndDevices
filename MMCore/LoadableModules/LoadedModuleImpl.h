@@ -24,6 +24,8 @@
 
 #include "LoadedModule.h"
 
+#include <memory>
+
 namespace mmcore {
 namespace internal {
 
@@ -33,7 +35,7 @@ public:
    LoadedModuleImpl(const LoadedModuleImpl&) = delete;
    LoadedModuleImpl& operator=(const LoadedModuleImpl&) = delete;
 
-   static LoadedModuleImpl* NewPlatformImpl(const std::string& filename);
+   static std::unique_ptr<LoadedModuleImpl> NewPlatformImpl(const std::string& filename);
 
    virtual ~LoadedModuleImpl() {}
 

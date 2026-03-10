@@ -713,12 +713,12 @@ private:
    long timeoutMs_;
    bool autoShutter_;
    bool initialized_ = false;
-   std::vector<double> *nullAffine_;
-   MM::Core* callback_;                 // core services for devices
-   mmcore::internal::ConfigGroupCollection* configGroups_;
-   mmcore::internal::CorePropertyCollection* properties_;
-   PixelSizeConfigGroup* pixelSizeGroup_;
-   mmcore::internal::CircularBuffer* cbuf_;
+   std::vector<double> nullAffine_;
+   std::unique_ptr<mmcore::internal::ConfigGroupCollection> configGroups_;
+   std::unique_ptr<PixelSizeConfigGroup> pixelSizeGroup_;
+   std::unique_ptr<mmcore::internal::CorePropertyCollection> properties_;
+   std::unique_ptr<mmcore::internal::CircularBuffer> cbuf_;
+   std::unique_ptr<MM::Core> callback_;
 
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;

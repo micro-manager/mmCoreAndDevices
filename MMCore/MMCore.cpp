@@ -121,37 +121,24 @@ const int MMCore_versionMajor = 12, MMCore_versionMinor = 2, MMCore_versionPatch
  * devices at this point.
  */
 CMMCore::CMMCore() :
-   logManager_(new mmi::LogManager()),
+   logManager_(std::make_shared<mmi::LogManager>()),
    appLogger_(logManager_->NewLogger("App")),
    coreLogger_(logManager_->NewLogger("Core")),
    everSnapped_(false),
    pollingIntervalMs_(10),
    timeoutMs_(5000),
    autoShutter_(true),
-   callback_(0),
-   configGroups_(0),
-   properties_(0),
-   pixelSizeGroup_(0),
-   cbuf_(0),
-   pluginManager_(new mmi::CPluginManager()),
-   deviceManager_(new mmi::DeviceManager()),
+   nullAffine_(6, 0.0),
+   configGroups_(std::make_unique<mmi::ConfigGroupCollection>()),
+   pixelSizeGroup_(std::make_unique<PixelSizeConfigGroup>()),
+   cbuf_(std::make_unique<mmi::CircularBuffer>(
+      (sizeof(void*) > 4) ? 250u : 25u)),
+   callback_(std::make_unique<mmi::CoreCallback>(this)),
+   pluginManager_(std::make_shared<mmi::CPluginManager>()),
+   deviceManager_(std::make_shared<mmi::DeviceManager>()),
    stateCache_(std::make_unique<SynchronizedConfiguration>())
 {
-   configGroups_ = new mmi::ConfigGroupCollection();
-   pixelSizeGroup_ = new PixelSizeConfigGroup();
-
    InitializeErrorMessages();
-
-   callback_ = new mmi::CoreCallback(this);
-
-   const unsigned seqBufMegabytes = (sizeof(void*) > 4) ? 250 : 25;
-   cbuf_ = new mmi::CircularBuffer(seqBufMegabytes);
-
-   nullAffine_ = new std::vector<double>(6);
-   for (int i = 0; i < 6; i++) {
-      nullAffine_->at(i) = 0.0;
-   }
-
    CreateCoreProperties();
 }
 
@@ -182,12 +169,6 @@ CMMCore::~CMMCore()
    {
       LOG_ERROR(coreLogger_) << "Exception caught in CMMCore destructor.";
    }
-
-   delete callback_;
-   delete configGroups_;
-   delete properties_;
-   delete cbuf_;
-   delete pixelSizeGroup_;
 
    LOG_INFO(coreLogger_) << "Core session ended";
 }
@@ -712,7 +693,7 @@ void CMMCore::loadDevice(const char* label, const char* moduleName, const char* 
    std::shared_ptr<mmi::DeviceInstance> pDevice =
       deviceManager_->LoadDevice(module, deviceName, label, this,
             deviceLogger, coreLogger);
-   pDevice->SetCallback(callback_);
+   pDevice->SetCallback(callback_.get());
 
    LOG_INFO(coreLogger_) << "Did load device " << deviceName <<
       " from " << moduleName << "; label = " << label;
@@ -3251,12 +3232,11 @@ void CMMCore::clearCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
 void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
                                                ) MMCORE_LEGACY_THROW(CMMError)
 {
-   delete cbuf_; // discard old buffer
    LOG_DEBUG(coreLogger_) << "Will set circular buffer size to " <<
       sizeMB << " MB";
 	try
 	{
-		cbuf_ = new mmi::CircularBuffer(sizeMB);
+		cbuf_ = std::make_unique<mmi::CircularBuffer>(sizeMB);
 	}
 	catch (std::bad_alloc& ex)
 	{
@@ -3265,7 +3245,6 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
 		messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
 		throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
 	}
-	if (NULL == cbuf_) throw CMMError(getCoreErrorText(MMERR_OutOfMemory).c_str(), MMERR_OutOfMemory);
 
 
 	try
@@ -5815,7 +5794,7 @@ std::vector<double> CMMCore::getPixelSizeAffine(bool cached) MMCORE_LEGACY_THROW
    else
    {
       // no config found, return a matrix with all 0.0s
-      return *nullAffine_;
+      return nullAffine_;
    }
 }
 
@@ -7612,13 +7591,12 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_TH
                //
                if (tokens.size() == 8)
                {
-                  std::vector<double> *affineT = new std::vector<double>(6);
+                  std::vector<double> affineT(6);
                   for (int i = 0; i < 6; i++)
                   {
-                     affineT->at(i) = atof(tokens[i + 2].c_str());
+                     affineT[i] = std::atof(tokens[i + 2].c_str());
                   }
-                  setPixelSizeAffine(tokens[1].c_str(), *affineT);
-                  delete affineT;
+                  setPixelSizeAffine(tokens[1].c_str(), affineT);
                }
                else
                   throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
@@ -8218,7 +8196,7 @@ void CMMCore::initializeInternal(bool init)
 
 void CMMCore::CreateCoreProperties()
 {
-   properties_ = new mmi::CorePropertyCollection(this);
+   properties_ = std::make_unique<mmi::CorePropertyCollection>(this);
 
    auto deviceRoleProp = [this](const char* keyword, MM::DeviceType devType,
          std::function<std::string()> getter,
