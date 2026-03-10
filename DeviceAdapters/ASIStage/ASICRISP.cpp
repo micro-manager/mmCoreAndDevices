@@ -974,7 +974,7 @@ int CRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 void CRISP::CreateWaitAfterLockProperty() {
 	CreateIntegerProperty(
-		Props::WaitMsAfterLock, 1000, true,
+		Props::WaitMsAfterLock, 1000, false,
 		new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 			if (eAct == MM::BeforeGet) {
 				pProp->Set(waitAfterLock_);
