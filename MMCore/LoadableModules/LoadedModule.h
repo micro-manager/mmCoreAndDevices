@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 
 namespace mmcore {
@@ -41,7 +42,7 @@ public:
    void* GetFunction(const char* funcName);
 
 private:
-   LoadedModuleImpl* pImpl_;
+   std::unique_ptr<LoadedModuleImpl> pImpl_;
    const std::string filename_;
 };
 
