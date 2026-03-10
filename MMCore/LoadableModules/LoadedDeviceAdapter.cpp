@@ -42,10 +42,10 @@ LoadedDeviceAdapter::LoadedDeviceAdapter(const std::string& name,
 }
 
 
-MMThreadLock*
+std::recursive_mutex&
 LoadedDeviceAdapter::GetLock()
 {
-   return &lock_;
+   return lock_;
 }
 
 

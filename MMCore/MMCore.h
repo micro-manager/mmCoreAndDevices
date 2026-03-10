@@ -53,7 +53,6 @@
 #include "MockDeviceAdapter.h"
 #include "Notification.h"
 
-#include "DeviceThreads.h"
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
 
@@ -61,6 +60,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -69,6 +69,7 @@
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
+class SynchronizedConfiguration;
 
 class CMMCore;
 
@@ -723,9 +724,7 @@ private:
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
 
-   // Must be unlocked when calling device methods or acquiring a module lock
-   mutable MMThreadLock stateCacheLock_;
-   mutable Configuration stateCache_; // Synchronized by stateCacheLock_
+   std::unique_ptr<SynchronizedConfiguration> stateCache_;
 
    // True while interpreting the config file (but not while rolling back on
    // failure):
