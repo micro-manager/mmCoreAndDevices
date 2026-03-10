@@ -117,7 +117,7 @@ public:
 
 private:
    CMMCore* core_;
-   MMThreadLock* pValueChangeLock_;
+   std::mutex valueChangeLock_;
 
    Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
    MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);

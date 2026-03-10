@@ -52,7 +52,6 @@
 #include "NotificationQueue.h"
 #include "PluginManager.h"
 
-#include "DeviceThreads.h"
 #include "DeviceUtils.h"
 #include "ImageMetadata.h"
 #include "ModuleInterface.h"
@@ -522,7 +521,7 @@ Configuration CMMCore::getSystemState()
  */
 Configuration CMMCore::getSystemStateCache() const
 {
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    return stateCache_;
 }
 
@@ -1125,7 +1124,7 @@ void CMMCore::updateSystemStateCache()
    LOG_DEBUG(coreLogger_) << "Will update system state cache";
    Configuration wk = getSystemState();
    {
-      MMThreadGuard scg(stateCacheLock_);
+      std::lock_guard<std::mutex> scg(stateCacheLock_);
       stateCache_ = wk;
    }
    LOG_INFO(coreLogger_) << "Did update system state cache";
@@ -1337,7 +1336,7 @@ void CMMCore::setTimeoutMs(long timeoutMs)
    if (timeoutMs <= 0)
       return;
    properties_->Set(MM::g_Keyword_CoreTimeoutMs, std::to_string(timeoutMs));
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreTimeoutMs, std::to_string(timeoutMs).c_str()));
 }
 
@@ -2646,7 +2645,7 @@ void CMMCore::setAutoShutter(bool state)
 {
    properties_->Set(MM::g_Keyword_CoreAutoShutter, state ? "1" : "0");
    std::string actual = autoShutter_ ? "1" : "0";
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoShutter, actual.c_str()));
 }
 
@@ -2682,7 +2681,7 @@ void CMMCore::setShutterOpen(const char* shutterLabel, bool state) MMCORE_LEGACY
       if (pShutter->HasProperty(MM::g_Keyword_State))
       {
          {
-            MMThreadGuard scg(stateCacheLock_);
+            std::lock_guard<std::mutex> scg(stateCacheLock_);
             stateCache_.addSetting(PropertySetting(shutterLabel, MM::g_Keyword_State, CDeviceUtils::ConvertToString(state)));
          }
       }
@@ -3435,7 +3434,7 @@ void CMMCore::setAutoFocusDevice(const char* autofocusLabel) MMCORE_LEGACY_THROW
 {
    properties_->Set(MM::g_Keyword_CoreAutoFocus, autofocusLabel ? autofocusLabel : "");
    std::string actual = getAutoFocusDevice();
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoFocus, actual.c_str()));
 }
 
@@ -3489,7 +3488,7 @@ void CMMCore::setImageProcessorDevice(const char* procLabel) MMCORE_LEGACY_THROW
 {
    properties_->Set(MM::g_Keyword_CoreImageProcessor, procLabel ? procLabel : "");
    std::string actual = getImageProcessorDevice();
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreImageProcessor, actual.c_str()));
 }
 
@@ -3500,7 +3499,7 @@ void CMMCore::setSLMDevice(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
 {
    properties_->Set(MM::g_Keyword_CoreSLM, slmLabel ? slmLabel : "");
    std::string actual = getSLMDevice();
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreSLM, actual.c_str()));
 }
 
@@ -3512,7 +3511,7 @@ void CMMCore::setGalvoDevice(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMErro
 {
    properties_->Set(MM::g_Keyword_CoreGalvo, galvoLabel ? galvoLabel : "");
    std::string actual = getGalvoDevice();
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreGalvo, actual.c_str()));
 }
 
@@ -3524,7 +3523,7 @@ void CMMCore::setChannelGroup(const char* chGroup) MMCORE_LEGACY_THROW(CMMError)
    std::string group = chGroup ? chGroup : "";
    properties_->Set(MM::g_Keyword_CoreChannelGroup, group);
    std::string actual = channelGroup_;
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreChannelGroup, actual.c_str()));
 }
 
@@ -3544,7 +3543,7 @@ void CMMCore::setShutterDevice(const char* shutterLabel) MMCORE_LEGACY_THROW(CMM
 {
    properties_->Set(MM::g_Keyword_CoreShutter, shutterLabel ? shutterLabel : "");
    std::string actual = getShutterDevice();
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreShutter, actual.c_str()));
 }
 
@@ -3556,7 +3555,7 @@ void CMMCore::setFocusDevice(const char* focusLabel) MMCORE_LEGACY_THROW(CMMErro
 {
    properties_->Set(MM::g_Keyword_CoreFocus, focusLabel ? focusLabel : "");
    std::string actual = getFocusDevice();
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreFocus, actual.c_str()));
 }
 
@@ -3567,7 +3566,7 @@ void CMMCore::setXYStageDevice(const char* xyDeviceLabel) MMCORE_LEGACY_THROW(CM
 {
    properties_->Set(MM::g_Keyword_CoreXYStage, xyDeviceLabel ? xyDeviceLabel : "");
    std::string actual = getXYStageDevice();
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreXYStage, actual.c_str()));
 }
 
@@ -3579,7 +3578,7 @@ void CMMCore::setCameraDevice(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMEr
 {
    properties_->Set(MM::g_Keyword_CoreCamera, cameraLabel ? cameraLabel : "");
    std::string actual = getCameraDevice();
-   MMThreadGuard scg(stateCacheLock_);
+   std::lock_guard<std::mutex> scg(stateCacheLock_);
    stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, actual.c_str()));
 }
 
@@ -3682,7 +3681,7 @@ std::string CMMCore::getProperty(const char* label, const char* propName) MMCORE
    // Note, stateCache is mutable so that we can update it from this const function
    PropertySetting s(label, propName, value.c_str());
    {
-      MMThreadGuard scg(stateCacheLock_);
+      std::lock_guard<std::mutex> scg(stateCacheLock_);
       stateCache_.addSetting(s);
    }
 
@@ -3704,7 +3703,7 @@ std::string CMMCore::getPropertyFromCache(const char* label, const char* propNam
    CheckPropertyName(propName);
 
    {
-      MMThreadGuard scg(stateCacheLock_);
+      std::lock_guard<std::mutex> scg(stateCacheLock_);
       if (!stateCache_.isPropertyIncluded(label, propName))
          throw CMMError("Property " + ToQuotedString(propName) + " of device " +
                ToQuotedString(label) + " not found in cache",
@@ -3736,7 +3735,7 @@ void CMMCore::setProperty(const char* label, const char* propName,
       properties_->Set(propName, propValue);
       {
          std::string actual = properties_->Get(propName);
-         MMThreadGuard scg(stateCacheLock_);
+         std::lock_guard<std::mutex> scg(stateCacheLock_);
          stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, propName, actual.c_str()));
       }
 
@@ -3752,7 +3751,7 @@ void CMMCore::setProperty(const char* label, const char* propName,
       pDevice->SetProperty(propName, propValue);
 
       {
-         MMThreadGuard scg(stateCacheLock_);
+         std::lock_guard<std::mutex> scg(stateCacheLock_);
          stateCache_.addSetting(PropertySetting(label, propName, propValue));
       }
    }
@@ -4220,7 +4219,7 @@ void CMMCore::setExposure(const char* label, double dExp) MMCORE_LEGACY_THROW(CM
       if (pCamera->HasProperty(MM::g_Keyword_Exposure))
       {
          {
-            MMThreadGuard scg(stateCacheLock_);
+            std::lock_guard<std::mutex> scg(stateCacheLock_);
             stateCache_.addSetting(PropertySetting(label, MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(dExp)));
          }
       }
@@ -4532,7 +4531,7 @@ void CMMCore::setBinning(const char* label, long binning) MMCORE_LEGACY_THROW(CM
       pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
 
       {
-         MMThreadGuard scg(stateCacheLock_);
+         std::lock_guard<std::mutex> scg(stateCacheLock_);
          stateCache_.addSetting(PropertySetting(label, MM::g_Keyword_Binning, binningValue.c_str()));
       }
    }
@@ -4852,7 +4851,7 @@ void CMMCore::setState(const char* deviceLabel, long state) MMCORE_LEGACY_THROW(
    if (pStateDev->HasProperty(MM::g_Keyword_State))
    {
       {
-         MMThreadGuard scg(stateCacheLock_);
+         std::lock_guard<std::mutex> scg(stateCacheLock_);
          stateCache_.addSetting(PropertySetting(deviceLabel, MM::g_Keyword_State, CDeviceUtils::ConvertToString(state)));
       }
    }
@@ -4861,7 +4860,7 @@ void CMMCore::setState(const char* deviceLabel, long state) MMCORE_LEGACY_THROW(
       std::string posLbl = pStateDev->GetPositionLabel(state);
 
       {
-         MMThreadGuard scg(stateCacheLock_);
+         std::lock_guard<std::mutex> scg(stateCacheLock_);
          stateCache_.addSetting(PropertySetting(deviceLabel, MM::g_Keyword_Label, posLbl.c_str()));
       }
    }
@@ -4933,7 +4932,7 @@ void CMMCore::setStateLabel(const char* deviceLabel, const char* stateLabel) MMC
    if (pStateDev->HasProperty(MM::g_Keyword_Label))
    {
       {
-         MMThreadGuard scg(stateCacheLock_);
+         std::lock_guard<std::mutex> scg(stateCacheLock_);
          stateCache_.addSetting(PropertySetting(deviceLabel, MM::g_Keyword_Label, stateLabel));
       }
    }
@@ -4941,7 +4940,7 @@ void CMMCore::setStateLabel(const char* deviceLabel, const char* stateLabel) MMC
    {
       long state = getStateFromLabel(deviceLabel, stateLabel);
       {
-         MMThreadGuard scg(stateCacheLock_);
+         std::lock_guard<std::mutex> scg(stateCacheLock_);
          stateCache_.addSetting(PropertySetting(deviceLabel, MM::g_Keyword_State,
                   CDeviceUtils::ConvertToString(state)));
       }
@@ -5717,7 +5716,7 @@ std::string CMMCore::getCurrentPixelSizeConfig(bool cached) MMCORE_LEGACY_THROW(
                }
                else
                {
-                  MMThreadGuard scg(stateCacheLock_);
+                  std::lock_guard<std::mutex> scg(stateCacheLock_);
                   value = stateCache_.getSetting(deviceLabel.c_str(), propName.c_str()).getPropertyValue();
                }
                PropertySetting ss(deviceLabel.c_str(), propName.c_str(), value.c_str()); // state setting
@@ -8457,7 +8456,7 @@ void CMMCore::applyConfiguration(const Configuration& config) MMCORE_LEGACY_THRO
          properties_->Set(setting.getPropertyName().c_str(), setting.getPropertyValue());
          {
             std::string actual = properties_->Get(setting.getPropertyName().c_str());
-            MMThreadGuard scg(stateCacheLock_);
+            std::lock_guard<std::mutex> scg(stateCacheLock_);
             stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, setting.getPropertyName().c_str(), actual.c_str()));
          }
       }
@@ -8473,7 +8472,7 @@ void CMMCore::applyConfiguration(const Configuration& config) MMCORE_LEGACY_THRO
                   setting.getPropertyValue());
 
             {
-               MMThreadGuard scg(stateCacheLock_);
+               std::lock_guard<std::mutex> scg(stateCacheLock_);
                stateCache_.addSetting(setting);
             }
          }
@@ -8520,7 +8519,7 @@ int CMMCore::applyProperties(std::vector<PropertySetting>& props, std::string& l
                props[i].getPropertyValue());
 
          {
-            MMThreadGuard scg(stateCacheLock_);
+            std::lock_guard<std::mutex> scg(stateCacheLock_);
             stateCache_.addSetting(props[i]);
          }
       }

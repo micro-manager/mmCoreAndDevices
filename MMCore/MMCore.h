@@ -53,7 +53,6 @@
 #include "MockDeviceAdapter.h"
 #include "Notification.h"
 
-#include "DeviceThreads.h"
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
 
@@ -61,6 +60,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -724,7 +724,7 @@ private:
    std::map<int, std::string> errorText_;
 
    // Must be unlocked when calling device methods or acquiring a module lock
-   mutable MMThreadLock stateCacheLock_;
+   mutable std::mutex stateCacheLock_;
    mutable Configuration stateCache_; // Synchronized by stateCacheLock_
 
    // True while interpreting the config file (but not while rolling back on

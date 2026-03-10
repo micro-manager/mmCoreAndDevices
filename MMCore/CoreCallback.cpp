@@ -30,7 +30,6 @@
 #include "DeviceManager.h"
 #include "Notification.h"
 
-#include "DeviceThreads.h"
 #include "DeviceUtils.h"
 #include "ImgBuffer.h"
 
@@ -47,18 +46,13 @@ namespace internal {
 
 
 CoreCallback::CoreCallback(CMMCore* c) :
-   core_(c),
-   pValueChangeLock_(NULL)
+   core_(c)
 {
    assert(core_);
-   pValueChangeLock_ = new MMThreadLock();
 }
 
 
-CoreCallback::~CoreCallback()
-{
-   delete pValueChangeLock_;
-}
+CoreCallback::~CoreCallback() = default;
 
 
 int
@@ -388,14 +382,14 @@ int CoreCallback::OnPropertiesChanged(const MM::Device* /* caller */)
  */
 int CoreCallback::OnPropertyChanged(const MM::Device* device, const char* propName, const char* value)
 {
-   MMThreadGuard g(*pValueChangeLock_);
+   std::lock_guard<std::mutex> g(valueChangeLock_);
    char label[MM::MaxStrLength];
    device->GetLabel(label);
    bool readOnly;
    device->GetPropertyReadOnly(propName, readOnly);
    const PropertySetting ps(label, propName, value, readOnly);
    {
-      MMThreadGuard scg(core_->stateCacheLock_);
+      std::lock_guard<std::mutex> scg(core_->stateCacheLock_);
       core_->stateCache_.addSetting(ps);
    }
    core_->postNotification(
