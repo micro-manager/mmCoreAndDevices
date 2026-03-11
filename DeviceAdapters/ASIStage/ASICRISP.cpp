@@ -108,17 +108,17 @@ MM::DeviceDetectionStatus CRISP::DetectDevice()
 void CRISP::LogFirmwareSupport(const bool hasLockQueries, const bool hasExShortcut) const {
 	// use LOCK command instead of EXTRA
 	LogMessage(hasLockQueries ?
-		"CRISP: firmware >= 9.2o; using 'LK T?' for Sum." :
-		"CRISP: firmware < 9.2o; using legacy 'EXTRA X?' for Sum.", false);
+		"Firmware >= 9.2o; using 'LK T?' for Sum." :
+		"Firmware < 9.2o; using legacy 'EXTRA X?' for Sum.", false);
 	LogMessage(hasLockQueries ?
-		"CRISP: firmware >= 9.2o; using 'LK Y?' for Dither Error." :
-		"CRISP: firmware < 9.2o; using legacy 'EXTRA X?' for Dither Error.", false);
+		"Firmware >= 9.2o; using 'LK Y?' for Dither Error." :
+		"Firmware < 9.2o; using legacy 'EXTRA X?' for Dither Error.", false);
 
 	// use the EX shortcut?
 	if (hasExShortcut) {
-		LogMessage("CRISP: firmware >= 9.53; using 'EX Y?' for SNR.", false);
+		LogMessage("Firmware >= 9.53; using 'EX Y?' for SNR.", false);
 	} else {
-		LogMessage("CRISP: firmware < 9.53; using legacy 'EXTRA Y?' for SNR.", false);
+		LogMessage("Firmware < 9.53; using legacy 'EXTRA Y?' for SNR.", false);
 	}
 }
 
