@@ -105,10 +105,26 @@ MM::DeviceDetectionStatus CRISP::DetectDevice()
 	return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
+void CRISP::LogFirmwareSupport(const bool hasLockQueries, const bool hasExShortcut) const {
+	// use LOCK command instead of EXTRA
+	LogMessage(hasLockQueries ?
+		"CRISP: firmware >= 9.2o; using 'LK T?' for Sum." :
+		"CRISP: firmware < 9.2o; using legacy 'EXTRA X?' for Sum.", false);
+	LogMessage(hasLockQueries ?
+		"CRISP: firmware >= 9.2o; using 'LK Y?' for Dither Error." :
+		"CRISP: firmware < 9.2o; using legacy 'EXTRA X?' for Dither Error.", false);
+
+	// use the EX shortcut?
+	if (hasExShortcut) {
+		LogMessage("CRISP: firmware >= 9.53; using 'EX Y?' for SNR.", false);
+	} else {
+		LogMessage("CRISP: firmware < 9.53; using legacy 'EXTRA Y?' for SNR.", false);
+	}
+}
+
 int CRISP::Initialize()
 {
 	core_ = GetCoreCallback();
-
 	if (initialized_)
 	{
 		return DEVICE_OK;
@@ -120,6 +136,11 @@ int CRISP::Initialize()
 	{
 		return ret;
 	}
+
+	// log serial command selection decisions
+	const bool hasLockQueries = (version_ >= Version(9, 2, 'o'));
+	const bool hasExShortcut = (version_ >= Version(9, 5, 3));
+	LogFirmwareSupport(hasLockQueries, hasExShortcut);
 
 	// Read-only "AxisLetter" property, axisLetter_ is set using a pre-init property named "Axis".
 	CreateProperty("AxisLetter", axisLetter_.c_str(), MM::String, true);
@@ -1013,12 +1034,6 @@ void CRISP::CreateSNRProperty() {
 	const bool isNewFirmware = (version_ >= Version(9, 5, 3));
 	const std::string command = isNewFirmware ? "EX Y?" : "EXTRA Y?";
 
-	if (isNewFirmware) {
-		LogMessage("CRISP: firmware >= 9.53; using shortcut 'EX Y?' for SNR.", true);
-	} else {
-		LogMessage("CRISP: firmware < 9.53; using full command 'EXTRA Y?' for SNR.", true);
-	}
-
 	CreateFloatProperty(
 		Props::SignalNoiseRatio, 0.0, true,
 		new MM::ActionLambda([this, command](MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -1059,8 +1074,6 @@ void CRISP::CreateSumProperty() {
 	if (version_ >= Version(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
-		LogMessage("CRISP: firmware >= 9.2o; using 'LK T?' for Sum.", true);
-
 		CreateIntegerProperty(
 			Props::Sum, 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -1080,8 +1093,6 @@ void CRISP::CreateSumProperty() {
 
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
-		LogMessage("CRISP: firmware < 9.2o; using 'EXTRA X?' for Sum", true);
-
 		CreateIntegerProperty(
 			Props::Sum, 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -1112,8 +1123,6 @@ void CRISP::CreateDitherErrorProperty() {
 	if (version_ >= Version(9, 2, 'o')) {
 		// The LOCK command can query the value directly
 		// The command responds with => ":A 0 \r\n"
-		LogMessage("CRISP: firmware >= 9.2o; using 'LK Y?' for Dither Error.", true);
-
 		CreateIntegerProperty(
 			Props::DitherError, 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
@@ -1133,8 +1142,6 @@ void CRISP::CreateDitherErrorProperty() {
 
 		// The old version uses the EXTRA command and requires extra parsing
 		// The command responds with => "I    0    0 \r\n"
-		LogMessage("CRISP: firmware < 9.2o; using 'EXTRA X?' for Dither Error.", true);
-
 		CreateIntegerProperty(
 			Props::DitherError, 0, true,
 			new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {

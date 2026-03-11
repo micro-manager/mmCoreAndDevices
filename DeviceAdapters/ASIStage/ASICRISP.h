@@ -66,6 +66,8 @@ private:
 	int SetFocusState(const std::string& focusState);
 	int ForceSetFocusState(const std::string& focusState);
 
+	void LogFirmwareSupport(const bool hasLockQueries, const bool hasExShortcut) const;
+
 	// Serial Communication Helpers
 	int GetValue(const std::string& command, double& value);
 	int SetCommand(const std::string& command);
