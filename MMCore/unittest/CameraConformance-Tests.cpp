@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 
 #include "DeviceBase.h"
+#include "DeviceConformance/ConformanceTestConfig.h"
 #include "MMCore.h"
 #include "MMDeviceConstants.h"
 #include "MockDeviceUtils.h"
@@ -23,6 +24,11 @@ bool TestPassed(const nlohmann::json& results, const std::string& testName) {
    }
    throw std::runtime_error("Test not found: " + testName);
 }
+
+const mmcore::internal::ConformanceTestConfig shortTimeoutConfig{
+   std::chrono::milliseconds(100),
+   std::chrono::milliseconds(50),
+};
 
 struct ConfigurableAsyncCamera : CCameraBase<ConfigurableAsyncCamera> {
    std::string name = "ConfigurableAsyncCamera";
@@ -172,6 +178,7 @@ TEST_CASE("Conformant camera passes all conformance tests",
    ConfigurableAsyncCamera cam;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
 
@@ -190,6 +197,7 @@ TEST_CASE("Missing PrepareForAcq is detected by conformance test",
    cam.callPrepareForAcq = false;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
 
@@ -204,6 +212,7 @@ TEST_CASE("Missing AcqFinished is detected by conformance test",
    cam.callAcqFinished = false;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
 
@@ -218,6 +227,7 @@ TEST_CASE("Ignoring InsertImage error return is detected by conformance test",
    cam.checkInsertImageReturn = false;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
 

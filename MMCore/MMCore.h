@@ -96,6 +96,7 @@ namespace internal {
    class DeviceManager;
    class LogManager;
    class NotificationQueue;
+   struct ConformanceTestConfig;
    class SeqAcqTestMonitor;
 } // namespace internal
 } // namespace mmcore
@@ -690,6 +691,8 @@ public:
    ///@{
    void loadMockDeviceAdapter(const char* name,
          MockDeviceAdapter* implementation) MMCORE_LEGACY_THROW(CMMError);
+   void setConformanceTestConfig(
+         const mmcore::internal::ConformanceTestConfig& config);
    ///@}
 #endif
 
@@ -729,6 +732,7 @@ private:
    std::unique_ptr<MM::Core> callback_;
 
    std::atomic<mmcore::internal::SeqAcqTestMonitor*> seqAcqTestMonitor_{nullptr};
+   std::unique_ptr<mmcore::internal::ConformanceTestConfig> conformanceTestConfig_;
 
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
