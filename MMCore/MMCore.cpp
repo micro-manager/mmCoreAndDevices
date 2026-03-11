@@ -135,6 +135,7 @@ CMMCore::CMMCore() :
    cbuf_(std::make_unique<mmi::CircularBuffer>(
       (sizeof(void*) > 4) ? 250u : 25u)),
    callback_(std::make_unique<mmi::CoreCallback>(this)),
+   conformanceTestConfig_(std::make_unique<mmi::ConformanceTestConfig>()),
    pluginManager_(std::make_shared<mmi::CPluginManager>()),
    deviceManager_(std::make_shared<mmi::DeviceManager>()),
    stateCache_(std::make_unique<SynchronizedConfiguration>())
@@ -3112,8 +3113,23 @@ std::string CMMCore::runCameraConformanceTests(const char* cameraLabel,
             MMERR_NotAllowedDuringSequenceAcquisition);
    }
 
-   return mmi::RunCameraConformanceTests(pCam, seqAcqTestMonitor_, testName,
+   return mmi::RunCameraConformanceTests(pCam, seqAcqTestMonitor_,
+      *conformanceTestConfig_, testName,
       cameraLabel, pCam->GetName(), pCam->GetAdapterModule()->GetName());
+}
+
+/**
+ * \brief Testing only: configure conformance tests
+ * 
+ * This function is designed for unit testing of MMCore itself, and its
+ * interface is subject to change. It is also not designed for language
+ * bindings (Java, Python) in mind (at least for now).
+ * 
+ * Do not use this in production code, for now.
+ */
+void CMMCore::setConformanceTestConfig(
+      const mmcore::internal::ConformanceTestConfig& config) {
+   *conformanceTestConfig_ = config;
 }
 
 /**

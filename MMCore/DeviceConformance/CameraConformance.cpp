@@ -71,6 +71,7 @@ nlohmann::json TestToJson(const TestResult& t) {
 std::string RunCameraConformanceTests(
       std::shared_ptr<CameraInstance> pCam,
       std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor,
+      const ConformanceTestConfig& config,
       const char* testName,
       const std::string& deviceLabel,
       const std::string& deviceName,
@@ -81,8 +82,8 @@ std::string RunCameraConformanceTests(
    const auto startSteady = steady_clock::now();
 
    const MM::Device* rawCam = pCam->GetRawPtr();
-   const auto testTimeout = seconds(10);
-   const auto postErrorDelay = seconds(2);
+   const auto testTimeout = config.positiveTimeout;
+   const auto postErrorDelay = config.negativeTimeout;
 
    // RAII guard: stop camera first (joining its thread), then clear atomic.
    struct MonitorGuard {
