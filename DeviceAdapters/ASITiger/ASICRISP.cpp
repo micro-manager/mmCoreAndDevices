@@ -122,21 +122,21 @@ CommandTable CCRISP::BuildCommandTable(std::string_view cardAddress) const {
 void CCRISP::LogFirmwareSupport(const bool hasLockQueries, const bool hasExShortcut) const {
     // use LOCK command instead of EXTRA
     LogMessage(hasLockQueries ?
-        "CRISP: firmware >= 3.40; using 'LK T?' for Sum." :
-        "CRISP: firmware < 3.40; using legacy 'EXTRA X?' for Sum.", false);
+        "Firmware >= 3.40; using 'LK T?' for Sum." :
+        "Firmware < 3.40; using legacy 'EXTRA X?' for Sum.", false);
     LogMessage(hasLockQueries ?
-        "CRISP: firmware >= 3.40; using 'LK Y?' for Dither Error." :
-        "CRISP: firmware < 3.40; using legacy 'EXTRA X?' for Dither Error.", false);
+        "Firmware >= 3.40; using 'LK Y?' for Dither Error." :
+        "Firmware < 3.40; using legacy 'EXTRA X?' for Dither Error.", false);
 
     // Tiger Comm and Stage Card firmware required for shortcut
     if (hasExShortcut) {
-        LogMessage("CRISP: firmware >= 3.53; using 'EX Y?' for SNR.", false);
+        LogMessage("Firmware >= 3.53; using 'EX Y?' for SNR.", false);
     } else {
         if (FirmwareVersionAtLeast(3.53)) { // Stage Card has "EX"
-            LogMessage("CRISP: Stage Card is >= 3.53 but Tiger Comm < 3.53; "
+            LogMessage("Stage Card is >= 3.53 but Tiger Comm < 3.53; "
                        "falling back to 'EXTRA Y?' for SNR.", false);
         } else {
-            LogMessage("CRISP: firmware < 3.53; using legacy 'EXTRA Y?' for SNR.", false);
+            LogMessage("Firmware < 3.53; using legacy 'EXTRA Y?' for SNR.", false);
         }
     }
 }
