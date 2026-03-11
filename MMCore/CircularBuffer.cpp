@@ -55,9 +55,9 @@ CircularBuffer::CircularBuffer(unsigned int memorySizeMB) :
    imageCounter_(0), 
    insertIndex_(0), 
    saveIndex_(0), 
-   memorySizeMB_(memorySizeMB), 
    overflow_(false),
    overwriteData_(false),
+   memorySizeMB_(memorySizeMB),
    threadPool_(std::make_shared<ThreadPool>()),
    tasksMemCopy_(std::make_shared<TaskSet_CopyMemory>(threadPool_))
 {
@@ -66,14 +66,14 @@ CircularBuffer::CircularBuffer(unsigned int memorySizeMB) :
 CircularBuffer::~CircularBuffer() {}
 
 int CircularBuffer::SetOverwriteData(bool overwrite) {
-   MMThreadGuard guard(g_bufferLock);
+   std::lock_guard<std::mutex> guard(bufferLock_);
    overwriteData_ = overwrite;
    return DEVICE_OK;
 }
 
 bool CircularBuffer::Initialize(unsigned int w, unsigned int h, unsigned int pixDepth)
 {
-   MMThreadGuard guard(g_bufferLock);
+   std::lock_guard<std::mutex> guard(bufferLock_);
    imageNumbers_.clear();
    startTime_ = std::chrono::steady_clock::now();
 
@@ -133,11 +133,16 @@ bool CircularBuffer::Initialize(unsigned int w, unsigned int h, unsigned int pix
    return ret;
 }
 
-void CircularBuffer::Clear() 
+void CircularBuffer::Clear()
 {
-   MMThreadGuard guard(g_bufferLock); 
-   insertIndex_=0; 
-   saveIndex_=0; 
+   std::lock_guard<std::mutex> guard(bufferLock_);
+   ClearLocked();
+}
+
+void CircularBuffer::ClearLocked()
+{
+   insertIndex_=0;
+   saveIndex_=0;
    overflow_ = false;
    startTime_ = std::chrono::steady_clock::now();
    imageNumbers_.clear();
@@ -145,13 +150,13 @@ void CircularBuffer::Clear()
 
 unsigned long CircularBuffer::GetSize() const
 {
-   MMThreadGuard guard(g_bufferLock);
+   std::lock_guard<std::mutex> guard(bufferLock_);
    return (unsigned long)frameArray_.size();
 }
 
 unsigned long CircularBuffer::GetFreeSize() const
 {
-   MMThreadGuard guard(g_bufferLock);
+   std::lock_guard<std::mutex> guard(bufferLock_);
    long freeSize = (long)frameArray_.size() - (insertIndex_ - saveIndex_);
    if (freeSize < 0)
       return 0;
@@ -161,7 +166,7 @@ unsigned long CircularBuffer::GetFreeSize() const
 
 unsigned long CircularBuffer::GetRemainingImageCount() const
 {
-   MMThreadGuard guard(g_bufferLock);
+   std::lock_guard<std::mutex> guard(bufferLock_);
    return (unsigned long)(insertIndex_ - saveIndex_);
 }
 
@@ -199,13 +204,13 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
    unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
    const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
-    MMThreadGuard insertGuard(g_insertLock);
+    std::lock_guard<std::mutex> insertGuard(insertLock_);
 
     ImgBuffer* pImg;
     unsigned long singleChannelSize = (unsigned long)width * height * byteDepth;
  
     {
-       MMThreadGuard guard(g_bufferLock);
+       std::lock_guard<std::mutex> guard(bufferLock_);
  
        // check image dimensions
        if (width != width_ || height != height_ || byteDepth != pixDepth_)
@@ -214,7 +219,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
        bool overflowed = (insertIndex_ - saveIndex_) >= static_cast<long>(frameArray_.size());
        if (overflowed) {
          if (overwriteData_) {
-            Clear();
+            ClearLocked();
          } else {
             overflow_ = true;
             return false;
@@ -224,7 +229,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
  
    Metadata md;
    {
-      MMThreadGuard guard(g_bufferLock);
+      std::lock_guard<std::mutex> guard(bufferLock_);
       // we assume that all buffers are pre-allocated
       pImg = frameArray_[insertIndex_ % frameArray_.size()].FindImage(0);
       if (!pImg)
@@ -288,7 +293,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
          pixArray, singleChannelSize);
 
    {
-      MMThreadGuard guard(g_bufferLock);
+      std::lock_guard<std::mutex> guard(bufferLock_);
 
       imageCounter_++;
       insertIndex_++;
@@ -325,7 +330,7 @@ const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
 const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
       unsigned channel) const
 {
-   MMThreadGuard guard(g_bufferLock);
+   std::lock_guard<std::mutex> guard(bufferLock_);
 
    long availableImages = insertIndex_ - saveIndex_;
    if (n + 1 > availableImages)
@@ -349,7 +354,7 @@ const unsigned char* CircularBuffer::GetNextImage()
 
 const ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
 {
-   MMThreadGuard guard(g_bufferLock);
+   std::lock_guard<std::mutex> guard(bufferLock_);
 
    long availableImages = insertIndex_ - saveIndex_;
    if (availableImages < 1)

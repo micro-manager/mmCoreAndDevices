@@ -51,8 +51,8 @@
 #include "MMEventCallback.h"
 #include "NotificationQueue.h"
 #include "PluginManager.h"
+#include "SynchronizedConfiguration.h"
 
-#include "DeviceThreads.h"
 #include "DeviceUtils.h"
 #include "ImageMetadata.h"
 #include "ModuleInterface.h"
@@ -108,7 +108,7 @@ namespace notif = mmcore::internal::notification;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 12, MMCore_versionMinor = 0, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 12, MMCore_versionMinor = 2, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -121,36 +121,24 @@ const int MMCore_versionMajor = 12, MMCore_versionMinor = 0, MMCore_versionPatch
  * devices at this point.
  */
 CMMCore::CMMCore() :
-   logManager_(new mmi::LogManager()),
+   logManager_(std::make_shared<mmi::LogManager>()),
    appLogger_(logManager_->NewLogger("App")),
    coreLogger_(logManager_->NewLogger("Core")),
    everSnapped_(false),
    pollingIntervalMs_(10),
    timeoutMs_(5000),
    autoShutter_(true),
-   callback_(0),
-   configGroups_(0),
-   properties_(0),
-   pixelSizeGroup_(0),
-   cbuf_(0),
-   pluginManager_(new mmi::CPluginManager()),
-   deviceManager_(new mmi::DeviceManager())
+   nullAffine_(6, 0.0),
+   configGroups_(std::make_unique<mmi::ConfigGroupCollection>()),
+   pixelSizeGroup_(std::make_unique<PixelSizeConfigGroup>()),
+   cbuf_(std::make_unique<mmi::CircularBuffer>(
+      (sizeof(void*) > 4) ? 250u : 25u)),
+   callback_(std::make_unique<mmi::CoreCallback>(this)),
+   pluginManager_(std::make_shared<mmi::CPluginManager>()),
+   deviceManager_(std::make_shared<mmi::DeviceManager>()),
+   stateCache_(std::make_unique<SynchronizedConfiguration>())
 {
-   configGroups_ = new mmi::ConfigGroupCollection();
-   pixelSizeGroup_ = new PixelSizeConfigGroup();
-
    InitializeErrorMessages();
-
-   callback_ = new mmi::CoreCallback(this);
-
-   const unsigned seqBufMegabytes = (sizeof(void*) > 4) ? 250 : 25;
-   cbuf_ = new mmi::CircularBuffer(seqBufMegabytes);
-
-   nullAffine_ = new std::vector<double>(6);
-   for (int i = 0; i < 6; i++) {
-      nullAffine_->at(i) = 0.0;
-   }
-
    CreateCoreProperties();
 }
 
@@ -181,12 +169,6 @@ CMMCore::~CMMCore()
    {
       LOG_ERROR(coreLogger_) << "Exception caught in CMMCore destructor.";
    }
-
-   delete callback_;
-   delete configGroups_;
-   delete properties_;
-   delete cbuf_;
-   delete pixelSizeGroup_;
 
    LOG_INFO(coreLogger_) << "Core session ended";
 }
@@ -522,8 +504,7 @@ Configuration CMMCore::getSystemState()
  */
 Configuration CMMCore::getSystemStateCache() const
 {
-   MMThreadGuard scg(stateCacheLock_);
-   return stateCache_;
+   return stateCache_->get();
 }
 
 /**
@@ -712,7 +693,7 @@ void CMMCore::loadDevice(const char* label, const char* moduleName, const char* 
    std::shared_ptr<mmi::DeviceInstance> pDevice =
       deviceManager_->LoadDevice(module, deviceName, label, this,
             deviceLogger, coreLogger);
-   pDevice->SetCallback(callback_);
+   pDevice->SetCallback(callback_.get());
 
    LOG_INFO(coreLogger_) << "Did load device " << deviceName <<
       " from " << moduleName << "; label = " << label;
@@ -822,8 +803,6 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
       LOG_DEBUG(coreLogger_) << "Will unload device " << label;
       deviceManager_->UnloadDevice(pDevice);
       LOG_DEBUG(coreLogger_) << "Did unload device " << label;
-      
-      updateCoreProperties();
    }
    catch (CMMError& err) {
       logError("MMCore::unloadDevice", err.getMsg().c_str());
@@ -843,7 +822,8 @@ void CMMCore::unloadAllDevices() MMCORE_LEGACY_THROW(CMMError)
       removeAllDeviceRoles();
 
       configGroups_->Clear();
-      updateAllowedChannelGroups();
+      if (!channelGroup_.empty())
+         setChannelGroup("");
 
       // clear pixel size configurations
       if (!pixelSizeGroup_->IsEmpty())
@@ -859,8 +839,6 @@ void CMMCore::unloadAllDevices() MMCORE_LEGACY_THROW(CMMError)
       LOG_DEBUG(coreLogger_) << "Will unload all devices";
       deviceManager_->UnloadAllDevices();
       LOG_INFO(coreLogger_) << "Did unload all devices";
-
-	   properties_->Refresh();
 
       // The system config has "changed" (to "(none)").
       // But don't notify if we will proceed to load a new config.
@@ -905,8 +883,6 @@ void CMMCore::reset() MMCORE_LEGACY_THROW(CMMError)
 
    // unload devices
    unloadAllDevices();
-
-   properties_->Refresh();
 
    LOG_INFO(coreLogger_) << "System reset";
 }
@@ -958,8 +934,6 @@ void CMMCore::initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError)
    }
 
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
-
-   updateCoreProperties();
 }
 
 
@@ -1052,7 +1026,6 @@ void CMMCore::initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError)
    }
    LOG_INFO(coreLogger_) << "Finished initializing " << devices.size() << " devices";
 
-   updateCoreProperties();
    // not sure if this cleanup is needed, but should not hurt:
    moduleMap.clear();
    ports.clear();
@@ -1074,35 +1047,13 @@ int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<mmi
 }
 
 /**
- * Updates CoreProperties (currently all Core properties are 
- * devices types) with the loaded hardware.
- * After this call, each of the Core-Device properties 
- * will be populated with the currently loaded devices 
- * of that type
+ * Update the allowed values for the Core device role properties.
+ * 
+ * @deprecated This is now a no-op (role property allowed values are always up
+ * to date)
  */
-void CMMCore::updateCoreProperties() MMCORE_LEGACY_THROW(CMMError)
+MMCORE_DEPRECATED void CMMCore::updateCoreProperties() MMCORE_LEGACY_THROW(CMMError)
 {
-   updateCoreProperty(MM::g_Keyword_CoreCamera, MM::CameraDevice);
-   updateCoreProperty(MM::g_Keyword_CoreShutter, MM::ShutterDevice);
-   updateCoreProperty(MM::g_Keyword_CoreFocus,MM::StageDevice);
-   updateCoreProperty(MM::g_Keyword_CoreXYStage,MM::XYStageDevice);
-   updateCoreProperty(MM::g_Keyword_CoreAutoFocus,MM::AutoFocusDevice);
-   updateCoreProperty(MM::g_Keyword_CoreImageProcessor,MM::ImageProcessorDevice);
-   updateCoreProperty(MM::g_Keyword_CoreSLM,MM::SLMDevice);
-   updateCoreProperty(MM::g_Keyword_CoreGalvo,MM::GalvoDevice);
-
-   properties_->Refresh();
-}
-
-void CMMCore::updateCoreProperty(const char* propName, MM::DeviceType devType) MMCORE_LEGACY_THROW(CMMError)
-{
-   CheckPropertyName(propName);
-
-   std::vector<std::string> devices = getLoadedDevicesOfType(devType);
-   devices.push_back(""); // add empty value
-   properties_->ClearAllowedValues(propName);
-   for (size_t i=0; i<devices.size(); i++)
-      properties_->AddAllowedValue(propName, devices[i].c_str());
 }
 
 /**
@@ -1120,8 +1071,6 @@ void CMMCore::initializeDevice(const char* label ///< the device to initialize
    LOG_INFO(coreLogger_) << "Will initialize device " << label;
    pDevice->Initialize();
    LOG_INFO(coreLogger_) << "Did initialize device " << label;
-
-   updateCoreProperties();
 }
 
 
@@ -1156,10 +1105,7 @@ void CMMCore::updateSystemStateCache()
 {
    LOG_DEBUG(coreLogger_) << "Will update system state cache";
    Configuration wk = getSystemState();
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_ = wk;
-   }
+   stateCache_->set(wk);
    LOG_INFO(coreLogger_) << "Did update system state cache";
 }
 
@@ -1358,6 +1304,27 @@ bool CMMCore::deviceBusy(const char* label) MMCORE_LEGACY_THROW(CMMError)
    return pDevice->Busy();
 }
 
+
+/**
+ * Sets the timeout for all wait commands.
+ *
+ * @param timeoutMs the timeout in milliseconds (must be positive)
+ */
+void CMMCore::setTimeoutMs(long timeoutMs)
+{
+   if (timeoutMs <= 0)
+      return;
+   properties_->Set(MM::g_Keyword_CoreTimeoutMs, std::to_string(timeoutMs));
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreTimeoutMs, std::to_string(timeoutMs).c_str()));
+}
+
+/**
+ * Returns the timeout for all wait commands in milliseconds.
+ */
+long CMMCore::getTimeoutMs()
+{
+   return timeoutMs_;
+}
 
 /**
  * Waits (blocks the calling thread) for specified time in milliseconds.
@@ -2595,6 +2562,8 @@ void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
                logError("CMMCore::snapImage", getDeviceErrorText(sret, shutter).c_str());
                throw CMMError(getDeviceErrorText(sret, shutter).c_str(), MMERR_DEVICE_GENERIC);
             }
+            postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), true});
             waitForDevice(shutter);
          }
 
@@ -2620,6 +2589,8 @@ void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
                logError("CMMCore::snapImage", getDeviceErrorText(sret, shutter).c_str());
                throw CMMError(getDeviceErrorText(sret, shutter).c_str(), MMERR_DEVICE_GENERIC);
             }
+            postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), false});
             waitForDevice(shutter);
          }
          postNotification(notif::ImageSnapped{camera->GetLabel()});
@@ -2651,12 +2622,8 @@ void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
 void CMMCore::setAutoShutter(bool state)
 {
    properties_->Set(MM::g_Keyword_CoreAutoShutter, state ? "1" : "0");
-   autoShutter_ = state;
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoShutter, state ? "1" : "0"));
-   }
-   LOG_DEBUG(coreLogger_) << "Autoshutter turned " << (state ? "on" : "off");
+   std::string actual = autoShutter_ ? "1" : "0";
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoShutter, actual.c_str()));
 }
 
 /**
@@ -2686,12 +2653,11 @@ void CMMCore::setShutterOpen(const char* shutterLabel, bool state) MMCORE_LEGACY
          throw CMMError(getDeviceErrorText(ret, pShutter).c_str(), MMERR_DEVICE_GENERIC);
       }
 
+      postNotification(notif::ShutterOpenChanged{shutterLabel, state});
+
       if (pShutter->HasProperty(MM::g_Keyword_State))
       {
-         {
-            MMThreadGuard scg(stateCacheLock_);
-            stateCache_.addSetting(PropertySetting(shutterLabel, MM::g_Keyword_State, CDeviceUtils::ConvertToString(state)));
-         }
+         stateCache_->addSetting(PropertySetting(shutterLabel, MM::g_Keyword_State, CDeviceUtils::ConvertToString(state)));
       }
    }
 }
@@ -3266,12 +3232,11 @@ void CMMCore::clearCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
 void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
                                                ) MMCORE_LEGACY_THROW(CMMError)
 {
-   delete cbuf_; // discard old buffer
    LOG_DEBUG(coreLogger_) << "Will set circular buffer size to " <<
       sizeMB << " MB";
 	try
 	{
-		cbuf_ = new mmi::CircularBuffer(sizeMB);
+		cbuf_ = std::make_unique<mmi::CircularBuffer>(sizeMB);
 	}
 	catch (std::bad_alloc& ex)
 	{
@@ -3280,7 +3245,6 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
 		messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
 		throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
 	}
-	if (NULL == cbuf_) throw CMMError(getCoreErrorText(MMERR_OutOfMemory).c_str(), MMERR_OutOfMemory);
 
 
 	try
@@ -3440,23 +3404,9 @@ std::string CMMCore::getAutoFocusDevice()
  */
 void CMMCore::setAutoFocusDevice(const char* autofocusLabel) MMCORE_LEGACY_THROW(CMMError)
 {
-   if (autofocusLabel && strlen(autofocusLabel)>0)
-   {
-      currentAutofocusDevice_ =
-         deviceManager_->GetDeviceOfType<mmi::AutoFocusInstance>(autofocusLabel);
-      LOG_INFO(coreLogger_) << "Default autofocus set to " << autofocusLabel;
-   }
-   else
-   {
-      currentAutofocusDevice_.reset();
-      LOG_INFO(coreLogger_) << "Default autofocus unset";
-   }
-   std::string newAutofocusLabel = getAutoFocusDevice();
-   properties_->Set(MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoFocus, newAutofocusLabel.c_str()));
-   }
+   properties_->Set(MM::g_Keyword_CoreAutoFocus, autofocusLabel ? autofocusLabel : "");
+   std::string actual = getAutoFocusDevice();
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreAutoFocus, actual.c_str()));
 }
 
 /**
@@ -3507,23 +3457,9 @@ std::string CMMCore::getGalvoDevice()
  */
 void CMMCore::setImageProcessorDevice(const char* procLabel) MMCORE_LEGACY_THROW(CMMError)
 {
-   if (procLabel && strlen(procLabel)>0)
-   {
-      currentImageProcessor_ =
-         deviceManager_->GetDeviceOfType<mmi::ImageProcessorInstance>(procLabel);
-      LOG_INFO(coreLogger_) << "Default image processor set to " << procLabel;
-   }
-   else
-   {
-      currentImageProcessor_.reset();
-      LOG_INFO(coreLogger_) << "Default image processor unset";
-   }
-   std::string newProcLabel = getImageProcessorDevice();
-   properties_->Set(MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreImageProcessor, newProcLabel.c_str()));
-   }
+   properties_->Set(MM::g_Keyword_CoreImageProcessor, procLabel ? procLabel : "");
+   std::string actual = getImageProcessorDevice();
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreImageProcessor, actual.c_str()));
 }
 
 /**
@@ -3531,23 +3467,9 @@ void CMMCore::setImageProcessorDevice(const char* procLabel) MMCORE_LEGACY_THROW
  */
 void CMMCore::setSLMDevice(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
 {
-   if (slmLabel && strlen(slmLabel)>0)
-   {
-      currentSLMDevice_ =
-         deviceManager_->GetDeviceOfType<mmi::SLMInstance>(slmLabel);
-      LOG_INFO(coreLogger_) << "Default SLM set to " << slmLabel;
-   }
-   else
-   {
-      currentSLMDevice_.reset();
-      LOG_INFO(coreLogger_) << "Default SLM unset";
-   }
-   std::string newSLMLabel = getSLMDevice();
-   properties_->Set(MM::g_Keyword_CoreSLM, newSLMLabel.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreSLM, newSLMLabel.c_str()));
-   }
+   properties_->Set(MM::g_Keyword_CoreSLM, slmLabel ? slmLabel : "");
+   std::string actual = getSLMDevice();
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreSLM, actual.c_str()));
 }
 
 
@@ -3556,23 +3478,9 @@ void CMMCore::setSLMDevice(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
  */
 void CMMCore::setGalvoDevice(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
-   if (galvoLabel && strlen(galvoLabel)>0)
-   {
-      currentGalvoDevice_ =
-         deviceManager_->GetDeviceOfType<mmi::GalvoInstance>(galvoLabel);
-      LOG_INFO(coreLogger_) << "Default galvo set to " << galvoLabel;
-   }
-   else
-   {
-      currentGalvoDevice_.reset();
-      LOG_INFO(coreLogger_) << "Default galvo unset";
-   }
-   std::string newGalvoLabel = getGalvoDevice();
-   properties_->Set(MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreGalvo, newGalvoLabel.c_str()));
-   }
+   properties_->Set(MM::g_Keyword_CoreGalvo, galvoLabel ? galvoLabel : "");
+   std::string actual = getGalvoDevice();
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreGalvo, actual.c_str()));
 }
 
 /**
@@ -3580,27 +3488,10 @@ void CMMCore::setGalvoDevice(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMErro
  */
 void CMMCore::setChannelGroup(const char* chGroup) MMCORE_LEGACY_THROW(CMMError)
 {
-   // Don't do anything if the new channelgroup is the same as the old one
-   if (channelGroup_.compare(chGroup) == 0)
-   {
-      return;
-   }
-
-   if (!chGroup)
-   {
-      chGroup = "";
-   }
-   
-   // CoreProperty checks if this is a valid group, throws CMMError otherwise
-   properties_->Set(MM::g_Keyword_CoreChannelGroup, chGroup);
-   channelGroup_ = chGroup;
-   LOG_INFO(coreLogger_) << "Channel group set to " << chGroup;
-
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreChannelGroup, channelGroup_.c_str()));
-   }
-   postNotification(notif::ChannelGroupChanged{channelGroup_});
+   std::string group = chGroup ? chGroup : "";
+   properties_->Set(MM::g_Keyword_CoreChannelGroup, group);
+   std::string actual = channelGroup_;
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreChannelGroup, actual.c_str()));
 }
 
 /**
@@ -3608,7 +3499,6 @@ void CMMCore::setChannelGroup(const char* chGroup) MMCORE_LEGACY_THROW(CMMError)
  */
 std::string CMMCore::getChannelGroup()
 {
-
    return channelGroup_;
 }
 
@@ -3618,47 +3508,9 @@ std::string CMMCore::getChannelGroup()
  */
 void CMMCore::setShutterDevice(const char* shutterLabel) MMCORE_LEGACY_THROW(CMMError)
 {
-   if (!shutterLabel || strlen(shutterLabel) > 0) // Allow empty label
-      CheckDeviceLabel(shutterLabel);
-
-   // Nothing to do if this is the current shutter device:
-   if (getShutterDevice().compare(shutterLabel) == 0)
-      return;
-
-   // To avoid confusion close the current shutter:
-   bool shutterWasOpen = false;
-   std::shared_ptr<mmi::ShutterInstance> oldShutter =
-      currentShutterDevice_.lock();
-   if (oldShutter)
-   {
-      shutterWasOpen = getShutterOpen(oldShutter->GetLabel().c_str());
-      if (shutterWasOpen)
-      {
-         setShutterOpen(oldShutter->GetLabel().c_str(), false);
-      }
-   }
-
-   if (strlen(shutterLabel) > 0)
-   {
-      currentShutterDevice_ =
-         deviceManager_->GetDeviceOfType<mmi::ShutterInstance>(shutterLabel);
-
-      if (shutterWasOpen)
-         setShutterOpen(true);
-
-      LOG_INFO(coreLogger_) << "Default shutter set to " << shutterLabel;
-   }
-   else
-   {
-      currentShutterDevice_.reset();
-      LOG_INFO(coreLogger_) << "Default shutter unset";
-   }
-   std::string newShutterLabel = getShutterDevice();
-   properties_->Set(MM::g_Keyword_CoreShutter, newShutterLabel.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreShutter, newShutterLabel.c_str()));
-   }
+   properties_->Set(MM::g_Keyword_CoreShutter, shutterLabel ? shutterLabel : "");
+   std::string actual = getShutterDevice();
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreShutter, actual.c_str()));
 }
 
 /**
@@ -3667,23 +3519,9 @@ void CMMCore::setShutterDevice(const char* shutterLabel) MMCORE_LEGACY_THROW(CMM
  */
 void CMMCore::setFocusDevice(const char* focusLabel) MMCORE_LEGACY_THROW(CMMError)
 {
-   if (focusLabel && strlen(focusLabel)>0)
-   {
-      currentFocusDevice_ =
-         deviceManager_->GetDeviceOfType<mmi::StageInstance>(focusLabel);
-      LOG_INFO(coreLogger_) << "Default stage set to " << focusLabel;
-   }
-   else
-   {
-      currentFocusDevice_.reset();
-      LOG_INFO(coreLogger_) << "Default stage unset";
-   }
-   std::string newFocusLabel = getFocusDevice();
-   properties_->Set(MM::g_Keyword_CoreFocus, newFocusLabel.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreFocus, newFocusLabel.c_str()));
-   }
+   properties_->Set(MM::g_Keyword_CoreFocus, focusLabel ? focusLabel : "");
+   std::string actual = getFocusDevice();
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreFocus, actual.c_str()));
 }
 
 /**
@@ -3691,23 +3529,9 @@ void CMMCore::setFocusDevice(const char* focusLabel) MMCORE_LEGACY_THROW(CMMErro
  */
 void CMMCore::setXYStageDevice(const char* xyDeviceLabel) MMCORE_LEGACY_THROW(CMMError)
 {
-   if (xyDeviceLabel && strlen(xyDeviceLabel)>0)
-   {
-      currentXYStageDevice_ =
-         deviceManager_->GetDeviceOfType<mmi::XYStageInstance>(xyDeviceLabel);
-      LOG_INFO(coreLogger_) << "Default xy stage set to " << xyDeviceLabel;
-   }
-   else
-   {
-      currentXYStageDevice_.reset();
-      LOG_INFO(coreLogger_) << "Default xy stage unset";
-   }
-   std::string newXYStageLabel = getXYStageDevice();
-   properties_->Set(MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreXYStage, newXYStageLabel.c_str()));
-   }
+   properties_->Set(MM::g_Keyword_CoreXYStage, xyDeviceLabel ? xyDeviceLabel : "");
+   std::string actual = getXYStageDevice();
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreXYStage, actual.c_str()));
 }
 
 /**
@@ -3716,37 +3540,9 @@ void CMMCore::setXYStageDevice(const char* xyDeviceLabel) MMCORE_LEGACY_THROW(CM
  */
 void CMMCore::setCameraDevice(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError)
 {
-   // If a sequence acquisition is running, the camera cannot be switched. (In
-   // order to start sequences for multiple cameras, one must instead use the
-   // version of startSequenceAcquisition() that takes the camera label.)
-
-   // Note: there is a blatant race condition between this and the
-   // starting/stopping of sequence acquisitions. This is hard to fix it at the
-   // moment, as we would need a way to safely lock two cameras at the same
-   // time.
-   if (isSequenceRunning())
-   {
-      throw CMMError("Cannot switch camera device while sequence acquisition "
-            "is running");
-   }
-
-   if (cameraLabel && strlen(cameraLabel) > 0)
-   {
-      currentCameraDevice_ =
-         deviceManager_->GetDeviceOfType<mmi::CameraInstance>(cameraLabel);
-      LOG_INFO(coreLogger_) << "Default camera set to " << cameraLabel;
-   }
-   else
-   {
-      currentCameraDevice_.reset();
-      LOG_INFO(coreLogger_) << "Default camera unset";
-   }
-   std::string newCameraLabel = getCameraDevice();
-   properties_->Set(MM::g_Keyword_CoreCamera, newCameraLabel.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, newCameraLabel.c_str()));
-   }
+   properties_->Set(MM::g_Keyword_CoreCamera, cameraLabel ? cameraLabel : "");
+   std::string actual = getCameraDevice();
+   stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CoreCamera, actual.c_str()));
 }
 
 /**
@@ -3846,11 +3642,7 @@ std::string CMMCore::getProperty(const char* label, const char* propName) MMCORE
 
    // use the opportunity to update the cache
    // Note, stateCache is mutable so that we can update it from this const function
-   PropertySetting s(label, propName, value.c_str());
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      stateCache_.addSetting(s);
-   }
+   stateCache_->addSetting(PropertySetting(label, propName, value.c_str()));
 
    return value;
 }
@@ -3869,15 +3661,12 @@ std::string CMMCore::getPropertyFromCache(const char* label, const char* propNam
    CheckDeviceLabel(label);
    CheckPropertyName(propName);
 
-   {
-      MMThreadGuard scg(stateCacheLock_);
-      if (!stateCache_.isPropertyIncluded(label, propName))
-         throw CMMError("Property " + ToQuotedString(propName) + " of device " +
-               ToQuotedString(label) + " not found in cache",
-               MMERR_PropertyNotInCache);
-      PropertySetting s = stateCache_.getSetting(label, propName);
-      return s.getPropertyValue();
-   }
+   auto s = stateCache_->getSetting(label, propName);
+   if (!s)
+      throw CMMError("Property " + ToQuotedString(propName) + " of device " +
+            ToQuotedString(label) + " not found in cache",
+            MMERR_PropertyNotInCache);
+   return s->getPropertyValue();
 }
 
 /**
@@ -3899,11 +3688,9 @@ void CMMCore::setProperty(const char* label, const char* propName,
       LOG_DEBUG(coreLogger_) << "Will set Core property: " <<
          propName << " = " << propValue;
 
-      properties_->Execute(propName, propValue);
-      {
-         MMThreadGuard scg(stateCacheLock_);
-         stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, propName, propValue));
-      }
+      properties_->Set(propName, propValue);
+      std::string actual = properties_->Get(propName);
+      stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, propName, actual.c_str()));
 
       LOG_DEBUG(coreLogger_) << "Did set Core property: " <<
          propName << " = " << propValue;
@@ -3916,10 +3703,7 @@ void CMMCore::setProperty(const char* label, const char* propName,
 
       pDevice->SetProperty(propName, propValue);
 
-      {
-         MMThreadGuard scg(stateCacheLock_);
-         stateCache_.addSetting(PropertySetting(label, propName, propValue));
-      }
+      stateCache_->addSetting(PropertySetting(label, propName, propValue));
    }
 }
 
@@ -4019,7 +3803,7 @@ bool CMMCore::isPropertyReadOnly(const char* label, const char* propName) MMCORE
 bool CMMCore::isPropertyPreInit(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      return false;
+      return properties_->IsPropertyPreInit(propName);
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -4033,7 +3817,7 @@ bool CMMCore::isPropertyPreInit(const char* label, const char* propName) MMCORE_
 double CMMCore::getPropertyLowerLimit(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      return 0.0;
+      return properties_->GetPropertyLowerLimit(propName);
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -4047,7 +3831,7 @@ double CMMCore::getPropertyLowerLimit(const char* label, const char* propName) M
 double CMMCore::getPropertyUpperLimit(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      return 0.0;
+      return properties_->GetPropertyUpperLimit(propName);
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -4063,7 +3847,7 @@ double CMMCore::getPropertyUpperLimit(const char* label, const char* propName) M
 bool CMMCore::hasPropertyLimits(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      return false;
+      return properties_->HasPropertyLimits(propName);
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -4079,7 +3863,7 @@ bool CMMCore::hasPropertyLimits(const char* label, const char* propName) MMCORE_
 bool CMMCore::isPropertySequenceable(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      return false;
+      return properties_->IsPropertySequenceable(propName);
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -4096,7 +3880,7 @@ bool CMMCore::isPropertySequenceable(const char* label, const char* propName) MM
 long CMMCore::getPropertySequenceMaxLength(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
    if (IsCoreDeviceLabel(label))
-      return 0;
+      return properties_->GetPropertySequenceMaxLength(propName);
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
    CheckPropertyName(propName);
 
@@ -4384,10 +4168,7 @@ void CMMCore::setExposure(const char* label, double dExp) MMCORE_LEGACY_THROW(CM
       pCamera->SetExposure(dExp);
       if (pCamera->HasProperty(MM::g_Keyword_Exposure))
       {
-         {
-            MMThreadGuard scg(stateCacheLock_);
-            stateCache_.addSetting(PropertySetting(label, MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(dExp)));
-         }
+         stateCache_->addSetting(PropertySetting(label, MM::g_Keyword_Exposure, CDeviceUtils::ConvertToString(dExp)));
       }
    }
 
@@ -4696,10 +4477,7 @@ void CMMCore::setBinning(const char* label, long binning) MMCORE_LEGACY_THROW(CM
 
       pCamera->SetProperty(MM::g_Keyword_Binning, binningValue);
 
-      {
-         MMThreadGuard scg(stateCacheLock_);
-         stateCache_.addSetting(PropertySetting(label, MM::g_Keyword_Binning, binningValue.c_str()));
-      }
+      stateCache_->addSetting(PropertySetting(label, MM::g_Keyword_Binning, binningValue.c_str()));
    }
 
    LOG_DEBUG(coreLogger_) << "Did set camera " << label <<
@@ -5016,19 +4794,12 @@ void CMMCore::setState(const char* deviceLabel, long state) MMCORE_LEGACY_THROW(
 
    if (pStateDev->HasProperty(MM::g_Keyword_State))
    {
-      {
-         MMThreadGuard scg(stateCacheLock_);
-         stateCache_.addSetting(PropertySetting(deviceLabel, MM::g_Keyword_State, CDeviceUtils::ConvertToString(state)));
-      }
+      stateCache_->addSetting(PropertySetting(deviceLabel, MM::g_Keyword_State, CDeviceUtils::ConvertToString(state)));
    }
    if (pStateDev->HasProperty(MM::g_Keyword_Label))
    {
       std::string posLbl = pStateDev->GetPositionLabel(state);
-
-      {
-         MMThreadGuard scg(stateCacheLock_);
-         stateCache_.addSetting(PropertySetting(deviceLabel, MM::g_Keyword_Label, posLbl.c_str()));
-      }
+      stateCache_->addSetting(PropertySetting(deviceLabel, MM::g_Keyword_Label, posLbl.c_str()));
    }
 
    LOG_DEBUG(coreLogger_) << "Did set " << deviceLabel << " to state " << state;
@@ -5097,19 +4868,13 @@ void CMMCore::setStateLabel(const char* deviceLabel, const char* stateLabel) MMC
 
    if (pStateDev->HasProperty(MM::g_Keyword_Label))
    {
-      {
-         MMThreadGuard scg(stateCacheLock_);
-         stateCache_.addSetting(PropertySetting(deviceLabel, MM::g_Keyword_Label, stateLabel));
-      }
+      stateCache_->addSetting(PropertySetting(deviceLabel, MM::g_Keyword_Label, stateLabel));
    }
    if (pStateDev->HasProperty(MM::g_Keyword_State))
    {
       long state = getStateFromLabel(deviceLabel, stateLabel);
-      {
-         MMThreadGuard scg(stateCacheLock_);
-         stateCache_.addSetting(PropertySetting(deviceLabel, MM::g_Keyword_State,
-                  CDeviceUtils::ConvertToString(state)));
-      }
+      stateCache_->addSetting(PropertySetting(deviceLabel, MM::g_Keyword_State,
+               CDeviceUtils::ConvertToString(state)));
    }
 }
 
@@ -5243,8 +5008,6 @@ void CMMCore::defineConfigGroup(const char* groupName) MMCORE_LEGACY_THROW(CMMEr
       throw CMMError(ToQuotedString(groupName) + ": " + getCoreErrorText(MMERR_DuplicateConfigGroup),
             MMERR_DuplicateConfigGroup);
 
-   updateAllowedChannelGroups();
-
    LOG_DEBUG(coreLogger_) << "Created config group " << groupName;
 }
 
@@ -5259,7 +5022,8 @@ void CMMCore::deleteConfigGroup(const char* groupName) MMCORE_LEGACY_THROW(CMMEr
       throw CMMError(ToQuotedString(groupName) + ": " + getCoreErrorText(MMERR_NoConfigGroup),
             MMERR_NoConfigGroup);
 
-   updateAllowedChannelGroups();
+   if (!isGroupDefined(getChannelGroup().c_str()))
+      setChannelGroup("");
 
    LOG_DEBUG(coreLogger_) << "Deleted config group " << groupName;
 }
@@ -5279,10 +5043,8 @@ void CMMCore::renameConfigGroup(const char* oldGroupName, const char* newGroupNa
    LOG_DEBUG(coreLogger_) << "Renamed config group " << oldGroupName <<
       " to " << newGroupName;
 
-   updateAllowedChannelGroups();
-
-   if (0 == channelGroup_.compare(oldGroupName))
-      setChannelGroup(newGroupName);
+   if (!isGroupDefined(getChannelGroup().c_str()))
+      setChannelGroup("");
 }
 
 /**
@@ -5297,14 +5059,7 @@ void CMMCore::defineConfig(const char* groupName, const char* configName) MMCORE
    CheckConfigGroupName(groupName);
    CheckConfigPresetName(configName);
 
-   bool groupExisted = configGroups_->isDefined(groupName);
-
    configGroups_->Define(groupName, configName);
-
-   if (!groupExisted)
-   {
-      updateAllowedChannelGroups();
-   }
 
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": added preset " << configName;
@@ -5331,14 +5086,7 @@ void CMMCore::defineConfig(const char* groupName, const char* configName, const 
    CheckPropertyName(propName);
    CheckPropertyValue(value);
 
-   bool groupExisted = configGroups_->isDefined(groupName);
-
    configGroups_->Define(groupName, configName, deviceLabel, propName, value);
-
-   if (!groupExisted)
-   {
-      updateAllowedChannelGroups();
-   }
 
    LOG_DEBUG(coreLogger_) << "Config group " << groupName <<
       ": preset " << configName << ": added setting " <<
@@ -5899,8 +5647,7 @@ std::string CMMCore::getCurrentPixelSizeConfig(bool cached) MMCORE_LEGACY_THROW(
                }
                else
                {
-                  MMThreadGuard scg(stateCacheLock_);
-                  value = stateCache_.getSetting(deviceLabel.c_str(), propName.c_str()).getPropertyValue();
+                  value = stateCache_->getSetting(deviceLabel.c_str(), propName.c_str())->getPropertyValue();
                }
                PropertySetting ss(deviceLabel.c_str(), propName.c_str(), value.c_str()); // state setting
                curState.addSetting(ss);
@@ -6047,7 +5794,7 @@ std::vector<double> CMMCore::getPixelSizeAffine(bool cached) MMCORE_LEGACY_THROW
    else
    {
       // no config found, return a matrix with all 0.0s
-      return *nullAffine_;
+      return nullAffine_;
    }
 }
 
@@ -7844,13 +7591,12 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_TH
                //
                if (tokens.size() == 8)
                {
-                  std::vector<double> *affineT = new std::vector<double>(6);
+                  std::vector<double> affineT(6);
                   for (int i = 0; i < 6; i++)
                   {
-                     affineT->at(i) = atof(tokens[i + 2].c_str());
+                     affineT[i] = std::atof(tokens[i + 2].c_str());
                   }
-                  setPixelSizeAffine(tokens[1].c_str(), *affineT);
-                  delete affineT;
+                  setPixelSizeAffine(tokens[1].c_str(), affineT);
                }
                else
                   throw CMMError(getCoreErrorText(MMERR_InvalidCFGEntry) + " (" +
@@ -8300,63 +8046,250 @@ void CMMCore::InitializeErrorMessages()
    errorText_[MMERR_BadAffineTransform] = "Bad affine transform.  Affine transforms need to have 6 numbers; 2 rows of 3 column.";
 }
 
+void CMMCore::setCameraInternal(const std::string& label)
+{
+   if (isSequenceRunning())
+      throw CMMError("Cannot switch camera device while sequence acquisition "
+            "is running");
+
+   if (!label.empty()) {
+      currentCameraDevice_ =
+         deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
+      LOG_INFO(coreLogger_) << "Default camera set to " << label;
+   } else {
+      currentCameraDevice_.reset();
+      LOG_INFO(coreLogger_) << "Default camera unset";
+   }
+}
+
+void CMMCore::setShutterInternal(const std::string& label)
+{
+   if (!label.empty())
+      CheckDeviceLabel(label.c_str());
+
+   if (getShutterDevice() == label)
+      return;
+
+   bool shutterWasOpen = false;
+   std::shared_ptr<mmi::ShutterInstance> oldShutter =
+      currentShutterDevice_.lock();
+   if (oldShutter) {
+      shutterWasOpen = getShutterOpen(oldShutter->GetLabel().c_str());
+      if (shutterWasOpen)
+         setShutterOpen(oldShutter->GetLabel().c_str(), false);
+   }
+
+   if (!label.empty()) {
+      currentShutterDevice_ =
+         deviceManager_->GetDeviceOfType<mmi::ShutterInstance>(label);
+      if (shutterWasOpen)
+         setShutterOpen(true);
+      LOG_INFO(coreLogger_) << "Default shutter set to " << label;
+   } else {
+      currentShutterDevice_.reset();
+      LOG_INFO(coreLogger_) << "Default shutter unset";
+   }
+}
+
+void CMMCore::setFocusInternal(const std::string& label)
+{
+   if (!label.empty()) {
+      currentFocusDevice_ =
+         deviceManager_->GetDeviceOfType<mmi::StageInstance>(label);
+      LOG_INFO(coreLogger_) << "Default stage set to " << label;
+   } else {
+      currentFocusDevice_.reset();
+      LOG_INFO(coreLogger_) << "Default stage unset";
+   }
+}
+
+void CMMCore::setXYStageInternal(const std::string& label)
+{
+   if (!label.empty()) {
+      currentXYStageDevice_ =
+         deviceManager_->GetDeviceOfType<mmi::XYStageInstance>(label);
+      LOG_INFO(coreLogger_) << "Default xy stage set to " << label;
+   } else {
+      currentXYStageDevice_.reset();
+      LOG_INFO(coreLogger_) << "Default xy stage unset";
+   }
+}
+
+void CMMCore::setAutoFocusInternal(const std::string& label)
+{
+   if (!label.empty()) {
+      currentAutofocusDevice_ =
+         deviceManager_->GetDeviceOfType<mmi::AutoFocusInstance>(label);
+      LOG_INFO(coreLogger_) << "Default autofocus set to " << label;
+   } else {
+      currentAutofocusDevice_.reset();
+      LOG_INFO(coreLogger_) << "Default autofocus unset";
+   }
+}
+
+void CMMCore::setImageProcessorInternal(const std::string& label)
+{
+   if (!label.empty()) {
+      currentImageProcessor_ =
+         deviceManager_->GetDeviceOfType<mmi::ImageProcessorInstance>(label);
+      LOG_INFO(coreLogger_) << "Default image processor set to " << label;
+   } else {
+      currentImageProcessor_.reset();
+      LOG_INFO(coreLogger_) << "Default image processor unset";
+   }
+}
+
+void CMMCore::setSLMInternal(const std::string& label)
+{
+   if (!label.empty()) {
+      currentSLMDevice_ =
+         deviceManager_->GetDeviceOfType<mmi::SLMInstance>(label);
+      LOG_INFO(coreLogger_) << "Default SLM set to " << label;
+   } else {
+      currentSLMDevice_.reset();
+      LOG_INFO(coreLogger_) << "Default SLM unset";
+   }
+}
+
+void CMMCore::setGalvoInternal(const std::string& label)
+{
+   if (!label.empty()) {
+      currentGalvoDevice_ =
+         deviceManager_->GetDeviceOfType<mmi::GalvoInstance>(label);
+      LOG_INFO(coreLogger_) << "Default galvo set to " << label;
+   } else {
+      currentGalvoDevice_.reset();
+      LOG_INFO(coreLogger_) << "Default galvo unset";
+   }
+}
+
+void CMMCore::setAutoShutterInternal(bool state)
+{
+   autoShutter_ = state;
+   LOG_DEBUG(coreLogger_) << "Autoshutter turned " << (state ? "on" : "off");
+}
+
+void CMMCore::setTimeoutMsInternal(long timeoutMs)
+{
+   if (timeoutMs <= 0)
+      throw CMMError("TimeoutMs must be positive",
+            MMERR_InvalidCoreValue);
+   timeoutMs_ = timeoutMs;
+}
+
+void CMMCore::setChannelGroupInternal(const std::string& group)
+{
+   channelGroup_ = group;
+   LOG_INFO(coreLogger_) << "Channel group set to " << group;
+   // We have a specific notification in addition to PropertyChanged
+   postNotification(notif::ChannelGroupChanged{channelGroup_});
+}
+
+void CMMCore::initializeInternal(bool init)
+{
+   if (init)
+      initializeAllDevices();
+   else
+      unloadAllDevices();
+   initialized_ = init;
+}
+
 void CMMCore::CreateCoreProperties()
 {
-   properties_ = new mmi::CorePropertyCollection(this);
+   properties_ = std::make_unique<mmi::CorePropertyCollection>(this);
+
+   auto deviceRoleProp = [this](const char* keyword, MM::DeviceType devType,
+         std::function<std::string()> getter,
+         std::function<void(const std::string&)> setter) {
+      properties_->Add(keyword, {
+         MM::String, false,
+         std::move(getter),
+         std::move(setter),
+         [this, devType]() {
+            auto devs = getLoadedDevicesOfType(devType);
+            devs.insert(devs.begin(), "");
+            return devs;
+         },
+      });
+   };
 
    // Initialize
-   mmi::CoreProperty propInit("0", false, MM::Integer);
-   propInit.AddAllowedValue("0");
-   propInit.AddAllowedValue("1");
-   properties_->Add(MM::g_Keyword_CoreInitialize, propInit);
+   properties_->Add(MM::g_Keyword_CoreInitialize, {
+      MM::Integer, false,
+      [this]() { return initialized_ ? "1" : "0"; },
+      [this](const std::string& val) { initializeInternal(val == "1"); },
+      []() { return std::vector<std::string>{"0", "1"}; },
+   });
 
-   // Auto shutter
-   mmi::CoreProperty propAutoShutter("1", false, MM::Integer);
-   propAutoShutter.AddAllowedValue("0");
-   propAutoShutter.AddAllowedValue("1");
-   properties_->Add(MM::g_Keyword_CoreAutoShutter, propAutoShutter);
+   // AutoShutter
+   properties_->Add(MM::g_Keyword_CoreAutoShutter, {
+      MM::Integer, false,
+      [this]() { return autoShutter_ ? "1" : "0"; },
+      [this](const std::string& val) { setAutoShutterInternal(val == "1"); },
+      []() { return std::vector<std::string>{"0", "1"}; },
+   });
 
-   mmi::CoreProperty propCamera;
-   properties_->Add(MM::g_Keyword_CoreCamera, propCamera);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreCamera, "");
+   // Device role properties
+   deviceRoleProp(MM::g_Keyword_CoreCamera, MM::CameraDevice,
+      [this]() { return getCameraDevice(); },
+      [this](const std::string& v) { setCameraInternal(v); });
 
-   mmi::CoreProperty propShutter;
-   properties_->Add(MM::g_Keyword_CoreShutter, propShutter);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreShutter, "");
+   deviceRoleProp(MM::g_Keyword_CoreShutter, MM::ShutterDevice,
+      [this]() { return getShutterDevice(); },
+      [this](const std::string& v) { setShutterInternal(v); });
 
-   mmi::CoreProperty propFocus;
-   properties_->Add(MM::g_Keyword_CoreFocus, propFocus);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreFocus, "");
+   deviceRoleProp(MM::g_Keyword_CoreFocus, MM::StageDevice,
+      [this]() { return getFocusDevice(); },
+      [this](const std::string& v) { setFocusInternal(v); });
 
-   mmi::CoreProperty propXYStage;
-   properties_->Add(MM::g_Keyword_CoreXYStage, propXYStage);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreXYStage, "");
+   deviceRoleProp(MM::g_Keyword_CoreXYStage, MM::XYStageDevice,
+      [this]() { return getXYStageDevice(); },
+      [this](const std::string& v) { setXYStageInternal(v); });
 
-   mmi::CoreProperty propAutoFocus;
-   properties_->Add(MM::g_Keyword_CoreAutoFocus, propAutoFocus);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreAutoFocus, "");
+   deviceRoleProp(MM::g_Keyword_CoreAutoFocus, MM::AutoFocusDevice,
+      [this]() { return getAutoFocusDevice(); },
+      [this](const std::string& v) { setAutoFocusInternal(v); });
 
-   mmi::CoreProperty propImageProc;
-   properties_->Add(MM::g_Keyword_CoreImageProcessor, propImageProc);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreImageProcessor, "");
+   deviceRoleProp(MM::g_Keyword_CoreImageProcessor, MM::ImageProcessorDevice,
+      [this]() { return getImageProcessorDevice(); },
+      [this](const std::string& v) { setImageProcessorInternal(v); });
 
-   mmi::CoreProperty propSLM;
-   properties_->Add(MM::g_Keyword_CoreSLM, propSLM);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreSLM, "");
+   deviceRoleProp(MM::g_Keyword_CoreSLM, MM::SLMDevice,
+      [this]() { return getSLMDevice(); },
+      [this](const std::string& v) { setSLMInternal(v); });
 
-   mmi::CoreProperty propGalvo;
-   properties_->Add(MM::g_Keyword_CoreGalvo, propGalvo);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreGalvo, "");
+   deviceRoleProp(MM::g_Keyword_CoreGalvo, MM::GalvoDevice,
+      [this]() { return getGalvoDevice(); },
+      [this](const std::string& v) { setGalvoInternal(v); });
 
-   mmi::CoreProperty propChannelGroup;
-   properties_->Add(MM::g_Keyword_CoreChannelGroup, propChannelGroup);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreChannelGroup, "");
+   // ChannelGroup
+   properties_->Add(MM::g_Keyword_CoreChannelGroup, {
+      MM::String, false,
+      [this]() { return channelGroup_; },
+      [this](const std::string& val) { setChannelGroupInternal(val); },
+      [this]() {
+         auto groups = getAvailableConfigGroups();
+         groups.insert(groups.begin(), "");
+         return groups;
+      },
+   });
 
-   // Time after which we give up on checking the Busy flag status
-   mmi::CoreProperty propBusyTimeoutMs("5000", false, MM::Integer);
-   properties_->Add(MM::g_Keyword_CoreTimeoutMs, propBusyTimeoutMs);
-
-   properties_->Refresh();
+   // TimeoutMs
+   properties_->Add(MM::g_Keyword_CoreTimeoutMs, {
+      MM::Integer, false,
+      [this]() { return std::to_string(timeoutMs_); },
+      [this](const std::string& val) {
+         long v;
+         try {
+            v = std::stol(val);
+         } catch (const std::exception&) {
+            throw CMMError("TimeoutMs must be a valid integer",
+                  MMERR_InvalidCoreValue);
+         }
+         setTimeoutMsInternal(v);
+      },
+      nullptr,
+   });
 }
 
 static bool ContainsForbiddenCharacters(const std::string& str)
@@ -8449,11 +8382,9 @@ void CMMCore::applyConfiguration(const Configuration& config) MMCORE_LEGACY_THRO
       // perform special processing for core commands
       if (setting.getDeviceLabel().compare(MM::g_Keyword_CoreDevice) == 0)
       {
-         properties_->Execute(setting.getPropertyName().c_str(), setting.getPropertyValue().c_str());
-         {
-            MMThreadGuard scg(stateCacheLock_);
-            stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, setting.getPropertyName().c_str(), setting.getPropertyValue().c_str()));
-         }
+         properties_->Set(setting.getPropertyName().c_str(), setting.getPropertyValue());
+         std::string actual = properties_->Get(setting.getPropertyName().c_str());
+         stateCache_->addSetting(PropertySetting(MM::g_Keyword_CoreDevice, setting.getPropertyName().c_str(), actual.c_str()));
       }
       else
       {
@@ -8466,10 +8397,7 @@ void CMMCore::applyConfiguration(const Configuration& config) MMCORE_LEGACY_THRO
             pDevice->SetProperty(setting.getPropertyName(),
                   setting.getPropertyValue());
 
-            {
-               MMThreadGuard scg(stateCacheLock_);
-               stateCache_.addSetting(setting);
-            }
+            stateCache_->addSetting(setting);
          }
          catch (const CMMError&)
          {
@@ -8513,10 +8441,7 @@ int CMMCore::applyProperties(std::vector<PropertySetting>& props, std::string& l
          pDevice->SetProperty(props[i].getPropertyName(),
                props[i].getPropertyValue());
 
-         {
-            MMThreadGuard scg(stateCacheLock_);
-            stateCache_.addSetting(props[i]);
-         }
+         stateCache_->addSetting(props[i]);
       }
       catch (const CMMError& e)
       {
@@ -8572,18 +8497,6 @@ std::string CMMCore::getDeviceName(std::shared_ptr<mmcore::internal::DeviceInsta
    return pDev->GetName();
 }
 
-void CMMCore::updateAllowedChannelGroups()
-{
-   std::vector<std::string> groups = getAvailableConfigGroups();
-   properties_->ClearAllowedValues(MM::g_Keyword_CoreChannelGroup);
-   properties_->AddAllowedValue(MM::g_Keyword_CoreChannelGroup, ""); // No channel group
-   for (unsigned i=0; i<groups.size(); i++)
-      properties_->AddAllowedValue(MM::g_Keyword_CoreChannelGroup, groups[i].c_str());
-
-   // If we don't have the group assigned to ChannelGroup anymore, set ChannelGroup to blank.
-   if (!isGroupDefined(getChannelGroup().c_str()))
-      setChannelGroup("");
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Automatic device and serial port discovery methods

@@ -29,8 +29,8 @@
 #include "CoreCallback.h"
 #include "DeviceManager.h"
 #include "Notification.h"
+#include "SynchronizedConfiguration.h"
 
-#include "DeviceThreads.h"
 #include "DeviceUtils.h"
 #include "ImgBuffer.h"
 
@@ -47,18 +47,13 @@ namespace internal {
 
 
 CoreCallback::CoreCallback(CMMCore* c) :
-   core_(c),
-   pValueChangeLock_(NULL)
+   core_(c)
 {
    assert(core_);
-   pValueChangeLock_ = new MMThreadLock();
 }
 
 
-CoreCallback::~CoreCallback()
-{
-   delete pValueChangeLock_;
-}
+CoreCallback::~CoreCallback() = default;
 
 
 int
@@ -297,13 +292,14 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
       {
          // We need to lock the shutter's module for thread safety, but there's
          // a case where deadlock would result.
+         int sret = DEVICE_ERR;
          if (camera->GetAdapterModule() == shutter->GetAdapterModule())
          {
             // This is a nasty hack to allow the case where the shutter and
             // camera live in the same module. It is not safe, but this is how
             // _all_ cases used to be implemented, and I can't immediately
             // think of a fully safe fix that is reasonably simple.
-            shutter->SetOpen(false);
+            sret = shutter->SetOpen(false);
          }
          else if (currentCamera && currentCamera->GetAdapterModule() ==
                shutter->GetAdapterModule())
@@ -315,14 +311,14 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
             // This is an even nastier hack in that it ignores the possibility
             // of StopSequenceAcquisition() being called on a camera other than
             // currentCamera, but such cases are rare.
-            shutter->SetOpen(false);
+            sret = shutter->SetOpen(false);
          }
          else
          {
             // If the shutter is in a different device adapter, it is safe to
             // lock that adapter.
             DeviceModuleLockGuard g(shutter);
-            shutter->SetOpen(false);
+            sret = shutter->SetOpen(false);
 
             // We could wait for the shutter to close here, but the
             // implementation has always returned without waiting. The camera
@@ -330,6 +326,9 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
             // stopSequenceAcquisition() does not wait for the shutter before
             // returning.
          }
+         if (sret == DEVICE_OK)
+            core_->postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), false});
       }
    }
 
@@ -347,10 +346,14 @@ int CoreCallback::PrepareForAcq(const MM::Device* caller)
          core_->currentShutterDevice_.lock();
       if (shutter)
       {
+         int sret;
          {
             DeviceModuleLockGuard g(shutter);
-            shutter->SetOpen(true);
+            sret = shutter->SetOpen(true);
          }
+         if (sret == DEVICE_OK)
+            core_->postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), true});
          core_->waitForDevice(shutter);
       }
    }
@@ -380,16 +383,13 @@ int CoreCallback::OnPropertiesChanged(const MM::Device* /* caller */)
  */
 int CoreCallback::OnPropertyChanged(const MM::Device* device, const char* propName, const char* value)
 {
-   MMThreadGuard g(*pValueChangeLock_);
+   std::lock_guard<std::mutex> g(onPropertyChangedLock_);
    char label[MM::MaxStrLength];
    device->GetLabel(label);
    bool readOnly;
    device->GetPropertyReadOnly(propName, readOnly);
    const PropertySetting ps(label, propName, value, readOnly);
-   {
-      MMThreadGuard scg(core_->stateCacheLock_);
-      core_->stateCache_.addSetting(ps);
-   }
+   core_->stateCache_->addSetting(ps);
    core_->postNotification(
       notif::PropertyChanged{label, propName, value});
 

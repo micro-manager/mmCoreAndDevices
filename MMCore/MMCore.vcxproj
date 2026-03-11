@@ -101,13 +101,12 @@
     <ClCompile Include="Devices\XYStageInstance.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
-    <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp" />
+    <ClCompile Include="LibraryInfo\LibraryPaths.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplMock.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplRegular.cpp" />
     <ClCompile Include="LoadableModules\LoadedModule.cpp" />
     <ClCompile Include="LoadableModules\LoadedModuleImpl.cpp" />
-    <ClCompile Include="LoadableModules\LoadedModuleImplWindows.cpp" />
     <ClCompile Include="Logging\Metadata.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="MMCore.cpp" />
@@ -148,6 +147,7 @@
     <ClInclude Include="Devices\VolumetricPumpInstance.h" />
     <ClInclude Include="Devices\XYStageInstance.h" />
     <ClInclude Include="Error.h" />
+    <ClInclude Include="ErrorCodes.h" />
     <ClInclude Include="FrameBuffer.h" />
     <ClInclude Include="ImageMetadata.h" />
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
@@ -157,7 +157,6 @@
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplRegular.h" />
     <ClInclude Include="LoadableModules\LoadedModule.h" />
     <ClInclude Include="LoadableModules\LoadedModuleImpl.h" />
-    <ClInclude Include="LoadableModules\LoadedModuleImplWindows.h" />
     <ClInclude Include="Logging\GenericEntryFilter.h" />
     <ClInclude Include="Logging\GenericLinePacket.h" />
     <ClInclude Include="Logging\GenericLogger.h" />
@@ -175,8 +174,11 @@
     <ClInclude Include="MMCore.h" />
     <ClInclude Include="MMEventCallback.h" />
     <ClInclude Include="MockDeviceAdapter.h" />
+    <ClInclude Include="Notification.h" />
+    <ClInclude Include="NotificationQueue.h" />
     <ClInclude Include="PluginManager.h" />
     <ClInclude Include="Semaphore.h" />
+    <ClInclude Include="SynchronizedConfiguration.h" />
     <ClInclude Include="Task.h" />
     <ClInclude Include="TaskSet.h" />
     <ClInclude Include="TaskSet_CopyMemory.h" />

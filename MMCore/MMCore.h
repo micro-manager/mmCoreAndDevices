@@ -53,7 +53,6 @@
 #include "MockDeviceAdapter.h"
 #include "Notification.h"
 
-#include "DeviceThreads.h"
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
 
@@ -61,6 +60,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -69,6 +69,7 @@
 class MMEventCallback;
 class Metadata;
 class PixelSizeConfigGroup;
+class SynchronizedConfiguration;
 
 class CMMCore;
 
@@ -151,7 +152,7 @@ public:
 
    void unloadLibrary(const char* moduleName) MMCORE_LEGACY_THROW(CMMError);
 
-   void updateCoreProperties() MMCORE_LEGACY_THROW(CMMError);
+   MMCORE_DEPRECATED void updateCoreProperties() MMCORE_LEGACY_THROW(CMMError);
 
    std::string getCoreErrorText(int code) const;
 
@@ -258,8 +259,8 @@ public:
    void setDeviceDelayMs(const char* label, double delayMs) MMCORE_LEGACY_THROW(CMMError);
    bool usesDeviceDelay(const char* label) MMCORE_LEGACY_THROW(CMMError);
 
-   void setTimeoutMs(long timeoutMs) {if (timeoutMs > 0) timeoutMs_ = timeoutMs;}
-   long getTimeoutMs() { return timeoutMs_;}
+   void setTimeoutMs(long timeoutMs);
+   long getTimeoutMs();
 
    void sleep(double intervalMs) const;
    ///@}
@@ -711,20 +712,19 @@ private:
    long pollingIntervalMs_;
    long timeoutMs_;
    bool autoShutter_;
-   std::vector<double> *nullAffine_;
-   MM::Core* callback_;                 // core services for devices
-   mmcore::internal::ConfigGroupCollection* configGroups_;
-   mmcore::internal::CorePropertyCollection* properties_;
-   PixelSizeConfigGroup* pixelSizeGroup_;
-   mmcore::internal::CircularBuffer* cbuf_;
+   bool initialized_ = false;
+   std::vector<double> nullAffine_;
+   std::unique_ptr<mmcore::internal::ConfigGroupCollection> configGroups_;
+   std::unique_ptr<PixelSizeConfigGroup> pixelSizeGroup_;
+   std::unique_ptr<mmcore::internal::CorePropertyCollection> properties_;
+   std::unique_ptr<mmcore::internal::CircularBuffer> cbuf_;
+   std::unique_ptr<MM::Core> callback_;
 
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
 
-   // Must be unlocked when calling device methods or acquiring a module lock
-   mutable MMThreadLock stateCacheLock_;
-   mutable Configuration stateCache_; // Synchronized by stateCacheLock_
+   std::unique_ptr<SynchronizedConfiguration> stateCache_;
 
    // True while interpreting the config file (but not while rolling back on
    // failure):
@@ -756,12 +756,24 @@ private:
    std::string getDeviceErrorText(int deviceCode, std::shared_ptr<mmcore::internal::DeviceInstance> pDevice);
    std::string getDeviceName(std::shared_ptr<mmcore::internal::DeviceInstance> pDev);
    void logError(const char* device, const char* msg);
-   void updateAllowedChannelGroups();
    void assignDefaultRole(std::shared_ptr<mmcore::internal::DeviceInstance> pDev);
    void removeDeviceRole(std::shared_ptr<mmcore::internal::DeviceInstance> pDev);
    void removeAllDeviceRoles();
-   void updateCoreProperty(const char* propName, MM::DeviceType devType) MMCORE_LEGACY_THROW(CMMError);
    void loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
+
+   void setCameraInternal(const std::string& label);
+   void setShutterInternal(const std::string& label);
+   void setFocusInternal(const std::string& label);
+   void setXYStageInternal(const std::string& label);
+   void setAutoFocusInternal(const std::string& label);
+   void setImageProcessorInternal(const std::string& label);
+   void setSLMInternal(const std::string& label);
+   void setGalvoInternal(const std::string& label);
+   void setAutoShutterInternal(bool state);
+   void setTimeoutMsInternal(long timeoutMs);
+   void setChannelGroupInternal(const std::string& group);
+   void initializeInternal(bool init);
+
    void initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError);
    void initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError);
    int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<mmcore::internal::DeviceInstance>, std::string> > pDevices);

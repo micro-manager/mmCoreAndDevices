@@ -23,10 +23,10 @@
 #include "Logging/Logger.h"
 
 #include "MMDevice.h"
-#include "DeviceThreads.h"
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -137,7 +137,7 @@ public:
 // Scoped acquisition of a device's module's lock
 class DeviceModuleLockGuard
 {
-   MMThreadGuard g_;
+   std::lock_guard<std::recursive_mutex> g_;
 public:
    explicit DeviceModuleLockGuard(std::shared_ptr<DeviceInstance> device);
 };

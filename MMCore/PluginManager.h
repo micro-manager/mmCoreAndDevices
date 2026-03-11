@@ -24,8 +24,6 @@
 
 #include "MockDeviceAdapter.h"
 
-#include "DeviceThreads.h"
-
 #include <map>
 #include <memory>
 #include <string>

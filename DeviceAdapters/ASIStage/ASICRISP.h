@@ -10,9 +10,8 @@
 
 #include "ASIBase.h"
 
-// CRISP reflection based autofocusing unit (Nico, Nov 2011)
-class CRISP : public CAutoFocusBase<CRISP>, public ASIBase
-{
+// CRISP Autofocus (Nico, Nov 2011)
+class CRISP : public CAutoFocusBase<CRISP>, public ASIBase {
 public:
 	CRISP();
 	~CRISP();
@@ -33,7 +32,7 @@ public:
 	bool IsContinuousFocusLocked();
 	int FullFocus();
 	int IncrementalFocus();
-	int GetLastFocusScore(double& score);
+	int GetLastFocusScore(double& score) { return GetCurrentFocusScore(score); }
 	int GetCurrentFocusScore(double& score);
 	int GetOffset(double& offset);
 	int SetOffset(double offset);
@@ -58,7 +57,6 @@ public:
 	int GetGainMultiplier(long& gainMult);
 	int OnFocusCurve(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnFocusCurveData(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
-	int OnSNR(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int GetNumSkips(long& updateRate);
@@ -66,23 +64,25 @@ public:
 	int GetInFocusRange(double& inFocusRange);
 	int OnOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSetLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSetLockOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-	int GetFocusState(std::string& focusState);
+	int UpdateFocusState();
 	int SetFocusState(const std::string& focusState);
 	int ForceSetFocusState(const std::string& focusState);
 	int GetValue(const std::string& command, double& value);
 	int SetCommand(const std::string& command);
 
 	// Properties
+	void CreateSNRProperty();
 	void CreateSumProperty();
 	void CreateDitherErrorProperty();
+	void CreateSetLogAmpAGCProperty();
+	void CreateSetLockOffsetProperty();
 
-	std::string axis_;
+	std::string axisLetter_;
 	std::string focusState_;
 	long waitAfterLock_;
+
 	int answerTimeoutMs_;
 
 	// cached properties

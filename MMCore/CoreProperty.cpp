@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Implements the "core property" mechanism. The MMCore exposes
 //                some of its own settings as a virtual device.
-//              
+//
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 10/23/2005
 //
 // COPYRIGHT:     University of California, San Francisco, 2006
@@ -21,8 +21,6 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// CVS:           $Id: CoreProperty.cpp 13831 2014-07-16 03:49:21Z mark $
-//
 
 #include "CoreProperty.h"
 #include "CoreUtils.h"
@@ -30,271 +28,93 @@
 #include "Error.h"
 #include "Notification.h"
 
-#include "DeviceUtils.h"
-
-#include <cassert>
-#include <cstdlib>
+#include <algorithm>
 
 namespace mmcore {
 namespace internal {
 
-std::vector<std::string> CoreProperty::GetAllowedValues() const
+const CorePropertyDef& CorePropertyCollection::FindOrThrow(const char* propName) const
 {
-   std::vector<std::string> allowedVals;
-   for (std::set<std::string>::const_iterator it=values_.begin(); it!=values_.end(); ++it)
-      allowedVals.push_back(*it);
-   return allowedVals;
-}
-
-void CoreProperty::AddAllowedValue(const char* value)
-{
-   values_.insert(value);
-}
-
-bool CoreProperty::IsAllowed(const char* value) const
-{
-   if (values_.size() == 0)
-      return true;
-
-   std::set<std::string>::const_iterator it;
-   if (values_.find(value) == values_.end())
-      return false;
-   else
-      return true;
-}
-
-bool CoreProperty::Set(const char* value)
-{
-   if (IsReadOnly())
-      return false;
-
-   value_ = value;
-   return true;
-}
-
-std::string CoreProperty::Get() const
-{
-   return value_;
-}
-
-void CorePropertyCollection::Set(const char* propName, const char* value)
-{
-   std::map<std::string, CoreProperty>::iterator it = properties_.find(propName);
+   auto it = properties_.find(propName);
    if (it == properties_.end())
-      throw CMMError("Cannot set invalid Core property (" + ToString(propName) +
-            ") to value \"" + ToString(value) + "\"",
+      throw CMMError("Invalid Core property (" + ToString(propName) + ")",
             MMERR_InvalidCoreProperty);
-
-   if (!it->second.IsAllowed(value) || it->second.IsReadOnly())
-   {
-      throw CMMError("Cannot set Core property " + ToString(propName) +
-            " to invalid value \"" + ToString(value) + "\"",
-            MMERR_InvalidCoreValue);
-   }
-
-   // execute property set command
-   //
-   it->second.Set(value); // throws on failure
-}
-
-
-void CorePropertyCollection::Execute(const char* propName, const char* value)
-{
-   Set(propName, value); // throws on failure
-   
-   // initialization
-   if (strcmp(propName, MM::g_Keyword_CoreInitialize) == 0)
-   {
-      if (strcmp(value, "0") == 0)
-         core_->unloadAllDevices();
-      else if (strcmp(value, "1") == 0)
-         core_->initializeAllDevices();
-      else
-         assert(!"Invalid value for the core property.\n");
-   }
-   else if (strcmp(propName, MM::g_Keyword_CoreAutoShutter) == 0)
-   {
-      if (strcmp(value, "0") == 0)
-         core_->setAutoShutter(false);
-      else if (strcmp(value, "1") == 0)
-         core_->setAutoShutter(true);
-      else
-         assert(!"Invalid value for the core property.\n");
-   }
-  // shutter
-   else if (strcmp(propName, MM::g_Keyword_CoreShutter) == 0)
-   {
-      core_->setShutterDevice(value);
-   }
-   // camera
-   else if (strcmp(propName, MM::g_Keyword_CoreCamera) == 0)
-   {
-      core_->setCameraDevice(value);
-   }
-   // focus
-   else if (strcmp(propName, MM::g_Keyword_CoreFocus) == 0)
-   {
-      core_->setFocusDevice(value);
-   }
-   // xy stage
-   else if (strcmp(propName, MM::g_Keyword_CoreXYStage) == 0)
-   {
-      core_->setXYStageDevice(value);
-   }
-   else if (strcmp(propName, MM::g_Keyword_CoreAutoFocus) == 0)
-   {
-      core_->setAutoFocusDevice(value);
-   }
-   else if (strcmp(propName, MM::g_Keyword_CoreImageProcessor) == 0)
-   {
-      core_->setImageProcessorDevice(value);
-   }
-   else if (strcmp(propName, MM::g_Keyword_CoreSLM) == 0)
-   {
-      core_->setSLMDevice(value);
-   }
-   else if (strcmp(propName, MM::g_Keyword_CoreGalvo) == 0)
-   {
-      core_->setGalvoDevice(value);
-   }
-   else if (strcmp(propName, MM::g_Keyword_CoreTimeoutMs) == 0)
-   {
-      core_->setTimeoutMs(atol(value));
-   }
-   else if (strcmp(propName, MM::g_Keyword_CoreChannelGroup) == 0)
-   {
-      core_->setChannelGroup(value);
-   }
-   // unknown property
-   else
-   {
-      // should never get here...
-      assert(!"Unable to execute set property command.\n");
-   }
-
-   core_->postNotification(
-      notification::PropertyChanged{"Core", propName, value});
+   return it->second;
 }
 
 std::string CorePropertyCollection::Get(const char* propName) const
 {
-   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
-   if (it == properties_.end())
-      throw CMMError("Cannot get value of invalid Core property (" +
-            ToString(propName) + ")",
-            MMERR_InvalidCoreProperty);
+   return FindOrThrow(propName).getter();
+}
 
-   return it->second.Get();
+void CorePropertyCollection::Set(const char* propName, const std::string& value)
+{
+   const auto& def = FindOrThrow(propName);
+
+   if (def.readOnly)
+      throw CMMError("Cannot set Core property " + ToString(propName) +
+            " to value \"" + value + "\" (read-only)",
+            MMERR_InvalidCoreValue);
+
+   if (def.allowedValues) {
+      auto allowed = def.allowedValues();
+      if (!allowed.empty()) {
+         if (std::find(allowed.begin(), allowed.end(), value) == allowed.end())
+            throw CMMError("Cannot set Core property " + ToString(propName) +
+                  " to invalid value \"" + value + "\"",
+                  MMERR_InvalidCoreValue);
+      }
+   }
+
+   def.setter(value);
+
+   core_->postNotification(
+      notification::PropertyChanged{"Core", propName, def.getter()});
 }
 
 bool CorePropertyCollection::Has(const char* propName) const
 {
-   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
-   if (it == properties_.end())
-      return false; // not defined
-
-   return true;
+   return properties_.find(propName) != properties_.end();
 }
 
 std::vector<std::string> CorePropertyCollection::GetNames() const
 {
    std::vector<std::string> names;
-   for (std::map<std::string, CoreProperty>::const_iterator it=properties_.begin(); it!=properties_.end(); ++it)
-      names.push_back(it->first);
+   names.reserve(properties_.size());
+   for (const auto& kv : properties_)
+      names.push_back(kv.first);
    return names;
-}
-
-void CorePropertyCollection::Refresh() 
-{
-   assert(core_);
-
-   // Initialize
-   // no need to update
-
-   // Auto shutter
-   Set(MM::g_Keyword_CoreAutoShutter, core_->getAutoShutter() ? "1" : "0");
-
-   // Camera
-   Set(MM::g_Keyword_CoreCamera, core_->getCameraDevice().c_str());
-
-   // Shutter
-   Set(MM::g_Keyword_CoreShutter, core_->getShutterDevice().c_str());
-
-   // Focus
-   Set(MM::g_Keyword_CoreFocus, core_->getFocusDevice().c_str());
-
-   // XYStage
-   Set(MM::g_Keyword_CoreXYStage, core_->getXYStageDevice().c_str());
-
-   // Auto-Focus
-   Set(MM::g_Keyword_CoreAutoFocus, core_->getAutoFocusDevice().c_str());
-
-   // Image processor
-   Set(MM::g_Keyword_CoreImageProcessor, core_->getImageProcessorDevice().c_str());
-
-   // SLM
-   Set(MM::g_Keyword_CoreSLM, core_->getSLMDevice().c_str());
-
-   // Galvo
-   Set(MM::g_Keyword_CoreGalvo, core_->getGalvoDevice().c_str());
-
-   // Timeout for Device Busy checking
-   Set(MM::g_Keyword_CoreTimeoutMs, CDeviceUtils::ConvertToString(core_->getTimeoutMs()));
-
-   // Channel group
-   Set(MM::g_Keyword_CoreChannelGroup, core_->getChannelGroup().c_str());
-
 }
 
 bool CorePropertyCollection::IsReadOnly(const char* propName) const
 {
-   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
-   if (it == properties_.end())
-      throw CMMError("Invalid Core property (" + ToString(propName) + ")",
-            MMERR_InvalidCoreProperty);
-
-   return it->second.IsReadOnly();
+   return FindOrThrow(propName).readOnly;
 }
 
 MM::PropertyType CorePropertyCollection::GetPropertyType(const char* propName) const
 {
-   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
-   if (it == properties_.end())
-      throw CMMError("Invalid Core property (" + ToString(propName) + ")",
-            MMERR_InvalidCoreProperty);
-
-   return it->second.GetType();
+   return FindOrThrow(propName).type;
 }
 
 std::vector<std::string> CorePropertyCollection::GetAllowedValues(const char* propName) const
 {
-   std::map<std::string, CoreProperty>::const_iterator it = properties_.find(propName);
-   if (it == properties_.end())
-      throw CMMError("Invalid Core property (" + ToString(propName) + ")",
-            MMERR_InvalidCoreProperty);
-
-   return it->second.GetAllowedValues();
+   const auto& def = FindOrThrow(propName);
+   if (def.allowedValues)
+      return def.allowedValues();
+   return {};
 }
 
-void CorePropertyCollection::ClearAllowedValues(const char* propName)
+void CorePropertyCollection::Add(const char* name, CorePropertyDef def)
 {
-   std::map<std::string, CoreProperty>::iterator it = properties_.find(propName);
-   if (it == properties_.end())
-      throw CMMError("Invalid Core property (" + ToString(propName) + ")",
-            MMERR_InvalidCoreProperty);
-
-   it->second.ClearAllowedValues();
+   properties_[name] = std::move(def);
 }
 
-void CorePropertyCollection::AddAllowedValue(const char* propName, const char* value)
-{
-   std::map<std::string, CoreProperty>::iterator it = properties_.find(propName);
-   if (it == properties_.end())
-      throw CMMError("Invalid Core property (" + ToString(propName) + ")",
-            MMERR_InvalidCoreProperty);
-
-   it->second.AddAllowedValue(value);
-}
+bool CorePropertyCollection::IsPropertyPreInit(const char*) const { return false; }
+bool CorePropertyCollection::HasPropertyLimits(const char*) const { return false; }
+double CorePropertyCollection::GetPropertyLowerLimit(const char*) const { return 0.0; }
+double CorePropertyCollection::GetPropertyUpperLimit(const char*) const { return 0.0; }
+bool CorePropertyCollection::IsPropertySequenceable(const char*) const { return false; }
+long CorePropertyCollection::GetPropertySequenceMaxLength(const char*) const { return 0; }
 
 } // namespace internal
 } // namespace mmcore
