@@ -65,6 +65,7 @@ mmcore_sources = files(
     'MMCore.cpp',
     'PluginManager.cpp',
     'DeviceConformance/CameraConformance.cpp',
+    'DeviceConformance/DeviceConformance.cpp',
     'DeviceConformance/SeqAcqTestMonitor.cpp',
     'Semaphore.cpp',
     'Task.cpp',

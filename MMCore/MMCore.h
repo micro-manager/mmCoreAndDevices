@@ -682,7 +682,7 @@ public:
 
    /** \name Device conformance testing. */
    ///@{
-   std::string runCameraConformanceTests(const char* cameraLabel,
+   std::string runDeviceConformanceTests(const char* deviceLabel,
          const char* testName = nullptr) MMCORE_LEGACY_THROW(CMMError);
    ///@}
 

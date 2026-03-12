@@ -13,21 +13,42 @@
 
 #pragma once
 
-#include "DeviceConformance.h"
+#include "ConformanceTestConfig.h"
+#include "SeqAcqTestMonitor.h"
 
 #include <atomic>
+#include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace mmcore {
 namespace internal {
 
-class CameraInstance;
+class DeviceInstance;
 
-std::vector<TestEntry> GetCameraConformanceTests(
-      std::shared_ptr<CameraInstance> camera,
-      std::atomic<SeqAcqTestMonitor*>& testMonitor,
-      const ConformanceTestConfig& config);
+struct AssertionResult {
+   bool passed;
+   std::string message;
+   std::vector<std::string> details;
+};
+
+struct TestResult {
+   std::string name;
+   bool passed;
+   std::vector<AssertionResult> assertions;
+};
+
+struct TestEntry {
+   std::string slug;
+   std::function<TestResult()> func;
+};
+
+std::string RunDeviceConformanceTests(
+      std::shared_ptr<DeviceInstance> device,
+      std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor,
+      const ConformanceTestConfig& config,
+      const char* testName);
 
 } // namespace internal
 } // namespace mmcore
