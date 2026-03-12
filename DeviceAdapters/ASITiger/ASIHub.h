@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h
-//
 
 #ifndef ASIHUB_H
 #define ASIHUB_H
@@ -30,6 +28,7 @@
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include <string>
+
 
 ////////////////////////////////////////////////////////////////
 // *********** generic ASI comm class *************************
@@ -43,24 +42,21 @@
 class ASIHub : public ASIBase<HubBase, ASIHub>
 {
 public:
-	ASIHub();
-	~ASIHub() { }
+    explicit ASIHub();
+    ~ASIHub() = default;
 
-	// Communication base functions
+   // Clear the serial buffers.
    int ClearComPort();
-
-   // Return the Tiger Comm Card firmware version.
-   bool FirmwareVersionAtLeast(double minimumFirmwareVersion);
 
    // gets the response to a command but waits a certain time for the response to come instead of looking for a terminator
    // also doesn't necessarily wait for a complete response
-   int QueryCommandUnterminatedResponse(const char *command, const long timeoutMs, unsigned long reply_length);
+   int QueryCommandUnterminatedResponse(const char *command, const long timeoutMs, unsigned long replyLength);
    int QueryCommandUnterminatedResponse(const char *command, const long timeoutMs) 
    {	   return  QueryCommandUnterminatedResponse(command, timeoutMs,1);   }
    int QueryCommandUnterminatedResponse(const std::string &command, const long timeoutMs)
       { return QueryCommandUnterminatedResponse(command.c_str(), timeoutMs,1); }
-   int QueryCommandUnterminatedResponse(const std::string &command, const long timeoutMs, unsigned long reply_length)
-   {   return QueryCommandUnterminatedResponse(command.c_str(), timeoutMs, reply_length);   }
+   int QueryCommandUnterminatedResponse(const std::string &command, const long timeoutMs, unsigned long replyLength)
+   {   return QueryCommandUnterminatedResponse(command.c_str(), timeoutMs, replyLength);   }
 
    int QueryCommandLongReply(const char *command, const char *replyTerminator);  // all variants call this
    int QueryCommandLongReply(const char *command) { return QueryCommandLongReply(command, g_SerialTerminatorMultiLine); }

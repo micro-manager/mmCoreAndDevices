@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h
-//
 
 #ifndef ASIPERIPHERALBASE_H
 #define ASIPERIPHERALBASE_H
@@ -37,7 +35,7 @@ template <template <typename> class TDeviceBase, class UConcreteDevice>
 class ASIPeripheralBase : public ASIBase<TDeviceBase, UConcreteDevice>
 {
 public:
-   ASIPeripheralBase(const char* name) :
+    explicit ASIPeripheralBase(const char* name) :
       ASIBase<TDeviceBase, UConcreteDevice>(name),
       hub_(nullptr),
       addressString_(g_EmptyCardAddressStr),

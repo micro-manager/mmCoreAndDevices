@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h and others
-//
 
 #ifndef ASIFWHEEL_H
 #define ASIFWHEEL_H
@@ -32,20 +30,17 @@
 class CFWheel : public ASIPeripheralBase<CStateDeviceBase, CFWheel>
 {
 public:
-   CFWheel(const char* name);
-   ~CFWheel() { }
-  
+    explicit CFWheel(const char* name);
+    ~CFWheel() = default;
+
    // Generic device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // State device API
-   // -----------
    unsigned long GetNumberOfPositions() const { return numPositions_; }
 
    // action interface
-   // ----------------
    int OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnState       (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -57,15 +52,15 @@ public:
    int OnOffset      (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+    int SelectWheelOverride();
+    int SelectWheel();
+    void ForcePropertyRefresh();
+
    unsigned int numPositions_;
    unsigned int curPosition_;
    bool spinning_;
    std::string wheelNumber_;
    static std::string selectedWheel_; // which wheel is currently selected, shared among all instances of this class
-
-   int SelectWheelOverride();
-   int SelectWheel();
-   void ForcePropertyRefresh();
 };
 
 #endif // ASIFWHEEL_H

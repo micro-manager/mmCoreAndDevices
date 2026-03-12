@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h and others
-//
 
 #ifndef ASIXYSTAGE_H
 #define ASIXYSTAGE_H
@@ -32,9 +30,9 @@
 class CXYStage : public ASIPeripheralBase<CXYStageBase, CXYStage>
 {
 public:
-   CXYStage(const char* name);
-   ~CXYStage() { }
-  
+    explicit CXYStage(const char* name);
+    ~CXYStage() = default;
+
    // Device API
    // ----------
    int Initialize();

@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h and others
-//
 
 #ifndef ASIPIEZO_H
 #define ASIPIEZO_H
@@ -32,9 +30,9 @@
 class CPiezo : public ASIPeripheralBase<CStageBase, CPiezo>
 {
 public:
-   CPiezo(const char* name);
-   ~CPiezo() { }
-  
+    explicit CPiezo(const char* name);
+    ~CPiezo() = default;
+
    // Device API
    int Initialize();
    bool Busy();

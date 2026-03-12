@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 05/2014
 //
-// BASED ON:      ASIStage.h and others
-//
 
 #ifndef ASILED_H
 #define ASILED_H
@@ -32,9 +30,9 @@
 class CLED : public ASIPeripheralBase<CShutterBase, CLED>
 {
 public:
-   CLED(const char* name);
-   ~CLED() { }
-  
+    explicit CLED(const char* name);
+    ~CLED() = default;
+
    // Device API
    int Initialize();
    bool Busy() { return false; }
