@@ -103,20 +103,26 @@ int ASIBase::CheckDeviceStatus() {
 	return ret;
 }
 
-int ASIBase::GetVersion(std::string& version) const
-{
-   std::string answer;
-   int ret = QueryCommand("V", answer);
-   if (ret != DEVICE_OK)
-   {
-      return ret;
-   }
-   if (answer.compare(0, 2, ":A") == 0)
-   {
-		version = answer.substr(3);
-		return DEVICE_OK;
-   }
-   return ERR_UNRECOGNIZED_ANSWER;
+int ASIBase::GetVersion(std::string& version) const {
+    std::string answer;
+    if (const int error = QueryCommand("V", answer)) {
+        return error;
+    }
+    if (answer.size() > 16 && answer.compare(0, 2, ":A") == 0) {
+        const size_t start = 16; // dash position
+        const size_t space = answer.find(' ', start);
+        // :A Version: USB-#.## \r\n
+        //          start ^    ^ space
+        if (space != std::string::npos) {
+            // found the space in "#.## \r\n"
+            version = answer.substr(start, space - start);
+        } else {
+            // otherwise take everything from the start
+            version = answer.substr(16);
+        }
+        return DEVICE_OK;
+    }
+    return ERR_UNRECOGNIZED_ANSWER;
 }
 
 // Get the version of this controller
