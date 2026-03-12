@@ -182,7 +182,7 @@ TEST_CASE("Conformant camera passes all conformance tests",
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
 
-   auto results = nlohmann::json::parse(c.runCameraConformanceTests("cam"));
+   auto results = nlohmann::json::parse(c.runDeviceConformanceTests("cam"));
    for (const auto& test : results["tests"]) {
       INFO("Test: " << test["name"].get<std::string>());
       CHECK(test["passed"].get<bool>());
@@ -202,7 +202,7 @@ TEST_CASE("Missing PrepareForAcq is detected by conformance test",
    c.setCameraDevice("cam");
 
    auto results = nlohmann::json::parse(
-      c.runCameraConformanceTests("cam", "seq-prepare-before-insert"));
+      c.runDeviceConformanceTests("cam", "seq-prepare-before-insert"));
    CHECK_FALSE(TestPassed(results, "seq-prepare-before-insert"));
 }
 
@@ -217,7 +217,7 @@ TEST_CASE("Missing AcqFinished is detected by conformance test",
    c.setCameraDevice("cam");
 
    auto results = nlohmann::json::parse(
-      c.runCameraConformanceTests("cam", "seq-finished-after-count"));
+      c.runDeviceConformanceTests("cam", "seq-finished-after-count"));
    CHECK_FALSE(TestPassed(results, "seq-finished-after-count"));
 }
 
@@ -232,6 +232,6 @@ TEST_CASE("Ignoring InsertImage error return is detected by conformance test",
    c.setCameraDevice("cam");
 
    auto results = nlohmann::json::parse(
-      c.runCameraConformanceTests("cam", "seq-finished-on-error-finite"));
+      c.runDeviceConformanceTests("cam", "seq-finished-on-error-finite"));
    CHECK_FALSE(TestPassed(results, "seq-finished-on-error-finite"));
 }
