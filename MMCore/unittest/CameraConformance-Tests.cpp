@@ -251,8 +251,8 @@ TEST_CASE("Camera that fails to start seq acq produces warning",
    c.setCameraDevice("cam");
 
    auto results = nlohmann::json::parse(
-      c.runDeviceConformanceTests("cam", "seq-prepare-before-insert"));
-   CHECK(GetTestStatus(results, "seq-prepare-before-insert") == "warning");
+      c.runDeviceConformanceTests("cam", "seq-basic"));
+   CHECK(GetTestStatus(results, "seq-basic") == "warning");
 }
 
 TEST_CASE("Dependent tests are skipped when dependency warns",
@@ -266,9 +266,10 @@ TEST_CASE("Dependent tests are skipped when dependency warns",
    c.setCameraDevice("cam");
 
    auto results = nlohmann::json::parse(c.runDeviceConformanceTests("cam"));
-   CHECK(GetTestStatus(results, "seq-prepare-before-insert") == "warning");
+   CHECK(GetTestStatus(results, "seq-basic") == "warning");
+   CHECK(GetTestStatus(results, "seq-prepare-before-insert") == "skipped");
    CHECK(GetTestStatus(results, "seq-finished-after-count") == "skipped");
    CHECK(GetTestStatus(results, "seq-finished-on-error-finite") == "skipped");
    CHECK(results["summary"]["warnings"].get<int>() == 1);
-   CHECK(results["summary"]["skipped"].get<int>() == 5);
+   CHECK(results["summary"]["skipped"].get<int>() == 6);
 }

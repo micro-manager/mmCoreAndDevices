@@ -67,6 +67,36 @@ struct CameraTestContext {
          pCam->StopSequenceAcquisition();
    }
 
+   TestResult TestSeqBasic() {
+      TestResult result;
+      result.name = "seq-basic";
+
+      SeqAcqTestMonitor monitor(rawCam);
+      seqAcqTestMonitor.store(&monitor, std::memory_order_release);
+      MonitorGuard mg{seqAcqTestMonitor, pCam};
+
+      try {
+         StartFinite(1, 0.0);
+      } catch (const CMMError&) {
+         result.assertions.push_back(
+            {AssertionStatus::Warning,
+               "Camera failed to start sequence acquisition", {}});
+         return result;
+      }
+
+      if (monitor.WaitForInsertImageCount(1, testTimeout)) {
+         result.assertions.push_back(
+            {AssertionStatus::Pass,
+               "Camera produced 1 image via sequence acquisition", {}});
+      } else {
+         result.assertions.push_back(
+            {AssertionStatus::Fail,
+               "No image arrived from sequence acquisition", {}});
+      }
+
+      return result;
+   }
+
    TestResult TestPrepareBeforeInsert() {
       TestResult result;
       result.name = "seq-prepare-before-insert";
@@ -220,28 +250,31 @@ std::vector<TestEntry> GetCameraConformanceTests(
 
    std::vector<TestEntry> tests;
 
+   tests.push_back({"seq-basic", [ctx]() {
+      return ctx->TestSeqBasic();
+   }, {}});
    tests.push_back({"seq-prepare-before-insert", [ctx]() {
       return ctx->TestPrepareBeforeInsert();
-   }, {}});
+   }, {"seq-basic"}});
    tests.push_back({"seq-finished-after-count", [ctx]() {
       return ctx->TestFinishedAfterCount();
-   }, {"seq-prepare-before-insert"}});
+   }, {"seq-basic"}});
    tests.push_back({"seq-finished-on-error-finite", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-error-finite",
          DEVICE_ERR, "DEVICE_ERR", false);
-   }, {"seq-prepare-before-insert"}});
+   }, {"seq-basic"}});
    tests.push_back({"seq-finished-on-error-continuous", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-error-continuous",
          DEVICE_ERR, "DEVICE_ERR", true);
-   }, {"seq-prepare-before-insert"}});
+   }, {"seq-basic"}});
    tests.push_back({"seq-finished-on-overflow-finite", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-overflow-finite",
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", false);
-   }, {"seq-prepare-before-insert"}});
+   }, {"seq-basic"}});
    tests.push_back({"seq-finished-on-overflow-continuous", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-overflow-continuous",
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", true);
-   }, {"seq-prepare-before-insert"}});
+   }, {"seq-basic"}});
 
    return tests;
 }
