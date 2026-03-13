@@ -39,8 +39,7 @@ struct CameraTestContext {
       ~MonitorGuard() {
          try {
             DeviceModuleLockGuard g(cam);
-            if (cam->IsCapturing())
-               cam->StopSequenceAcquisition();
+            cam->StopSequenceAcquisition();
          } catch (...) {}
          atom.store(nullptr, std::memory_order_release);
       }
@@ -63,8 +62,7 @@ struct CameraTestContext {
 
    void StopCamera() {
       DeviceModuleLockGuard guard(pCam);
-      if (pCam->IsCapturing())
-         pCam->StopSequenceAcquisition();
+      pCam->StopSequenceAcquisition();
    }
 
    TestResult TestSeqBasic() {
