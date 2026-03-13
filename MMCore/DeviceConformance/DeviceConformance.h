@@ -27,21 +27,25 @@ namespace internal {
 
 class DeviceInstance;
 
+enum class AssertionStatus { Pass, Fail, Warning };
+
 struct AssertionResult {
-   bool passed;
+   AssertionStatus status;
    std::string message;
    std::vector<std::string> details;
 };
 
+enum class TestStatus { Pass, Fail, Warning, Skipped };
+
 struct TestResult {
    std::string name;
-   bool passed;
    std::vector<AssertionResult> assertions;
 };
 
 struct TestEntry {
    std::string slug;
    std::function<TestResult()> func;
+   std::vector<std::string> dependsOn;
 };
 
 std::string RunDeviceConformanceTests(

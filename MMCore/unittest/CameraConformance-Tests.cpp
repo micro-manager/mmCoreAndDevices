@@ -17,10 +17,11 @@
 
 namespace {
 
-bool TestPassed(const nlohmann::json& results, const std::string& testName) {
+std::string GetTestStatus(const nlohmann::json& results,
+      const std::string& testName) {
    for (const auto& t : results["tests"]) {
       if (t["name"] == testName)
-         return t["passed"].get<bool>();
+         return t["status"].get<std::string>();
    }
    throw std::runtime_error("Test not found: " + testName);
 }
@@ -43,6 +44,7 @@ struct ConfigurableAsyncCamera : CCameraBase<ConfigurableAsyncCamera> {
    bool callPrepareForAcq = true;
    bool callAcqFinished = true;
    bool checkInsertImageReturn = true;
+   bool failStartSequenceAcq = false;
 
    int Initialize() override { return DEVICE_OK; }
    int Shutdown() override { return DEVICE_OK; }
@@ -85,6 +87,8 @@ struct ConfigurableAsyncCamera : CCameraBase<ConfigurableAsyncCamera> {
    }
 
    int StartSequenceAcquisition(long numImages, double, bool) override {
+      if (failStartSequenceAcq)
+         return DEVICE_ERR;
       // Thread may be left over from previous (unstopped) run
       if (thread_.joinable())
          thread_.join();
@@ -185,7 +189,7 @@ TEST_CASE("Conformant camera passes all conformance tests",
    auto results = nlohmann::json::parse(c.runDeviceConformanceTests("cam"));
    for (const auto& test : results["tests"]) {
       INFO("Test: " << test["name"].get<std::string>());
-      CHECK(test["passed"].get<bool>());
+      CHECK(test["status"].get<std::string>() == "pass");
    }
    CHECK(results["summary"]["passed"].get<int>() ==
          results["summary"]["total"].get<int>());
@@ -203,7 +207,7 @@ TEST_CASE("Missing PrepareForAcq is detected by conformance test",
 
    auto results = nlohmann::json::parse(
       c.runDeviceConformanceTests("cam", "seq-prepare-before-insert"));
-   CHECK_FALSE(TestPassed(results, "seq-prepare-before-insert"));
+   CHECK(GetTestStatus(results, "seq-prepare-before-insert") == "fail");
 }
 
 TEST_CASE("Missing AcqFinished is detected by conformance test",
@@ -218,7 +222,7 @@ TEST_CASE("Missing AcqFinished is detected by conformance test",
 
    auto results = nlohmann::json::parse(
       c.runDeviceConformanceTests("cam", "seq-finished-after-count"));
-   CHECK_FALSE(TestPassed(results, "seq-finished-after-count"));
+   CHECK(GetTestStatus(results, "seq-finished-after-count") == "fail");
 }
 
 TEST_CASE("Ignoring InsertImage error return is detected by conformance test",
@@ -233,5 +237,38 @@ TEST_CASE("Ignoring InsertImage error return is detected by conformance test",
 
    auto results = nlohmann::json::parse(
       c.runDeviceConformanceTests("cam", "seq-finished-on-error-finite"));
-   CHECK_FALSE(TestPassed(results, "seq-finished-on-error-finite"));
+   CHECK(GetTestStatus(results, "seq-finished-on-error-finite") == "fail");
+}
+
+TEST_CASE("Camera that fails to start seq acq produces warning",
+          "[CameraConformance]") {
+   ConfigurableAsyncCamera cam;
+   cam.failStartSequenceAcq = true;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   auto results = nlohmann::json::parse(
+      c.runDeviceConformanceTests("cam", "seq-prepare-before-insert"));
+   CHECK(GetTestStatus(results, "seq-prepare-before-insert") == "warning");
+}
+
+TEST_CASE("Dependent tests are skipped when dependency warns",
+          "[CameraConformance]") {
+   ConfigurableAsyncCamera cam;
+   cam.failStartSequenceAcq = true;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   auto results = nlohmann::json::parse(c.runDeviceConformanceTests("cam"));
+   CHECK(GetTestStatus(results, "seq-prepare-before-insert") == "warning");
+   CHECK(GetTestStatus(results, "seq-finished-after-count") == "skipped");
+   CHECK(GetTestStatus(results, "seq-finished-on-error-finite") == "skipped");
+   CHECK(results["summary"]["warnings"].get<int>() == 1);
+   CHECK(results["summary"]["skipped"].get<int>() == 5);
 }
