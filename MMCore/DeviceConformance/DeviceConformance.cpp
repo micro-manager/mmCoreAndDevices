@@ -28,6 +28,7 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
 
 namespace mmcore {
 namespace internal {
@@ -47,19 +48,49 @@ std::string FormatISO8601(std::chrono::system_clock::time_point tp) {
    return ss.str();
 }
 
+const char* AssertionStatusToString(AssertionStatus s) {
+   switch (s) {
+      case AssertionStatus::Pass: return "pass";
+      case AssertionStatus::Fail: return "fail";
+      case AssertionStatus::Warning: return "warning";
+   }
+   return "unknown";
+}
+
+const char* TestStatusToString(TestStatus s) {
+   switch (s) {
+      case TestStatus::Pass: return "pass";
+      case TestStatus::Fail: return "fail";
+      case TestStatus::Warning: return "warning";
+      case TestStatus::Skipped: return "skipped";
+   }
+   return "unknown";
+}
+
+TestStatus DeriveTestStatus(const std::vector<AssertionResult>& assertions) {
+   bool anyWarning = false;
+   for (const auto& a : assertions) {
+      if (a.status == AssertionStatus::Fail)
+         return TestStatus::Fail;
+      if (a.status == AssertionStatus::Warning)
+         anyWarning = true;
+   }
+   return anyWarning ? TestStatus::Warning : TestStatus::Pass;
+}
+
 nlohmann::json AssertionToJson(const AssertionResult& a) {
    nlohmann::json j;
-   j["passed"] = a.passed;
+   j["status"] = AssertionStatusToString(a.status);
    j["message"] = a.message;
    if (!a.details.empty())
       j["details"] = a.details;
    return j;
 }
 
-nlohmann::json TestToJson(const TestResult& t) {
+nlohmann::json TestToJson(const TestResult& t, TestStatus status) {
    nlohmann::json j;
    j["name"] = t.name;
-   j["passed"] = t.passed;
+   j["status"] = TestStatusToString(status);
    nlohmann::json assertions = nlohmann::json::array();
    for (const auto& a : t.assertions)
       assertions.push_back(AssertionToJson(a));
@@ -97,10 +128,37 @@ std::string RunConformanceTests(
    const auto startSteady = steady_clock::now();
 
    std::vector<TestResult> results;
+   std::vector<TestStatus> statuses;
+   std::unordered_map<std::string, TestStatus> completedStatuses;
+
    for (const auto& t : tests) {
       if (!selectedTest.empty() && selectedTest != t.slug)
          continue;
-      results.push_back(t.func());
+
+      bool skip = false;
+      if (selectedTest.empty()) {
+         for (const auto& dep : t.dependsOn) {
+            auto it = completedStatuses.find(dep);
+            if (it == completedStatuses.end() ||
+                  it->second != TestStatus::Pass) {
+               skip = true;
+               break;
+            }
+         }
+      }
+
+      TestStatus status;
+      if (skip) {
+         TestResult r;
+         r.name = t.slug;
+         results.push_back(std::move(r));
+         status = TestStatus::Skipped;
+      } else {
+         results.push_back(t.func());
+         status = DeriveTestStatus(results.back().assertions);
+      }
+      statuses.push_back(status);
+      completedStatuses[t.slug] = status;
    }
 
    const auto endSteady = steady_clock::now();
@@ -108,17 +166,22 @@ std::string RunConformanceTests(
       duration_cast<duration<double, std::milli>>(endSteady - startSteady)
          .count();
 
-   int passedCount = 0;
-   for (const auto& r : results)
-      if (r.passed)
-         ++passedCount;
+   int passedCount = 0, failedCount = 0, warningCount = 0, skippedCount = 0;
+   for (auto s : statuses) {
+      switch (s) {
+         case TestStatus::Pass: ++passedCount; break;
+         case TestStatus::Fail: ++failedCount; break;
+         case TestStatus::Warning: ++warningCount; break;
+         case TestStatus::Skipped: ++skippedCount; break;
+      }
+   }
 
    nlohmann::json testsJson = nlohmann::json::array();
-   for (const auto& r : results)
-      testsJson.push_back(TestToJson(r));
+   for (size_t i = 0; i < results.size(); ++i)
+      testsJson.push_back(TestToJson(results[i], statuses[i]));
 
    nlohmann::json j;
-   j["version"] = 1;
+   j["version"] = 2;
    j["timestamp"] = FormatISO8601(startTime);
    j["device"] = {
       {"label", deviceLabel},
@@ -130,6 +193,9 @@ std::string RunConformanceTests(
    j["summary"] = {
       {"total", static_cast<int>(results.size())},
       {"passed", passedCount},
+      {"failed", failedCount},
+      {"warnings", warningCount},
+      {"skipped", skippedCount},
       {"durationMs", durationMs},
    };
 

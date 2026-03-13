@@ -75,21 +75,29 @@ struct CameraTestContext {
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
 
-      StartFinite(5, 0.0);
+      try {
+         StartFinite(5, 0.0);
+      } catch (const CMMError&) {
+         result.assertions.push_back(
+            {AssertionStatus::Warning,
+               "Camera failed to start sequence acquisition", {}});
+         return result;
+      }
       monitor.WaitForInsertImageCount(5, testTimeout);
 
       if (!monitor.PrepareForAcqCalled()) {
          result.assertions.push_back(
-            {false, "PrepareForAcq was not called", {}});
+            {AssertionStatus::Fail, "PrepareForAcq was not called", {}});
       } else if (!monitor.PrepareBeforeFirstInsert()) {
          result.assertions.push_back(
-            {false, "PrepareForAcq was called after InsertImage", {}});
+            {AssertionStatus::Fail,
+               "PrepareForAcq was called after InsertImage", {}});
       } else {
          result.assertions.push_back(
-            {true, "PrepareForAcq called before first InsertImage", {}});
+            {AssertionStatus::Pass,
+               "PrepareForAcq called before first InsertImage", {}});
       }
 
-      result.passed = result.assertions.back().passed;
       return result;
    }
 
@@ -101,15 +109,23 @@ struct CameraTestContext {
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
 
-      StartFinite(5, 0.0);
+      try {
+         StartFinite(5, 0.0);
+      } catch (const CMMError&) {
+         result.assertions.push_back(
+            {AssertionStatus::Warning,
+               "Camera failed to start sequence acquisition", {}});
+         return result;
+      }
       monitor.WaitForInsertImageCount(5, testTimeout);
 
       if (monitor.WaitForAcqFinished(testTimeout)) {
          result.assertions.push_back(
-            {true, "AcqFinished called after finite sequence completed", {}});
+            {AssertionStatus::Pass,
+               "AcqFinished called after finite sequence completed", {}});
       } else {
          AssertionResult a;
-         a.passed = false;
+         a.status = AssertionStatus::Fail;
          a.message =
             "AcqFinished not called after finite sequence (5 frames)";
          StopCamera();
@@ -124,7 +140,6 @@ struct CameraTestContext {
          result.assertions.push_back(std::move(a));
       }
 
-      result.passed = result.assertions.back().passed;
       return result;
    }
 
@@ -138,24 +153,29 @@ struct CameraTestContext {
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
 
-      if (continuous)
-         StartContinuous(0.0);
-      else
-         StartFinite(1000000, 0.0);
+      try {
+         if (continuous)
+            StartContinuous(0.0);
+         else
+            StartFinite(1000000, 0.0);
+      } catch (const CMMError&) {
+         result.assertions.push_back(
+            {AssertionStatus::Warning,
+               "Camera failed to start sequence acquisition", {}});
+         return result;
+      }
 
       monitor.WaitForInsertImageCount(3, testTimeout);
 
-      bool pass = true;
-
       if (monitor.WaitForAcqFinished(testTimeout)) {
          result.assertions.push_back(
-            {true, std::string("AcqFinished called after ") + errorName, {}});
+            {AssertionStatus::Pass,
+               std::string("AcqFinished called after ") + errorName, {}});
       } else {
          AssertionResult a;
-         a.passed = false;
+         a.status = AssertionStatus::Fail;
          a.message =
             std::string("AcqFinished not called after ") + errorName;
-         pass = false;
          StopCamera();
          if (monitor.WaitForAcqFinished(testTimeout)) {
             a.details.push_back(
@@ -172,15 +192,14 @@ struct CameraTestContext {
       int afterError = monitor.InsertImageCountAfterError();
       if (afterError > 1) {
          result.assertions.push_back(
-            {false, std::to_string(afterError - 1) +
+            {AssertionStatus::Fail, std::to_string(afterError - 1) +
                " InsertImage call(s) after error return", {}});
-         pass = false;
       } else {
          result.assertions.push_back(
-            {true, "No further InsertImage calls after error", {}});
+            {AssertionStatus::Pass,
+               "No further InsertImage calls after error", {}});
       }
 
-      result.passed = pass;
       return result;
    }
 };
@@ -203,26 +222,26 @@ std::vector<TestEntry> GetCameraConformanceTests(
 
    tests.push_back({"seq-prepare-before-insert", [ctx]() {
       return ctx->TestPrepareBeforeInsert();
-   }});
+   }, {}});
    tests.push_back({"seq-finished-after-count", [ctx]() {
       return ctx->TestFinishedAfterCount();
-   }});
+   }, {"seq-prepare-before-insert"}});
    tests.push_back({"seq-finished-on-error-finite", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-error-finite",
          DEVICE_ERR, "DEVICE_ERR", false);
-   }});
+   }, {"seq-prepare-before-insert"}});
    tests.push_back({"seq-finished-on-error-continuous", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-error-continuous",
          DEVICE_ERR, "DEVICE_ERR", true);
-   }});
+   }, {"seq-prepare-before-insert"}});
    tests.push_back({"seq-finished-on-overflow-finite", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-overflow-finite",
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", false);
-   }});
+   }, {"seq-prepare-before-insert"}});
    tests.push_back({"seq-finished-on-overflow-continuous", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-overflow-continuous",
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", true);
-   }});
+   }, {"seq-prepare-before-insert"}});
 
    return tests;
 }
