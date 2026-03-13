@@ -104,7 +104,8 @@ std::string RunConformanceTests(
       const std::string& deviceLabel,
       const std::string& deviceName,
       const std::string& adapterName,
-      const std::string& deviceType) {
+      const std::string& deviceType,
+      const nlohmann::json& deviceState) {
    using namespace std::chrono;
 
    std::string selectedTest;
@@ -181,7 +182,7 @@ std::string RunConformanceTests(
       testsJson.push_back(TestToJson(results[i], statuses[i]));
 
    nlohmann::json j;
-   j["version"] = 2;
+   j["version"] = 3;
    j["timestamp"] = FormatISO8601(startTime);
    j["device"] = {
       {"label", deviceLabel},
@@ -189,6 +190,7 @@ std::string RunConformanceTests(
       {"library", adapterName},
    };
    j["deviceType"] = deviceType;
+   j["deviceState"] = deviceState;
    j["tests"] = testsJson;
    j["summary"] = {
       {"total", static_cast<int>(results.size())},
@@ -204,6 +206,20 @@ std::string RunConformanceTests(
 
 } // anonymous namespace
 
+nlohmann::json CollectDeviceProperties(
+      std::shared_ptr<DeviceInstance> device) {
+   nlohmann::json props = nlohmann::json::object();
+   DeviceModuleLockGuard guard(device);
+   for (const auto& name : device->GetPropertyNames()) {
+      try {
+         props[name] = device->GetProperty(name);
+      } catch (...) {
+         props[name] = nullptr;
+      }
+   }
+   return props;
+}
+
 std::string RunDeviceConformanceTests(
       std::shared_ptr<DeviceInstance> device,
       std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor,
@@ -215,6 +231,9 @@ std::string RunDeviceConformanceTests(
    const auto deviceType = device->GetType();
    const auto deviceTypeStr = ToString(deviceType);
 
+   nlohmann::json deviceState;
+   deviceState["properties"] = CollectDeviceProperties(device);
+
    std::vector<TestEntry> tests;
    if (deviceType == MM::CameraDevice) {
       auto pCam = std::static_pointer_cast<CameraInstance>(device);
@@ -225,11 +244,12 @@ std::string RunDeviceConformanceTests(
                "Not allowed during sequence acquisition",
                MMERR_NotAllowedDuringSequenceAcquisition);
       }
+      deviceState["settings"] = CollectCameraState(pCam);
       tests = GetCameraConformanceTests(pCam, seqAcqTestMonitor, config);
    }
 
    return RunConformanceTests(tests, testName, deviceLabel, deviceName,
-      adapterName, deviceTypeStr);
+      adapterName, deviceTypeStr, deviceState);
 }
 
 } // namespace internal

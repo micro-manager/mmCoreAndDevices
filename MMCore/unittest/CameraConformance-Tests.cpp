@@ -273,3 +273,31 @@ TEST_CASE("Dependent tests are skipped when dependency warns",
    CHECK(results["summary"]["warnings"].get<int>() == 1);
    CHECK(results["summary"]["skipped"].get<int>() == 6);
 }
+
+TEST_CASE("deviceState contains camera settings", "[CameraConformance]") {
+   ConfigurableAsyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   auto results = nlohmann::json::parse(c.runDeviceConformanceTests("cam"));
+   CHECK(results["version"].get<int>() == 3);
+   REQUIRE(results["deviceState"].is_object());
+
+   const auto& state = results["deviceState"];
+   REQUIRE(state["properties"].is_object());
+   REQUIRE(state["settings"].is_object());
+
+   const auto& settings = state["settings"];
+   CHECK(settings["exposure"].get<double>() == 10.0);
+   CHECK(settings["binning"].get<int>() == 1);
+   CHECK(settings["imageWidth"].get<unsigned>() == 64);
+   CHECK(settings["imageHeight"].get<unsigned>() == 64);
+   CHECK(settings["bitDepth"].get<unsigned>() == 8);
+   CHECK(settings["roi"] ==
+         nlohmann::json({{"x", 0}, {"y", 0}, {"width", 64}, {"height", 64}}));
+   CHECK(settings["exposureSequenceable"].get<bool>() == false);
+   CHECK(settings["multiROISupported"].get<bool>() == false);
+}

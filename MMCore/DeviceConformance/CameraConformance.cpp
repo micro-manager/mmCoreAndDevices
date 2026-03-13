@@ -19,10 +19,95 @@
 
 #include "MMDeviceConstants.h"
 
+#include <nlohmann/json.hpp>
+
 #include <thread>
+#include <vector>
 
 namespace mmcore {
 namespace internal {
+
+nlohmann::json CollectCameraState(
+      std::shared_ptr<CameraInstance> camera) {
+   nlohmann::json s = nlohmann::json::object();
+   DeviceModuleLockGuard guard(camera);
+
+   try { s["exposure"] = camera->GetExposure(); }
+   catch (...) { s["exposure"] = nullptr; }
+
+   try { s["binning"] = camera->GetBinning(); }
+   catch (...) { s["binning"] = nullptr; }
+
+   try {
+      unsigned x, y, w, h;
+      camera->GetROI(x, y, w, h);
+      s["roi"] = {{"x", x}, {"y", y}, {"width", w}, {"height", h}};
+   } catch (...) { s["roi"] = nullptr; }
+
+   try { s["imageWidth"] = camera->GetImageWidth(); }
+   catch (...) { s["imageWidth"] = nullptr; }
+
+   try { s["imageHeight"] = camera->GetImageHeight(); }
+   catch (...) { s["imageHeight"] = nullptr; }
+
+   try { s["imageBytesPerPixel"] = camera->GetImageBytesPerPixel(); }
+   catch (...) { s["imageBytesPerPixel"] = nullptr; }
+
+   try { s["bitDepth"] = camera->GetBitDepth(); }
+   catch (...) { s["bitDepth"] = nullptr; }
+
+   try { s["numberOfComponents"] = camera->GetNumberOfComponents(); }
+   catch (...) { s["numberOfComponents"] = nullptr; }
+
+   try {
+      unsigned nCh = camera->GetNumberOfChannels();
+      nlohmann::json channels = nlohmann::json::array();
+      for (unsigned i = 0; i < nCh; ++i)
+         channels.push_back(camera->GetChannelName(i));
+      s["channels"] = channels;
+   } catch (...) { s["channels"] = nullptr; }
+
+   try { s["imageBufferSize"] = camera->GetImageBufferSize(); }
+   catch (...) { s["imageBufferSize"] = nullptr; }
+
+   try { s["multiROISupported"] = camera->SupportsMultiROI(); }
+   catch (...) { s["multiROISupported"] = nullptr; }
+
+   try { s["multiROIEnabled"] = camera->IsMultiROISet(); }
+   catch (...) { s["multiROIEnabled"] = nullptr; }
+
+   try {
+      if (camera->IsMultiROISet()) {
+         unsigned count = 0;
+         camera->GetMultiROI(nullptr, nullptr, nullptr, nullptr, &count);
+         std::vector<unsigned> xs(count), ys(count), ws(count), hs(count);
+         camera->GetMultiROI(xs.data(), ys.data(), ws.data(), hs.data(),
+            &count);
+         nlohmann::json rois = nlohmann::json::array();
+         for (unsigned i = 0; i < count; ++i)
+            rois.push_back(
+               {{"x", xs[i]}, {"y", ys[i]},
+                  {"width", ws[i]}, {"height", hs[i]}});
+         s["multiROIs"] = rois;
+      }
+   } catch (...) { s["multiROIs"] = nullptr; }
+
+   bool isSeq = false;
+   try {
+      camera->IsExposureSequenceable(isSeq);
+      s["exposureSequenceable"] = isSeq;
+   } catch (...) { s["exposureSequenceable"] = nullptr; }
+
+   if (isSeq) {
+      try {
+         long maxLen = 0;
+         camera->GetExposureSequenceMaxLength(maxLen);
+         s["exposureSequenceMaxLength"] = maxLen;
+      } catch (...) { s["exposureSequenceMaxLength"] = nullptr; }
+   }
+
+   return s;
+}
 
 namespace {
 

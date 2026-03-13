@@ -19,10 +19,15 @@
 #include <memory>
 #include <vector>
 
+#include <nlohmann/json_fwd.hpp>
+
 namespace mmcore {
 namespace internal {
 
 class CameraInstance;
+
+nlohmann::json CollectCameraState(
+      std::shared_ptr<CameraInstance> camera);
 
 std::vector<TestEntry> GetCameraConformanceTests(
       std::shared_ptr<CameraInstance> camera,

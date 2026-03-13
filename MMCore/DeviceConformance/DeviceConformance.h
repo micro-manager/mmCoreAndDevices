@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include <nlohmann/json_fwd.hpp>
+
 namespace mmcore {
 namespace internal {
 
@@ -47,6 +49,9 @@ struct TestEntry {
    std::function<TestResult()> func;
    std::vector<std::string> dependsOn;
 };
+
+nlohmann::json CollectDeviceProperties(
+      std::shared_ptr<DeviceInstance> device);
 
 std::string RunDeviceConformanceTests(
       std::shared_ptr<DeviceInstance> device,
