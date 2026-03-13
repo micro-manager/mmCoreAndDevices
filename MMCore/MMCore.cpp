@@ -51,6 +51,7 @@
 #include "MMEventCallback.h"
 #include "NotificationQueue.h"
 #include "PluginManager.h"
+#include "DeviceConformance/DeviceConformance.h"
 #include "SynchronizedConfiguration.h"
 
 #include "DeviceUtils.h"
@@ -134,6 +135,7 @@ CMMCore::CMMCore() :
    cbuf_(std::make_unique<mmi::CircularBuffer>(
       (sizeof(void*) > 4) ? 250u : 25u)),
    callback_(std::make_unique<mmi::CoreCallback>(this)),
+   conformanceTestConfig_(std::make_unique<mmi::ConformanceTestConfig>()),
    pluginManager_(std::make_shared<mmi::CPluginManager>()),
    deviceManager_(std::make_shared<mmi::DeviceManager>()),
    stateCache_(std::make_unique<SynchronizedConfiguration>())
@@ -3086,6 +3088,40 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
    mmi::DeviceModuleLockGuard guard(pCam);
    return pCam->IsCapturing();
 };
+
+/**
+ * Run behavioral conformance tests on a device and return a JSON report.
+ *
+ * Currently supports camera devices, where the tests exercise the sequence
+ * acquisition callback protocol (PrepareForAcq, InsertImage, AcqFinished).
+ *
+ * @param deviceLabel  Label of the device to test (must be loaded and
+ *                     initialized).
+ * @param testName     Slug name of a single test to run, or null/empty to run
+ *                     all tests.
+ * @return A JSON string containing the test results.
+ */
+std::string CMMCore::runDeviceConformanceTests(const char* deviceLabel,
+      const char* testName) MMCORE_LEGACY_THROW(CMMError)
+{
+   auto device = deviceManager_->GetDevice(deviceLabel);
+   return mmi::RunDeviceConformanceTests(device, seqAcqTestMonitor_,
+      *conformanceTestConfig_, testName);
+}
+
+/**
+ * \brief Testing only: configure conformance tests
+ * 
+ * This function is designed for unit testing of MMCore itself, and its
+ * interface is subject to change. It is also not designed for language
+ * bindings (Java, Python) in mind (at least for now).
+ * 
+ * Do not use this in production code, for now.
+ */
+void CMMCore::setConformanceTestConfig(
+      const mmcore::internal::ConformanceTestConfig& config) {
+   *conformanceTestConfig_ = config;
+}
 
 /**
  * Gets the last image from the circular buffer.
