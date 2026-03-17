@@ -16,12 +16,22 @@
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <vector>
 
 namespace mmcore {
 namespace internal {
+
+enum class SeqAcqEvent { PrepareForAcq, InsertImage, AcqFinished };
+
+struct SeqAcqLogEntry {
+   SeqAcqEvent event;
+   int returnCode;
+   std::chrono::steady_clock::time_point timestamp;
+};
 
 class SeqAcqTestMonitor {
 public:
@@ -40,14 +50,9 @@ public:
    int OnInsertImage();
    void OnAcqFinished();
 
-   bool WaitForInsertImageCount(int n, std::chrono::milliseconds timeout);
-   bool WaitForAcqFinished(std::chrono::milliseconds timeout);
-
-   bool PrepareForAcqCalled() const;
-   int InsertImageCount() const;
-   bool AcqFinishedCalled() const;
-   bool PrepareBeforeFirstInsert() const;
-   int InsertImageCountAfterError() const;
+   bool WaitForEvent(SeqAcqEvent event, int count,
+      std::chrono::milliseconds timeout);
+   std::vector<SeqAcqLogEntry> GetLog() const;
 
 private:
    const MM::Device* const target_;
@@ -55,16 +60,12 @@ private:
    mutable std::mutex mutex_;
    std::condition_variable cv_;
 
-   bool prepareForAcqCalled_ = false;
-   int insertImageCount_ = 0;
-   bool acqFinishedCalled_ = false;
-
-   bool prepareBeforeFirstInsert_ = false;
+   std::vector<SeqAcqLogEntry> log_;
+   int successfulInsertCount_ = 0;
 
    int injectErrorCode_ = DEVICE_OK;
    int injectAfterCount_ = 0;
    bool errorInjected_ = false;
-   int insertImageCountAfterError_ = 0;
 };
 
 } // namespace internal
