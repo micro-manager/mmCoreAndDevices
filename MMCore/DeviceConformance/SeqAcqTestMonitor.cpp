@@ -25,73 +25,51 @@ void SeqAcqTestMonitor::SetErrorInjection(int errorCode,
 
 void SeqAcqTestMonitor::OnPrepareForAcq() {
    std::lock_guard<std::mutex> lock(mutex_);
-   prepareForAcqCalled_ = true;
-   if (insertImageCount_ == 0)
-      prepareBeforeFirstInsert_ = true;
+   log_.push_back({SeqAcqEvent::PrepareForAcq, DEVICE_OK,
+      std::chrono::steady_clock::now()});
+   cv_.notify_all();
 }
 
 int SeqAcqTestMonitor::OnInsertImage() {
    std::lock_guard<std::mutex> lock(mutex_);
-   if (errorInjected_) {
-      ++insertImageCountAfterError_;
-      cv_.notify_all();
-      return injectErrorCode_;
-   }
+   int retCode = DEVICE_OK;
    if (injectErrorCode_ != DEVICE_OK &&
-         insertImageCount_ >= injectAfterCount_) {
+         successfulInsertCount_ >= injectAfterCount_) {
       errorInjected_ = true;
-      ++insertImageCountAfterError_;
-      cv_.notify_all();
-      return injectErrorCode_;
    }
-   ++insertImageCount_;
+   if (errorInjected_) {
+      retCode = injectErrorCode_;
+   } else {
+      ++successfulInsertCount_;
+   }
+   log_.push_back({SeqAcqEvent::InsertImage, retCode,
+      std::chrono::steady_clock::now()});
    cv_.notify_all();
-   return DEVICE_OK;
+   return retCode;
 }
 
 void SeqAcqTestMonitor::OnAcqFinished() {
    std::lock_guard<std::mutex> lock(mutex_);
-   acqFinishedCalled_ = true;
+   log_.push_back({SeqAcqEvent::AcqFinished, DEVICE_OK,
+      std::chrono::steady_clock::now()});
    cv_.notify_all();
 }
 
-bool SeqAcqTestMonitor::WaitForInsertImageCount(int n,
+bool SeqAcqTestMonitor::WaitForEvent(SeqAcqEvent event, int count,
       std::chrono::milliseconds timeout) {
    std::unique_lock<std::mutex> lock(mutex_);
-   return cv_.wait_for(lock, timeout,
-      [&] { return insertImageCount_ >= n || errorInjected_; });
+   return cv_.wait_for(lock, timeout, [&] {
+      int n = 0;
+      for (const auto& entry : log_)
+         if (entry.event == event)
+            ++n;
+      return n >= count;
+   });
 }
 
-bool SeqAcqTestMonitor::WaitForAcqFinished(
-      std::chrono::milliseconds timeout) {
-   std::unique_lock<std::mutex> lock(mutex_);
-   return cv_.wait_for(lock, timeout,
-      [&] { return acqFinishedCalled_; });
-}
-
-bool SeqAcqTestMonitor::PrepareForAcqCalled() const {
+std::vector<SeqAcqLogEntry> SeqAcqTestMonitor::GetLog() const {
    std::lock_guard<std::mutex> lock(mutex_);
-   return prepareForAcqCalled_;
-}
-
-int SeqAcqTestMonitor::InsertImageCount() const {
-   std::lock_guard<std::mutex> lock(mutex_);
-   return insertImageCount_;
-}
-
-bool SeqAcqTestMonitor::AcqFinishedCalled() const {
-   std::lock_guard<std::mutex> lock(mutex_);
-   return acqFinishedCalled_;
-}
-
-bool SeqAcqTestMonitor::PrepareBeforeFirstInsert() const {
-   std::lock_guard<std::mutex> lock(mutex_);
-   return prepareBeforeFirstInsert_;
-}
-
-int SeqAcqTestMonitor::InsertImageCountAfterError() const {
-   std::lock_guard<std::mutex> lock(mutex_);
-   return insertImageCountAfterError_;
+   return log_;
 }
 
 } // namespace internal

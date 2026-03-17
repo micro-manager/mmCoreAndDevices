@@ -111,12 +111,43 @@ nlohmann::json CollectCameraState(
 
 namespace {
 
+bool HasEvent(const std::vector<SeqAcqLogEntry>& log, SeqAcqEvent event) {
+   for (const auto& e : log)
+      if (e.event == event)
+         return true;
+   return false;
+}
+
+bool PrepareBeforeFirstInsert(const std::vector<SeqAcqLogEntry>& log) {
+   for (const auto& e : log) {
+      if (e.event == SeqAcqEvent::PrepareForAcq)
+         return true;
+      if (e.event == SeqAcqEvent::InsertImage)
+         return false;
+   }
+   return false;
+}
+
+int CountInsertsAfterError(const std::vector<SeqAcqLogEntry>& log) {
+   bool seenError = false;
+   int count = 0;
+   for (const auto& e : log) {
+      if (e.event != SeqAcqEvent::InsertImage)
+         continue;
+      if (seenError)
+         ++count;
+      else if (e.returnCode != DEVICE_OK)
+         seenError = true;
+   }
+   return count;
+}
+
 struct CameraTestContext {
    std::shared_ptr<CameraInstance> pCam;
    std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor;
    const MM::Device* rawCam;
    std::chrono::milliseconds testTimeout;
-   std::chrono::milliseconds postErrorDelay;
+   std::chrono::milliseconds negativeTimeout;
 
    struct MonitorGuard {
       std::atomic<SeqAcqTestMonitor*>& atom;
@@ -167,7 +198,7 @@ struct CameraTestContext {
          return result;
       }
 
-      if (monitor.WaitForInsertImageCount(1, testTimeout)) {
+      if (monitor.WaitForEvent(SeqAcqEvent::InsertImage, 1, testTimeout)) {
          result.assertions.push_back(
             {AssertionStatus::Pass,
                "Camera produced 1 image via sequence acquisition", {}});
@@ -196,12 +227,13 @@ struct CameraTestContext {
                "Camera failed to start sequence acquisition", {}});
          return result;
       }
-      monitor.WaitForInsertImageCount(5, testTimeout);
+      monitor.WaitForEvent(SeqAcqEvent::InsertImage, 5, testTimeout);
 
-      if (!monitor.PrepareForAcqCalled()) {
+      auto log = monitor.GetLog();
+      if (!HasEvent(log, SeqAcqEvent::PrepareForAcq)) {
          result.assertions.push_back(
             {AssertionStatus::Fail, "PrepareForAcq was not called", {}});
-      } else if (!monitor.PrepareBeforeFirstInsert()) {
+      } else if (!PrepareBeforeFirstInsert(log)) {
          result.assertions.push_back(
             {AssertionStatus::Fail,
                "PrepareForAcq was called after InsertImage", {}});
@@ -230,9 +262,9 @@ struct CameraTestContext {
                "Camera failed to start sequence acquisition", {}});
          return result;
       }
-      monitor.WaitForInsertImageCount(5, testTimeout);
+      monitor.WaitForEvent(SeqAcqEvent::InsertImage, 5, testTimeout);
 
-      if (monitor.WaitForAcqFinished(testTimeout)) {
+      if (monitor.WaitForEvent(SeqAcqEvent::AcqFinished, 1, testTimeout)) {
          result.assertions.push_back(
             {AssertionStatus::Pass,
                "AcqFinished called after finite sequence completed", {}});
@@ -242,7 +274,8 @@ struct CameraTestContext {
          a.message =
             "AcqFinished not called after finite sequence (5 frames)";
          StopCamera();
-         if (monitor.WaitForAcqFinished(testTimeout)) {
+         if (monitor.WaitForEvent(
+               SeqAcqEvent::AcqFinished, 1, testTimeout)) {
             a.details.push_back(
                "AcqFinished was called after stopSequenceAcquisition");
          } else {
@@ -278,9 +311,10 @@ struct CameraTestContext {
          return result;
       }
 
-      monitor.WaitForInsertImageCount(3, testTimeout);
+      monitor.WaitForEvent(SeqAcqEvent::InsertImage, 4, testTimeout);
 
-      if (monitor.WaitForAcqFinished(testTimeout)) {
+      if (monitor.WaitForEvent(
+            SeqAcqEvent::AcqFinished, 1, testTimeout)) {
          result.assertions.push_back(
             {AssertionStatus::Pass,
                std::string("AcqFinished called after ") + errorName, {}});
@@ -290,7 +324,8 @@ struct CameraTestContext {
          a.message =
             std::string("AcqFinished not called after ") + errorName;
          StopCamera();
-         if (monitor.WaitForAcqFinished(testTimeout)) {
+         if (monitor.WaitForEvent(
+               SeqAcqEvent::AcqFinished, 1, testTimeout)) {
             a.details.push_back(
                "AcqFinished was called after stopSequenceAcquisition");
          } else {
@@ -301,11 +336,12 @@ struct CameraTestContext {
          result.assertions.push_back(std::move(a));
       }
 
-      std::this_thread::sleep_for(postErrorDelay);
-      int afterError = monitor.InsertImageCountAfterError();
-      if (afterError > 1) {
+      std::this_thread::sleep_for(negativeTimeout);
+      auto log = monitor.GetLog();
+      int afterError = CountInsertsAfterError(log);
+      if (afterError > 0) {
          result.assertions.push_back(
-            {AssertionStatus::Fail, std::to_string(afterError - 1) +
+            {AssertionStatus::Fail, std::to_string(afterError) +
                " InsertImage call(s) after error return", {}});
       } else {
          result.assertions.push_back(
@@ -328,8 +364,8 @@ std::vector<TestEntry> GetCameraConformanceTests(
       seqAcqTestMonitor,
       pCam->GetRawPtr(),
       config.positiveTimeout,
-      config.negativeTimeout,
-   });
+      config.negativeTimeout});
+
 
    std::vector<TestEntry> tests;
 
