@@ -323,7 +323,7 @@ template <> class DCCDCUConfig<DCCOrDCU::DCU> {
 
    static auto EnableOutput(short mod_no, short con_no, short enable) noexcept
        -> short {
-      assert(0 <= con_no && con_no < 4);
+      assert(0 <= con_no && con_no < 5);
       return DCCUSB_enable_outputs(mod_no, con_no, enable);
    }
 
@@ -332,7 +332,7 @@ template <> class DCCDCUConfig<DCCOrDCU::DCU> {
    }
 
    static auto ClearOverload(short mod_no, short con_no) noexcept -> short {
-      assert(0 <= con_no && con_no < 3);
+      assert(0 <= con_no && con_no < 4);
       return DCCUSB_clear_overload(mod_no, con_no);
    }
 
