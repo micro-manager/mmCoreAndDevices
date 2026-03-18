@@ -35,8 +35,10 @@
 #include <string>
 #include <map>
 #include <algorithm>
+#include <cstring>
 #include <stdint.h>
 #include <future>
+#include <vector>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -967,18 +969,16 @@ public:
    template <typename PixelType>
    int Flip(PixelType* pI, unsigned int width, unsigned int height)
    {
-      PixelType tmp;
-      int ret = DEVICE_OK;
-      for( unsigned long ix = 0; ix < width ; ++ix)
+      std::vector<PixelType> rowBuf(width);
+      for (unsigned int iy = 0; iy < height / 2; ++iy)
       {
-         for( unsigned long iy = 0; iy < (height>>1); ++iy)
-         {
-            tmp = pI[ ix + iy*width];
-            pI[ ix + iy*width] = pI[ ix + (height - 1 - iy)*width];
-            pI[ ix + (height - 1 - iy)*width] = tmp;
-         }
+         PixelType* topRow = pI + iy * width;
+         PixelType* botRow = pI + (height - 1 - iy) * width;
+         std::memcpy(rowBuf.data(), topRow, width * sizeof(PixelType));
+         std::memcpy(topRow, botRow, width * sizeof(PixelType));
+         std::memcpy(botRow, rowBuf.data(), width * sizeof(PixelType));
       }
-      return ret;
+      return DEVICE_OK;
    }
 
 
