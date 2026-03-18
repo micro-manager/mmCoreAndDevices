@@ -382,6 +382,8 @@ int ScientificaMotion8Hub::IsMoving(uint8_t device, bool* is_moving)
 	else
 	{
 		uint8_t moving;
+		uint8_t dummy;
+		rxPacket->GetByte(&dummy); // skip device byte
 		rxPacket->GetByte(&moving);
 		*is_moving = moving != 0;
 		delete rxPacket;
