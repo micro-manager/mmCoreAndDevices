@@ -1489,6 +1489,15 @@ void CMMCore::setPosition(const char* label, double position) MMCORE_LEGACY_THRO
       logError(pStage->GetName().c_str(), getDeviceErrorText(ret, pStage).c_str());
       throw CMMError(getDeviceErrorText(ret, pStage).c_str(), MMERR_DEVICE_GENERIC);
    }
+
+   // Update the lastSetPosition in the state cache
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      stateCache_.addSetting(PropertySetting(label,
+                                             MM::g_Keyword_LastSetPosition,
+                                             CDeviceUtils::ConvertToString(position)));
+   }
+
 }
 /**
  * Sets the position of the stage in microns. Uses the current Z positioner
@@ -1520,6 +1529,14 @@ void CMMCore::setRelativePosition(const char* label, double d) MMCORE_LEGACY_THR
    {
       logError(pStage->GetName().c_str(), getDeviceErrorText(ret, pStage).c_str());
       throw CMMError(getDeviceErrorText(ret, pStage).c_str(), MMERR_DEVICE_GENERIC);
+   }
+
+   // clear lastSetPosition in the state cache, since it's guaranteed to be invalid now
+   // We could conceivably update it here, but that's more complex and error-prone
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      if (stateCache_.isPropertyIncluded(label, MM::g_Keyword_LastSetPosition))
+         stateCache_.deleteSetting(label, MM::g_Keyword_LastSetPosition);
    }
 }
 
@@ -1586,6 +1603,17 @@ void CMMCore::setXYPosition(const char* label, double x, double y) MMCORE_LEGACY
       logError(pXYStage->GetName().c_str(), getDeviceErrorText(ret, pXYStage).c_str());
       throw CMMError(getDeviceErrorText(ret, pXYStage).c_str(), MMERR_DEVICE_GENERIC);
    }
+
+   // Update the lastSetPositionX/Y in the state cache
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      stateCache_.addSetting(PropertySetting(label,
+                                             MM::g_Keyword_LastSetPositionX,
+                                             CDeviceUtils::ConvertToString(x)));
+      stateCache_.addSetting(PropertySetting(label,
+                                             MM::g_Keyword_LastSetPositionY,
+                                             CDeviceUtils::ConvertToString(y)));
+   }
 }
 
 /**
@@ -1620,6 +1648,16 @@ void CMMCore::setRelativeXYPosition(const char* label, double dx, double dy) MMC
    {
       logError(pXYStage->GetName().c_str(), getDeviceErrorText(ret, pXYStage).c_str());
       throw CMMError(getDeviceErrorText(ret, pXYStage).c_str(), MMERR_DEVICE_GENERIC);
+   }
+
+   // clear lastSetPositionX/Y in the state cache, since it's guaranteed to be invalid now
+   // We could conceivably update it here, but that's more complex and error-prone
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      if (stateCache_.isPropertyIncluded(label, MM::g_Keyword_LastSetPositionX))
+         stateCache_.deleteSetting(label, MM::g_Keyword_LastSetPositionX);
+      if (stateCache_.isPropertyIncluded(label, MM::g_Keyword_LastSetPositionY))
+         stateCache_.deleteSetting(label, MM::g_Keyword_LastSetPositionY);
    }
 }
 
@@ -1856,6 +1894,16 @@ void CMMCore::setOriginXY(const char* label) MMCORE_LEGACY_THROW(CMMError)
    }
 
    LOG_DEBUG(coreLogger_) << "Zeroed xy stage " << label << " at current position";
+
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      stateCache_.addSetting(PropertySetting(label,
+                                             MM::g_Keyword_LastSetPositionX,
+                                             "0"));
+      stateCache_.addSetting(PropertySetting(label,
+                                             MM::g_Keyword_LastSetPositionY,
+                                             "0"));
+   }
 }
 
 /**
@@ -1891,6 +1939,13 @@ void CMMCore::setOriginX(const char* label) MMCORE_LEGACY_THROW(CMMError)
 
    LOG_DEBUG(coreLogger_) << "Zeroed x coordinate of xy stage " << label <<
       " at current position";
+
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      stateCache_.addSetting(PropertySetting(label,
+                                             MM::g_Keyword_LastSetPositionX,
+                                             "0"));
+   }
 }
 
 /**
@@ -1925,6 +1980,13 @@ void CMMCore::setOriginY(const char* label) MMCORE_LEGACY_THROW(CMMError)
 
    LOG_DEBUG(coreLogger_) << "Zeroed y coordinate of xy stage " << label <<
       " at current position";
+
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      stateCache_.addSetting(PropertySetting(label,
+                                             MM::g_Keyword_LastSetPositionY,
+                                             "0"));
+   }
 }
 
 /**
@@ -1959,6 +2021,13 @@ void CMMCore::setOrigin(const char* label) MMCORE_LEGACY_THROW(CMMError)
    }
 
    LOG_DEBUG(coreLogger_) << "Zeroed stage " << label << " at current position";
+
+   {
+      MMThreadGuard scg(stateCacheLock_);
+      stateCache_.addSetting(PropertySetting(label,
+                                             MM::g_Keyword_LastSetPosition,
+                                             "0"));
+   }
 }
 
 /**
