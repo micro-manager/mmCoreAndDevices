@@ -63,6 +63,9 @@
     <ClCompile Include="PropertyShutter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="StageStateDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="StateDeviceShutter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
