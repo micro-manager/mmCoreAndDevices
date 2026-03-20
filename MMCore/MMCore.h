@@ -56,6 +56,7 @@
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
 
+#include <atomic>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -95,6 +96,8 @@ namespace internal {
    class DeviceManager;
    class LogManager;
    class NotificationQueue;
+   struct ConformanceTestConfig;
+   class SeqAcqTestMonitor;
 } // namespace internal
 } // namespace mmcore
 
@@ -677,11 +680,19 @@ public:
    std::vector<std::string> getLoadedPeripheralDevices(const char* hubLabel) MMCORE_LEGACY_THROW(CMMError);
    ///@}
 
+   /** \name Device conformance testing. */
+   ///@{
+   std::string runDeviceConformanceTests(const char* deviceLabel,
+         const char* testName = nullptr) MMCORE_LEGACY_THROW(CMMError);
+   ///@}
+
 #if !defined(SWIGJAVA) && !defined(SWIGPYTHON)
    /** \name Testing */
    ///@{
    void loadMockDeviceAdapter(const char* name,
          MockDeviceAdapter* implementation) MMCORE_LEGACY_THROW(CMMError);
+   void setConformanceTestConfig(
+         const mmcore::internal::ConformanceTestConfig& config);
    ///@}
 #endif
 
@@ -719,6 +730,9 @@ private:
    std::unique_ptr<mmcore::internal::CorePropertyCollection> properties_;
    std::unique_ptr<mmcore::internal::CircularBuffer> cbuf_;
    std::unique_ptr<MM::Core> callback_;
+
+   std::atomic<mmcore::internal::SeqAcqTestMonitor*> seqAcqTestMonitor_{nullptr};
+   std::unique_ptr<mmcore::internal::ConformanceTestConfig> conformanceTestConfig_;
 
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
