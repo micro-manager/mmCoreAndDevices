@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.11"
 # dependencies = ["tree-sitter", "tree-sitter-cpp"]
 # ///
 """Extract device adapter properties from C++ source files.
@@ -365,27 +365,38 @@ def find_device_classes(files: list[ParsedFile]) -> list[dict]:
             if name_node is None:
                 continue
             class_name = _text(name_node, source)
-            for child in node.children:
-                if child.type != "base_class_clause":
-                    continue
-                for base_child in _walk(child):
-                    if base_child.type == "template_type":
-                        type_node = base_child.child_by_field_name("name")
-                        base_name = _text(type_node, source) if type_node else None
-                    elif base_child.type == "type_identifier":
-                        base_name = _text(base_child, source)
-                    else:
-                        continue
-                    if base_name in BASE_CLASS_TO_TYPE:
-                        classes.append(
-                            {
-                                "class_name": class_name,
-                                "base_class": base_name,
-                                "device_type": BASE_CLASS_TO_TYPE[base_name],
-                                "file": path,
-                            }
-                        )
+            base_name = _find_base_class(node, source)
+            if base_name:
+                classes.append(
+                    {
+                        "class_name": class_name,
+                        "base_class": base_name,
+                        "device_type": BASE_CLASS_TO_TYPE[base_name],
+                        "file": path,
+                    }
+                )
     return classes
+
+
+def _find_base_class(class_node: Any, source: bytes) -> str | None:
+    """Find a known device base class in a class's inheritance list."""
+    for child in class_node.children:
+        if child.type != "base_class_clause":
+            continue
+        for base_child in _walk(child):
+            if base_child.type == "template_type":
+                type_node = base_child.child_by_field_name("name")
+                base_name = _text(type_node, source) if type_node else None
+                if base_name and base_name in BASE_CLASS_TO_TYPE:
+                    return base_name
+            elif base_child.type == "type_identifier":
+                # Skip if parent is template_type (already checked above)
+                if base_child.parent and base_child.parent.type == "template_type":
+                    continue
+                base_name = _text(base_child, source)
+                if base_name in BASE_CLASS_TO_TYPE:
+                    return base_name
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1304,6 +1315,20 @@ def main():
                 all_devices.extend(process_adapter_dir(subdir, mm_keywords))
             except Exception as e:
                 print(f"Warning: error processing {subdir.name}: {e}", file=sys.stderr)
+
+    # Deduplicate by (library, device), keeping the entry with more properties
+    seen: dict[tuple[str, str], int] = {}
+    deduped: list[dict] = []
+    for d in all_devices:
+        key = (d["library"], d["device"])
+        if key in seen:
+            idx = seen[key]
+            if len(d["properties"]) > len(deduped[idx]["properties"]):
+                deduped[idx] = d
+        else:
+            seen[key] = len(deduped)
+            deduped.append(d)
+    all_devices = deduped
 
     print(
         f"Found {len(all_devices)} devices across {', '.join(p.name for p in adapter_roots)}",
