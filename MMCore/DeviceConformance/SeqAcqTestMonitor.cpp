@@ -16,18 +16,25 @@
 namespace mmcore {
 namespace internal {
 
-void SeqAcqTestMonitor::SetErrorInjection(int errorCode,
+void SeqAcqTestMonitor::SetPrepareForAcqError(int errorCode) {
+   std::lock_guard<std::mutex> lock(mutex_);
+   prepareForAcqError_ = errorCode;
+}
+
+void SeqAcqTestMonitor::SetInsertImageError(int errorCode,
       int afterSuccessfulCount) {
    std::lock_guard<std::mutex> lock(mutex_);
    injectErrorCode_ = errorCode;
    injectAfterCount_ = afterSuccessfulCount;
 }
 
-void SeqAcqTestMonitor::OnPrepareForAcq() {
+int SeqAcqTestMonitor::OnPrepareForAcq() {
    std::lock_guard<std::mutex> lock(mutex_);
-   log_.push_back({SeqAcqEvent::PrepareForAcq, DEVICE_OK,
+   int retCode = prepareForAcqError_;
+   log_.push_back({SeqAcqEvent::PrepareForAcq, retCode,
       std::chrono::steady_clock::now()});
    cv_.notify_all();
+   return retCode;
 }
 
 int SeqAcqTestMonitor::OnInsertImage() {

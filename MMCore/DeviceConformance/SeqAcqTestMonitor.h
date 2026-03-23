@@ -44,9 +44,10 @@ public:
       return caller == target_;
    }
 
-   void SetErrorInjection(int errorCode, int afterSuccessfulCount);
+   void SetPrepareForAcqError(int errorCode);
+   void SetInsertImageError(int errorCode, int afterSuccessfulCount);
 
-   void OnPrepareForAcq();
+   int OnPrepareForAcq();
    int OnInsertImage();
    void OnAcqFinished();
 
@@ -66,6 +67,8 @@ private:
    int injectErrorCode_ = DEVICE_OK;
    int injectAfterCount_ = 0;
    bool errorInjected_ = false;
+
+   int prepareForAcqError_ = DEVICE_OK;
 };
 
 } // namespace internal

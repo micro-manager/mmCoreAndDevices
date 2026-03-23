@@ -295,7 +295,7 @@ struct CameraTestContext {
       result.name = slug;
 
       SeqAcqTestMonitor monitor(rawCam);
-      monitor.SetErrorInjection(errorCode, 3);
+      monitor.SetInsertImageError(errorCode, 3);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
 
@@ -351,6 +351,76 @@ struct CameraTestContext {
 
       return result;
    }
+
+   TestResult TestPrepareErrorPropagated() {
+      TestResult result;
+      result.name = "seq-prepare-error-propagated";
+
+      SeqAcqTestMonitor monitor(rawCam);
+      monitor.SetPrepareForAcqError(DEVICE_ERR);
+      seqAcqTestMonitor.store(&monitor, std::memory_order_release);
+      MonitorGuard mg{seqAcqTestMonitor, pCam};
+
+      bool startFailed = false;
+      try {
+         StartFinite(1, 0.0);
+      } catch (const CMMError&) {
+         startFailed = true;
+      }
+
+      if (!startFailed) {
+         result.assertions.push_back(
+            {AssertionStatus::Fail,
+               "Camera did not propagate PrepareForAcq error", {}});
+         return result;
+      }
+
+      auto log = monitor.GetLog();
+      if (!HasEvent(log, SeqAcqEvent::PrepareForAcq)) {
+         result.assertions.push_back(
+            {AssertionStatus::Warning,
+               "Camera failed before calling PrepareForAcq", {}});
+         return result;
+      }
+
+      std::this_thread::sleep_for(negativeTimeout);
+      log = monitor.GetLog();
+
+      if (HasEvent(log, SeqAcqEvent::InsertImage)) {
+         result.assertions.push_back(
+            {AssertionStatus::Fail,
+               "InsertImage called after PrepareForAcq error", {}});
+      } else {
+         result.assertions.push_back(
+            {AssertionStatus::Pass,
+               "No InsertImage calls after PrepareForAcq error", {}});
+      }
+
+      if (HasEvent(log, SeqAcqEvent::AcqFinished)) {
+         result.assertions.push_back(
+            {AssertionStatus::Fail,
+               "AcqFinished called after PrepareForAcq error", {}});
+      } else {
+         result.assertions.push_back(
+            {AssertionStatus::Pass,
+               "No AcqFinished call after PrepareForAcq error", {}});
+      }
+
+      {
+         DeviceModuleLockGuard guard(pCam);
+         if (pCam->IsCapturing()) {
+            result.assertions.push_back(
+               {AssertionStatus::Fail,
+                  "IsCapturing() returned true after failed start", {}});
+         } else {
+            result.assertions.push_back(
+               {AssertionStatus::Pass,
+                  "IsCapturing() returned false after failed start", {}});
+         }
+      }
+
+      return result;
+   }
 };
 
 } // anonymous namespace
@@ -369,6 +439,9 @@ std::vector<TestEntry> GetCameraConformanceTests(
 
    std::vector<TestEntry> tests;
 
+   tests.push_back({"seq-prepare-error-propagated", [ctx]() {
+      return ctx->TestPrepareErrorPropagated();
+   }, {}});
    tests.push_back({"seq-basic", [ctx]() {
       return ctx->TestSeqBasic();
    }, {}});

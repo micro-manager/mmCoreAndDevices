@@ -42,6 +42,7 @@ struct ConfigurableAsyncCamera : CCameraBase<ConfigurableAsyncCamera> {
    double exposure = 10.0;
 
    bool callPrepareForAcq = true;
+   bool checkPrepareForAcqReturn = true;
    bool callAcqFinished = true;
    bool checkInsertImageReturn = true;
    bool failStartSequenceAcq = false;
@@ -92,8 +93,11 @@ struct ConfigurableAsyncCamera : CCameraBase<ConfigurableAsyncCamera> {
       // Thread may be left over from previous (unstopped) run
       if (thread_.joinable())
          thread_.join();
-      if (callPrepareForAcq)
-         GetCoreCallback()->PrepareForAcq(this);
+      if (callPrepareForAcq) {
+         int ret = GetCoreCallback()->PrepareForAcq(this);
+         if (checkPrepareForAcqReturn && ret != DEVICE_OK)
+            return ret;
+      }
       {
          std::lock_guard<std::mutex> lk(mu_);
          running_ = true;
@@ -270,7 +274,8 @@ TEST_CASE("Dependent tests are skipped when dependency warns",
    CHECK(GetTestStatus(results, "seq-prepare-before-insert") == "skipped");
    CHECK(GetTestStatus(results, "seq-finished-after-count") == "skipped");
    CHECK(GetTestStatus(results, "seq-finished-on-error-finite") == "skipped");
-   CHECK(results["summary"]["warnings"].get<int>() == 1);
+   CHECK(GetTestStatus(results, "seq-prepare-error-propagated") == "warning");
+   CHECK(results["summary"]["warnings"].get<int>() == 2);
    CHECK(results["summary"]["skipped"].get<int>() == 6);
 }
 
@@ -300,4 +305,33 @@ TEST_CASE("deviceState contains camera settings", "[CameraConformance]") {
          nlohmann::json({{"x", 0}, {"y", 0}, {"width", 64}, {"height", 64}}));
    CHECK(settings["exposureSequenceable"].get<bool>() == false);
    CHECK(settings["multiROISupported"].get<bool>() == false);
+}
+
+TEST_CASE("Ignoring PrepareForAcq error is detected by conformance test",
+          "[CameraConformance]") {
+   ConfigurableAsyncCamera cam;
+   cam.checkPrepareForAcqReturn = false;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   auto results = nlohmann::json::parse(c.runDeviceConformanceTests(
+      "cam", "seq-prepare-error-propagated"));
+   CHECK(GetTestStatus(results, "seq-prepare-error-propagated") == "fail");
+}
+
+TEST_CASE("Conformant camera passes PrepareForAcq error propagation test",
+          "[CameraConformance]") {
+   ConfigurableAsyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   auto results = nlohmann::json::parse(c.runDeviceConformanceTests(
+      "cam", "seq-prepare-error-propagated"));
+   CHECK(GetTestStatus(results, "seq-prepare-error-propagated") == "pass");
 }

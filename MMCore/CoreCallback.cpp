@@ -357,8 +357,7 @@ int CoreCallback::PrepareForAcq(const MM::Device* caller)
 {
    if (auto* monitor = core_->seqAcqTestMonitor_.load(std::memory_order_acquire)) {
       if (monitor->IsMonitoring(caller)) {
-         monitor->OnPrepareForAcq();
-         return DEVICE_OK;
+         return monitor->OnPrepareForAcq();
       }
    }
 
