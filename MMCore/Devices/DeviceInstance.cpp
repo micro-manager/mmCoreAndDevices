@@ -58,20 +58,22 @@ DeviceInstance::DeviceInstance(CMMCore* core,
    pImpl_(pDevice),
    core_(core),
    adapter_(adapter),
+   name_(name),
    label_(label),
    deleteFunction_(deleteFunction),
    deviceLogger_(deviceLogger),
    coreLogger_(coreLogger)
 {
-   const std::string actualName = GetName();
+   // MM::Device::GetName() is not used any more outside of peripheral
+   // discovery, but we still have it for legacy reasons. For what it's worth,
+   // log a warning if GetName() doesn't return the expected name.
+   DeviceStringBuffer nameBuf(this, "GetName");
+   pImpl_->GetName(nameBuf.GetBuffer());
+   const std::string actualName = nameBuf.Get();
    if (actualName != name)
    {
       LOG_WARNING(Logger()) << "Requested device named \"" << name <<
          "\" but the actual device is named \"" << actualName << "\"";
-
-      // TODO This should ideally be an error, but currently it breaks some
-      // device adapters. Probably best to remove GetName() from MM::Device
-      // entirely and handle it solely in the Core.
    }
 
    pImpl_->SetLabel(label_.c_str());
@@ -398,14 +400,6 @@ DeviceInstance::Shutdown()
 MM::DeviceType
 DeviceInstance::GetType() const
 { return pImpl_->GetType(); }
-
-std::string
-DeviceInstance::GetName() const
-{
-   DeviceStringBuffer nameBuf(this, "GetName");
-   pImpl_->GetName(nameBuf.GetBuffer());
-   return nameBuf.Get();
-}
 
 void
 DeviceInstance::SetCallback(MM::Core* callback) { 

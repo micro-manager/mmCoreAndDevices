@@ -61,88 +61,88 @@ TEST_CASE("StubGalvo can be default-constructed") {
 
 TEST_CASE("StubGeneric can be loaded into CMMCore") {
    StubGeneric dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubGeneric", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubGeneric");
+   CHECK(c.getDeviceName("StubGeneric") == "StubGeneric");
 }
 
 TEST_CASE("StubCamera can be loaded into CMMCore") {
    StubCamera dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubCamera", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubCamera");
+   CHECK(c.getDeviceName("StubCamera") == "StubCamera");
 }
 
 TEST_CASE("StubStage can be loaded into CMMCore") {
    StubStage dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubStage", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubStage");
+   CHECK(c.getDeviceName("StubStage") == "StubStage");
 }
 
 TEST_CASE("StubXYStage can be loaded into CMMCore") {
    StubXYStage dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubXYStage", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubXYStage");
+   CHECK(c.getDeviceName("StubXYStage") == "StubXYStage");
 }
 
 TEST_CASE("StubStateDevice can be loaded into CMMCore") {
    StubStateDevice dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubStateDevice", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubStateDevice");
+   CHECK(c.getDeviceName("StubStateDevice") == "StubStateDevice");
 }
 
 TEST_CASE("StubShutter can be loaded into CMMCore") {
    StubShutter dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubShutter", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubShutter");
+   CHECK(c.getDeviceName("StubShutter") == "StubShutter");
 }
 
 TEST_CASE("StubMagnifier can be loaded into CMMCore") {
    StubMagnifier dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubMagnifier", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubMagnifier");
+   CHECK(c.getDeviceName("StubMagnifier") == "StubMagnifier");
 }
 
 TEST_CASE("StubAutoFocus can be loaded into CMMCore") {
    StubAutoFocus dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubAutoFocus", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubAutoFocus");
+   CHECK(c.getDeviceName("StubAutoFocus") == "StubAutoFocus");
 }
 
 TEST_CASE("StubImageProcessor can be loaded into CMMCore") {
    StubImageProcessor dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubImageProcessor", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubImageProcessor");
+   CHECK(c.getDeviceName("StubImageProcessor") == "StubImageProcessor");
 }
 
 TEST_CASE("StubSLM can be loaded into CMMCore") {
    StubSLM dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubSLM", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubSLM");
+   CHECK(c.getDeviceName("StubSLM") == "StubSLM");
 }
 
 TEST_CASE("StubGalvo can be loaded into CMMCore") {
    StubGalvo dev;
-   MockAdapterWithDevices adapter{{"dev", &dev}};
+   MockAdapterWithDevices adapter{{"StubGalvo", &dev}};
    CMMCore c;
    adapter.LoadIntoCore(c);
-   CHECK(c.getDeviceName("dev") == "StubGalvo");
+   CHECK(c.getDeviceName("StubGalvo") == "StubGalvo");
 }

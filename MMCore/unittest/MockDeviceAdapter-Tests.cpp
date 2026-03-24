@@ -41,7 +41,7 @@ TEST_CASE("Register and load a mock device")
    c.loadDevice("mylabel", "myadapter", "mydevice");
    c.initializeDevice("mylabel");
    c.waitForDevice("mylabel");
-   CHECK(c.getDeviceName("mylabel") == "name-returned-by-device");
+   CHECK(c.getDeviceName("mylabel") == "mydevice");
    c.unloadDevice("mylabel");
 }
 

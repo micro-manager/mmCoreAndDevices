@@ -73,6 +73,7 @@ protected:
 private:
    CMMCore* core_; // Weak reference
    std::shared_ptr<LoadedDeviceAdapter> adapter_;
+   const std::string name_;
    const std::string label_;
    std::string description_;
    DeleteDeviceFunction deleteFunction_;
@@ -86,6 +87,7 @@ public:
    DeviceInstance& operator=(const DeviceInstance&) = delete;
 
    std::shared_ptr<LoadedDeviceAdapter> GetAdapterModule() const /* final */ { return adapter_; }
+   std::string GetName() const /* final */ { return name_; }
    std::string GetLabel() const /* final */ { return label_; }
    std::string GetDescription() const /* final */ { return description_; }
    void SetDescription(const std::string& description) /* final */ { description_ = description; }
@@ -221,7 +223,6 @@ public:
    void Initialize();
    void Shutdown();
    MM::DeviceType GetType() const; // TODO Make private (can use RTTI)
-   std::string GetName() const;
    void SetCallback(MM::Core* callback);
    bool SupportsDeviceDetection();
    MM::DeviceDetectionStatus DetectDevice();
