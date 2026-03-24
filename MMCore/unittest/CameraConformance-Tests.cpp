@@ -44,6 +44,7 @@ struct ConfigurableAsyncCamera : CCameraBase<ConfigurableAsyncCamera> {
    bool callPrepareForAcq = true;
    bool checkPrepareForAcqReturn = true;
    bool callAcqFinished = true;
+   bool clearCapturingBeforeAcqFinished = true;
    bool checkInsertImageReturn = true;
    bool failStartSequenceAcq = false;
 
@@ -163,9 +164,13 @@ private:
                break;
          }
       }
+      if (clearCapturingBeforeAcqFinished) {
+         std::lock_guard<std::mutex> lk(mu_);
+         running_ = false;
+      }
       if (callAcqFinished)
          GetCoreCallback()->AcqFinished(this, 0);
-      {
+      if (!clearCapturingBeforeAcqFinished) {
          std::lock_guard<std::mutex> lk(mu_);
          running_ = false;
       }
@@ -218,6 +223,21 @@ TEST_CASE("Missing AcqFinished is detected by conformance test",
           "[CameraConformance]") {
    ConfigurableAsyncCamera cam;
    cam.callAcqFinished = false;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   auto results = nlohmann::json::parse(
+      c.runDeviceConformanceTests("cam", "seq-finished-after-count"));
+   CHECK(GetTestStatus(results, "seq-finished-after-count") == "fail");
+}
+
+TEST_CASE("IsCapturing() true during AcqFinished is detected by conformance test",
+          "[CameraConformance]") {
+   ConfigurableAsyncCamera cam;
+   cam.clearCapturingBeforeAcqFinished = false;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
    c.setConformanceTestConfig(shortTimeoutConfig);

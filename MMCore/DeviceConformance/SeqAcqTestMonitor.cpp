@@ -32,7 +32,7 @@ int SeqAcqTestMonitor::OnPrepareForAcq() {
    std::lock_guard<std::mutex> lock(mutex_);
    int retCode = prepareForAcqError_;
    log_.push_back({SeqAcqEvent::PrepareForAcq, retCode,
-      std::chrono::steady_clock::now()});
+      std::chrono::steady_clock::now(), camera_->IsCapturing()});
    cv_.notify_all();
    return retCode;
 }
@@ -50,7 +50,7 @@ int SeqAcqTestMonitor::OnInsertImage() {
       ++successfulInsertCount_;
    }
    log_.push_back({SeqAcqEvent::InsertImage, retCode,
-      std::chrono::steady_clock::now()});
+      std::chrono::steady_clock::now(), camera_->IsCapturing()});
    cv_.notify_all();
    return retCode;
 }
@@ -58,7 +58,7 @@ int SeqAcqTestMonitor::OnInsertImage() {
 void SeqAcqTestMonitor::OnAcqFinished() {
    std::lock_guard<std::mutex> lock(mutex_);
    log_.push_back({SeqAcqEvent::AcqFinished, DEVICE_OK,
-      std::chrono::steady_clock::now()});
+      std::chrono::steady_clock::now(), camera_->IsCapturing()});
    cv_.notify_all();
 }
 

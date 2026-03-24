@@ -142,10 +142,17 @@ int CountInsertsAfterError(const std::vector<SeqAcqLogEntry>& log) {
    return count;
 }
 
+bool WasCapturingDuringAcqFinished(const std::vector<SeqAcqLogEntry>& log) {
+   for (const auto& e : log)
+      if (e.event == SeqAcqEvent::AcqFinished)
+         return e.isCapturing;
+   return false;
+}
+
 struct CameraTestContext {
    std::shared_ptr<CameraInstance> pCam;
    std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor;
-   const MM::Device* rawCam;
+   MM::Camera* rawCamera;
    std::chrono::milliseconds testTimeout;
    std::chrono::milliseconds negativeTimeout;
 
@@ -185,7 +192,7 @@ struct CameraTestContext {
       TestResult result;
       result.name = "seq-basic";
 
-      SeqAcqTestMonitor monitor(rawCam);
+      SeqAcqTestMonitor monitor(rawCamera);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
 
@@ -215,7 +222,7 @@ struct CameraTestContext {
       TestResult result;
       result.name = "seq-prepare-before-insert";
 
-      SeqAcqTestMonitor monitor(rawCam);
+      SeqAcqTestMonitor monitor(rawCamera);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
 
@@ -250,7 +257,7 @@ struct CameraTestContext {
       TestResult result;
       result.name = "seq-finished-after-count";
 
-      SeqAcqTestMonitor monitor(rawCam);
+      SeqAcqTestMonitor monitor(rawCamera);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
 
@@ -268,6 +275,16 @@ struct CameraTestContext {
          result.assertions.push_back(
             {AssertionStatus::Pass,
                "AcqFinished called after finite sequence completed", {}});
+         auto log = monitor.GetLog();
+         if (WasCapturingDuringAcqFinished(log)) {
+            result.assertions.push_back(
+               {AssertionStatus::Fail,
+                  "IsCapturing() was true during AcqFinished", {}});
+         } else {
+            result.assertions.push_back(
+               {AssertionStatus::Pass,
+                  "IsCapturing() was false during AcqFinished", {}});
+         }
       } else {
          AssertionResult a;
          a.status = AssertionStatus::Fail;
@@ -294,7 +311,7 @@ struct CameraTestContext {
       TestResult result;
       result.name = slug;
 
-      SeqAcqTestMonitor monitor(rawCam);
+      SeqAcqTestMonitor monitor(rawCamera);
       monitor.SetInsertImageError(errorCode, 3);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
@@ -318,6 +335,16 @@ struct CameraTestContext {
          result.assertions.push_back(
             {AssertionStatus::Pass,
                std::string("AcqFinished called after ") + errorName, {}});
+         auto log = monitor.GetLog();
+         if (WasCapturingDuringAcqFinished(log)) {
+            result.assertions.push_back(
+               {AssertionStatus::Fail,
+                  "IsCapturing() was true during AcqFinished", {}});
+         } else {
+            result.assertions.push_back(
+               {AssertionStatus::Pass,
+                  "IsCapturing() was false during AcqFinished", {}});
+         }
       } else {
          AssertionResult a;
          a.status = AssertionStatus::Fail;
@@ -356,7 +383,7 @@ struct CameraTestContext {
       TestResult result;
       result.name = "seq-prepare-error-propagated";
 
-      SeqAcqTestMonitor monitor(rawCam);
+      SeqAcqTestMonitor monitor(rawCamera);
       monitor.SetPrepareForAcqError(DEVICE_ERR);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
@@ -432,7 +459,7 @@ std::vector<TestEntry> GetCameraConformanceTests(
    auto ctx = std::make_shared<CameraTestContext>(CameraTestContext{
       pCam,
       seqAcqTestMonitor,
-      pCam->GetRawPtr(),
+      static_cast<MM::Camera*>(pCam->GetRawPtr()),
       config.positiveTimeout,
       config.negativeTimeout});
 

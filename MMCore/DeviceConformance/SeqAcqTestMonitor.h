@@ -31,17 +31,19 @@ struct SeqAcqLogEntry {
    SeqAcqEvent event;
    int returnCode;
    std::chrono::steady_clock::time_point timestamp;
+   bool isCapturing;
 };
 
 class SeqAcqTestMonitor {
 public:
-   explicit SeqAcqTestMonitor(const MM::Device* target) : target_(target) {}
+   explicit SeqAcqTestMonitor(MM::Camera* camera)
+      : camera_(camera) {}
 
    SeqAcqTestMonitor(const SeqAcqTestMonitor&) = delete;
    SeqAcqTestMonitor& operator=(const SeqAcqTestMonitor&) = delete;
 
    bool IsMonitoring(const MM::Device* caller) const {
-      return caller == target_;
+      return caller == camera_;
    }
 
    void SetPrepareForAcqError(int errorCode);
@@ -56,7 +58,7 @@ public:
    std::vector<SeqAcqLogEntry> GetLog() const;
 
 private:
-   const MM::Device* const target_;
+   MM::Camera* const camera_;
 
    mutable std::mutex mutex_;
    std::condition_variable cv_;
