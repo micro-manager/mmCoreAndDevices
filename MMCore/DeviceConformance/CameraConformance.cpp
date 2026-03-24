@@ -196,6 +196,21 @@ struct CameraTestContext {
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
 
+      {
+         DeviceModuleLockGuard guard(pCam);
+         if (pCam->IsCapturing()) {
+            result.assertions.push_back(
+               {AssertionStatus::Warning,
+                  "IsCapturing() was true before starting sequence acquisition",
+                  {}});
+            return result;
+         }
+         result.assertions.push_back(
+            {AssertionStatus::Pass,
+               "IsCapturing() was false before starting sequence acquisition",
+               {}});
+      }
+
       try {
          StartFinite(1, 0.0);
       } catch (const CMMError&) {
@@ -387,6 +402,21 @@ struct CameraTestContext {
       monitor.SetPrepareForAcqError(DEVICE_ERR);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
       MonitorGuard mg{seqAcqTestMonitor, pCam};
+
+      {
+         DeviceModuleLockGuard guard(pCam);
+         if (pCam->IsCapturing()) {
+            result.assertions.push_back(
+               {AssertionStatus::Warning,
+                  "IsCapturing() was true before starting sequence acquisition",
+                  {}});
+            return result;
+         }
+         result.assertions.push_back(
+            {AssertionStatus::Pass,
+               "IsCapturing() was false before starting sequence acquisition",
+               {}});
+      }
 
       bool startFailed = false;
       try {
