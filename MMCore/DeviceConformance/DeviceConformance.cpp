@@ -156,6 +156,7 @@ std::string RunConformanceTests(
          status = TestStatus::Skipped;
       } else {
          results.push_back(t.func());
+         results.back().name = t.slug;
          status = DeriveTestStatus(results.back().assertions);
       }
       statuses.push_back(status);

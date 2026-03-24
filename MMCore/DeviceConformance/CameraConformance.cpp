@@ -202,7 +202,6 @@ struct CameraTestContext {
 
    TestResult TestSeqBasic() {
       TestResult result;
-      result.name = "seq-basic";
 
       SeqAcqTestMonitor monitor(rawCamera);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
@@ -247,7 +246,6 @@ struct CameraTestContext {
 
    TestResult TestPrepareBeforeInsert() {
       TestResult result;
-      result.name = "seq-prepare-before-insert";
 
       SeqAcqTestMonitor monitor(rawCamera);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
@@ -282,7 +280,6 @@ struct CameraTestContext {
 
    TestResult TestFinishedAfterCount() {
       TestResult result;
-      result.name = "seq-finished-after-count";
 
       SeqAcqTestMonitor monitor(rawCamera);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
@@ -333,10 +330,9 @@ struct CameraTestContext {
       return result;
    }
 
-   TestResult TestFinishedOnError(const char* slug, int errorCode,
-         const char* errorName, bool continuous) {
+   TestResult TestFinishedOnError(int errorCode, const char* errorName,
+         bool continuous) {
       TestResult result;
-      result.name = slug;
 
       SeqAcqTestMonitor monitor(rawCamera);
       monitor.SetInsertImageError(errorCode, 3);
@@ -408,7 +404,6 @@ struct CameraTestContext {
 
    TestResult TestPrepareErrorPropagated() {
       TestResult result;
-      result.name = "seq-prepare-error-propagated";
 
       SeqAcqTestMonitor monitor(rawCamera);
       monitor.SetPrepareForAcqError(DEVICE_ERR);
@@ -491,9 +486,8 @@ struct CameraTestContext {
       return result;
    }
 
-   TestResult TestExplicitStop(const char* slug, bool continuous) {
+   TestResult TestExplicitStop(bool continuous) {
       TestResult result;
-      result.name = slug;
 
       SeqAcqTestMonitor monitor(rawCamera);
       seqAcqTestMonitor.store(&monitor, std::memory_order_release);
@@ -644,26 +638,24 @@ std::vector<TestEntry> GetCameraConformanceTests(
       return ctx->TestFinishedAfterCount();
    }, {"seq-basic"}});
    tests.push_back({"seq-finished-on-error-finite", [ctx]() {
-      return ctx->TestFinishedOnError("seq-finished-on-error-finite",
-         DEVICE_ERR, "DEVICE_ERR", false);
+      return ctx->TestFinishedOnError(DEVICE_ERR, "DEVICE_ERR", false);
    }, {"seq-basic"}});
    tests.push_back({"seq-finished-on-error-continuous", [ctx]() {
-      return ctx->TestFinishedOnError("seq-finished-on-error-continuous",
-         DEVICE_ERR, "DEVICE_ERR", true);
+      return ctx->TestFinishedOnError(DEVICE_ERR, "DEVICE_ERR", true);
    }, {"seq-basic"}});
    tests.push_back({"seq-finished-on-overflow-finite", [ctx]() {
-      return ctx->TestFinishedOnError("seq-finished-on-overflow-finite",
+      return ctx->TestFinishedOnError(
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", false);
    }, {"seq-basic"}});
    tests.push_back({"seq-finished-on-overflow-continuous", [ctx]() {
-      return ctx->TestFinishedOnError("seq-finished-on-overflow-continuous",
+      return ctx->TestFinishedOnError(
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", true);
    }, {"seq-basic"}});
    tests.push_back({"seq-explicit-stop-finite", [ctx]() {
-      return ctx->TestExplicitStop("seq-explicit-stop-finite", false);
+      return ctx->TestExplicitStop(false);
    }, {"seq-basic"}});
    tests.push_back({"seq-explicit-stop-continuous", [ctx]() {
-      return ctx->TestExplicitStop("seq-explicit-stop-continuous", true);
+      return ctx->TestExplicitStop(true);
    }, {"seq-basic"}});
 
    return tests;
