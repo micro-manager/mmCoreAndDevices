@@ -35,7 +35,6 @@
 //
 
 #include "EnumerationProperty.h"
-#include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
 

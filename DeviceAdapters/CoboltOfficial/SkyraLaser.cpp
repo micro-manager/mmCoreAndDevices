@@ -42,6 +42,7 @@
 #include "LaserStateProperty.h"
 //#include "MutableDeviceProperty.h"
 #include "CustomizableEnumerationProperty.h"
+#include "ImmutableEnumerationProperty.h"
 #include "MutableNumericProperty.h"
 //#include "LaserShutterProperty.h"
 #include "NoShutterCommandLegacyFix.h"
@@ -55,7 +56,7 @@ SkyraLaser::SkyraLaser(
     const bool line2Enabled,
     const bool line3Enabled,
     const bool line4Enabled ) :
-    Laser( "Skyra", driver )
+    LegacyLaser( "Skyra", driver )
 {
     currentUnit_ = Milliamperes;
     powerUnit_ = Milliwatts;
@@ -66,9 +67,12 @@ SkyraLaser::SkyraLaser(
     CreateFirmwareVersionProperty();
     CreateAdapterVersionProperty();
     CreateOperatingHoursProperty();
-
     CreateKeyswitchProperty();
     CreateLaserStateProperty();
+    CreateFaultProperty();
+
+    CreateClearFaultProperty();
+    CreateAutostartControlProperty();
     CreateShutterProperty();
 
     if ( line1Enabled ) { CreateLineSpecificProperties( 1 ); }
@@ -120,6 +124,19 @@ void SkyraLaser::CreateCpPowerSetpointProperty( const int line )
     
     MutableDeviceProperty* property = new MutableNumericProperty<double>( MakeLineName( line ) + " Power Setpoint [" + powerUnit_ + "]",
         laserDriver_, MakeLineCommand( "glp?", line ), MakeLineCommand( "slp", line ), 0.0f, maxPowerSetpoint );
+    RegisterPublicProperty( property );
+}
+
+void SkyraLaser::CreateFaultProperty()
+{
+    ImmutableEnumerationProperty* property = new ImmutableEnumerationProperty( "Laser Fault", laserDriver_, "f?" );
+
+    property->RegisterEnumerationItem( "0", "No Fault" );
+    property->RegisterEnumerationItem( "1", "TEC Fault" );
+    property->RegisterEnumerationItem( "3", "Interlock" );
+
+    property->SetCaching( false );
+
     RegisterPublicProperty( property );
 }
 

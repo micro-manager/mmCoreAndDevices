@@ -45,7 +45,7 @@ using namespace std;
 using namespace cobolt;
 
 OldMld06Laser::OldMld06Laser( const std::string& wavelength, LaserDriver* driver ) :
-    Laser( "06-MLD", driver )
+    LegacyLaser( "06-MLD", driver )
 {
     currentUnit_ = Milliamperes;
     powerUnit_ = Milliwatts;

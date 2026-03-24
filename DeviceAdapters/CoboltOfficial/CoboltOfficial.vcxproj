@@ -84,10 +84,11 @@
     <ClCompile Include="Gen5Laser.cpp" />
     <ClCompile Include="ImmutableEnumerationProperty.cpp" />
     <ClCompile Include="Laser.cpp" />
+    <ClCompile Include="Laser06.cpp" />
     <ClCompile Include="LaserFactory.cpp" />
     <ClCompile Include="LaserShutterProperty.cpp" />
     <ClCompile Include="LaserStateProperty.cpp" />
-    <ClCompile Include="LysaLaser.cpp" />
+    <ClCompile Include="LegacyLaser.cpp" />
     <ClCompile Include="MutableDeviceProperty.cpp" />
     <ClCompile Include="MutableNumericProperty.cpp" />
     <ClCompile Include="NoShutterCommandLegacyFix.cpp" />
@@ -106,12 +107,13 @@
     <ClInclude Include="Gen5Laser.h" />
     <ClInclude Include="ImmutableEnumerationProperty.h" />
     <ClInclude Include="Laser.h" />
+    <ClInclude Include="Laser06.h" />
     <ClInclude Include="LaserDriver.h" />
     <ClInclude Include="LaserFactory.h" />
     <ClInclude Include="LaserShutterProperty.h" />
     <ClInclude Include="LaserStateProperty.h" />
+    <ClInclude Include="LegacyLaser.h" />
     <ClInclude Include="Logger.h" />
-    <ClInclude Include="LysaLaser.h" />
     <ClInclude Include="MutableDeviceProperty.h" />
     <ClInclude Include="MutableNumericProperty.h" />
     <ClInclude Include="NoShutterCommandLegacyFix.h" />

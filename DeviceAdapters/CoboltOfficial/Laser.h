@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       LysaLaser.h
+// FILE:       Laser.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,10 +34,16 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2025)
 //
 
-#ifndef __COBOLT__LYSA_LASER_H
-#define __COBOLT__LYSA_LASER_H
+#ifndef __COBOLT__LASER_H
+#define __COBOLT__LASER_H
 
-#include "Laser.h"
+#include <string>
+#include <set>
+#include <map>
+#include <vector>
+
+#include "base.h"
+#include "Property.h"
 
 class StaticStringProperty;
 
@@ -45,42 +51,104 @@ NAMESPACE_COBOLT_BEGIN
 
 class LaserDriver;
 class DeviceProperty;
+class LaserShutterProperty;
+class MutableDeviceProperty;
 
-class LysaLaser : public Laser
+class Laser
 {
 public:
 
-    LysaLaser( const std::string& name, const std::string& wavelength, LaserDriver* device );
+    static const std::string Milliamperes;
+    static const std::string Amperes;
+    static const std::string Milliwatts;
+    static const std::string Watts;
 
-    virtual void CreateShutterProperty() override;
-    virtual bool IsShutterEnabled() const override;
+    static const std::string EnumerationItem_On;
+    static const std::string EnumerationItem_Off;
+    static const std::string EnumerationItem_Enabled;
+    static const std::string EnumerationItem_Disabled;
+
+    static const std::string EnumerationItem_RunMode_ConstantCurrent;
+    static const std::string EnumerationItem_RunMode_ConstantPower;
+    static const std::string EnumerationItem_RunMode_Modulation;
+
+    typedef std::map<std::string, cobolt::Property*>::iterator PropertyIterator;
+
+    ~Laser();
+
+    const std::string& GetId() const;
+    const std::string& GetName() const;
+
+    void SetOn( const bool );
+    void SetShutterOpen( const bool );
+
+    virtual bool IsShutterEnabled() const;
+
+    bool IsShutterOpen() const;
+
+    Property* GetProperty( const std::string& name ) const;
+    Property* GetProperty( const std::string& name );
+
+    PropertyIterator GetPropertyIteratorBegin();
+    PropertyIterator GetPropertyIteratorEnd();
 
 protected:
 
-    void CreateClearFaultProperty();
-    void CreateRestartProperty();
-    void CreateAbortProperty();
-    void CreateLaserStateProperty();
-    void CreateFaultProperty();
-    virtual void CreateCurrentReadingProperty() override;
-    virtual void CreatePowerReadingProperty() override;
-    virtual void CreateCcCurrentSetpointProperty() override;
-    virtual void CreateCpPowerSetpointProperty() override;
-    void CreateRunmodeProperty();
+    static int NextId__;
 
-    void CreatePmPowerSetpointProperty() override;
-    void CreateCmCurrentHighSetpointProperty();
-    void CreatePmDigitalModulationProperty();
-    void CreatePmAnalogModulationProperty();
-    void CreateCmDigitalModulationProperty();
-    void CreateCmAnalogModulationProperty();
+    Laser( const std::string& name, const std::string& wavelength, LaserDriver* driver );
 
-    virtual void CreateAnalogImpedanceProperty() override;
-    void CreateModulationInputVoltageMaxProperty();
+    /// ###
+    /// Property Generators
+    virtual void CreateAdapterVersionProperty();
+    virtual void CreateAnalogImpedanceProperty();
+    virtual void CreateAnalogModulationProperty();
+    virtual void CreateAutostartControlProperty();
+    virtual void CreateCcCurrentSetpointProperty();
+    virtual void CreateClearFaultProperty();
+    virtual void CreateCmCurrentHighSetpointProperty();
+    virtual void CreateCpPowerSetpointProperty();
+    virtual void CreateCurrentReadingProperty();
+    virtual void CreateDigitalModulationProperty();
+    virtual void CreateFaultProperty();
+    virtual void CreateFirmwareVersionProperty();
+    virtual void CreateKeyswitchProperty();
+    virtual void CreateLaserOnOffProperty();
+    virtual void CreateLaserStateProperty();
+    virtual void CreateModelProperty();
+    virtual void CreateModulationInputVoltageMaxProperty();
+    virtual void CreateNameProperty();
+    virtual void CreateOperatingHoursProperty();
+    virtual void CreatePmPowerSetpointProperty();
+    virtual void CreatePowerReadingProperty();
+    virtual void CreateRunmodeProperty();
+    virtual void CreateSerialNumberProperty();
+    virtual void CreateShutterProperty();
+    virtual void CreateWavelengthProperty( const std::string& wavelength );
+
+    virtual bool IsShutterCommandSupported() const;
+    bool IsInCdrhMode() const;
+
+    void RegisterPublicProperty( Property* );
+
+    double MaxCurrentSetpoint();
+    double MaxPowerSetpoint();
+
+    std::map<std::string, cobolt::Property*> properties_;
+
+    std::string id_;
+    std::string name_;
+    LaserDriver* laserDriver_;
+
+    std::string currentUnit_;
+    std::string powerUnit_;
+
+    MutableDeviceProperty* laserOnOffProperty_;
+    LaserShutterProperty* shutter_;
 
     DeviceProperty* laserStateProperty_;
 };
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__LYSA_LASER_H
+#endif // #ifndef __COBOLT__LASER_H

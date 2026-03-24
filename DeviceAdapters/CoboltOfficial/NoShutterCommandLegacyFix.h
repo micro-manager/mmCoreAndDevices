@@ -40,7 +40,7 @@
 #include "CustomizableEnumerationProperty.h"
 #include "LaserShutterProperty.h"
 #include "MutableNumericProperty.h"
-#include "Laser.h"
+#include "LegacyLaser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
@@ -51,6 +51,8 @@ namespace legacy
         class PersistedLaserState
         { 
         public:
+            std::string savedCurrentSetpoint;
+            std::string savedRunMode;
 
             PersistedLaserState( LaserDriver* laserDriver, const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand ) :
                 laserDriver_( laserDriver ),
@@ -73,6 +75,7 @@ namespace legacy
                 char valueToSave[ 32 ];
                 sprintf( valueToSave, "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
                 const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
+                Logger::Instance()->LogMessage("CoboltShutter :" + saveCommand, true);
 
                 return laserDriver_->SendCommand( saveCommand );
             }
@@ -94,6 +97,10 @@ namespace legacy
                 char valueToSave[ 32 ];
                 sprintf( valueToSave, "MM[%s;%s;%s]", ( isShutterOpen ? "1" : "0" ), runmode.c_str(), currentSetpoint.c_str() );
                 const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
+                
+                Logger::Instance()->LogMessage("CoboltShutter : Save state" + saveCommand, true);
+                savedCurrentSetpoint = currentSetpoint;
+                savedRunMode = runmode;
 
                 return laserDriver_->SendCommand( saveCommand );
             }
@@ -184,7 +191,7 @@ namespace legacy
                 const std::string& setCommandBase,
                 const double min,
                 const double max,
-                Laser* laser,
+                LegacyLaser* laser,
                 const std::string& getPersistedDataCommand,
                 const std::string& setPersistedDataCommand
             ) :
@@ -229,7 +236,7 @@ namespace legacy
 
         private:
 
-            Laser* laser_;
+            LegacyLaser* laser_;
             PersistedLaserState laserStatePersistence_;
         };
          
@@ -243,7 +250,7 @@ namespace legacy
                 const std::string& name,
                 LaserDriver* laserDriver,
                 const std::string& getCommand,
-                Laser* laser,
+                LegacyLaser* laser,
                 const std::string& getPersistedDataCommand,
                 const std::string& setPersistedDataCommand
             ) :
@@ -302,7 +309,7 @@ namespace legacy
 
         private:
 
-            Laser* laser_;
+            LegacyLaser* laser_;
             PersistedLaserState laserStatePersistence_;
         };
 
@@ -313,7 +320,7 @@ namespace legacy
             LaserShutterPropertyCdrh(
                 const std::string& name,
                 LaserDriver* laserDriver,
-                Laser* laser,
+                LegacyLaser* laser,
                 const std::string& getPersistedDataCommand,
                 const std::string& setPersistedDataCommand );
             
@@ -336,7 +343,7 @@ namespace legacy
 
         public:
 
-            LaserShutterPropertyOem( const std::string& name, LaserDriver* laserDriver, Laser* laser ) :
+            LaserShutterPropertyOem( const std::string& name, LaserDriver* laserDriver, LegacyLaser* laser ) :
                 cobolt::LaserShutterProperty( name, laserDriver, laser, "l0", "l1" ),
                 laser_( laser )
             {
@@ -353,7 +360,7 @@ namespace legacy
 
         private:
 
-            Laser* laser_;
+            LegacyLaser* laser_;
         };
 
         namespace skyra
@@ -367,7 +374,7 @@ namespace legacy
                 static const std::string Value_Active;
                 static const std::string Value_Inactive;
 
-                LineActivationProperty( const int line, const std::string& name, LaserDriver* laserDriver, Laser* laser ) :
+                LineActivationProperty( const int line, const std::string& name, LaserDriver* laserDriver, LegacyLaser* laser ) :
                     CustomizableEnumerationProperty( name, laserDriver, std::to_string( (long long) line ) + "gla?" ),
                     userValue_( "" ),
                     laser_( laser )
@@ -429,7 +436,7 @@ namespace legacy
                  */
                 std::string userValue_;
                 
-                Laser* laser_;
+                LegacyLaser* laser_;
             };
 
             class LaserShutterProperty : public cobolt::LaserShutterProperty
@@ -438,7 +445,7 @@ namespace legacy
 
             public:
 
-                LaserShutterProperty( const std::string& name, LaserDriver* laserDriver, Laser* laser ) :
+                LaserShutterProperty( const std::string& name, LaserDriver* laserDriver, LegacyLaser* laser ) :
                     cobolt::LaserShutterProperty( name, laserDriver, laser )
                 {
                 }

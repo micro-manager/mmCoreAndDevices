@@ -93,6 +93,8 @@ public:
     virtual int OnGuiSetAction( GuiProperty& );
     virtual int OnGuiGetAction( GuiProperty& guiProperty );
 
+    virtual void Update() {}
+
     /**
      * \brief The property object represented in a string. For logging/debug purposes.
      */

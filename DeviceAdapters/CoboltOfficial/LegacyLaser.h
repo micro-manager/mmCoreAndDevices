@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       Laser.h
+// FILE:       LegacyLaser.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,16 +34,15 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
 //
 
-#ifndef __COBOLT__LASER_H
-#define __COBOLT__LASER_H
+#ifndef __COBOLT__LEGACY_LASER_H
+#define __COBOLT__LEGACY_LASER_H
 
 #include <string>
 #include <set>
 #include <map>
 #include <vector>
 
-#include "base.h"
-#include "Property.h"
+#include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
@@ -52,15 +51,15 @@ class LaserStateProperty;
 class LaserShutterProperty;
 class MutableDeviceProperty;
 
-class Laser
+class LegacyLaser : public Laser
 {
 public:
 
     typedef std::map<std::string, cobolt::Property*>::iterator PropertyIterator;
 
-    Laser( const std::string& name, LaserDriver* driver );
+    LegacyLaser( const std::string& name, LaserDriver* driver );
 
-    virtual ~Laser();
+    virtual ~LegacyLaser();
 
     const std::string& GetId() const;
     const std::string& GetName() const;
@@ -72,63 +71,41 @@ public:
     
     bool IsShutterOpen() const;
 
-    Property* GetProperty( const std::string& name ) const;
-    Property* GetProperty( const std::string& name );
-
-    PropertyIterator GetPropertyIteratorBegin();
-    PropertyIterator GetPropertyIteratorEnd();
-
 protected:
 
     static int NextId__;
 
-    void RegisterState( const std::string& state );
-
     /// ###
     /// Property Generators
-
-    void CreatePropertyGroup( const std::string& groupName );
-
-    virtual void CreateNameProperty();
-    virtual void CreateModelProperty();
-    virtual void CreateWavelengthProperty( const std::string& wavelength );
-    virtual void CreateKeyswitchProperty();
-    virtual void CreateSerialNumberProperty();
-    virtual void CreateFirmwareVersionProperty();
-    virtual void CreateAdapterVersionProperty();
-     
-    virtual void CreateOperatingHoursProperty();
-    virtual void CreateCcCurrentSetpointProperty();
-    virtual void CreateCcCurrentSetpointProperty( const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand );
-    virtual void CreateCurrentReadingProperty();
-    virtual void CreateCpPowerSetpointProperty();
-    virtual void CreatePowerReadingProperty();
     
-    virtual void CreateLaserOnOffProperty();
-    virtual void CreateShutterProperty();
-    virtual void CreateDigitalModulationProperty();
-    virtual void CreateAnalogModulationProperty();
+    virtual void CreateAutostartControlProperty() override;
+    virtual void CreateClearFaultProperty() override;
+    virtual void CreateNameProperty() override;
+    virtual void CreateModelProperty() override;
+    virtual void CreateWavelengthProperty( const std::string& wavelength ) override;
+    virtual void CreateKeyswitchProperty() override;
+    virtual void CreateSerialNumberProperty() override;
+    virtual void CreateFirmwareVersionProperty() override;
+    virtual void CreateAdapterVersionProperty() override;
      
-    virtual void CreatePmPowerSetpointProperty();
-    virtual void CreateAnalogImpedanceProperty();
+    virtual void CreateOperatingHoursProperty() override;
+    virtual void CreateCcCurrentSetpointProperty() override;
+    virtual void CreateCcCurrentSetpointProperty( const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand );
+    virtual void CreateCurrentReadingProperty() override;
+    virtual void CreateCpPowerSetpointProperty() override;
+    virtual void CreatePowerReadingProperty() override;
+    
+    virtual void CreateLaserOnOffProperty() override;
+    virtual void CreateShutterProperty( std::string saveCmd = "sdsn", std::string readCmd = "gdsn?" );
+    virtual void CreateDigitalModulationProperty() override;
+    virtual void CreateAnalogModulationProperty() override;
+     
+    virtual void CreatePmPowerSetpointProperty() override;
+    virtual void CreateAnalogImpedanceProperty() override;
      
     virtual void CreateModulationCurrentLowSetpointProperty();
     virtual void CreateModulationCurrentHighSetpointProperty();
     virtual void CreateModulationHighPowerSetpointProperty();
-    
-    static const std::string Milliamperes;
-    static const std::string Amperes;
-    static const std::string Milliwatts;
-    static const std::string Watts;
-
-    static const std::string EnumerationItem_On;
-    static const std::string EnumerationItem_Off;
-    static const std::string EnumerationItem_Enabled;
-    static const std::string EnumerationItem_Disabled;
-
-    static const std::string EnumerationItem_RunMode_ConstantCurrent;
-    static const std::string EnumerationItem_RunMode_ConstantPower;
-    static const std::string EnumerationItem_RunMode_Modulation;
 
     virtual bool IsShutterCommandSupported() const;
     bool IsInCdrhMode() const;
@@ -138,20 +115,9 @@ protected:
     double MaxCurrentSetpoint();
     double MaxPowerSetpoint();
     
-    std::map<std::string, cobolt::Property*> properties_;
-    
-    std::string id_;
-    std::string name_;
-    LaserDriver* laserDriver_;
-
-    std::string currentUnit_;
-    std::string powerUnit_;
-
     LaserStateProperty* laserStatePropertyOld_;
-    MutableDeviceProperty* laserOnOffProperty_;
-    LaserShutterProperty* shutter_;
 };
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__LASER_H
+#endif // #ifndef __COBOLT__LEGACY_LASER_H

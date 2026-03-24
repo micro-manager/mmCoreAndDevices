@@ -40,7 +40,8 @@
 
 #include "LaserDriver.h"
 
-#include "LysaLaser.h"
+#include "Laser06.h"
+#include "LegacyLaser.h"
 #include "OldDpl06Laser.h"
 #include "OldMld06Laser.h"
 #include "Gen5Laser.h"
@@ -91,18 +92,18 @@ Laser* LaserFactory::Create( LaserDriver* driver )
          firmwareVersion.find( "BOB-1005" ) != std::string::npos ) { // New lysa fw version format
 
         Logger::Instance()->LogMessage( "Instantiating the 12V 06-DPL driver...", false );
-        laser = new LysaLaser( "06-DPL Laser", wavelength, driver);
+        laser = new Laser06( "06-DPL Laser", wavelength, driver);
 
     } else if ( firmwareVersion.find( "/1004." ) != std::string::npos || // Old lysa fw version format
                 firmwareVersion.find( "CAP-1004" ) != std::string::npos ) { // New lysa fw version format
 
         Logger::Instance()->LogMessage( "Instantiating the 12V 06-MLD driver...", false );
-        laser = new LysaLaser( "06-MLD Laser", wavelength, driver );
+        laser = new Laser06( "06-MLD Laser", wavelength, driver );
 
     } else if ( firmwareVersion.find( "IMP-1011" ) != std::string::npos ) {
 
         Logger::Instance()->LogMessage( "Instantiating the 12V 06-MLDM driver...", false );
-        laser = new LysaLaser( "06-MLDM Laser", wavelength, driver );
+        laser = new Laser06( "06-MLDM Laser", wavelength, driver );
 
     } else if ( modelString.find( "-06-51-" ) != std::string::npos ||
         modelString.find( "-06-53-" ) != std::string::npos ||
@@ -158,7 +159,7 @@ Laser* LaserFactory::Create( LaserDriver* driver )
 
         Logger::Instance()->LogMessage( "Unknown laser, instantiating a generic driver...", false );
 
-        laser = new Laser( "Unknown", driver );
+        laser = new LegacyLaser( "Unknown", driver );
     }
 
     Logger::Instance()->LogMessage( "Instantiated driver for laser '" + laser->GetName() + "'.", true );

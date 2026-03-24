@@ -37,13 +37,13 @@
 #ifndef __COBOLT__GEN5_LASER_H
 #define __COBOLT__GEN5_LASER_H
 
-#include "Laser.h"
+#include "LegacyLaser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
 class LaserDriver;
 
-class Gen5Laser : public Laser
+class Gen5Laser : public LegacyLaser
 {
 public:
 
@@ -51,8 +51,9 @@ public:
 
 protected:
 
-    void CreateLaserStateProperty();
-    void CreateRunmodeProperty();
+    virtual void CreateLaserStateProperty() override;
+    virtual void CreateRunmodeProperty() override;
+    virtual void CreateFaultProperty() override;
 };
 
 NAMESPACE_COBOLT_END

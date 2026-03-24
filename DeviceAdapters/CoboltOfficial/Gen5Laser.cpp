@@ -40,15 +40,18 @@
 #include "LaserStateProperty.h"
 #include "CustomizableEnumerationProperty.h"
 #include "NoShutterCommandLegacyFix.h"
+#include "ImmutableEnumerationProperty.h"
 
 using namespace std;
 using namespace cobolt;
 
 Gen5Laser::Gen5Laser( const std::string& wavelength, LaserDriver* driver ) :
-    Laser( "05 Laser", driver )
+    LegacyLaser( "05 Laser", driver )
 {
     currentUnit_ = Amperes;
     powerUnit_ = Watts;
+
+    //CreateWavelengthProperty( wavelength );
 
     CreateNameProperty();
     CreateModelProperty();
@@ -56,24 +59,30 @@ Gen5Laser::Gen5Laser( const std::string& wavelength, LaserDriver* driver ) :
     CreateFirmwareVersionProperty();
     CreateAdapterVersionProperty();
     CreateOperatingHoursProperty();
-    CreateWavelengthProperty( wavelength );
-
     CreateKeyswitchProperty();
     CreateLaserStateProperty();
-    //CreateLaserOnOffProperty();
-    CreateShutterProperty();
+    CreateFaultProperty();
+
+    // Laser Control Group
+    CreateClearFaultProperty();
+    CreateAutostartControlProperty();
+    CreateShutterProperty( "sartn", "gartn?" );
     CreateRunmodeProperty();
-    CreateCpPowerSetpointProperty();
+
+    //// Readings Group
     CreatePowerReadingProperty();
-    CreateCcCurrentSetpointProperty( "gartn?", "sartn" );
     CreateCurrentReadingProperty();
+
+    //// Runmode Control Group
+    CreateCpPowerSetpointProperty();
+    CreateCcCurrentSetpointProperty( "gartn?", "sartn" );
 }
 
 void Gen5Laser::CreateLaserStateProperty()
 {
     if ( IsInCdrhMode() ) {
 
-        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Gen5Laser State", laserDriver_, "gom?" );
+        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Laser State", laserDriver_, "gom?" );
     
         laserStatePropertyOld_->RegisterState( "0", "Off", false );
         laserStatePropertyOld_->RegisterState( "1", "Waiting for Temperatures", false );
@@ -87,7 +96,7 @@ void Gen5Laser::CreateLaserStateProperty()
 
     } else {
 
-        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Gen5Laser State", laserDriver_, "l?" );
+        laserStatePropertyOld_ = new LaserStateProperty( Property::Stereotype::String, "Laser State", laserDriver_, "l?" );
 
         laserStatePropertyOld_->RegisterState( "0", "Off", true );
         laserStatePropertyOld_->RegisterState( "1", "On", true );
@@ -112,6 +121,20 @@ void Gen5Laser::CreateRunmodeProperty()
 
     property->RegisterEnumerationItem( "0", "ecc", EnumerationItem_RunMode_ConstantCurrent );
     property->RegisterEnumerationItem( "1", "ecp", EnumerationItem_RunMode_ConstantPower );
+
+    RegisterPublicProperty( property );
+}
+
+void Gen5Laser::CreateFaultProperty()
+{
+    ImmutableEnumerationProperty* property = new ImmutableEnumerationProperty( "Laser Fault", laserDriver_, "f?" );
+
+    property->RegisterEnumerationItem( "0", "No Fault" );
+    property->RegisterEnumerationItem( "1", "TEC Fault" );
+    property->RegisterEnumerationItem( "3", "Interlock" );
+    property->RegisterEnumerationItem( "4", "Current Clamp" );
+
+    property->SetCaching( false );
 
     RegisterPublicProperty( property );
 }

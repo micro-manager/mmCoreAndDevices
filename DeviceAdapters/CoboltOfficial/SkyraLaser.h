@@ -39,11 +39,11 @@
 
 #include <string>
 
-#include "Laser.h"
+#include "LegacyLaser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
-class SkyraLaser : public Laser
+class SkyraLaser : public LegacyLaser
 {
 public:
     
@@ -61,6 +61,8 @@ protected:
     void CreateCcCurrentSetpointProperty( const int line );
     void CreateCurrentReadingProperty( const int line );
     void CreateCpPowerSetpointProperty( const int line );
+    virtual void CreateFaultProperty() override;
+
     void CreatePowerReadingProperty( const int line );
     void CreateDigitalModulationEnabledProperty( const int line );
     void CreateAnalogModulationEnabledProperty( const int line );

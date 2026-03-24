@@ -35,7 +35,6 @@
 //
 
 #include "Property.h"
-#include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
@@ -93,7 +92,7 @@ int Property::OnGuiGetAction( GuiProperty& guiProperty )
         return returnCode;
     }
 
-    guiProperty.Set( string.c_str() );
+    guiProperty.Set( string );
 
     return returnCode;
 }

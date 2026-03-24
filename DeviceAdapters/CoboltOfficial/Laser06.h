@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       OldMld06Laser.h
+// FILE:       Laser06.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -31,30 +31,24 @@
 //                specified in owner's manual may result in exposure to hazardous radiation and
 //                violation of the CE / CDRH laser safety compliance.
 //
-// AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
+// AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2025)
 //
 
-#ifndef __COBOLT__OLD_MLD06_LASER_H
-#define __COBOLT__OLD_MLD06_LASER_H
+#ifndef __COBOLT__LASER06_H
+#define __COBOLT__LASER06_H
 
-#include "LegacyLaser.h"
+#include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
-class LaserDriver;
-
-class OldMld06Laser : public LegacyLaser
+class Laser06 : public Laser
 {
 public:
 
-    OldMld06Laser( const std::string& wavelength, LaserDriver* device );
-
-protected:
-
-    void CreateLaserStateProperty();
-    void CreateRunmodeProperty();
+    Laser06( const std::string& name, const std::string& wavelength, LaserDriver* driver );
+    ~Laser06();
 };
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__OLD_MLD06_LASER_H
+#endif // #ifndef __COBOLT__LASER06_H

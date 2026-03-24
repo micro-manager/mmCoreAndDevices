@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       LysaLaser.cpp
+// FILE:       Laser.cpp
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,68 +34,148 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2025)
 //
 
-#include "LysaLaser.h"
+#include <assert.h>
+
+#include "Laser.h"
 
 #include "LaserDriver.h"
 #include "LaserStateProperty.h"
 #include "CustomizableEnumerationProperty.h"
 #include "EnumerationProperty.h"
 #include "NoShutterCommandLegacyFix.h"
+#include "LaserShutterProperty.h"
+#include "MutableDeviceProperty.h"
+#include "ImmutableEnumerationProperty.h"
+#include "StaticStringProperty.h"
 
 using namespace std;
 using namespace cobolt;
 
-LysaLaser::LysaLaser( const std::string& name, const std::string& wavelength, LaserDriver* driver ) :
-    Laser( name, driver ),
-    laserStateProperty_( NULL )
+const std::string Laser::Milliamperes = "mA";
+const std::string Laser::Amperes = "A";
+const std::string Laser::Milliwatts = "mW";
+const std::string Laser::Watts = "W";
+
+const std::string Laser::EnumerationItem_On = "on";
+const std::string Laser::EnumerationItem_Off = "off";
+const std::string Laser::EnumerationItem_Enabled = "enabled";
+const std::string Laser::EnumerationItem_Disabled = "disabled";
+
+const std::string Laser::EnumerationItem_RunMode_ConstantCurrent = "Constant Current";
+const std::string Laser::EnumerationItem_RunMode_ConstantPower = "Constant Power";
+const std::string Laser::EnumerationItem_RunMode_Modulation = "Modulation";
+
+int Laser::NextId__ = 1;
+
+Laser::~Laser()
 {
-    currentUnit_ = Milliamperes;
-    powerUnit_ = Milliwatts;
+    const bool pausedPropertyIsPublic = ( shutter_ != NULL && properties_.find( shutter_->GetName() ) != properties_.end() );
 
-    CreateNameProperty();
-    CreateWavelengthProperty( wavelength );
-    CreateModelProperty();
-    CreateSerialNumberProperty();
-    CreateFirmwareVersionProperty();
-    CreateAdapterVersionProperty();
-    CreateOperatingHoursProperty();
-    CreateKeyswitchProperty();
-    CreateLaserStateProperty();
-    CreateFaultProperty();
+    if ( !pausedPropertyIsPublic ) {
+        delete shutter_;
+    }
 
-    CreatePropertyGroup( "Control" );
-    CreateClearFaultProperty();
-    CreateRestartProperty();
-    CreateAbortProperty();
-    CreateShutterProperty();
-    CreateRunmodeProperty();
+    for ( PropertyIterator it = GetPropertyIteratorBegin(); it != GetPropertyIteratorEnd(); it++ ) {
+        delete it->second;
+    }
 
-    CreatePropertyGroup( "Readings" );
-    CreatePowerReadingProperty();
-    CreateCurrentReadingProperty();
-
-    CreatePropertyGroup( "Runmode: Constant Power" );
-    CreateCpPowerSetpointProperty();
-
-    CreatePropertyGroup( "Runmode: Constant Current" );
-    CreateCcCurrentSetpointProperty();
-
-    CreatePropertyGroup( "Runmode: Power Modulation" );
-    CreatePmPowerSetpointProperty();
-    CreatePmDigitalModulationProperty();
-    CreatePmAnalogModulationProperty();
-
-    CreatePropertyGroup( "Runmode: Current Modulation" );
-    CreateCmCurrentHighSetpointProperty();
-    CreateCmDigitalModulationProperty();
-    CreateCmAnalogModulationProperty();
-
-    CreatePropertyGroup( "Modulation Settings" );
-    CreateAnalogImpedanceProperty();
-    CreateModulationInputVoltageMaxProperty();
+    properties_.clear();
 }
 
-void LysaLaser::CreateAnalogImpedanceProperty()
+const std::string& Laser::GetId() const
+{
+    return id_;
+}
+
+const std::string& Laser::GetName() const
+{
+    return name_;
+}
+
+void Laser::SetOn( const bool on )
+{
+    // Reset shutter on laser on/off:
+    SetShutterOpen( false );
+
+    if ( laserOnOffProperty_ != NULL && false ) { // TODO: replace 'false' with 'autostart disabled'
+
+        laserOnOffProperty_->SetValue( ( on ? EnumerationItem_On : EnumerationItem_Off ) );
+
+    } else {
+
+        if ( on ) {
+            laserDriver_->SendCommand( "restart" );
+        } else {
+            laserDriver_->SendCommand( "abort" );
+        }
+    }
+}
+
+void Laser::SetShutterOpen( const bool open )
+{
+    if ( shutter_ == NULL ) {
+
+        Logger::Instance()->LogError( "Laser::SetShutterOpen(): Shutter not available" );
+        return;
+    }
+
+    shutter_->SetValue( open ? LaserShutterProperty::Value_Open : LaserShutterProperty::Value_Closed );
+}
+
+bool Laser::IsShutterOpen() const
+{
+    if ( shutter_ == NULL ) {
+
+        Logger::Instance()->LogError( "Laser::IsShutterOpen(): Shutter not available" );
+        return false;
+    }
+
+    return ( shutter_->IsOpen() );
+}
+
+Property* Laser::GetProperty( const std::string& name ) const
+{
+    return properties_.at( name );
+}
+
+Property* Laser::GetProperty( const std::string& name )
+{
+    return properties_[ name ];
+}
+
+Laser::PropertyIterator Laser::GetPropertyIteratorBegin()
+{
+    return properties_.begin();
+}
+
+Laser::PropertyIterator Laser::GetPropertyIteratorEnd()
+{
+    return properties_.end();
+}
+
+bool Laser::IsShutterEnabled() const
+{
+    return true;
+}
+
+Laser::Laser( const std::string& name, const std::string& wavelength, LaserDriver* driver ) :
+    id_( std::to_string( (long double)NextId__++ ) ),
+    name_( name ),
+    laserDriver_( driver ),
+    currentUnit_( "[?]" ),
+    powerUnit_( "[?]" ),
+    laserOnOffProperty_( NULL ),
+    shutter_( NULL ),
+    laserStateProperty_( NULL )
+{
+}
+
+void Laser::CreateAdapterVersionProperty()
+{
+    RegisterPublicProperty( new StaticStringProperty( "Adapter Version", COBOLT_MM_DRIVER_VERSION ) );
+}
+
+void Laser::CreateAnalogImpedanceProperty()
 {
     CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Impedance", laserDriver_, "system:input:analog:impedance?" );
 
@@ -105,89 +185,28 @@ void LysaLaser::CreateAnalogImpedanceProperty()
     RegisterPublicProperty( property );
 }
 
-void LysaLaser::CreateModulationInputVoltageMaxProperty()
+void Laser::CreateAnalogModulationProperty()
 {
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Modulation Input Voltage Max", laserDriver_, "system:input:analog:voltage:range:max?" );
-
-    property->RegisterEnumerationItem( "1", "system:input:analog:voltage:range:max 1", "1 V" );
-    property->RegisterEnumerationItem( "5", "system:input:analog:voltage:range:max 5", "5 V" );
-
-    RegisterPublicProperty( property );
-}
-
-void LysaLaser::CreateShutterProperty()
-{
-    shutter_ = new LaserShutterProperty( "Emission Status", laserDriver_, this );
-    RegisterPublicProperty( shutter_ );
-}
-
-bool LysaLaser::IsShutterEnabled() const
-{
-    return true;
-}
-
-/**
- * This is a hacky function to get around the problem of not having any button feature available in the Property Browser.
- */
-void LysaLaser::CreateClearFaultProperty()
-{
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Clear Fault", laserDriver_, "?" );
-    property->RegisterEnumerationItem( "OK", "?", "---" ); // Without this we get an error when adding a new laser.
-    property->RegisterEnumerationItem( "__", "fault:clear", "Clear Fault" );
+    // TODO: Add for cm too
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Modulation", laserDriver_, "laser:pm:analog:enabled?" );
+    property->RegisterEnumerationItem( "0", "laser:pm:analog:enabled 0", EnumerationItem_Disabled );
+    property->RegisterEnumerationItem( "1", "laser:pm:analog:enabled 1", EnumerationItem_Enabled );
     RegisterPublicProperty( property );
 }
 
 /**
  * This is a hacky function to get around the problem of not having any button feature available in the Property Browser.
  */
-void LysaLaser::CreateRestartProperty()
+void Laser::CreateAutostartControlProperty()
 {
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Restart", laserDriver_, "?" );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Laser Control", laserDriver_, "?" );
     property->RegisterEnumerationItem( "OK", "?", "---" ); // Without this we get an error when adding a new laser.
+    property->RegisterEnumerationItem( "__", "autostart:abort", "Abort" );
     property->RegisterEnumerationItem( "__", "autostart:restart", "Restart" );
     RegisterPublicProperty( property );
 }
 
-/**
- * This is a hacky function to get around the problem of not having any button feature available in the Property Browser.
- */
-void LysaLaser::CreateAbortProperty()
-{
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Abort", laserDriver_, "?" );
-    property->RegisterEnumerationItem( "OK", "?", "---" ); // Without this we get an error when adding a new laser.
-    property->RegisterEnumerationItem( "__", "autostart:abort", "Abort" );
-    RegisterPublicProperty( property );
-}
-
-void LysaLaser::CreateLaserStateProperty()
-{
-    laserStateProperty_ = new DeviceProperty( Property::Stereotype::String, "Laser State", laserDriver_, "state?" );
-    laserStateProperty_->SetCaching( false );
-    RegisterPublicProperty( laserStateProperty_ );
-}
-
-void LysaLaser::CreateFaultProperty()
-{
-    DeviceProperty* faultProperty = new DeviceProperty( Property::Stereotype::String, "Laser Fault", laserDriver_, "fault?" );
-    faultProperty->SetCaching( false );
-    RegisterPublicProperty( faultProperty );
-}
-
-void LysaLaser::CreateCurrentReadingProperty()
-{
-    DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Current Reading [" + currentUnit_ + "]", laserDriver_, "laser:current:reading?" );
-    property->SetCaching( false );
-    RegisterPublicProperty( property );
-}
-
-void LysaLaser::CreatePowerReadingProperty()
-{
-    DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Power Reading [" + powerUnit_ + "]", laserDriver_, "laser:power:reading?" );
-    property->SetCaching( false );
-    RegisterPublicProperty( property );
-}
-
-void LysaLaser::CreateCcCurrentSetpointProperty()
+void Laser::CreateCcCurrentSetpointProperty()
 {
     std::string maxCurrentSetpointResponse;
     if ( laserDriver_->SendCommand( "laser:cc:current:setpoint? max", &maxCurrentSetpointResponse ) != return_code::ok ) {
@@ -197,48 +216,23 @@ void LysaLaser::CreateCcCurrentSetpointProperty()
 
     const double maxCurrentSetpoint = atof( maxCurrentSetpointResponse.c_str() );
 
-    MutableDeviceProperty* property = new MutableNumericProperty<double>( 
-        "Current Setpoint [" + currentUnit_ + "]", laserDriver_, "laser:cc:current:setpoint?", "laser:cc:current:setpoint", 0.0f, maxCurrentSetpoint );
-    RegisterPublicProperty( property );
-}
-
-void LysaLaser::CreateCpPowerSetpointProperty()
-{
-    std::string maxPowerSetpointResponse;
-    if ( laserDriver_->SendCommand( "laser:cp:power:setpoint? max", &maxPowerSetpointResponse ) != return_code::ok ) {
-        Logger::Instance()->LogError( "Laser::CreateCpPowerSetpointProperty(): Failed to retrieve max power sepoint" );
-        return;
-    }
-
-    const double maxPowerSetpoint = atof( maxPowerSetpointResponse.c_str() );
-
     MutableDeviceProperty* property = new MutableNumericProperty<double>(
-        "Power Setpoint [" + powerUnit_ + "]", laserDriver_, "laser:cp:power:setpoint?", "laser:cp:power:setpoint", 0.0f, maxPowerSetpoint );
+        "CC: Current Setpoint [" + currentUnit_ + "]", laserDriver_, "laser:cc:current:setpoint?", "laser:cc:current:setpoint", 0.0f, maxCurrentSetpoint );
     RegisterPublicProperty( property );
 }
 
-void LysaLaser::CreateRunmodeProperty()
+/**
+ * This is a hacky function to get around the problem of not having any button feature available in the Property Browser.
+ */
+void Laser::CreateClearFaultProperty()
 {
-    EnumerationProperty* property = new EnumerationProperty( "Runmode", laserDriver_, "laser:runmode" );
-    property->SetCaching( false );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Clear Fault", laserDriver_, "?" );
+    property->RegisterEnumerationItem( "OK", "?", "---" ); // Without this we get an error when adding a new laser.
+    property->RegisterEnumerationItem( "__", "fault:clear", "Clear Fault" );
     RegisterPublicProperty( property );
 }
 
-void LysaLaser::CreatePmPowerSetpointProperty()
-{
-    std::string maxPmPowerSetpointResponse;
-    if ( laserDriver_->SendCommand( "laser:pm:power:setpoint? max", &maxPmPowerSetpointResponse ) != return_code::ok ) {
-        Logger::Instance()->LogError( "Laser::CreatePmPowerSetpointProperty(): Failed to retrieve max power sepoint" );
-        return;
-    }
-
-    const double maxPmPowerSetpoint = atof( maxPmPowerSetpointResponse.c_str() );
-
-    RegisterPublicProperty( new MutableNumericProperty<double>(
-        "Power Setpoint", laserDriver_, "laser:pm:power:setpoint?", "laser:pm:power:setpoint", 0, maxPmPowerSetpoint ) );
-}
-
-void LysaLaser::CreateCmCurrentHighSetpointProperty()
+void Laser::CreateCmCurrentHighSetpointProperty()
 {
     std::string maxCmCurrentSetpointResponse;
     if ( laserDriver_->SendCommand( "laser:cm:current:high:setpoint? max", &maxCmCurrentSetpointResponse ) != return_code::ok ) {
@@ -249,37 +243,194 @@ void LysaLaser::CreateCmCurrentHighSetpointProperty()
     const double maxCmCurrentSetpoint = atof( maxCmCurrentSetpointResponse.c_str() );
 
     RegisterPublicProperty( new MutableNumericProperty<double>(
-        "High Current Setpoint", laserDriver_, "laser:cm:current:high:setpoint?", "laser:cm:current:high:setpoint", 0, maxCmCurrentSetpoint ) );
+        "Current Mod: High Current Setpoint [" + currentUnit_ + "]", laserDriver_, "laser:cm:current:high:setpoint?", "laser:cm:current:high:setpoint", 0, maxCmCurrentSetpoint ) );
 }
 
-void LysaLaser::CreatePmDigitalModulationProperty()
+void Laser::CreateCpPowerSetpointProperty()
 {
+    std::string maxPowerSetpointResponse;
+    if ( laserDriver_->SendCommand( "laser:cp:power:setpoint? max", &maxPowerSetpointResponse ) != return_code::ok ) {
+        Logger::Instance()->LogError( "Laser::CreateCpPowerSetpointProperty(): Failed to retrieve max power sepoint" );
+        return;
+    }
+
+    const double maxPowerSetpoint = atof( maxPowerSetpointResponse.c_str() );
+
+    MutableDeviceProperty* property = new MutableNumericProperty<double>(
+        "CP: Power Setpoint [" + powerUnit_ + "]", laserDriver_, "laser:cp:power:setpoint?", "laser:cp:power:setpoint", 0.0f, maxPowerSetpoint );
+    RegisterPublicProperty( property );
+}
+
+void Laser::CreateCurrentReadingProperty()
+{
+    DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Current Reading [" + currentUnit_ + "]", laserDriver_, "laser:current:reading?" );
+    property->SetCaching( false );
+    RegisterPublicProperty( property );
+}
+
+void Laser::CreateDigitalModulationProperty()
+{
+    // TODO: Add for cm too
+    // TODO NOW: Merge digital/analog modulation for pm and cm into one
     CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Digital Modulation", laserDriver_, "laser:pm:digital:enabled?" );
     property->RegisterEnumerationItem( "0", "laser:pm:digital:enabled 0", EnumerationItem_Disabled );
     property->RegisterEnumerationItem( "1", "laser:pm:digital:enabled 1", EnumerationItem_Enabled );
     RegisterPublicProperty( property );
 }
 
-void LysaLaser::CreatePmAnalogModulationProperty()
+void Laser::CreateFaultProperty()
 {
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Modulation", laserDriver_, "laser:pm:analog:enabled?" );
-    property->RegisterEnumerationItem( "0", "laser:pm:analog:enabled 0", EnumerationItem_Disabled );
-    property->RegisterEnumerationItem( "1", "laser:pm:analog:enabled 1", EnumerationItem_Enabled );
+    DeviceProperty* faultProperty = new DeviceProperty( Property::Stereotype::String, "Laser Fault", laserDriver_, "fault?" );
+    faultProperty->SetCaching( false );
+    RegisterPublicProperty( faultProperty );
+}
+
+void Laser::CreateFirmwareVersionProperty()
+{
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Firmware Version", laserDriver_, "gfv?" ) );
+}
+
+void Laser::CreateKeyswitchProperty()
+{
+    ImmutableEnumerationProperty* property = new ImmutableEnumerationProperty( "Keyswitch", laserDriver_, "gkses?" );
+
+    property->RegisterEnumerationItem( "0", "Disabled" );
+    property->RegisterEnumerationItem( "1", "Enabled" );
+
     RegisterPublicProperty( property );
 }
 
-void LysaLaser::CreateCmDigitalModulationProperty()
+void Laser::CreateLaserOnOffProperty()
 {
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Digital Modulation", laserDriver_, "laser:cm:digital:enabled?" );
-    property->RegisterEnumerationItem( "0", "laser:cm:digital:enabled 0", EnumerationItem_Disabled );
-    property->RegisterEnumerationItem( "1", "laser:cm:digital:enabled 1", EnumerationItem_Enabled );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Laser Status", laserDriver_, "l?" );
+
+    property->RegisterEnumerationItem( "0", "abort", EnumerationItem_Off );
+    property->RegisterEnumerationItem( "1", "restart", EnumerationItem_On );
+    property->SetCaching( false );
+
+    RegisterPublicProperty( property );
+    laserOnOffProperty_ = property;
+}
+
+void Laser::CreateLaserStateProperty()
+{
+    laserStateProperty_ = new DeviceProperty( Property::Stereotype::String, "Laser State", laserDriver_, "state?" );
+    laserStateProperty_->SetCaching( false );
+    RegisterPublicProperty( laserStateProperty_ );
+}
+
+void Laser::CreateModelProperty()
+{
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Model", laserDriver_, "glm?" ) );
+}
+
+void Laser::CreateModulationInputVoltageMaxProperty()
+{
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Modulation Input Voltage Max", laserDriver_, "system:input:analog:voltage:range:max?" );
+
+    property->RegisterEnumerationItem( "1", "system:input:analog:voltage:range:max 1", "1 V" );
+    property->RegisterEnumerationItem( "5", "system:input:analog:voltage:range:max 5", "5 V" );
+
     RegisterPublicProperty( property );
 }
 
-void LysaLaser::CreateCmAnalogModulationProperty()
+void Laser::CreateNameProperty()
 {
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Modulation", laserDriver_, "laser:cm:analog:enabled?" );
-    property->RegisterEnumerationItem( "0", "laser:cm:analog:enabled 0", EnumerationItem_Disabled );
-    property->RegisterEnumerationItem( "1", "laser:cm:analog:enabled 1", EnumerationItem_Enabled );
+    RegisterPublicProperty( new StaticStringProperty( "Name", this->GetName() ) );
+}
+
+void Laser::CreateOperatingHoursProperty()
+{
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Operating Hours", laserDriver_, "hrs?" ) );
+}
+
+void Laser::CreatePmPowerSetpointProperty()
+{
+    std::string maxPmPowerSetpointResponse;
+    if ( laserDriver_->SendCommand( "laser:pm:power:setpoint? max", &maxPmPowerSetpointResponse ) != return_code::ok ) {
+        Logger::Instance()->LogError( "Laser::CreatePmPowerSetpointProperty(): Failed to retrieve max power sepoint" );
+        return;
+    }
+
+    const double maxPmPowerSetpoint = atof( maxPmPowerSetpointResponse.c_str() );
+
+    RegisterPublicProperty( new MutableNumericProperty<double>(
+        "Power Mod: Power Setpoint [" + powerUnit_ + "]", laserDriver_, "laser:pm:power:setpoint?", "laser:pm:power:setpoint", 0, maxPmPowerSetpoint ) );
+}
+
+void Laser::CreatePowerReadingProperty()
+{
+    DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Power Reading [" + powerUnit_ + "]", laserDriver_, "laser:power:reading?" );
+    property->SetCaching( false );
     RegisterPublicProperty( property );
+}
+
+void Laser::CreateRunmodeProperty()
+{
+    EnumerationProperty* property = new EnumerationProperty( "Runmode", laserDriver_, "laser:runmode" );
+    property->SetCaching( false );
+    RegisterPublicProperty( property );
+}
+
+void Laser::CreateSerialNumberProperty()
+{
+    RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Serial Number", laserDriver_, "gsn?" ) );
+}
+
+void Laser::CreateShutterProperty()
+{
+    shutter_ = new LaserShutterProperty( "Emission Status", laserDriver_, this );
+    RegisterPublicProperty( shutter_ );
+}
+
+void Laser::CreateWavelengthProperty( const std::string& wavelength )
+{
+    RegisterPublicProperty( new StaticStringProperty( "Wavelength", wavelength ) );
+}
+
+bool Laser::IsShutterCommandSupported() const
+{
+    return true;
+}
+
+bool Laser::IsInCdrhMode() const
+{
+    static std::string response;
+
+    if ( response.empty() ) {
+        laserDriver_->SendCommand( "autostart:enabled?", &response );
+    }
+
+    return ( response == "1" );
+}
+
+void Laser::RegisterPublicProperty( Property* property )
+{
+    assert( property != NULL );
+    properties_[ property->GetName() ] = property;
+    Logger::Instance()->LogMessage( "Registered property: " + property->GetName(), true );
+}
+
+double Laser::MaxCurrentSetpoint()
+{
+    std::string maxCurrentSetpointResponse;
+    if ( laserDriver_->SendCommand( "gmlc?", &maxCurrentSetpointResponse ) != return_code::ok ) {
+
+        Logger::Instance()->LogError( "Laser::MaxCurrentSetpoint(): Failed to retrieve max current sepoint" );
+        return 0.0f;
+    }
+
+    return atof( maxCurrentSetpointResponse.c_str() );
+}
+
+double Laser::MaxPowerSetpoint()
+{
+    std::string maxPowerSetpointResponse;
+    if ( laserDriver_->SendCommand( "gmlp?", &maxPowerSetpointResponse ) != return_code::ok ) {
+
+        Logger::Instance()->LogError( "Laser::MaxPowerSetpoint(): Failed to retrieve max power sepoint" );
+        return 0.0f;
+    }
+
+    return atof( maxPowerSetpointResponse.c_str() );
 }

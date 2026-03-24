@@ -37,7 +37,7 @@
 #ifndef __COBOLT__OLD_DPL06_LASER_H
 #define __COBOLT__OLD_DPL06_LASER_H
 
-#include "Laser.h"
+#include "LegacyLaser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
@@ -45,7 +45,7 @@ class LaserDriver;
 class LaserStateProperty;
 class MutableDeviceProperty;
 
-class OldDpl06Laser : public Laser
+class OldDpl06Laser : public LegacyLaser
 {
 public:
 

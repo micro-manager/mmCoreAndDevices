@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       Laser.cpp
+// FILE:       LegacyLaser.cpp
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -36,7 +36,7 @@
 
 #include <assert.h>
 #include <algorithm>
-#include "Laser.h"
+#include "LegacyLaser.h"
 #include "Logger.h"
 
 #include "LaserDriver.h"
@@ -53,60 +53,27 @@
 using namespace std;
 using namespace cobolt;
 
-const std::string Laser::Milliamperes = "mA";
-const std::string Laser::Amperes = "A";
-const std::string Laser::Milliwatts = "mW";
-const std::string Laser::Watts = "W";
-
-const std::string Laser::EnumerationItem_On = "on";
-const std::string Laser::EnumerationItem_Off = "off";
-const std::string Laser::EnumerationItem_Enabled = "enabled";
-const std::string Laser::EnumerationItem_Disabled = "disabled";
-
-const std::string Laser::EnumerationItem_RunMode_ConstantCurrent = "Constant Current";
-const std::string Laser::EnumerationItem_RunMode_ConstantPower = "Constant Power";
-const std::string Laser::EnumerationItem_RunMode_Modulation = "Modulation";
-
-int Laser::NextId__ = 1;
-
-Laser::Laser( const std::string& name, LaserDriver* driver ) :
-    id_( std::to_string( (long double) NextId__++ ) ),
-    name_( name ),
-    laserDriver_( driver ),
-    currentUnit_( "?" ),
-    powerUnit_( "?" ),
-    laserStatePropertyOld_( NULL ),
-    laserOnOffProperty_( NULL ),
-    shutter_( NULL )
+LegacyLaser::LegacyLaser( const std::string& name, LaserDriver* driver ) :
+    Laser( name, "", driver),
+    laserStatePropertyOld_( NULL )
 {
 }
 
-Laser::~Laser()
+LegacyLaser::~LegacyLaser()
 {
-    const bool pausedPropertyIsPublic = ( shutter_ != NULL && properties_.find( shutter_->GetName() ) != properties_.end() );
-    
-    if ( !pausedPropertyIsPublic ) {
-        delete shutter_;
-    }
-
-    for ( PropertyIterator it = GetPropertyIteratorBegin(); it != GetPropertyIteratorEnd(); it++ ) {
-        delete it->second;
-    }
-
-    properties_.clear();
 }
 
-const std::string& Laser::GetId() const
+const std::string& LegacyLaser::GetId() const
 {
     return id_;
 }
 
-const std::string& Laser::GetName() const
+const std::string& LegacyLaser::GetName() const
 {
     return name_;
 }
 
-void Laser::SetOn( const bool on )
+void LegacyLaser::SetOn( const bool on )
 {
     // Reset shutter on laser on/off:
     SetShutterOpen( false );
@@ -125,7 +92,7 @@ void Laser::SetOn( const bool on )
     }
 }
 
-void Laser::SetShutterOpen( const bool open )
+void LegacyLaser::SetShutterOpen( const bool open )
 {
     if ( shutter_ == NULL ) {
 
@@ -136,7 +103,7 @@ void Laser::SetShutterOpen( const bool open )
     shutter_->SetValue( open ? LaserShutterProperty::Value_Open : LaserShutterProperty::Value_Closed );
 }
 
-bool Laser::IsShutterEnabled() const
+bool LegacyLaser::IsShutterEnabled() const
 {
     if ( laserOnOffProperty_ != NULL ) {
 
@@ -152,7 +119,7 @@ bool Laser::IsShutterEnabled() const
     return false;
 }
 
-bool Laser::IsShutterOpen() const
+bool LegacyLaser::IsShutterOpen() const
 {
     if ( shutter_ == NULL ) {
 
@@ -163,50 +130,45 @@ bool Laser::IsShutterOpen() const
     return ( shutter_->IsOpen() );
 }
 
-Property* Laser::GetProperty( const std::string& name ) const
+/**
+ * This is a hacky function to get around the problem of not having any button feature available in the Property Browser.
+ */
+void LegacyLaser::CreateAutostartControlProperty()
 {
-    return properties_.at( name );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Laser Control", laserDriver_, "?" );
+    property->RegisterEnumerationItem( "OK", "?", "---" ); // Without this we get an error when adding a new laser.
+    property->RegisterEnumerationItem( "__", "abort", "Abort" );
+    property->RegisterEnumerationItem( "__", "restart", "Restart" );
+    RegisterPublicProperty( property );
 }
 
-Property* Laser::GetProperty( const std::string& name )
+/**
+ * This is a hacky function to get around the problem of not having any button feature available in the Property Browser.
+ */
+void LegacyLaser::CreateClearFaultProperty()
 {
-    return properties_[ name ];
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Clear Fault", laserDriver_, "?" );
+    property->RegisterEnumerationItem( "OK", "?", "---" ); // Without this we get an error when adding a new laser.
+    property->RegisterEnumerationItem( "__", "cf", "Clear Fault" );
+    RegisterPublicProperty( property );
 }
 
-Laser::PropertyIterator Laser::GetPropertyIteratorBegin()
-{
-    return properties_.begin();
-}
-
-Laser::PropertyIterator Laser::GetPropertyIteratorEnd()
-{
-    return properties_.end();
-}
-
-void Laser::CreatePropertyGroup( const std::string& groupName )
-{
-    std::string groupNameUpper = groupName;
-    std::transform( groupNameUpper.begin(), groupNameUpper.end(), groupNameUpper.begin(), ::toupper );
-    RegisterPublicProperty( new StaticStringProperty( " ", " " ));
-    RegisterPublicProperty( new StaticStringProperty( "--- " + groupNameUpper + " ---", " "));
-}
-
-void Laser::CreateNameProperty()
+void LegacyLaser::CreateNameProperty()
 {
     RegisterPublicProperty( new StaticStringProperty( "Name", this->GetName() ) );
 }
 
-void Laser::CreateModelProperty()
+void LegacyLaser::CreateModelProperty()
 {
     RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Model", laserDriver_, "glm?") );
 }
 
-void Laser::CreateWavelengthProperty( const std::string& wavelength)
+void LegacyLaser::CreateWavelengthProperty( const std::string& wavelength)
 {
     RegisterPublicProperty( new StaticStringProperty( "Wavelength", wavelength ) );
 }
 
-void Laser::CreateKeyswitchProperty()
+void LegacyLaser::CreateKeyswitchProperty()
 {
     ImmutableEnumerationProperty* property = new ImmutableEnumerationProperty( "Keyswitch", laserDriver_, "gkses?" );
 
@@ -216,32 +178,32 @@ void Laser::CreateKeyswitchProperty()
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateSerialNumberProperty()
+void LegacyLaser::CreateSerialNumberProperty()
 {
     RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Serial Number", laserDriver_, "gsn?") );
 }
 
-void Laser::CreateFirmwareVersionProperty()
+void LegacyLaser::CreateFirmwareVersionProperty()
 {
     RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Firmware Version", laserDriver_, "gfv?") );
 }
 
-void Laser::CreateAdapterVersionProperty()
+void LegacyLaser::CreateAdapterVersionProperty()
 {
     RegisterPublicProperty( new StaticStringProperty( "Adapter Version", COBOLT_MM_DRIVER_VERSION ) );
 }
 
-void Laser::CreateOperatingHoursProperty()
+void LegacyLaser::CreateOperatingHoursProperty()
 {
     RegisterPublicProperty( new DeviceProperty( Property::Stereotype::String, "Operating Hours", laserDriver_, "hrs?") );
 }
 
-void Laser::CreateCcCurrentSetpointProperty()
+void LegacyLaser::CreateCcCurrentSetpointProperty()
 {
     CreateCcCurrentSetpointProperty( "gdsn?", "sdsn" );
 }
 
-void Laser::CreateCcCurrentSetpointProperty( const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand )
+void LegacyLaser::CreateCcCurrentSetpointProperty( const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand )
 {
     MutableDeviceProperty* property;
    
@@ -263,27 +225,27 @@ void Laser::CreateCcCurrentSetpointProperty( const std::string& getPersistedData
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateCurrentReadingProperty()
+void LegacyLaser::CreateCurrentReadingProperty()
 {
     DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Current Reading [" + currentUnit_ + "]", laserDriver_, "i?" );
     property->SetCaching( false );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateCpPowerSetpointProperty()
+void LegacyLaser::CreateCpPowerSetpointProperty()
 {
     MutableDeviceProperty* property = new MutableNumericProperty<double>( "Power Setpoint [" + powerUnit_ + "]", laserDriver_, "glp?", "slp", 0.0f, MaxPowerSetpoint() );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreatePowerReadingProperty()
+void LegacyLaser::CreatePowerReadingProperty()
 {
     DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Power Reading [" + powerUnit_ + "]", laserDriver_, "pa?" );
     property->SetCaching( false );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateLaserOnOffProperty()
+void LegacyLaser::CreateLaserOnOffProperty()
 {
     CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Laser Status", laserDriver_, "l?" );
 
@@ -295,14 +257,14 @@ void Laser::CreateLaserOnOffProperty()
     laserOnOffProperty_ = property;
 }
 
-void Laser::CreateShutterProperty()
+void LegacyLaser::CreateShutterProperty(std::string saveCmd, std::string readCmd)
 {
     if ( IsShutterCommandSupported() ) {
         shutter_ = new LaserShutterProperty( "Emission Status", laserDriver_, this );
     } else {
 
         if ( IsInCdrhMode() ) {
-            shutter_ = new legacy::no_shutter_command::LaserShutterPropertyCdrh( "Emission Status", laserDriver_, this, "gdsn?", "sdsn" );
+            shutter_ = new legacy::no_shutter_command::LaserShutterPropertyCdrh( "Emission Status", laserDriver_, this, readCmd, saveCmd );
         } else {
             shutter_ = new legacy::no_shutter_command::LaserShutterPropertyOem( "Emission Status", laserDriver_, this );
         }
@@ -311,7 +273,7 @@ void Laser::CreateShutterProperty()
     RegisterPublicProperty( shutter_ );
 }
 
-void Laser::CreateDigitalModulationProperty()
+void LegacyLaser::CreateDigitalModulationProperty()
 {
     CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Digital Modulation", laserDriver_, "gdmes?" );
     property->RegisterEnumerationItem( "0", "sdmes 0", EnumerationItem_Disabled );
@@ -319,7 +281,7 @@ void Laser::CreateDigitalModulationProperty()
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateAnalogModulationProperty()
+void LegacyLaser::CreateAnalogModulationProperty()
 {
     CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Modulation", laserDriver_,  "games?" );
     property->RegisterEnumerationItem( "0", "sames 0", EnumerationItem_Disabled );
@@ -327,7 +289,7 @@ void Laser::CreateAnalogModulationProperty()
     RegisterPublicProperty( property );
 }
 
-void Laser::CreatePmPowerSetpointProperty()
+void LegacyLaser::CreatePmPowerSetpointProperty()
 {
     std::string maxModulationPowerSetpointResponse;
     if ( laserDriver_->SendCommand( "gmlp?", &maxModulationPowerSetpointResponse ) != return_code::ok ) {
@@ -341,7 +303,7 @@ void Laser::CreatePmPowerSetpointProperty()
     RegisterPublicProperty( new MutableNumericProperty<double>( "Modulation Power Setpoint", laserDriver_, "glmp?", "slmp", 0, maxModulationPowerSetpoint ) );
 }
 
-void Laser::CreateAnalogImpedanceProperty()
+void LegacyLaser::CreateAnalogImpedanceProperty()
 {
     CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Impedance", laserDriver_, "galis?" );
     
@@ -351,38 +313,38 @@ void Laser::CreateAnalogImpedanceProperty()
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateModulationCurrentLowSetpointProperty()
+void LegacyLaser::CreateModulationCurrentLowSetpointProperty()
 {
     MutableDeviceProperty* property;
     property = new MutableNumericProperty<double>( "Modulation Low Current Setpoint [" + currentUnit_ + "]", laserDriver_, "glth?", "slth", 0.0f, MaxCurrentSetpoint() );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateModulationCurrentHighSetpointProperty()
+void LegacyLaser::CreateModulationCurrentHighSetpointProperty()
 {
     MutableDeviceProperty* property;
     property = new MutableNumericProperty<double>( "Modulation Low Current Setpoint [" + currentUnit_ + "]", laserDriver_, "gmc?", "smc", 0.0f, MaxCurrentSetpoint() );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateModulationHighPowerSetpointProperty()
+void LegacyLaser::CreateModulationHighPowerSetpointProperty()
 {
     MutableDeviceProperty* property = new MutableNumericProperty<double>( "Modulation Power Setpoint [" + powerUnit_ + "]", laserDriver_, "glmp?", "slmp", 0.0f, MaxPowerSetpoint() );
     RegisterPublicProperty( property );
 }
 
-bool Laser::IsShutterCommandSupported() const // TODO: Split into IsShutterCommandSupported() and IsPauseCommandSupported()
+bool LegacyLaser::IsShutterCommandSupported() const // TODO: Split into IsShutterCommandSupported() and IsPauseCommandSupported()
 {
     static std::string response;
 
     if ( response.empty() ) {
         laserDriver_->SendCommand( "l0r", &response );
     }
-    
-    return ( response.find( "Syntax error" ) == std::string::npos );
+
+    return (!( response.find( "Invalid" ) != std::string::npos || response.find("illegal") != std::string::npos));
 }
 
-bool Laser::IsInCdrhMode() const
+bool LegacyLaser::IsInCdrhMode() const
 {
     static std::string response;
 
@@ -393,13 +355,13 @@ bool Laser::IsInCdrhMode() const
     return ( response == "1" );
 }
 
-void Laser::RegisterPublicProperty( Property* property )
+void LegacyLaser::RegisterPublicProperty( Property* property )
 {
     assert( property != NULL );
     properties_[ property->GetName() ] = property;
 }
 
-double Laser::MaxCurrentSetpoint()
+double LegacyLaser::MaxCurrentSetpoint()
 {
     std::string maxCurrentSetpointResponse;
     if ( laserDriver_->SendCommand( "gmlc?", &maxCurrentSetpointResponse ) != return_code::ok ) {
@@ -411,7 +373,7 @@ double Laser::MaxCurrentSetpoint()
     return atof( maxCurrentSetpointResponse.c_str() );
 }
 
-double Laser::MaxPowerSetpoint()
+double LegacyLaser::MaxPowerSetpoint()
 {
     std::string maxPowerSetpointResponse;
     if ( laserDriver_->SendCommand( "gmlp?", &maxPowerSetpointResponse ) != return_code::ok ) {
