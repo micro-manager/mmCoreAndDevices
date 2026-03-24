@@ -149,6 +149,18 @@ bool WasCapturingDuringAcqFinished(const std::vector<SeqAcqLogEntry>& log) {
    return false;
 }
 
+int CountInsertsAfterFinished(const std::vector<SeqAcqLogEntry>& log) {
+   bool seenFinished = false;
+   int count = 0;
+   for (const auto& e : log) {
+      if (e.event == SeqAcqEvent::AcqFinished)
+         seenFinished = true;
+      else if (seenFinished && e.event == SeqAcqEvent::InsertImage)
+         ++count;
+   }
+   return count;
+}
+
 struct CameraTestContext {
    std::shared_ptr<CameraInstance> pCam;
    std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor;
@@ -478,6 +490,129 @@ struct CameraTestContext {
 
       return result;
    }
+
+   TestResult TestExplicitStop(const char* slug, bool continuous) {
+      TestResult result;
+      result.name = slug;
+
+      SeqAcqTestMonitor monitor(rawCamera);
+      seqAcqTestMonitor.store(&monitor, std::memory_order_release);
+      MonitorGuard mg{seqAcqTestMonitor, pCam};
+
+      {
+         DeviceModuleLockGuard guard(pCam);
+         if (pCam->IsCapturing()) {
+            result.assertions.push_back(
+               {AssertionStatus::Warning,
+                  "IsCapturing() was true before starting sequence "
+                  "acquisition",
+                  {}});
+            return result;
+         }
+      }
+
+      try {
+         if (continuous)
+            StartContinuous(0.0);
+         else
+            StartFinite(1000000, 0.0);
+      } catch (const CMMError&) {
+         result.assertions.push_back(
+            {AssertionStatus::Warning,
+               "Camera failed to start sequence acquisition", {}});
+         return result;
+      }
+
+      if (!monitor.WaitForEvent(
+            SeqAcqEvent::InsertImage, 3, testTimeout)) {
+         result.assertions.push_back(
+            {AssertionStatus::Warning,
+               "Camera did not produce 3 images before stop", {}});
+         return result;
+      }
+
+      {
+         auto log = monitor.GetLog();
+         bool allCapturing = true;
+         for (const auto& e : log) {
+            if (e.event == SeqAcqEvent::InsertImage && !e.isCapturing) {
+               allCapturing = false;
+               break;
+            }
+         }
+         if (allCapturing) {
+            result.assertions.push_back(
+               {AssertionStatus::Pass,
+                  "IsCapturing() was true during all InsertImage calls",
+                  {}});
+         } else {
+            result.assertions.push_back(
+               {AssertionStatus::Fail,
+                  "IsCapturing() was false during an InsertImage call",
+                  {}});
+         }
+      }
+
+      StopCamera();
+
+      {
+         DeviceModuleLockGuard guard(pCam);
+         if (pCam->IsCapturing()) {
+            result.assertions.push_back(
+               {AssertionStatus::Fail,
+                  "IsCapturing() was true after "
+                  "StopSequenceAcquisition",
+                  {}});
+         } else {
+            result.assertions.push_back(
+               {AssertionStatus::Pass,
+                  "IsCapturing() was false after "
+                  "StopSequenceAcquisition",
+                  {}});
+         }
+      }
+
+      if (monitor.WaitForEvent(
+            SeqAcqEvent::AcqFinished, 1, testTimeout)) {
+         result.assertions.push_back(
+            {AssertionStatus::Pass,
+               "AcqFinished called after StopSequenceAcquisition",
+               {}});
+         auto log = monitor.GetLog();
+         if (WasCapturingDuringAcqFinished(log)) {
+            result.assertions.push_back(
+               {AssertionStatus::Fail,
+                  "IsCapturing() was true during AcqFinished", {}});
+         } else {
+            result.assertions.push_back(
+               {AssertionStatus::Pass,
+                  "IsCapturing() was false during AcqFinished", {}});
+         }
+      } else {
+         result.assertions.push_back(
+            {AssertionStatus::Fail,
+               "AcqFinished not called after "
+               "StopSequenceAcquisition",
+               {}});
+      }
+
+      std::this_thread::sleep_for(negativeTimeout);
+      auto log = monitor.GetLog();
+      int afterFinished = CountInsertsAfterFinished(log);
+      if (afterFinished > 0) {
+         result.assertions.push_back(
+            {AssertionStatus::Fail,
+               std::to_string(afterFinished) +
+                  " InsertImage call(s) after AcqFinished",
+               {}});
+      } else {
+         result.assertions.push_back(
+            {AssertionStatus::Pass,
+               "No further InsertImage calls after AcqFinished", {}});
+      }
+
+      return result;
+   }
 };
 
 } // anonymous namespace
@@ -523,6 +658,12 @@ std::vector<TestEntry> GetCameraConformanceTests(
    tests.push_back({"seq-finished-on-overflow-continuous", [ctx]() {
       return ctx->TestFinishedOnError("seq-finished-on-overflow-continuous",
          DEVICE_BUFFER_OVERFLOW, "DEVICE_BUFFER_OVERFLOW", true);
+   }, {"seq-basic"}});
+   tests.push_back({"seq-explicit-stop-finite", [ctx]() {
+      return ctx->TestExplicitStop("seq-explicit-stop-finite", false);
+   }, {"seq-basic"}});
+   tests.push_back({"seq-explicit-stop-continuous", [ctx]() {
+      return ctx->TestExplicitStop("seq-explicit-stop-continuous", true);
    }, {"seq-basic"}});
 
    return tests;

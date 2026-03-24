@@ -294,9 +294,11 @@ TEST_CASE("Dependent tests are skipped when dependency warns",
    CHECK(GetTestStatus(results, "seq-prepare-before-insert") == "skipped");
    CHECK(GetTestStatus(results, "seq-finished-after-count") == "skipped");
    CHECK(GetTestStatus(results, "seq-finished-on-error-finite") == "skipped");
+   CHECK(GetTestStatus(results, "seq-explicit-stop-finite") == "skipped");
+   CHECK(GetTestStatus(results, "seq-explicit-stop-continuous") == "skipped");
    CHECK(GetTestStatus(results, "seq-prepare-error-propagated") == "warning");
    CHECK(results["summary"]["warnings"].get<int>() == 2);
-   CHECK(results["summary"]["skipped"].get<int>() == 6);
+   CHECK(results["summary"]["skipped"].get<int>() == 8);
 }
 
 TEST_CASE("deviceState contains camera settings", "[CameraConformance]") {
