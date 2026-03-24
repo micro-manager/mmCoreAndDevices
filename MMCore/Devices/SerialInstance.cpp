@@ -25,7 +25,7 @@
 namespace mmcore {
 namespace internal {
 
-MM::PortType SerialInstance::GetPortType() const { RequireInitialized(__func__); return GetImpl()->GetPortType(); }
+MM::PortType SerialInstance::GetPortType() const { return GetImpl()->GetPortType(); }
 int SerialInstance::SetCommand(const char* command, const char* term) { RequireInitialized(__func__); return GetImpl()->SetCommand(command, term); }
 int SerialInstance::GetAnswer(char* txt, unsigned maxChars, const char* term) { RequireInitialized(__func__); return GetImpl()->GetAnswer(txt, maxChars, term); }
 int SerialInstance::Write(const unsigned char* buf, unsigned long bufLen) { RequireInitialized(__func__); return GetImpl()->Write(buf, bufLen); }
