@@ -253,6 +253,21 @@ std::string CMMCore::getPrimaryLogFile() const
 }
 
 /**
+ * Set log rotation for the primary Core log file.
+ *
+ * @param maxFileSize Maximum file size in bytes before rotation. 0 disables
+ * rotation.
+ * @param maxBackupCount Maximum number of rotated files to keep. 0 means
+ * unlimited. Oldest files are deleted first.
+ */
+void CMMCore::setPrimaryLogFileRotation(long long maxFileSize, int maxBackupCount)
+{
+   logManager_->SetPrimaryLogRotation(
+         maxFileSize > 0 ? static_cast<std::size_t>(maxFileSize) : 0,
+         maxBackupCount);
+}
+
+/**
  * Record text message in the log file.
  */
 void CMMCore::logMessage(const char* msg)

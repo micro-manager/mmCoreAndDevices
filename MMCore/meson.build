@@ -58,6 +58,7 @@ mmcore_sources = files(
     'LoadableModules/LoadedDeviceAdapterImplRegular.cpp',
     'LoadableModules/LoadedModule.cpp',
     'LoadableModules/LoadedModuleImpl.cpp',
+    'Logging/FileRotation.cpp',
     'Logging/Metadata.cpp',
     'LogManager.cpp',
     'MMCore.cpp',

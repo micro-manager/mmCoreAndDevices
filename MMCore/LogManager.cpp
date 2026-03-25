@@ -37,6 +37,8 @@ LogManager::LogManager() :
    internalLogger_(loggingCore_->NewLogger("LogManager")),
    primaryLogLevel_(logging::LogLevelInfo),
    usingStdErr_(false),
+   primaryMaxFileSize_(0),
+   primaryMaxBackupFiles_(0),
    nextSecondaryHandle_(0)
 {}
 
@@ -103,7 +105,8 @@ LogManager::SetPrimaryLogFilename(const std::string& filename, bool truncate)
    std::shared_ptr<logging::LogSink> newSink;
    try
    {
-      newSink = std::make_shared<logging::FileLogSink>(primaryFilename_, !truncate);
+      newSink = std::make_shared<logging::FileLogSink>(primaryFilename_,
+            !truncate, primaryMaxFileSize_, primaryMaxBackupFiles_);
    }
    catch (const logging::CannotOpenFileException&)
    {
@@ -163,6 +166,44 @@ LogManager::IsUsingPrimaryLogFile() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
    return !primaryFilename_.empty();
+}
+
+
+void
+LogManager::SetPrimaryLogRotation(std::size_t maxFileSize, int maxBackupFiles)
+{
+   std::lock_guard<std::mutex> lock(mutex_);
+
+   primaryMaxFileSize_ = maxFileSize;
+   primaryMaxBackupFiles_ = maxBackupFiles;
+
+   if (!primaryFileSink_)
+      return;
+
+   std::shared_ptr<logging::LogSink> newSink;
+   try
+   {
+      newSink = std::make_shared<logging::FileLogSink>(primaryFilename_,
+            true, primaryMaxFileSize_, primaryMaxBackupFiles_);
+   }
+   catch (const logging::CannotOpenFileException&)
+   {
+      LOG_ERROR(internalLogger_) << "Failed to reopen file " <<
+         primaryFilename_ << " while updating rotation settings";
+      return;
+   }
+
+   newSink->SetFilter(std::make_shared<logging::LevelFilter>(primaryLogLevel_));
+
+   LOG_INFO(internalLogger_) << "Updating primary log file rotation settings";
+   std::vector<std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>> toRemove;
+   std::vector<std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>> toAdd;
+   toRemove.push_back(std::make_pair(primaryFileSink_, PrimarySinkMode));
+   toAdd.push_back(std::make_pair(newSink, PrimarySinkMode));
+
+   loggingCore_->AtomicSwapSinks(toRemove.begin(), toRemove.end(),
+         toAdd.begin(), toAdd.end());
+   primaryFileSink_ = newSink;
 }
 
 

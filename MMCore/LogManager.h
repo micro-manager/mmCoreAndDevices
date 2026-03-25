@@ -30,6 +30,8 @@ private:
 
    std::string primaryFilename_;
    std::shared_ptr<logging::LogSink> primaryFileSink_;
+   std::size_t primaryMaxFileSize_;
+   int primaryMaxBackupFiles_;
 
    LogFileHandle nextSecondaryHandle_;
    struct LogFileInfo
@@ -59,6 +61,8 @@ public:
    void SetPrimaryLogFilename(const std::string& filename, bool truncate);
    std::string GetPrimaryLogFilename() const;
    bool IsUsingPrimaryLogFile() const;
+
+   void SetPrimaryLogRotation(std::size_t maxFileSize, int maxBackupFiles);
 
    void SetPrimaryLogLevel(logging::LogLevel level);
    logging::LogLevel GetPrimaryLogLevel() const;

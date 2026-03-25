@@ -120,6 +120,9 @@
     <ClCompile Include="DeviceManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Logging\FileRotation.cpp">
+      <Filter>Source Files\Logging</Filter>
+    </ClCompile>
     <ClCompile Include="Logging\Metadata.cpp">
       <Filter>Source Files\Logging</Filter>
     </ClCompile>
@@ -262,6 +265,9 @@
     </ClInclude>
     <ClInclude Include="DeviceManager.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Logging\FileRotation.h">
+      <Filter>Header Files\Logging</Filter>
     </ClInclude>
     <ClInclude Include="Logging\GenericEntryFilter.h">
       <Filter>Header Files\Logging</Filter>

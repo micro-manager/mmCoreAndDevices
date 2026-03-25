@@ -81,6 +81,8 @@ libMMCore_la_SOURCES = \
 	LoadableModules/LoadedModuleImpl.h \
 	LogManager.cpp \
 	LogManager.h \
+	Logging/FileRotation.cpp \
+	Logging/FileRotation.h \
 	Logging/GenericStreamSink.h \
 	Logging/GenericEntryFilter.h \
 	Logging/GenericLinePacket.h \

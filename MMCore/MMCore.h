@@ -186,6 +186,7 @@ public:
    ///@{
    void setPrimaryLogFile(const char* filename, bool truncate = false) MMCORE_LEGACY_THROW(CMMError);
    std::string getPrimaryLogFile() const;
+   void setPrimaryLogFileRotation(long long maxFileSize, int maxBackupCount);
 
    void logMessage(const char* msg);
    void logMessage(const char* msg, bool debugOnly);
