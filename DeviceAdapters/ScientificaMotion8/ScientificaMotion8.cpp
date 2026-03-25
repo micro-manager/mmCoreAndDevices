@@ -23,7 +23,6 @@
 
 #include "ScientificaMotion8.h"
 #include "ScientificaRxPacket.h"
-
 #include "ModuleInterface.h"
 #include <sstream>
 #include <cstdio>
