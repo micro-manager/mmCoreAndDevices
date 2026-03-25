@@ -42,7 +42,7 @@ LevelString(LogLevel logLevel)
       case LogLevelInfo: return "IFO";
       case LogLevelWarning: return "WRN";
       case LogLevelError: return "ERR";
-      case LogLevelFatal: return "FTL";
+      case LogLevelCritical: return "CRT";
       default: return "???";
    }
 }

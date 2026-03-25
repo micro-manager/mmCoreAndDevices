@@ -59,4 +59,4 @@ typedef internal::GenericLogStream<Logger> LogStream;
 #define LOG_INFO(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelInfo)
 #define LOG_WARNING(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelWarning)
 #define LOG_ERROR(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelError)
-#define LOG_FATAL(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelFatal)
+#define LOG_CRITICAL(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelCritical)

@@ -23,7 +23,7 @@ const char* StringForLogLevel(LogLevel level)
       case LogLevelInfo: return "info";
       case LogLevelWarning: return "warning";
       case LogLevelError: return "error";
-      case LogLevelFatal: return "fatal";
+      case LogLevelCritical: return "critical";
       default: return "(unknown)";
    }
 }

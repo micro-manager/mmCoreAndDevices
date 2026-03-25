@@ -9,7 +9,7 @@ enum LogLevel
    LogLevelInfo,
    LogLevelWarning,
    LogLevelError,
-   LogLevelFatal,
+   LogLevelCritical,
 };
 
 } // namespace mmcore
