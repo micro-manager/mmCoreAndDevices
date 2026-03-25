@@ -424,6 +424,10 @@ public:
 
     virtual unsigned long GetNumberOfPositions()const { return numPos_; } // replace with numPos_ once API allows not creating Labels
 
+    // Gate (shutter) interface
+    int SetGateOpen(bool open);
+    int GetGateOpen(bool& open);
+
     // action interface
     // ----------------
     int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);

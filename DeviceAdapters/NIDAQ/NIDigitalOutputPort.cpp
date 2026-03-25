@@ -211,6 +211,38 @@ void DigitalOutputPort::GetName(char* name) const
 }
 
 
+int DigitalOutputPort::SetGateOpen(bool open)
+{
+   if (open == open_)
+      return DEVICE_OK;
+
+   open_ = open;
+
+   // When a hardware-timed task (blanking/sequencing) is active,
+   // just update the flag — hardware controls the outputs.
+   if (blanking_ || sequenceRunning_)
+      return DEVICE_OK;
+
+   if (open)
+   {
+      return SetState(pos_);
+   }
+   else
+   {
+      long closedPosition;
+      GetProperty(MM::g_Keyword_Closed_Position, closedPosition);
+      return SetState(closedPosition);
+   }
+}
+
+
+int DigitalOutputPort::GetGateOpen(bool& open)
+{
+   open = open_;
+   return DEVICE_OK;
+}
+
+
 int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -229,9 +261,20 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       if ((pos == pos_) && (open_ == gateOpen))
          return DEVICE_OK;
 
-      long closed_state;
-      GetProperty(MM::g_Keyword_Closed_Position, closed_state);
-      long newState = gateOpen ? pos : closed_state;
+      // When blanking is active, hardware controls on/off via the trigger
+      // input, so always use the requested state. Gate only applies in
+      // software-timed mode (blanking off).
+      long newState;
+      if (blanking_)
+      {
+         newState = pos;
+      }
+      else
+      {
+         long closed_state;
+         GetProperty(MM::g_Keyword_Closed_Position, closed_state);
+         newState = gateOpen ? pos : closed_state;
+      }
 
       // pause blanking, otherwise most cards will error
       int err;
