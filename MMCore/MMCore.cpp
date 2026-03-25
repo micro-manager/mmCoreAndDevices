@@ -3090,6 +3090,23 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 };
 
 /**
+ * Get the list of available conformance tests for a device as JSON.
+ *
+ * The returned JSON includes test names and dependency information, suitable
+ * for a GUI that wants to display and run tests individually.
+ *
+ * @param deviceLabel  Label of the device (must be loaded and initialized).
+ * @return A JSON string containing the test list.
+ */
+std::string CMMCore::getDeviceConformanceTests(const char* deviceLabel)
+      MMCORE_LEGACY_THROW(CMMError)
+{
+   auto device = deviceManager_->GetDevice(deviceLabel);
+   return mmi::GetDeviceConformanceTestList(device, seqAcqTestMonitor_,
+      *conformanceTestConfig_);
+}
+
+/**
  * Run behavioral conformance tests on a device and return a JSON report.
  *
  * Currently supports camera devices, where the tests exercise the sequence

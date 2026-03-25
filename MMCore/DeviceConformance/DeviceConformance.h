@@ -59,5 +59,10 @@ std::string RunDeviceConformanceTests(
       const ConformanceTestConfig& config,
       const char* testName);
 
+std::string GetDeviceConformanceTestList(
+      std::shared_ptr<DeviceInstance> device,
+      std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor,
+      const ConformanceTestConfig& config);
+
 } // namespace internal
 } // namespace mmcore

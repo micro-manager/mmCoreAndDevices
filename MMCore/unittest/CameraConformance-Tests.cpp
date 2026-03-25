@@ -357,3 +357,45 @@ TEST_CASE("Conformant camera passes PrepareForAcq error propagation test",
       "cam", "seq-prepare-error-propagated"));
    CHECK(GetTestStatus(results, "seq-prepare-error-propagated") == "pass");
 }
+
+TEST_CASE("getDeviceConformanceTests returns test list with dependencies",
+          "[CameraConformance]") {
+   ConfigurableAsyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   c.setConformanceTestConfig(shortTimeoutConfig);
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   auto listing = nlohmann::json::parse(c.getDeviceConformanceTests("cam"));
+   CHECK(listing["version"].get<int>() == 3);
+   CHECK(listing["deviceType"].get<std::string>() == "Camera");
+   REQUIRE(listing["tests"].is_array());
+   REQUIRE(listing["tests"].size() > 0);
+
+   // Every test has name and dependsOn
+   for (const auto& t : listing["tests"]) {
+      REQUIRE(t.contains("name"));
+      REQUIRE(t.contains("dependsOn"));
+      REQUIRE(t["dependsOn"].is_array());
+   }
+
+   // Check a specific dependency
+   bool foundPrepareBeforeInsert = false;
+   for (const auto& t : listing["tests"]) {
+      if (t["name"] == "seq-prepare-before-insert") {
+         foundPrepareBeforeInsert = true;
+         REQUIRE(t["dependsOn"].size() == 1);
+         CHECK(t["dependsOn"][0].get<std::string>() == "seq-basic");
+      }
+   }
+   CHECK(foundPrepareBeforeInsert);
+
+   // Listing should not contain result fields
+   for (const auto& t : listing["tests"]) {
+      CHECK_FALSE(t.contains("status"));
+      CHECK_FALSE(t.contains("assertions"));
+   }
+   CHECK_FALSE(listing.contains("summary"));
+   CHECK_FALSE(listing.contains("timestamp"));
+}

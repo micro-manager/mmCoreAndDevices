@@ -253,5 +253,34 @@ std::string RunDeviceConformanceTests(
       adapterName, deviceTypeStr, deviceState);
 }
 
+std::string GetDeviceConformanceTestList(
+      std::shared_ptr<DeviceInstance> device,
+      std::atomic<SeqAcqTestMonitor*>& seqAcqTestMonitor,
+      const ConformanceTestConfig& config) {
+   const auto deviceType = device->GetType();
+   const auto deviceTypeStr = ToString(deviceType);
+
+   std::vector<TestEntry> tests;
+   if (deviceType == MM::CameraDevice) {
+      auto pCam = std::static_pointer_cast<CameraInstance>(device);
+      tests = GetCameraConformanceTests(pCam, seqAcqTestMonitor, config);
+   }
+
+   nlohmann::json testsJson = nlohmann::json::array();
+   for (const auto& t : tests) {
+      nlohmann::json entry;
+      entry["name"] = t.slug;
+      entry["dependsOn"] = t.dependsOn;
+      testsJson.push_back(std::move(entry));
+   }
+
+   nlohmann::json j;
+   j["version"] = 3;
+   j["deviceType"] = deviceTypeStr;
+   j["tests"] = testsJson;
+
+   return j.dump(2);
+}
+
 } // namespace internal
 } // namespace mmcore

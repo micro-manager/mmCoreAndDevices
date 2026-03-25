@@ -682,6 +682,8 @@ public:
 
    /** \name Device conformance testing. */
    ///@{
+   std::string getDeviceConformanceTests(const char* deviceLabel)
+         MMCORE_LEGACY_THROW(CMMError);
    std::string runDeviceConformanceTests(const char* deviceLabel,
          const char* testName = nullptr) MMCORE_LEGACY_THROW(CMMError);
    ///@}
