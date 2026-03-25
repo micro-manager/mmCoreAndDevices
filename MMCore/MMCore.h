@@ -49,6 +49,7 @@
 #include "Configuration.h"
 #include "Error.h"
 #include "ErrorCodes.h"
+#include "LogLevel.h"
 #include "Logging/Logger.h"
 #include "MockDeviceAdapter.h"
 #include "Notification.h"
@@ -190,6 +191,11 @@ public:
 
    void logMessage(const char* msg);
    void logMessage(const char* msg, bool debugOnly);
+   void log(const char* msg, mmcore::LogLevel level);
+   void log(const char* msg, mmcore::LogLevel level,
+         const char* loggerName);
+   void setPrimaryLogLevel(mmcore::LogLevel level);
+   mmcore::LogLevel getPrimaryLogLevel();
    void enableDebugLog(bool enable);
    bool debugLogEnabled();
    void enableStderrLog(bool enable);

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "../LogLevel.h"
 #include "GenericMetadata.h"
 
 #ifdef _WIN32
@@ -54,17 +55,6 @@ GetTid() { return ::pthread_self(); }
 
 
 } // namespace internal
-
-
-enum LogLevel
-{
-   LogLevelTrace,
-   LogLevelDebug,
-   LogLevelInfo,
-   LogLevelWarning,
-   LogLevelError,
-   LogLevelFatal,
-};
 
 
 class EntryData

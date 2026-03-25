@@ -260,6 +260,9 @@
     <ClInclude Include="LibraryInfo\LibraryPaths.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LogLevel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="LogManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>

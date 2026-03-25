@@ -54,9 +54,9 @@ typedef internal::GenericLogStream<Logger> LogStream;
          !strm.Used(); strm.MarkUsed()) \
       strm
 
-#define LOG_TRACE(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelTrace)
-#define LOG_DEBUG(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelDebug)
-#define LOG_INFO(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelInfo)
-#define LOG_WARNING(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelWarning)
-#define LOG_ERROR(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelError)
-#define LOG_FATAL(logger) LOG_WITH_LEVEL((logger), ::mmcore::internal::logging::LogLevelFatal)
+#define LOG_TRACE(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelTrace)
+#define LOG_DEBUG(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelDebug)
+#define LOG_INFO(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelInfo)
+#define LOG_WARNING(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelWarning)
+#define LOG_ERROR(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelError)
+#define LOG_FATAL(logger) LOG_WITH_LEVEL((logger), ::mmcore::LogLevelFatal)

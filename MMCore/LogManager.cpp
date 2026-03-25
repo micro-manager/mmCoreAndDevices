@@ -14,16 +14,16 @@ namespace internal {
 namespace
 {
 
-const char* StringForLogLevel(logging::LogLevel level)
+const char* StringForLogLevel(LogLevel level)
 {
    switch (level)
    {
-      case logging::LogLevelTrace: return "trace";
-      case logging::LogLevelDebug: return "debug";
-      case logging::LogLevelInfo: return "info";
-      case logging::LogLevelWarning: return "warning";
-      case logging::LogLevelError: return "error";
-      case logging::LogLevelFatal: return "fatal";
+      case LogLevelTrace: return "trace";
+      case LogLevelDebug: return "debug";
+      case LogLevelInfo: return "info";
+      case LogLevelWarning: return "warning";
+      case LogLevelError: return "error";
+      case LogLevelFatal: return "fatal";
       default: return "(unknown)";
    }
 }
@@ -35,7 +35,7 @@ const logging::SinkMode LogManager::PrimarySinkMode = logging::SinkModeAsynchron
 LogManager::LogManager() :
    loggingCore_(std::make_shared<logging::LoggingCore>()),
    internalLogger_(loggingCore_->NewLogger("LogManager")),
-   primaryLogLevel_(logging::LogLevelInfo),
+   primaryLogLevel_(LogLevelInfo),
    usingStdErr_(false),
    primaryMaxFileSize_(0),
    primaryMaxBackupFiles_(0),
@@ -208,14 +208,14 @@ LogManager::SetPrimaryLogRotation(std::size_t maxFileSize, int maxBackupFiles)
 
 
 void
-LogManager::SetPrimaryLogLevel(logging::LogLevel level)
+LogManager::SetPrimaryLogLevel(LogLevel level)
 {
    std::lock_guard<std::mutex> lock(mutex_);
 
    if (level == primaryLogLevel_)
       return;
 
-   logging::LogLevel oldLevel = primaryLogLevel_;
+   LogLevel oldLevel = primaryLogLevel_;
    primaryLogLevel_ = level;
 
    LOG_INFO(internalLogger_) << "Switching primary log level from " <<
@@ -250,7 +250,7 @@ LogManager::SetPrimaryLogLevel(logging::LogLevel level)
 }
 
 
-logging::LogLevel
+LogLevel
 LogManager::GetPrimaryLogLevel() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
@@ -259,7 +259,7 @@ LogManager::GetPrimaryLogLevel() const
 
 
 LogManager::LogFileHandle
-LogManager::AddSecondaryLogFile(logging::LogLevel level,
+LogManager::AddSecondaryLogFile(LogLevel level,
       const std::string& filename, bool truncate, logging::SinkMode mode)
 {
    std::lock_guard<std::mutex> lock(mutex_);

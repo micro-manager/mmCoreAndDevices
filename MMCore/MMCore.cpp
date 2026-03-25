@@ -272,7 +272,7 @@ void CMMCore::setPrimaryLogFileRotation(long long maxFileSize, int maxBackupCoun
  */
 void CMMCore::logMessage(const char* msg)
 {
-   appLogger_(mmi::logging::LogLevelInfo, msg);
+   appLogger_(mmcore::LogLevelInfo, msg);
 }
 
 
@@ -281,8 +281,49 @@ void CMMCore::logMessage(const char* msg)
  */
 void CMMCore::logMessage(const char* msg, bool debugOnly)
 {
-   appLogger_(debugOnly ? mmi::logging::LogLevelDebug :
-         mmi::logging::LogLevelInfo, msg);
+   appLogger_(debugOnly ? mmcore::LogLevelDebug :
+         mmcore::LogLevelInfo, msg);
+}
+
+
+/**
+ * Record text message in the log file at the specified level.
+ */
+void CMMCore::log(const char* msg, mmcore::LogLevel level)
+{
+   appLogger_(level, msg);
+}
+
+
+/**
+ * Record text message in the log file at the specified level, with a
+ * caller-specified logger name as the component label.
+ */
+void CMMCore::log(const char* msg, mmcore::LogLevel level,
+      const char* loggerName)
+{
+   logManager_->NewLogger(loggerName)(level, msg);
+}
+
+
+/**
+ * Set the primary log level.
+ *
+ * Messages below this level will not be recorded in the primary log file or
+ * stderr output.
+ */
+void CMMCore::setPrimaryLogLevel(mmcore::LogLevel level)
+{
+   logManager_->SetPrimaryLogLevel(level);
+}
+
+
+/**
+ * Return the current primary log level.
+ */
+mmcore::LogLevel CMMCore::getPrimaryLogLevel()
+{
+   return logManager_->GetPrimaryLogLevel();
 }
 
 
@@ -292,8 +333,8 @@ void CMMCore::logMessage(const char* msg, bool debugOnly)
  */
 void CMMCore::enableDebugLog(bool enable)
 {
-   logManager_->SetPrimaryLogLevel(enable ? mmi::logging::LogLevelTrace :
-         mmi::logging::LogLevelInfo);
+   logManager_->SetPrimaryLogLevel(enable ? mmcore::LogLevelTrace :
+         mmcore::LogLevelInfo);
 }
 
 /**
@@ -301,7 +342,7 @@ void CMMCore::enableDebugLog(bool enable)
  */
 bool CMMCore::debugLogEnabled()
 {
-   return (logManager_->GetPrimaryLogLevel() < mmi::logging::LogLevelInfo);
+   return (logManager_->GetPrimaryLogLevel() < mmcore::LogLevelInfo);
 }
 
 /**
@@ -345,7 +386,7 @@ int CMMCore::startSecondaryLogFile(const char* filename, bool enableDebug,
    typedef mmi::LogManager::LogFileHandle LogFileHandle;
 
    LogFileHandle handle = logManager_->AddSecondaryLogFile(
-            (enableDebug ? LogLevelTrace : LogLevelInfo),
+            (enableDebug ? mmcore::LogLevelTrace : mmcore::LogLevelInfo),
             filename, truncate,
             (synchronous ? SinkModeSynchronous : SinkModeAsynchronous));
    return static_cast<int>(handle);
