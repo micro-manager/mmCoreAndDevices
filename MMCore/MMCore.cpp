@@ -3095,6 +3095,9 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
  * The returned JSON includes test names and dependency information, suitable
  * for a GUI that wants to display and run tests individually.
  *
+ * The JSON format may change without notice (check the "version" key, which is
+ * incremented for incompatible changes).
+ *
  * @param deviceLabel  Label of the device (must be loaded and initialized).
  * @return A JSON string containing the test list.
  */
@@ -3109,8 +3112,23 @@ std::string CMMCore::getDeviceConformanceTests(const char* deviceLabel)
 /**
  * Run behavioral conformance tests on a device and return a JSON report.
  *
- * Currently supports camera devices, where the tests exercise the sequence
- * acquisition callback protocol (PrepareForAcq, InsertImage, AcqFinished).
+ * Conformance tests aim to check for correct implementation of a device
+ * adapter, to the extent possible in fully automated tests. They do not
+ * attempt to test for correct hardware behavior.
+ *
+ * The focus is on catching common programming errors in device adapters, but
+ * not all problems can be tested. Tests may be added or refined over time, so
+ * a passing device adapter could fail in a future version. It is recommended
+ * to test device adapters against the latest MMCore.
+ *
+ * Currently, tests are available only for camera devices.
+ *
+ * Test results can depend on the current settings of the device (for example,
+ * exposure or ROI). This is intentional, because a device may behave correctly
+ * under some configurations and not under others.
+ *
+ * The JSON format may change without notice (check the "version" key, which is
+ * incremented for incompatible changes).
  *
  * @param deviceLabel  Label of the device to test (must be loaded and
  *                     initialized).
@@ -3127,13 +3145,13 @@ std::string CMMCore::runDeviceConformanceTests(const char* deviceLabel,
 }
 
 /**
- * \brief Testing only: configure conformance tests
- * 
+ * Testing only: configure conformance tests
+ *
  * This function is designed for unit testing of MMCore itself, and its
- * interface is subject to change. It is also not designed for language
+ * interface is subject to change. It is also not designed with language
  * bindings (Java, Python) in mind (at least for now).
- * 
- * Do not use this in production code, for now.
+ *
+ * Not intended for use in production code.
  */
 void CMMCore::setConformanceTestConfig(
       const mmcore::internal::ConformanceTestConfig& config) {
