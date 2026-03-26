@@ -299,6 +299,9 @@
     <ClInclude Include="Logging\Logging.h">
       <Filter>Header Files\Logging</Filter>
     </ClInclude>
+    <ClInclude Include="Logging\StderrColor.h">
+      <Filter>Header Files\Logging</Filter>
+    </ClInclude>
     <ClInclude Include="Logging\Metadata.h">
       <Filter>Header Files\Logging</Filter>
     </ClInclude>

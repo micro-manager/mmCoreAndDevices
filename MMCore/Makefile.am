@@ -95,6 +95,7 @@ libMMCore_la_SOURCES = \
 	Logging/GenericSink.h \
 	Logging/Logger.h \
 	Logging/Logging.h \
+	Logging/StderrColor.h \
 	Logging/Metadata.cpp \
 	Logging/Metadata.h \
 	Logging/MetadataFormatter.h \

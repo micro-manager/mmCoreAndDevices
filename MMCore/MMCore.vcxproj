@@ -170,6 +170,7 @@
     <ClInclude Include="Logging\GenericStreamSink.h" />
     <ClInclude Include="Logging\Logger.h" />
     <ClInclude Include="Logging\Logging.h" />
+    <ClInclude Include="Logging\StderrColor.h" />
     <ClInclude Include="Logging\Metadata.h" />
     <ClInclude Include="Logging\MetadataFormatter.h" />
     <ClInclude Include="LogLevel.h" />
