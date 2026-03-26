@@ -108,7 +108,7 @@ namespace notif = mmcore::internal::notification;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 12, MMCore_versionMinor = 2, MMCore_versionPatch = 2;
+const int MMCore_versionMajor = 12, MMCore_versionMinor = 3, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -253,11 +253,26 @@ std::string CMMCore::getPrimaryLogFile() const
 }
 
 /**
+ * Set log rotation for the primary Core log file.
+ *
+ * @param maxFileSize Maximum file size in bytes before rotation. 0 disables
+ * rotation.
+ * @param maxBackupCount Maximum number of rotated files to keep. 0 means
+ * unlimited. Oldest files are deleted first.
+ */
+void CMMCore::setPrimaryLogFileRotation(long long maxFileSize, int maxBackupCount)
+{
+   logManager_->SetPrimaryLogRotation(
+         maxFileSize > 0 ? static_cast<std::size_t>(maxFileSize) : 0,
+         maxBackupCount);
+}
+
+/**
  * Record text message in the log file.
  */
 void CMMCore::logMessage(const char* msg)
 {
-   appLogger_(mmi::logging::LogLevelInfo, msg);
+   appLogger_(mmcore::LogLevelInfo, msg);
 }
 
 
@@ -266,8 +281,49 @@ void CMMCore::logMessage(const char* msg)
  */
 void CMMCore::logMessage(const char* msg, bool debugOnly)
 {
-   appLogger_(debugOnly ? mmi::logging::LogLevelDebug :
-         mmi::logging::LogLevelInfo, msg);
+   appLogger_(debugOnly ? mmcore::LogLevelDebug :
+         mmcore::LogLevelInfo, msg);
+}
+
+
+/**
+ * Record text message in the log file at the specified level.
+ */
+void CMMCore::log(const char* msg, mmcore::LogLevel level)
+{
+   appLogger_(level, msg);
+}
+
+
+/**
+ * Record text message in the log file at the specified level, with a
+ * caller-specified logger name as the component label.
+ */
+void CMMCore::log(const char* msg, mmcore::LogLevel level,
+      const char* loggerName)
+{
+   logManager_->NewLogger(loggerName)(level, msg);
+}
+
+
+/**
+ * Set the primary log level.
+ *
+ * Messages below this level will not be recorded in the primary log file or
+ * stderr output.
+ */
+void CMMCore::setPrimaryLogLevel(mmcore::LogLevel level)
+{
+   logManager_->SetPrimaryLogLevel(level);
+}
+
+
+/**
+ * Return the current primary log level.
+ */
+mmcore::LogLevel CMMCore::getPrimaryLogLevel()
+{
+   return logManager_->GetPrimaryLogLevel();
 }
 
 
@@ -277,8 +333,8 @@ void CMMCore::logMessage(const char* msg, bool debugOnly)
  */
 void CMMCore::enableDebugLog(bool enable)
 {
-   logManager_->SetPrimaryLogLevel(enable ? mmi::logging::LogLevelTrace :
-         mmi::logging::LogLevelInfo);
+   logManager_->SetPrimaryLogLevel(enable ? mmcore::LogLevelTrace :
+         mmcore::LogLevelInfo);
 }
 
 /**
@@ -286,7 +342,7 @@ void CMMCore::enableDebugLog(bool enable)
  */
 bool CMMCore::debugLogEnabled()
 {
-   return (logManager_->GetPrimaryLogLevel() < mmi::logging::LogLevelInfo);
+   return (logManager_->GetPrimaryLogLevel() < mmcore::LogLevelInfo);
 }
 
 /**
@@ -330,7 +386,7 @@ int CMMCore::startSecondaryLogFile(const char* filename, bool enableDebug,
    typedef mmi::LogManager::LogFileHandle LogFileHandle;
 
    LogFileHandle handle = logManager_->AddSecondaryLogFile(
-            (enableDebug ? LogLevelTrace : LogLevelInfo),
+            (enableDebug ? mmcore::LogLevelTrace : mmcore::LogLevelInfo),
             filename, truncate,
             (synchronous ? SinkModeSynchronous : SinkModeAsynchronous));
    return static_cast<int>(handle);

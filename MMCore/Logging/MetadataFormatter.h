@@ -42,8 +42,35 @@ LevelString(LogLevel logLevel)
       case LogLevelInfo: return "IFO";
       case LogLevelWarning: return "WRN";
       case LogLevelError: return "ERR";
-      case LogLevelFatal: return "FTL";
+      case LogLevelCritical: return "CRT";
       default: return "???";
+   }
+}
+
+
+inline const char*
+LevelColorCode(LogLevel level)
+{
+   switch (level)
+   {
+      case LogLevelTrace: return "\033[2m";
+      case LogLevelDebug: return "\033[2m";
+      case LogLevelInfo: return "";
+      case LogLevelWarning: return "\033[33m";
+      case LogLevelError: return "\033[31m";
+      case LogLevelCritical: return "\033[1;31m";
+      default: return "";
+   }
+}
+
+
+inline const char*
+LevelColorReset(LogLevel level)
+{
+   switch (level)
+   {
+      case LogLevelInfo: return "";
+      default: return "\033[m";
    }
 }
 
@@ -57,15 +84,21 @@ class MetadataFormatter
    std::ostringstream sstrm_;
    size_t openBracketCol_;
    size_t closeBracketCol_;
+   bool useColor_;
 
 public:
-   MetadataFormatter() : openBracketCol_(0), closeBracketCol_(0) {}
+   MetadataFormatter() : openBracketCol_(0), closeBracketCol_(0),
+      useColor_(false) {}
 
    // Format the line prefix for the first line of an entry
    void FormatLinePrefix(std::ostream& stream, const Metadata& metadata);
 
    // Format the line prefix for subsequent lines of an entry
    void FormatContinuationPrefix(std::ostream& stream);
+
+protected:
+   explicit MetadataFormatter(bool useColor) :
+      openBracketCol_(0), closeBracketCol_(0), useColor_(useColor) {}
 };
 
 
@@ -115,11 +148,20 @@ MetadataFormatter::FormatLinePrefix(std::ostream& stream,
    openBracketCol_ = buf_.size();
    buf_ += '[';
 
-   buf_ += LevelString(metadata.GetEntryData().GetLevel());
+   const auto level = metadata.GetEntryData().GetLevel();
+   const char* levelStr = LevelString(level);
+   if (useColor_)
+      buf_ += LevelColorCode(level);
+   buf_ += levelStr;
+   if (useColor_)
+      buf_ += LevelColorReset(level);
    buf_ += ',';
-   buf_ += metadata.GetLoggerData().GetComponentLabel();
 
-   closeBracketCol_ = buf_.size();
+   const char* label = metadata.GetLoggerData().GetComponentLabel();
+   buf_ += label;
+
+   closeBracketCol_ = openBracketCol_ + 1 +
+      std::strlen(levelStr) + 1 + std::strlen(label);
    buf_ += ']';
 
    stream << buf_;

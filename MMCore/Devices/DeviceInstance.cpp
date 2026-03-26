@@ -35,8 +35,8 @@ namespace mmcore {
 namespace internal {
 
 using mmcore::internal::logging::Logger;
-using mmcore::internal::logging::LogLevelDebug;
-using mmcore::internal::logging::LogLevelInfo;
+using mmcore::LogLevelDebug;
+using mmcore::LogLevelInfo;
 
 int
 DeviceInstance::LogMessage(const char* msg, bool debugOnly)

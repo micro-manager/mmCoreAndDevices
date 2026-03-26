@@ -14,16 +14,16 @@ namespace internal {
 namespace
 {
 
-const char* StringForLogLevel(logging::LogLevel level)
+const char* StringForLogLevel(LogLevel level)
 {
    switch (level)
    {
-      case logging::LogLevelTrace: return "trace";
-      case logging::LogLevelDebug: return "debug";
-      case logging::LogLevelInfo: return "info";
-      case logging::LogLevelWarning: return "warning";
-      case logging::LogLevelError: return "error";
-      case logging::LogLevelFatal: return "fatal";
+      case LogLevelTrace: return "trace";
+      case LogLevelDebug: return "debug";
+      case LogLevelInfo: return "info";
+      case LogLevelWarning: return "warning";
+      case LogLevelError: return "error";
+      case LogLevelCritical: return "critical";
       default: return "(unknown)";
    }
 }
@@ -35,8 +35,10 @@ const logging::SinkMode LogManager::PrimarySinkMode = logging::SinkModeAsynchron
 LogManager::LogManager() :
    loggingCore_(std::make_shared<logging::LoggingCore>()),
    internalLogger_(loggingCore_->NewLogger("LogManager")),
-   primaryLogLevel_(logging::LogLevelInfo),
+   primaryLogLevel_(LogLevelInfo),
    usingStdErr_(false),
+   primaryMaxFileSize_(0),
+   primaryMaxBackupFiles_(0),
    nextSecondaryHandle_(0)
 {}
 
@@ -103,7 +105,8 @@ LogManager::SetPrimaryLogFilename(const std::string& filename, bool truncate)
    std::shared_ptr<logging::LogSink> newSink;
    try
    {
-      newSink = std::make_shared<logging::FileLogSink>(primaryFilename_, !truncate);
+      newSink = std::make_shared<logging::FileLogSink>(primaryFilename_,
+            !truncate, primaryMaxFileSize_, primaryMaxBackupFiles_);
    }
    catch (const logging::CannotOpenFileException&)
    {
@@ -167,14 +170,52 @@ LogManager::IsUsingPrimaryLogFile() const
 
 
 void
-LogManager::SetPrimaryLogLevel(logging::LogLevel level)
+LogManager::SetPrimaryLogRotation(std::size_t maxFileSize, int maxBackupFiles)
+{
+   std::lock_guard<std::mutex> lock(mutex_);
+
+   primaryMaxFileSize_ = maxFileSize;
+   primaryMaxBackupFiles_ = maxBackupFiles;
+
+   if (!primaryFileSink_)
+      return;
+
+   std::shared_ptr<logging::LogSink> newSink;
+   try
+   {
+      newSink = std::make_shared<logging::FileLogSink>(primaryFilename_,
+            true, primaryMaxFileSize_, primaryMaxBackupFiles_);
+   }
+   catch (const logging::CannotOpenFileException&)
+   {
+      LOG_ERROR(internalLogger_) << "Failed to reopen file " <<
+         primaryFilename_ << " while updating rotation settings";
+      return;
+   }
+
+   newSink->SetFilter(std::make_shared<logging::LevelFilter>(primaryLogLevel_));
+
+   LOG_INFO(internalLogger_) << "Updating primary log file rotation settings";
+   std::vector<std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>> toRemove;
+   std::vector<std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>> toAdd;
+   toRemove.push_back(std::make_pair(primaryFileSink_, PrimarySinkMode));
+   toAdd.push_back(std::make_pair(newSink, PrimarySinkMode));
+
+   loggingCore_->AtomicSwapSinks(toRemove.begin(), toRemove.end(),
+         toAdd.begin(), toAdd.end());
+   primaryFileSink_ = newSink;
+}
+
+
+void
+LogManager::SetPrimaryLogLevel(LogLevel level)
 {
    std::lock_guard<std::mutex> lock(mutex_);
 
    if (level == primaryLogLevel_)
       return;
 
-   logging::LogLevel oldLevel = primaryLogLevel_;
+   LogLevel oldLevel = primaryLogLevel_;
    primaryLogLevel_ = level;
 
    LOG_INFO(internalLogger_) << "Switching primary log level from " <<
@@ -209,7 +250,7 @@ LogManager::SetPrimaryLogLevel(logging::LogLevel level)
 }
 
 
-logging::LogLevel
+LogLevel
 LogManager::GetPrimaryLogLevel() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
@@ -218,7 +259,7 @@ LogManager::GetPrimaryLogLevel() const
 
 
 LogManager::LogFileHandle
-LogManager::AddSecondaryLogFile(logging::LogLevel level,
+LogManager::AddSecondaryLogFile(LogLevel level,
       const std::string& filename, bool truncate, logging::SinkMode mode)
 {
    std::lock_guard<std::mutex> lock(mutex_);

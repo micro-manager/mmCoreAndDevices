@@ -66,6 +66,7 @@ swig_gen_java_source_names = [
     'DeviceType.java',
     'DoubleVector.java',
     'FocusDirection.java',
+    'LogLevel.java',
     'LongVector.java',
     'Metadata.java',
     'MetadataArrayTag.java',
