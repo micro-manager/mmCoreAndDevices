@@ -257,7 +257,7 @@ void LegacyLaser::CreateLaserOnOffProperty()
     laserOnOffProperty_ = property;
 }
 
-void LegacyLaser::CreateShutterProperty(std::string saveCmd, std::string readCmd)
+void LegacyLaser::CreateShutterProperty( std::string saveCmd, std::string readCmd )
 {
     if ( IsShutterCommandSupported() ) {
         shutter_ = new LaserShutterProperty( "Emission Status", laserDriver_, this );
@@ -335,7 +335,7 @@ void LegacyLaser::CreateModulationHighPowerSetpointProperty()
 
 bool LegacyLaser::IsShutterCommandSupported() const // TODO: Split into IsShutterCommandSupported() and IsPauseCommandSupported()
 {
-    static std::string response;
+    std::string response;
 
     if ( response.empty() ) {
         laserDriver_->SendCommand( "l0r", &response );
@@ -346,7 +346,7 @@ bool LegacyLaser::IsShutterCommandSupported() const // TODO: Split into IsShutte
 
 bool LegacyLaser::IsInCdrhMode() const
 {
-    static std::string response;
+    std::string response;
 
     if ( response.empty() ) {
         laserDriver_->SendCommand( "gas?", &response );

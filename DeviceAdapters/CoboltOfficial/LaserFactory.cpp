@@ -164,9 +164,7 @@ Laser* LaserFactory::Create( LaserDriver* driver )
 
     Logger::Instance()->LogMessage( "Instantiated driver for laser '" + laser->GetName() + "'.", true );
 
-    if ( laser->IsShutterEnabled() ) {
-        laser->SetShutterOpen( false );
-    }
+    laser->SetShutterOpen( false );
 
     Property::ResetIdGenerator();
 

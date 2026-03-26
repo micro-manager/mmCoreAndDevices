@@ -395,7 +395,7 @@ bool Laser::IsShutterCommandSupported() const
 
 bool Laser::IsInCdrhMode() const
 {
-    static std::string response;
+    std::string response;
 
     if ( response.empty() ) {
         laserDriver_->SendCommand( "autostart:enabled?", &response );

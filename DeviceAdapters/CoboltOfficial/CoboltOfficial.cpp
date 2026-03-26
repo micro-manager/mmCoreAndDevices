@@ -114,9 +114,9 @@ CoboltOfficial::CoboltOfficial() :
     SetErrorText( cobolt::return_code::unsupported_device_property_value,       "Unsupported device response." );
     
     // Create non-laser properties:
-    CreateProperty( MM::g_Keyword_Name,         g_DeviceName,               MM::String, true );
-    CreateProperty( "Vendor",                   g_DeviceVendorName,         MM::String, true );
-    CreateProperty( MM::g_Keyword_Description,  g_DeviceDescription,        MM::String, true );
+    CreateProperty( "00-Name",                  g_DeviceName,               MM::String, true );
+    CreateProperty( "00-Vendor",                g_DeviceVendorName,         MM::String, true );
+    CreateProperty( "00-Description",           g_DeviceDescription,        MM::String, true );
     CreateProperty( MM::g_Keyword_Port,         g_Property_Port_None,       MM::String, false, new CPropertyAction( this, &CoboltOfficial::OnPropertyAction_Port ), true );
     
     UpdateStatus();
