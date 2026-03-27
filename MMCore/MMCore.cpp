@@ -316,7 +316,7 @@ void CMMCore::log(const char* msg, mmcore::LogLevel level,
  */
 void CMMCore::setPrimaryLogLevel(mmcore::LogLevel level)
 {
-   logManager_->SetPrimaryLogLevel(level);
+   logManager_->SetLogLevels(level, true, false);
 }
 
 
@@ -334,7 +334,7 @@ mmcore::LogLevel CMMCore::getPrimaryLogLevel()
  *
  * When enabled, sets both the primary log file level and the stderr log level
  * to trace. When disabled, sets both to info.
- * 
+ *
  * It is not recommended to mix use of this function with setPrimaryLogLevel()
  * and setStderrLogLevel().
  *
@@ -342,10 +342,8 @@ mmcore::LogLevel CMMCore::getPrimaryLogLevel()
  */
 void CMMCore::enableDebugLog(bool enable)
 {
-   mmcore::LogLevel level = enable ? mmcore::LogLevelTrace :
-         mmcore::LogLevelInfo;
-   logManager_->SetPrimaryLogLevel(level);
-   logManager_->SetStderrLogLevel(level);
+   logManager_->SetLogLevels(enable ? mmcore::LogLevelTrace :
+         mmcore::LogLevelInfo, true, true);
 }
 
 /**
@@ -387,7 +385,7 @@ bool CMMCore::stderrLogEnabled()
  */
 void CMMCore::setStderrLogLevel(mmcore::LogLevel level)
 {
-   logManager_->SetStderrLogLevel(level);
+   logManager_->SetLogLevels(level, false, true);
 }
 
 

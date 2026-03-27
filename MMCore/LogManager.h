@@ -65,10 +65,8 @@ public:
 
    void SetPrimaryLogRotation(std::size_t maxFileSize, int maxBackupFiles);
 
-   void SetPrimaryLogLevel(LogLevel level);
+   void SetLogLevels(LogLevel level, bool setPrimary, bool setStderr);
    LogLevel GetPrimaryLogLevel() const;
-
-   void SetStderrLogLevel(LogLevel level);
    LogLevel GetStderrLogLevel() const;
 
    LogFileHandle AddSecondaryLogFile(LogLevel level,
