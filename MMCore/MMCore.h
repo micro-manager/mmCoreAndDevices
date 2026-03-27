@@ -62,7 +62,6 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -738,7 +737,7 @@ private:
    bool isLoadingSystemConfiguration_ = false;
 
    std::mutex callbackMutex_; // Serializes registerCallback() calls
-   std::shared_mutex notificationQueueMutex_; // Protects notificationQueue_
+   std::mutex notificationQueueMutex_; // Protects notificationQueue_
    std::shared_ptr<mmcore::internal::NotificationQueue>
       notificationQueue_;
    std::thread notificationDeliveryThread_;

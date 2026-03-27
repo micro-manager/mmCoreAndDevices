@@ -7769,7 +7769,7 @@ void CMMCore::registerCallback(MMEventCallback* cb) MMCORE_LEGACY_THROW(CMMError
    if (cb) {
       if (!notificationQueue_) {
          auto queue = std::make_shared<mmi::NotificationQueue>();
-         std::unique_lock<std::shared_mutex> lock(notificationQueueMutex_);
+         std::lock_guard<std::mutex> lock(notificationQueueMutex_);
          notificationQueue_ = queue;
       }
 
@@ -7786,7 +7786,7 @@ void CMMCore::registerCallback(MMEventCallback* cb) MMCORE_LEGACY_THROW(CMMError
          }
       });
    } else {
-      std::unique_lock<std::shared_mutex> lock(notificationQueueMutex_);
+      std::lock_guard<std::mutex> lock(notificationQueueMutex_);
       notificationQueue_.reset();
    }
 }
@@ -7794,9 +7794,13 @@ void CMMCore::registerCallback(MMEventCallback* cb) MMCORE_LEGACY_THROW(CMMError
 
 void CMMCore::postNotification(mmi::Notification notification)
 {
-   std::shared_lock<std::shared_mutex> lock(notificationQueueMutex_);
-   if (notificationQueue_)
-      notificationQueue_->Push(std::move(notification));
+   std::shared_ptr<mmi::NotificationQueue> q;
+   {
+      std::lock_guard<std::mutex> lock(notificationQueueMutex_);
+      q = notificationQueue_;
+   }
+   if (q)
+      q->Push(std::move(notification));
 }
 
 
