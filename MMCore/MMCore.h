@@ -200,6 +200,8 @@ public:
    bool debugLogEnabled();
    void enableStderrLog(bool enable);
    bool stderrLogEnabled();
+   void setStderrLogLevel(mmcore::LogLevel level);
+   mmcore::LogLevel getStderrLogLevel();
 
    int startSecondaryLogFile(const char* filename, bool enableDebug,
          bool truncate = true, bool synchronous = false) MMCORE_LEGACY_THROW(CMMError);

@@ -36,6 +36,7 @@ LogManager::LogManager() :
    loggingCore_(std::make_shared<logging::LoggingCore>()),
    internalLogger_(loggingCore_->NewLogger("LogManager")),
    primaryLogLevel_(LogLevelInfo),
+   stderrLogLevel_(LogLevelInfo),
    usingStdErr_(false),
    primaryMaxFileSize_(0),
    primaryMaxBackupFiles_(0),
@@ -55,11 +56,9 @@ LogManager::SetUseStdErr(bool flag)
    if (flag)
    {
       if (!stdErrSink_)
-      {
          stdErrSink_ = std::make_shared<logging::StdErrLogSink>();
-         stdErrSink_->SetFilter(
-               std::make_shared<logging::LevelFilter>(primaryLogLevel_));
-      }
+      stdErrSink_->SetFilter(
+            std::make_shared<logging::LevelFilter>(stderrLogLevel_));
       loggingCore_->AddSink(stdErrSink_, PrimarySinkMode);
 
       LOG_INFO(internalLogger_) << "Enabled logging to stderr";
@@ -208,18 +207,29 @@ LogManager::SetPrimaryLogRotation(std::size_t maxFileSize, int maxBackupFiles)
 
 
 void
-LogManager::SetPrimaryLogLevel(LogLevel level)
+LogManager::SetLogLevels(LogLevel level, bool setPrimary, bool setStderr)
 {
    std::lock_guard<std::mutex> lock(mutex_);
 
-   if (level == primaryLogLevel_)
+   bool primaryChanged = setPrimary && level != primaryLogLevel_;
+   bool stderrChanged = setStderr && level != stderrLogLevel_;
+   if (!primaryChanged && !stderrChanged)
       return;
 
-   LogLevel oldLevel = primaryLogLevel_;
-   primaryLogLevel_ = level;
-
-   LOG_INFO(internalLogger_) << "Switching primary log level from " <<
-      StringForLogLevel(oldLevel) << " to " << StringForLogLevel(level);
+   if (primaryChanged)
+   {
+      LOG_INFO(internalLogger_) << "Switching primary log file level from " <<
+         StringForLogLevel(primaryLogLevel_) << " to " <<
+         StringForLogLevel(level);
+      primaryLogLevel_ = level;
+   }
+   if (stderrChanged)
+   {
+      LOG_INFO(internalLogger_) << "Switching stderr log level from " <<
+         StringForLogLevel(stderrLogLevel_) << " to " <<
+         StringForLogLevel(level);
+      stderrLogLevel_ = level;
+   }
 
    std::shared_ptr<logging::EntryFilter> filter =
       std::make_shared<logging::LevelFilter>(level);
@@ -230,23 +240,32 @@ LogManager::SetPrimaryLogLevel(LogLevel level)
          std::shared_ptr<logging::EntryFilter>
       >
    > changes;
-   if (stdErrSink_)
-   {
-      changes.push_back(
-            std::make_pair(std::make_pair(stdErrSink_, PrimarySinkMode),
-               filter));
-   }
-   if (primaryFileSink_)
+   if (primaryChanged && primaryFileSink_)
    {
       changes.push_back(
             std::make_pair(std::make_pair(primaryFileSink_, PrimarySinkMode),
                filter));
    }
+   if (stderrChanged && stdErrSink_ && usingStdErr_)
+   {
+      changes.push_back(
+            std::make_pair(std::make_pair(stdErrSink_, PrimarySinkMode),
+               filter));
+   }
 
-   loggingCore_->AtomicSetSinkFilters(changes.begin(), changes.end());
+   if (!changes.empty())
+      loggingCore_->AtomicSetSinkFilters(changes.begin(), changes.end());
 
-   LOG_INFO(internalLogger_) << "Switched primary log level from " <<
-      StringForLogLevel(oldLevel) << " to " << StringForLogLevel(level);
+   if (primaryChanged)
+   {
+      LOG_INFO(internalLogger_) << "Switched primary log file level to " <<
+         StringForLogLevel(level);
+   }
+   if (stderrChanged)
+   {
+      LOG_INFO(internalLogger_) << "Switched stderr log level to " <<
+         StringForLogLevel(level);
+   }
 }
 
 
@@ -255,6 +274,14 @@ LogManager::GetPrimaryLogLevel() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
    return primaryLogLevel_;
+}
+
+
+LogLevel
+LogManager::GetStderrLogLevel() const
+{
+   std::lock_guard<std::mutex> lock(mutex_);
+   return stderrLogLevel_;
 }
 
 

@@ -108,7 +108,7 @@ namespace notif = mmcore::internal::notification;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 12, MMCore_versionMinor = 3, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 12, MMCore_versionMinor = 4, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -307,19 +307,21 @@ void CMMCore::log(const char* msg, mmcore::LogLevel level,
 
 
 /**
- * Set the primary log level.
+ * Set the log level for the primary log file.
  *
- * Messages below this level will not be recorded in the primary log file or
- * stderr output.
+ * Messages below this level will not be recorded in the primary log file.
+ * 
+ * It is not recommended to mix use of this function with enableDebugLog() and
+ * debugLogEnabled().
  */
 void CMMCore::setPrimaryLogLevel(mmcore::LogLevel level)
 {
-   logManager_->SetPrimaryLogLevel(level);
+   logManager_->SetLogLevels(level, true, false);
 }
 
 
 /**
- * Return the current primary log level.
+ * Return the current primary log file level.
  */
 mmcore::LogLevel CMMCore::getPrimaryLogLevel()
 {
@@ -329,20 +331,31 @@ mmcore::LogLevel CMMCore::getPrimaryLogLevel()
 
 /**
  * Enable or disable logging of debug messages.
- * @param enable   if set to true, debug messages will be recorded in the log file
+ *
+ * When enabled, sets both the primary log file level and the stderr log level
+ * to trace. When disabled, sets both to info.
+ *
+ * It is not recommended to mix use of this function with setPrimaryLogLevel()
+ * and setStderrLogLevel().
+ *
+ * @param enable   if set to true, debug messages will be recorded
  */
 void CMMCore::enableDebugLog(bool enable)
 {
-   logManager_->SetPrimaryLogLevel(enable ? mmcore::LogLevelTrace :
-         mmcore::LogLevelInfo);
+   logManager_->SetLogLevels(enable ? mmcore::LogLevelTrace :
+         mmcore::LogLevelInfo, true, true);
 }
 
 /**
- * Indicates if logging of debug messages is enabled
+ * Indicates if logging of debug messages is enabled.
+ *
+ * Returns true if both the primary log file and stderr log levels are at
+ * debug level or below.
  */
 bool CMMCore::debugLogEnabled()
 {
-   return (logManager_->GetPrimaryLogLevel() < mmcore::LogLevelInfo);
+   return (logManager_->GetPrimaryLogLevel() < mmcore::LogLevelInfo) &&
+          (logManager_->GetStderrLogLevel() < mmcore::LogLevelInfo);
 }
 
 /**
@@ -360,6 +373,28 @@ void CMMCore::enableStderrLog(bool enable)
 bool CMMCore::stderrLogEnabled()
 {
    return logManager_->IsUsingStdErr();
+}
+
+/**
+ * Set the stderr log level.
+ *
+ * Messages below this level will not be displayed on stderr.
+ * 
+ * It is not recommended to mix use of this function with enableDebugLog() and
+ * debugLogEnabled().
+ */
+void CMMCore::setStderrLogLevel(mmcore::LogLevel level)
+{
+   logManager_->SetLogLevels(level, false, true);
+}
+
+
+/**
+ * Return the current stderr log level.
+ */
+mmcore::LogLevel CMMCore::getStderrLogLevel()
+{
+   return logManager_->GetStderrLogLevel();
 }
 
 
