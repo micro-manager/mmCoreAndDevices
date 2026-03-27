@@ -85,13 +85,15 @@ Laser06::Laser06( const std::string& name, const std::string& wavelength, LaserD
 
     // Power Modulation Runmode Group
     CreatePmPowerSetpointProperty();
+    CreatePmDigitalModulationProperty();
+    CreatePmAnalogModulationProperty();
 
     // Current Modulation Runmode Group
     CreateCmCurrentHighSetpointProperty();
+    CreateCmDigitalModulationProperty();
+    CreateCmAnalogModulationProperty();
 
     // Modulation Settings Group
-    CreateDigitalModulationProperty();
-    CreateAnalogModulationProperty();
     CreateAnalogImpedanceProperty();
     CreateModulationInputVoltageMaxProperty();
 

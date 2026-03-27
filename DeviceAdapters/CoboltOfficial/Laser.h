@@ -102,14 +102,16 @@ protected:
     /// Property Generators
     virtual void CreateAdapterVersionProperty();
     virtual void CreateAnalogImpedanceProperty();
-    virtual void CreateAnalogModulationProperty();
+    virtual void CreateCmAnalogModulationProperty();
+    virtual void CreatePmAnalogModulationProperty();
     virtual void CreateAutostartControlProperty();
     virtual void CreateCcCurrentSetpointProperty();
     virtual void CreateClearFaultProperty();
     virtual void CreateCmCurrentHighSetpointProperty();
     virtual void CreateCpPowerSetpointProperty();
     virtual void CreateCurrentReadingProperty();
-    virtual void CreateDigitalModulationProperty();
+    virtual void CreateCmDigitalModulationProperty();
+    virtual void CreatePmDigitalModulationProperty();
     virtual void CreateFaultProperty();
     virtual void CreateFirmwareVersionProperty();
     virtual void CreateKeyswitchProperty();

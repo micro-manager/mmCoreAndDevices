@@ -185,10 +185,17 @@ void Laser::CreateAnalogImpedanceProperty()
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateAnalogModulationProperty()
+void Laser::CreateCmAnalogModulationProperty()
 {
-    // TODO: Add for cm too
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Modulation", laserDriver_, "laser:pm:analog:enabled?" );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Current Mod. Analog Modulation", laserDriver_, "laser:cm:analog:enabled?" );
+    property->RegisterEnumerationItem( "0", "laser:cm:analog:enabled 0", EnumerationItem_Disabled );
+    property->RegisterEnumerationItem( "1", "laser:cm:analog:enabled 1", EnumerationItem_Enabled );
+    RegisterPublicProperty( property );
+}
+
+void Laser::CreatePmAnalogModulationProperty()
+{
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Power Mod. Analog Modulation", laserDriver_, "laser:pm:analog:enabled?" );
     property->RegisterEnumerationItem( "0", "laser:pm:analog:enabled 0", EnumerationItem_Disabled );
     property->RegisterEnumerationItem( "1", "laser:pm:analog:enabled 1", EnumerationItem_Enabled );
     RegisterPublicProperty( property );
