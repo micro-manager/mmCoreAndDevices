@@ -217,7 +217,7 @@ void Laser::CreateCcCurrentSetpointProperty()
     const double maxCurrentSetpoint = atof( maxCurrentSetpointResponse.c_str() );
 
     MutableDeviceProperty* property = new MutableNumericProperty<double>(
-        "CC: Current Setpoint [" + currentUnit_ + "]", laserDriver_, "laser:cc:current:setpoint?", "laser:cc:current:setpoint", 0.0f, maxCurrentSetpoint );
+        "Const. Current Setpoint [" + currentUnit_ + "]", laserDriver_, "laser:cc:current:setpoint?", "laser:cc:current:setpoint", 0.0f, maxCurrentSetpoint );
     RegisterPublicProperty( property );
 }
 
@@ -243,7 +243,7 @@ void Laser::CreateCmCurrentHighSetpointProperty()
     const double maxCmCurrentSetpoint = atof( maxCmCurrentSetpointResponse.c_str() );
 
     RegisterPublicProperty( new MutableNumericProperty<double>(
-        "Current Mod: High Current Setpoint [" + currentUnit_ + "]", laserDriver_, "laser:cm:current:high:setpoint?", "laser:cm:current:high:setpoint", 0, maxCmCurrentSetpoint ) );
+        "Current Mod. High Current Setpoint [" + currentUnit_ + "]", laserDriver_, "laser:cm:current:high:setpoint?", "laser:cm:current:high:setpoint", 0, maxCmCurrentSetpoint ) );
 }
 
 void Laser::CreateCpPowerSetpointProperty()
@@ -257,7 +257,7 @@ void Laser::CreateCpPowerSetpointProperty()
     const double maxPowerSetpoint = atof( maxPowerSetpointResponse.c_str() );
 
     MutableDeviceProperty* property = new MutableNumericProperty<double>(
-        "CP: Power Setpoint [" + powerUnit_ + "]", laserDriver_, "laser:cp:power:setpoint?", "laser:cp:power:setpoint", 0.0f, maxPowerSetpoint );
+        "Const. Power Setpoint [" + powerUnit_ + "]", laserDriver_, "laser:cp:power:setpoint?", "laser:cp:power:setpoint", 0.0f, maxPowerSetpoint );
     RegisterPublicProperty( property );
 }
 
@@ -265,14 +265,20 @@ void Laser::CreateCurrentReadingProperty()
 {
     DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Current Reading [" + currentUnit_ + "]", laserDriver_, "laser:current:reading?" );
     property->SetCaching( false );
+    RegisterPublicProperty( property )
+}
+
+void Laser::CreateCmDigitalModulationProperty()
+{
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Current Mod. Digital Modulation", laserDriver_, "laser:cm:digital:enabled?" );
+    property->RegisterEnumerationItem( "0", "laser:cm:digital:enabled 0", EnumerationItem_Disabled );
+    property->RegisterEnumerationItem( "1", "laser:cm:digital:enabled 1", EnumerationItem_Enabled );
     RegisterPublicProperty( property );
 }
 
-void Laser::CreateDigitalModulationProperty()
+void Laser::CreatePmDigitalModulationProperty()
 {
-    // TODO: Add for cm too
-    // TODO NOW: Merge digital/analog modulation for pm and cm into one
-    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Digital Modulation", laserDriver_, "laser:pm:digital:enabled?" );
+    CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Power Mod. Digital Modulation", laserDriver_, "laser:pm:digital:enabled?" );
     property->RegisterEnumerationItem( "0", "laser:pm:digital:enabled 0", EnumerationItem_Disabled );
     property->RegisterEnumerationItem( "1", "laser:pm:digital:enabled 1", EnumerationItem_Enabled );
     RegisterPublicProperty( property );
@@ -355,7 +361,7 @@ void Laser::CreatePmPowerSetpointProperty()
     const double maxPmPowerSetpoint = atof( maxPmPowerSetpointResponse.c_str() );
 
     RegisterPublicProperty( new MutableNumericProperty<double>(
-        "Power Mod: Power Setpoint [" + powerUnit_ + "]", laserDriver_, "laser:pm:power:setpoint?", "laser:pm:power:setpoint", 0, maxPmPowerSetpoint ) );
+        "Power Mod. Power Setpoint [" + powerUnit_ + "]", laserDriver_, "laser:pm:power:setpoint?", "laser:pm:power:setpoint", 0, maxPmPowerSetpoint ) );
 }
 
 void Laser::CreatePowerReadingProperty()

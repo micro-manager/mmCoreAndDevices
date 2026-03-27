@@ -57,7 +57,6 @@ Gen5Laser::Gen5Laser( const std::string& wavelength, LaserDriver* driver ) :
     CreateModelProperty();
     CreateSerialNumberProperty();
     CreateFirmwareVersionProperty();
-    CreateAdapterVersionProperty();
     CreateOperatingHoursProperty();
     CreateKeyswitchProperty();
     CreateLaserStateProperty();
@@ -76,6 +75,7 @@ Gen5Laser::Gen5Laser( const std::string& wavelength, LaserDriver* driver ) :
     //// Runmode Control Group
     CreateCpPowerSetpointProperty();
     CreateCcCurrentSetpointProperty( "gartn?", "sartn" );
+    CreateAdapterVersionProperty();
 }
 
 void Gen5Laser::CreateLaserStateProperty()

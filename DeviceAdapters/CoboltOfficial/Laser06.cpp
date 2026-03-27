@@ -62,7 +62,6 @@ Laser06::Laser06( const std::string& name, const std::string& wavelength, LaserD
     CreateModelProperty();
     CreateSerialNumberProperty();
     CreateFirmwareVersionProperty();
-    CreateAdapterVersionProperty();
     CreateOperatingHoursProperty();
     CreateKeyswitchProperty();
     CreateLaserStateProperty();
@@ -95,6 +94,8 @@ Laser06::Laser06( const std::string& name, const std::string& wavelength, LaserD
     CreateAnalogModulationProperty();
     CreateAnalogImpedanceProperty();
     CreateModulationInputVoltageMaxProperty();
+
+    CreateAdapterVersionProperty();
 }
 
 Laser06::~Laser06()
