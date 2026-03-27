@@ -17,6 +17,7 @@ mmcore_test_sources = files(
     'EventCallback-Tests.cpp',
     'ImageMetadata-Tests.cpp',
     'ImageMetadataTags-Tests.cpp',
+    'LogManager-Tests.cpp',
     'Logger-Tests.cpp',
     'LoggingSplitEntryIntoLines-Tests.cpp',
     'LoggingStreamSink-Tests.cpp',
