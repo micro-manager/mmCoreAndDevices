@@ -24,6 +24,7 @@ private:
    mutable std::mutex mutex_;
 
    LogLevel primaryLogLevel_;
+   LogLevel stderrLogLevel_;
 
    bool usingStdErr_;
    std::shared_ptr<logging::LogSink> stdErrSink_;
@@ -66,6 +67,9 @@ public:
 
    void SetPrimaryLogLevel(LogLevel level);
    LogLevel GetPrimaryLogLevel() const;
+
+   void SetStderrLogLevel(LogLevel level);
+   LogLevel GetStderrLogLevel() const;
 
    LogFileHandle AddSecondaryLogFile(LogLevel level,
          const std::string& filename, bool truncate = true,

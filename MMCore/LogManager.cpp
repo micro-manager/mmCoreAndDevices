@@ -36,6 +36,7 @@ LogManager::LogManager() :
    loggingCore_(std::make_shared<logging::LoggingCore>()),
    internalLogger_(loggingCore_->NewLogger("LogManager")),
    primaryLogLevel_(LogLevelInfo),
+   stderrLogLevel_(LogLevelInfo),
    usingStdErr_(false),
    primaryMaxFileSize_(0),
    primaryMaxBackupFiles_(0),
@@ -55,11 +56,9 @@ LogManager::SetUseStdErr(bool flag)
    if (flag)
    {
       if (!stdErrSink_)
-      {
          stdErrSink_ = std::make_shared<logging::StdErrLogSink>();
-         stdErrSink_->SetFilter(
-               std::make_shared<logging::LevelFilter>(primaryLogLevel_));
-      }
+      stdErrSink_->SetFilter(
+            std::make_shared<logging::LevelFilter>(stderrLogLevel_));
       loggingCore_->AddSink(stdErrSink_, PrimarySinkMode);
 
       LOG_INFO(internalLogger_) << "Enabled logging to stderr";
@@ -218,34 +217,28 @@ LogManager::SetPrimaryLogLevel(LogLevel level)
    LogLevel oldLevel = primaryLogLevel_;
    primaryLogLevel_ = level;
 
-   LOG_INFO(internalLogger_) << "Switching primary log level from " <<
+   LOG_INFO(internalLogger_) << "Switching primary log file level from " <<
       StringForLogLevel(oldLevel) << " to " << StringForLogLevel(level);
 
-   std::shared_ptr<logging::EntryFilter> filter =
-      std::make_shared<logging::LevelFilter>(level);
-
-   std::vector<
-      std::pair<
-         std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>,
-         std::shared_ptr<logging::EntryFilter>
-      >
-   > changes;
-   if (stdErrSink_)
-   {
-      changes.push_back(
-            std::make_pair(std::make_pair(stdErrSink_, PrimarySinkMode),
-               filter));
-   }
    if (primaryFileSink_)
    {
+      std::shared_ptr<logging::EntryFilter> filter =
+         std::make_shared<logging::LevelFilter>(level);
+
+      std::vector<
+         std::pair<
+            std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>,
+            std::shared_ptr<logging::EntryFilter>
+         >
+      > changes;
       changes.push_back(
             std::make_pair(std::make_pair(primaryFileSink_, PrimarySinkMode),
                filter));
+
+      loggingCore_->AtomicSetSinkFilters(changes.begin(), changes.end());
    }
 
-   loggingCore_->AtomicSetSinkFilters(changes.begin(), changes.end());
-
-   LOG_INFO(internalLogger_) << "Switched primary log level from " <<
+   LOG_INFO(internalLogger_) << "Switched primary log file level from " <<
       StringForLogLevel(oldLevel) << " to " << StringForLogLevel(level);
 }
 
@@ -255,6 +248,51 @@ LogManager::GetPrimaryLogLevel() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
    return primaryLogLevel_;
+}
+
+
+void
+LogManager::SetStderrLogLevel(LogLevel level)
+{
+   std::lock_guard<std::mutex> lock(mutex_);
+
+   if (level == stderrLogLevel_)
+      return;
+
+   LogLevel oldLevel = stderrLogLevel_;
+   stderrLogLevel_ = level;
+
+   LOG_INFO(internalLogger_) << "Switching stderr log level from " <<
+      StringForLogLevel(oldLevel) << " to " << StringForLogLevel(level);
+
+   if (stdErrSink_ && usingStdErr_)
+   {
+      std::shared_ptr<logging::EntryFilter> filter =
+         std::make_shared<logging::LevelFilter>(level);
+
+      std::vector<
+         std::pair<
+            std::pair<std::shared_ptr<logging::LogSink>, logging::SinkMode>,
+            std::shared_ptr<logging::EntryFilter>
+         >
+      > changes;
+      changes.push_back(
+            std::make_pair(std::make_pair(stdErrSink_, PrimarySinkMode),
+               filter));
+
+      loggingCore_->AtomicSetSinkFilters(changes.begin(), changes.end());
+   }
+
+   LOG_INFO(internalLogger_) << "Switched stderr log level from " <<
+      StringForLogLevel(oldLevel) << " to " << StringForLogLevel(level);
+}
+
+
+LogLevel
+LogManager::GetStderrLogLevel() const
+{
+   std::lock_guard<std::mutex> lock(mutex_);
+   return stderrLogLevel_;
 }
 
 
