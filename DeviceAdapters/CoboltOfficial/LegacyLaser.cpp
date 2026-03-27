@@ -262,12 +262,8 @@ void LegacyLaser::CreateShutterProperty( std::string saveCmd, std::string readCm
     if ( IsShutterCommandSupported() ) {
         shutter_ = new LaserShutterProperty( "Emission Status", laserDriver_, this );
     } else {
-
-        if ( IsInCdrhMode() ) {
-            shutter_ = new legacy::no_shutter_command::LaserShutterPropertyCdrh( "Emission Status", laserDriver_, this, readCmd, saveCmd );
-        } else {
-            shutter_ = new legacy::no_shutter_command::LaserShutterPropertyOem( "Emission Status", laserDriver_, this );
-        }
+        // From now on we use the same shutter solution regardless of oem/cdrh:
+        shutter_ = new legacy::no_shutter_command::LaserShutterPropertyCdrh( "Emission Status", laserDriver_, this, readCmd, saveCmd );
     }
     
     RegisterPublicProperty( shutter_ );
