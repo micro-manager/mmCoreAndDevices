@@ -103,7 +103,7 @@ Laser* LaserFactory::Create( LaserDriver* driver )
     } else if ( firmwareVersion.find( "IMP-1011" ) != std::string::npos ) {
 
         Logger::Instance()->LogMessage( "Instantiating the 12V 06-MLDM driver...", false );
-        laser = new Laser06( "06-MLDM Laser", wavelength, driver );
+        laser = new Laser06( "06-HPLD Laser", wavelength, driver );
 
     } else if ( modelString.find( "-06-51-" ) != std::string::npos ||
         modelString.find( "-06-53-" ) != std::string::npos ||
