@@ -112,4 +112,9 @@ public:
       std::cout << "onSequenceAcquisitionStopped() " << cameraLabel << '\n';
    }
 
+   virtual void onImageAddedToBuffer(const char* cameraLabel)
+   {
+      std::cout << "onImageAddedToBuffer() " << cameraLabel << '\n';
+   }
+
 };

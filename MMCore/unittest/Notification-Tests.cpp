@@ -2,8 +2,10 @@
 
 #include "MMCore.h"
 #include "MMEventCallback.h"
+#include "MockDeviceUtils.h"
 #include "Notification.h"
 #include "NotificationQueue.h"
+#include "StubDevices.h"
 
 #include <atomic>
 #include <chrono>
@@ -201,6 +203,10 @@ public:
       calls.push_back(
          {"onChannelGroupChanged", {newChannelGroupName}, {}, false});
    }
+   void onImageAddedToBuffer(const char* cameraLabel) override {
+      calls.push_back(
+         {"onImageAddedToBuffer", {cameraLabel}, {}, false});
+   }
 };
 
 TEST_CASE("Dispatch PropertiesChanged", "[Notification][Dispatch]")
@@ -351,6 +357,14 @@ TEST_CASE("Dispatch ChannelGroupChanged", "[Notification][Dispatch]")
    REQUIRE(cb.calls.size() == 1);
    CHECK(cb.calls[0].method == "onChannelGroupChanged");
    CHECK(cb.calls[0].stringArgs[0] == "DAPI");
+}
+TEST_CASE("Dispatch ImageAddedToBuffer", "[Notification][Dispatch]")
+{
+   RecordingCallback cb;
+   mmi::DispatchNotification(notif::ImageAddedToBuffer{"Camera"}, cb);
+   REQUIRE(cb.calls.size() == 1);
+   CHECK(cb.calls[0].method == "onImageAddedToBuffer");
+   CHECK(cb.calls[0].stringArgs[0] == "Camera");
 }
 
 // --- Integration: registerCallback + postNotification ---

@@ -237,6 +237,31 @@ private:
    std::vector<unsigned char> imgBuf_;
 };
 
+class ImageAddedCallback : public MMEventCallback {
+public:
+   std::mutex mutex;
+   std::condition_variable cv;
+   int _receivedCalls = 0;
+   int _expectedCalls = 0;
+
+   ImageAddedCallback(int expectedCalls) {
+        
+        _expectedCalls = expectedCalls;
+   }
+
+   void onImageAddedToBuffer(const char*) override {
+      std::lock_guard<std::mutex> lock(mutex);
+      _receivedCalls++;
+      cv.notify_one();
+   }
+
+   bool waitForImageAdded(std::chrono::milliseconds timeout) {
+      std::unique_lock<std::mutex> lock(mutex);
+      return cv.wait_for(lock, timeout,
+         [this] { return _receivedCalls == _expectedCalls; });
+   }
+};
+
 // --- Lifecycle error handling ---
 
 TEST_CASE("startSequenceAcquisition throws when no camera set",
@@ -558,4 +583,44 @@ TEST_CASE("stopSequenceAcquisition on finite acquisition stops it early",
    c.stopSequenceAcquisition();
    CHECK(c.isSequenceRunning() == false);
    CHECK(c.getRemainingImageCount() < 1000000);
+}
+
+TEST_CASE("ImageAddedToBuffer fires notification during sequence acquisition",
+   "[Notification][Integration]")
+{
+   ImageAddedCallback cb(5);
+   AsyncCamera cam;
+   MockAdapterWithDevices adapter{{"Camera", &cam}};
+   CMMCore core;
+
+   adapter.LoadIntoCore(core);
+   core.setCameraDevice("Camera");
+   core.registerCallback(&cb);
+
+   core.startSequenceAcquisition("Camera", 5, 100, false);
+
+   CHECK(cb.waitForImageAdded(std::chrono::milliseconds(600)));
+
+   core.stopSequenceAcquisition();
+   core.registerCallback(nullptr);
+}
+
+TEST_CASE("ImageAddedToBuffer fires notification during continuous sequence acquisition",
+   "[Notification][Integration]")
+{
+   ImageAddedCallback cb(5);
+   AsyncCamera cam;
+   MockAdapterWithDevices adapter{{"Camera", &cam}};
+   CMMCore core;
+
+   adapter.LoadIntoCore(core);
+   core.setCameraDevice("Camera");
+   core.registerCallback(&cb);
+
+   core.startContinuousSequenceAcquisition(100);
+
+   CHECK(cb.waitForImageAdded(std::chrono::milliseconds(550)));
+
+   core.stopSequenceAcquisition();
+   core.registerCallback(nullptr);
 }

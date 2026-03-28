@@ -65,6 +65,9 @@ struct SystemConfigurationLoaded {};
 struct ChannelGroupChanged {
    std::string channelGroupName;
 };
+struct ImageAddedToBuffer {
+   std::string cameraLabel;
+};
 
 } // namespace notification
 
@@ -83,7 +86,8 @@ using Notification = std::variant<
    notification::SequenceAcquisitionStarted,
    notification::SequenceAcquisitionStopped,
    notification::SystemConfigurationLoaded,
-   notification::ChannelGroupChanged
+   notification::ChannelGroupChanged,
+   notification::ImageAddedToBuffer
 >;
 
 namespace detail {
@@ -142,6 +146,9 @@ inline void DispatchNotification(const Notification& notification,
       },
       [&](const notification::ChannelGroupChanged& n) {
          cb.onChannelGroupChanged(n.channelGroupName.c_str());
+      },
+      [&](const notification::ImageAddedToBuffer& n) {
+         cb.onImageAddedToBuffer(n.cameraLabel.c_str());
       },
    }, notification);
 }
