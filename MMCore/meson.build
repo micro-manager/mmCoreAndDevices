@@ -27,6 +27,8 @@ mmdevice_proj = subproject(
 )
 mmdevice_dep = mmdevice_proj.get_variable('mmdevice_dep')
 
+nlohmann_json_dep = dependency('nlohmann_json')
+
 mmcore_sources = files(
     'CircularBuffer.cpp',
     'Configuration.cpp',
@@ -63,6 +65,9 @@ mmcore_sources = files(
     'LogManager.cpp',
     'MMCore.cpp',
     'PluginManager.cpp',
+    'DeviceConformance/CameraConformance.cpp',
+    'DeviceConformance/DeviceConformance.cpp',
+    'DeviceConformance/SeqAcqTestMonitor.cpp',
     'Semaphore.cpp',
     'Task.cpp',
     'TaskSet.cpp',
@@ -98,6 +103,7 @@ mmcore_lib = static_library(
     include_directories: mmcore_include_dir,
     dependencies: [
         mmdevice_dep,
+        nlohmann_json_dep,
         dependency('threads'),
         dependency('dl', required: false),
     ],

@@ -51,6 +51,7 @@
 #include "MMEventCallback.h"
 #include "NotificationQueue.h"
 #include "PluginManager.h"
+#include "DeviceConformance/DeviceConformance.h"
 #include "SynchronizedConfiguration.h"
 
 #include "DeviceUtils.h"
@@ -134,6 +135,7 @@ CMMCore::CMMCore() :
    cbuf_(std::make_unique<mmi::CircularBuffer>(
       (sizeof(void*) > 4) ? 250u : 25u)),
    callback_(std::make_unique<mmi::CoreCallback>(this)),
+   conformanceTestConfig_(std::make_unique<mmi::ConformanceTestConfig>()),
    pluginManager_(std::make_shared<mmi::CPluginManager>()),
    deviceManager_(std::make_shared<mmi::DeviceManager>()),
    stateCache_(std::make_unique<SynchronizedConfiguration>())
@@ -3142,6 +3144,75 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
    mmi::DeviceModuleLockGuard guard(pCam);
    return pCam->IsCapturing();
 };
+
+/**
+ * Get the list of available conformance tests for a device as JSON.
+ *
+ * The returned JSON includes test names and dependency information, suitable
+ * for a GUI that wants to display and run tests individually.
+ *
+ * The JSON format may change without notice (check the "version" key, which is
+ * incremented for incompatible changes).
+ *
+ * @param deviceLabel  Label of the device (must be loaded and initialized).
+ * @return A JSON string containing the test list.
+ */
+std::string CMMCore::getDeviceConformanceTests(const char* deviceLabel)
+      MMCORE_LEGACY_THROW(CMMError)
+{
+   auto device = deviceManager_->GetDevice(deviceLabel);
+   return mmi::GetDeviceConformanceTestList(device, seqAcqTestMonitor_,
+      *conformanceTestConfig_);
+}
+
+/**
+ * Run behavioral conformance tests on a device and return a JSON report.
+ *
+ * Conformance tests aim to check for correct implementation of a device
+ * adapter, to the extent possible in fully automated tests. They do not
+ * attempt to test for correct hardware behavior.
+ *
+ * The focus is on catching common programming errors in device adapters, but
+ * not all problems can be tested. Tests may be added or refined over time, so
+ * a passing device adapter could fail in a future version. It is recommended
+ * to test device adapters against the latest MMCore.
+ *
+ * Currently, tests are available only for camera devices.
+ *
+ * Test results can depend on the current settings of the device (for example,
+ * exposure or ROI). This is intentional, because a device may behave correctly
+ * under some configurations and not under others.
+ *
+ * The JSON format may change without notice (check the "version" key, which is
+ * incremented for incompatible changes).
+ *
+ * @param deviceLabel  Label of the device to test (must be loaded and
+ *                     initialized).
+ * @param testName     Slug name of a single test to run, or null/empty to run
+ *                     all tests.
+ * @return A JSON string containing the test results.
+ */
+std::string CMMCore::runDeviceConformanceTests(const char* deviceLabel,
+      const char* testName) MMCORE_LEGACY_THROW(CMMError)
+{
+   auto device = deviceManager_->GetDevice(deviceLabel);
+   return mmi::RunDeviceConformanceTests(device, seqAcqTestMonitor_,
+      *conformanceTestConfig_, testName);
+}
+
+/**
+ * Testing only: configure conformance tests
+ *
+ * This function is designed for unit testing of MMCore itself, and its
+ * interface is subject to change. It is also not designed with language
+ * bindings (Java, Python) in mind (at least for now).
+ *
+ * Not intended for use in production code.
+ */
+void CMMCore::setConformanceTestConfig(
+      const mmcore::internal::ConformanceTestConfig& config) {
+   *conformanceTestConfig_ = config;
+}
 
 /**
  * Gets the last image from the circular buffer.

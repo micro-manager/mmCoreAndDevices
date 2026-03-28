@@ -13,3 +13,4 @@
 # Do not ignore wraps we provide
 !/catch2.wrap
 !/mmdevice.wrap
+!/nlohmann_json.wrap
