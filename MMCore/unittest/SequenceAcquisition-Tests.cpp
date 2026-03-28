@@ -8,6 +8,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -235,6 +236,66 @@ private:
    std::condition_variable cv_;
    std::thread thread_;
    std::vector<unsigned char> imgBuf_;
+};
+
+class ImageAddedCallback : public MMEventCallback {
+public:
+   std::mutex mutex;
+   std::condition_variable cv;
+   int _receivedCalls = 0;
+   int _expectedCalls = 0;
+
+   ImageAddedCallback(int expectedCalls) {
+        
+        _expectedCalls = expectedCalls;
+   }
+
+   void onImageAddedToBuffer(const char*) override {
+      std::lock_guard<std::mutex> lock(mutex);
+      _receivedCalls++;
+      cv.notify_one();
+   }
+
+   bool waitForImageAdded(std::chrono::milliseconds timeout) {
+      std::unique_lock<std::mutex> lock(mutex);
+      return cv.wait_for(lock, timeout,
+         [this] { return _receivedCalls == _expectedCalls; });
+   }
+};
+
+
+// A callback that pops images from the circular buffer as each image arrives.
+// Declare instances of this class BEFORE the CMMCore instance in tests so that
+// the callback object outlives core. The notification delivery thread holds a
+// raw pointer to this callback; it must be joined (via registerCallback(nullptr)
+// or CMMCore's destructor) before this object is destroyed.
+class RotatingBufferCallback : public MMEventCallback {
+public:
+   CMMCore* core_ = nullptr;
+   std::mutex mutex_;
+   std::condition_variable cv_;
+   std::vector<void*> images_;
+
+   void onImageAddedToBuffer(const char*) override {
+      if (!core_) return;
+      void* buf = nullptr;
+      try {
+         buf = core_->popNextImage();
+      } catch (const CMMError&) {
+         return; // Buffer empty due to race (e.g. overwrite cleared it)
+      }
+      {
+         std::lock_guard<std::mutex> lock(mutex_);
+         images_.push_back(buf);
+      }
+      cv_.notify_one();
+   }
+
+   bool waitForImages(size_t count, std::chrono::milliseconds timeout) {
+      std::unique_lock<std::mutex> lock(mutex_);
+      return cv_.wait_for(lock, timeout,
+         [this, count] { return images_.size() >= count; });
+   }
 };
 
 // --- Lifecycle error handling ---
@@ -558,4 +619,79 @@ TEST_CASE("stopSequenceAcquisition on finite acquisition stops it early",
    c.stopSequenceAcquisition();
    CHECK(c.isSequenceRunning() == false);
    CHECK(c.getRemainingImageCount() < 1000000);
+}
+
+TEST_CASE("ImageAddedToBuffer fires notification during sequence acquisition",
+   "[Notification][Integration]")
+{
+   ImageAddedCallback cb(5);
+   AsyncCamera cam;
+   MockAdapterWithDevices adapter{{"Camera", &cam}};
+   CMMCore core;
+
+   adapter.LoadIntoCore(core);
+   core.setCameraDevice("Camera");
+   core.registerCallback(&cb);
+
+   core.startSequenceAcquisition("Camera", 5, 100, false);
+
+   CHECK(cb.waitForImageAdded(std::chrono::milliseconds(600)));
+
+   core.stopSequenceAcquisition();
+   core.registerCallback(nullptr);
+}
+
+TEST_CASE("ImageAddedToBuffer fires notification during continuous sequence acquisition",
+   "[Notification][Integration]")
+{
+   ImageAddedCallback cb(5);
+   AsyncCamera cam;
+   MockAdapterWithDevices adapter{{"Camera", &cam}};
+   CMMCore core;
+
+   adapter.LoadIntoCore(core);
+   core.setCameraDevice("Camera");
+   core.registerCallback(&cb);
+
+   core.startContinuousSequenceAcquisition(100);
+
+   CHECK(cb.waitForImageAdded(std::chrono::milliseconds(550)));
+
+   core.stopSequenceAcquisition();
+   core.registerCallback(nullptr);
+}
+
+TEST_CASE("Images popped from onImageAddedToBuffer callback are unique and valid",
+   "[SequenceAcquisition][Notification][Integration]")
+{
+   // cb must be declared BEFORE core: C++ destroys locals in reverse order,
+   // so core is destroyed first. core's destructor joins the notification
+   // delivery thread (which holds a raw pointer to cb), ensuring cb is still
+   // alive when the thread exits. Setting core_ separately avoids requiring
+   // core to exist at cb's construction site.
+   RotatingBufferCallback cb;
+   AsyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore core;
+   adapter.LoadIntoCore(core);
+   core.setCameraDevice("cam");
+
+   cb.core_ = &core;
+   core.registerCallback(&cb);
+
+   const long numImages = 5;
+   core.startSequenceAcquisition(numImages, 0.0, true);
+
+   CHECK(cb.waitForImages(numImages, std::chrono::seconds(5)));
+
+   core.stopSequenceAcquisition();
+   // Explicitly join the delivery thread now so that cb.images_ is stable
+   // for the checks below. (core's destructor will call this again; it is
+   // a no-op the second time.)
+   core.registerCallback(nullptr);
+
+   CHECK(static_cast<long>(cb.images_.size()) == numImages);
+   std::set<void*> unique(cb.images_.begin(), cb.images_.end());
+   CHECK(unique.size() == cb.images_.size());
+   CHECK(unique.count(nullptr) == 0);
 }

@@ -243,9 +243,15 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
             ip->Process(const_cast<unsigned char*>(buf), width, height, bytesPerPixel);
          }
       if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, nComponents, &md))
-         return DEVICE_OK;
+      {
+        std::string label;
+        if(md.HasTag(MM::g_Keyword_Metadata_CameraLabel))
+            label = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
+        core_->postNotification(notif::ImageAddedToBuffer{label});
+        return DEVICE_OK;
+      }
       else
-         return DEVICE_BUFFER_OVERFLOW;
+        return DEVICE_BUFFER_OVERFLOW;
    }
    catch (CMMError& /*e*/)
    {
