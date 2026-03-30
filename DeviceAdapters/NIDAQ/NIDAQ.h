@@ -422,7 +422,51 @@ public:
     virtual void GetName(char* name) const;
     virtual bool Busy() { return false; }
 
-    virtual unsigned long GetNumberOfPositions()const { return numPos_; } // replace with numPos_ once API allows not creating Labels
+    // For 8-bit ports, all states are enumerable. For wider ports, only
+    // enumerate positions that have been explicitly labeled (e.g. via config
+    // file). This prevents MMCore from iterating billions of states.
+    // The State property limits still allow the full value range.
+    static const long maxEnumerablePositions_ = 65536;
+    virtual unsigned long GetNumberOfPositions()const {
+       if (numPos_ <= 255)
+          return numPos_ + 1;
+       return (highestLabeledPos_ >= 0 && highestLabeledPos_ < maxEnumerablePositions_)
+          ? (unsigned long)(highestLabeledPos_ + 1) : 0;
+    }
+
+    // Return the numeric string as default when no explicit label exists.
+    // This prevents errors when the Label property is read for unlabeled states.
+    virtual int GetPositionLabel(long pos, char* label) const
+    {
+       int ret = CStateDeviceBase<DigitalOutputPort>::GetPositionLabel(pos, label);
+       if (ret != DEVICE_OK)
+       {
+          CDeviceUtils::CopyLimitedString(label, std::to_string(pos).c_str());
+          return DEVICE_OK;
+       }
+       return ret;
+    }
+
+    // Override to fill in default labels for gaps when labels are added
+    // beyond the auto-generated range (e.g. from config file on wide ports).
+    virtual int SetPositionLabel(long pos, const char* label)
+    {
+       // Fill in default labels for any positions below pos that have no label
+       if (pos > highestLabeledPos_ && pos < maxEnumerablePositions_)
+       {
+          char buf[MM::MaxStrLength];
+          for (long i = highestLabeledPos_ + 1; i < pos; i++)
+          {
+             // Only fill if no label exists yet
+             if (CStateDeviceBase<DigitalOutputPort>::GetPositionLabel(i, buf) != DEVICE_OK)
+             {
+                CStateDeviceBase<DigitalOutputPort>::SetPositionLabel(i, std::to_string(i).c_str());
+             }
+          }
+          highestLabeledPos_ = pos;
+       }
+       return CStateDeviceBase<DigitalOutputPort>::SetPositionLabel(pos, label);
+    }
 
     // Gate (shutter) interface
     int SetGateOpen(bool open);
@@ -458,6 +502,7 @@ private:
     bool open_;
     long pos_;
     long numPos_;
+    long highestLabeledPos_;
     uInt32 portWidth_;
     long inputLine_;
     long firstStateSlider_;

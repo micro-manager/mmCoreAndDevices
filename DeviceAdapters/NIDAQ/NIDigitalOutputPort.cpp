@@ -35,6 +35,7 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    open_(true),
    pos_(0),
    numPos_(0),
+   highestLabeledPos_(-1),
    portWidth_(0),
    nrOfStateSliders_(4),
    inputLine_(8),
@@ -142,12 +143,26 @@ int DigitalOutputPort::Initialize()
    }
    else
    {
-      numPos_ = (1 << portWidth_) - 1;
+      numPos_ = (portWidth_ >= 32) ? 0x7FFFFFFF : (1L << portWidth_) - 1;
    }
 
    pAct = new CPropertyAction(this, &DigitalOutputPort::OnState);
    CreateIntegerProperty("State", 0, false, pAct);
    SetPropertyLimits("State", 0, numPos_);
+
+   pAct = new CPropertyAction(this, &CStateBase::OnLabel);
+   CreateProperty(MM::g_Keyword_Label, "", MM::String, false, pAct);
+
+   // For 8-bit ports, pre-populate labels for all states.
+   // For wider ports, labels are only created when explicitly set
+   // (e.g. via config file). The SetPositionLabel override fills gaps.
+   if (numPos_ <= 255)
+   {
+      for (long i = 0; i <= numPos_; i++)
+      {
+         SetPositionLabel(i, std::to_string(i).c_str());
+      }
+   }
 
    // In case someone left some pins high:
    SetState(0);
