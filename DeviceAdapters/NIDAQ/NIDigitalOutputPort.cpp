@@ -32,7 +32,6 @@ DigitalOutputPort::DigitalOutputPort(const std::string& port) :
    sequenceRunning_(false),
    blanking_(false),
    blankOnLow_(true),
-   open_(true),
    pos_(0),
    numPos_(0),
    highestLabeledPos_(-1),
@@ -169,7 +168,6 @@ int DigitalOutputPort::Initialize()
 
    // Gate Closed Position
    CreateProperty(MM::g_Keyword_Closed_Position, "0", MM::Integer, false);
-   GetGateOpen(open_);
 
    if (supportsBlankingAndSequencing_ && (uint32_t) nrOfStateSliders_ >= portWidth_) {
       nrOfStateSliders_ = portWidth_ - 1;
@@ -228,33 +226,18 @@ void DigitalOutputPort::GetName(char* name) const
 
 int DigitalOutputPort::SetGateOpen(bool open)
 {
-   if (open == open_)
+   // During blanking/sequencing, hardware controls the outputs via
+   // the trigger input. We cannot delegate to the base class because
+   // it calls SetPosition -> OnState, which rejects changes during
+   // sequencing. Just record the gate state for when we return to
+   // software-timed mode.
+   if (sequenceRunning_)
       return DEVICE_OK;
 
-   open_ = open;
-
-   // When a hardware-timed task (blanking/sequencing) is active,
-   // just update the flag — hardware controls the outputs.
-   if (blanking_ || sequenceRunning_)
-      return DEVICE_OK;
-
-   if (open)
-   {
-      return SetState(pos_);
-   }
-   else
-   {
-      long closedPosition;
-      GetProperty(MM::g_Keyword_Closed_Position, closedPosition);
-      return SetState(closedPosition);
-   }
-}
-
-
-int DigitalOutputPort::GetGateOpen(bool& open)
-{
-   open = open_;
-   return DEVICE_OK;
+   // Delegate to base class, which updates gateOpen_ and calls
+   // SetPosition -> OnState. OnState handles the blanking vs
+   // software-timed distinction.
+   return CStateDeviceBase<DigitalOutputPort>::SetGateOpen(open);
 }
 
 
@@ -269,12 +252,10 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (sequenceRunning_)
          return ERR_SEQUENCE_RUNNING;
 
-      bool gateOpen;
-      GetGateOpen(gateOpen);
       long pos;
       pProp->Get(pos);
-      if ((pos == pos_) && (open_ == gateOpen))
-         return DEVICE_OK;
+      bool gateOpen;
+      GetGateOpen(gateOpen);
 
       // When blanking is active, hardware controls on/off via the trigger
       // input, so always use the requested state. Gate only applies in
@@ -306,7 +287,6 @@ int DigitalOutputPort::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (err == DEVICE_OK)
       {
          pos_ = pos;
-         open_ = gateOpen;
       }
       else
       {

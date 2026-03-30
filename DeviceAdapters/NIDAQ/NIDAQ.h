@@ -470,7 +470,6 @@ public:
 
     // Gate (shutter) interface
     int SetGateOpen(bool open);
-    int GetGateOpen(bool& open);
 
     // action interface
     // ----------------
@@ -499,7 +498,6 @@ private:
     bool sequenceRunning_;
     bool blanking_;
     bool blankOnLow_;
-    bool open_;
     long pos_;
     long numPos_;
     long highestLabeledPos_;
