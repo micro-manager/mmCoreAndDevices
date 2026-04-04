@@ -2410,6 +2410,13 @@ void CMMCore::loadStageSequence(const char* label, std::vector<double> positionS
    std::shared_ptr<mmi::StageInstance> pStage =
       deviceManager_->GetDeviceOfType<mmi::StageInstance>(label);
 
+   unsigned long maxLength = getStageSequenceMaxLength(label);
+   if (positionSequence.size() > maxLength) {
+      throw CMMError("The length of the requested stage sequence (" + ToString(positionSequence.size()) +
+            ") exceeds the maximum allowed (" + ToString(maxLength) +
+            ") by the stage " + ToQuotedString(label));
+   }
+
    mmi::DeviceModuleLockGuard guard(pStage);
 
    int ret;
@@ -2562,8 +2569,20 @@ void CMMCore::loadXYStageSequence(const char* label,
                                   std::vector<double> xSequence,
                                   std::vector<double> ySequence) MMCORE_LEGACY_THROW(CMMError)
 {
+   if (xSequence.size() != ySequence.size()) {
+      throw CMMError("xSequence and ySequence must have the same length (got " +
+            ToString(xSequence.size()) + " and " + ToString(ySequence.size()) + ")");
+   }
+
    std::shared_ptr<mmi::XYStageInstance> pStage =
       deviceManager_->GetDeviceOfType<mmi::XYStageInstance>(label);
+
+   unsigned long maxLength = getXYStageSequenceMaxLength(label);
+   if (xSequence.size() > maxLength) {
+      throw CMMError("The length of the requested XY stage sequence (" + ToString(xSequence.size()) +
+            ") exceeds the maximum allowed (" + ToString(maxLength) +
+            ") by the XY stage " + ToQuotedString(label));
+   }
 
    mmi::DeviceModuleLockGuard guard(pStage);
 
@@ -6475,6 +6494,12 @@ void CMMCore::loadSLMSequence(const char* deviceLabel, std::vector<unsigned char
    std::shared_ptr<mmi::SLMInstance> pSLM =
       deviceManager_->GetDeviceOfType<mmi::SLMInstance>(deviceLabel);
 
+   unsigned long maxLength = getSLMSequenceMaxLength(deviceLabel);
+   if (imageSequence.size() > maxLength) {
+      throw CMMError("The length of the requested SLM sequence (" + ToString(imageSequence.size()) +
+            ") exceeds the maximum allowed (" + ToString(maxLength) +
+            ") by the SLM " + ToQuotedString(deviceLabel));
+   }
 
    mmi::DeviceModuleLockGuard guard(pSLM);
    int ret = pSLM->ClearSLMSequence();
