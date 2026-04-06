@@ -565,6 +565,8 @@ int ThorlabsUSBCam::StopSequenceAcquisition()
    int ret = is_StopLiveVideo(camHandle_, IS_DONT_WAIT);
    if (ret != IS_SUCCESS)
       LogMessage("Camera failed to stop live video.");
+   if (hEvent)
+      SetEvent(hEvent);
 
    if (!thd_->IsStopped()) {
       thd_->Stop();                                                       
