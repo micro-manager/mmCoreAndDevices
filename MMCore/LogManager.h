@@ -24,6 +24,7 @@ private:
    mutable std::mutex mutex_;
 
    LogLevel primaryLogLevel_;
+   LogLevel stderrLogLevel_;
 
    bool usingStdErr_;
    std::shared_ptr<logging::LogSink> stdErrSink_;
@@ -64,8 +65,9 @@ public:
 
    void SetPrimaryLogRotation(std::size_t maxFileSize, int maxBackupFiles);
 
-   void SetPrimaryLogLevel(LogLevel level);
+   void SetLogLevels(LogLevel level, bool setPrimary, bool setStderr);
    LogLevel GetPrimaryLogLevel() const;
+   LogLevel GetStderrLogLevel() const;
 
    LogFileHandle AddSecondaryLogFile(LogLevel level,
          const std::string& filename, bool truncate = true,
