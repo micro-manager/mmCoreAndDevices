@@ -269,7 +269,7 @@ void LegacyLaser::CreateShutterProperty( std::string saveCmd, std::string readCm
     RegisterPublicProperty( shutter_ );
 }
 
-void LegacyLaser::CreateDigitalModulationProperty()
+void LegacyLaser::CreateCmDigitalModulationProperty()
 {
     CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Digital Modulation", laserDriver_, "gdmes?" );
     property->RegisterEnumerationItem( "0", "sdmes 0", EnumerationItem_Disabled );
@@ -277,7 +277,7 @@ void LegacyLaser::CreateDigitalModulationProperty()
     RegisterPublicProperty( property );
 }
 
-void LegacyLaser::CreateAnalogModulationProperty()
+void LegacyLaser::CreateCmAnalogModulationProperty()
 {
     CustomizableEnumerationProperty* property = new CustomizableEnumerationProperty( "Analog Modulation", laserDriver_,  "games?" );
     property->RegisterEnumerationItem( "0", "sames 0", EnumerationItem_Disabled );

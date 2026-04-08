@@ -69,8 +69,8 @@ OldDpl06Laser::OldDpl06Laser( const std::string& wavelength, LaserDriver* driver
     CreatePowerReadingProperty();
     CreateCcCurrentSetpointProperty();
     CreateCurrentReadingProperty();
-    CreateDigitalModulationProperty();
-    CreateAnalogModulationProperty();
+    CreateCmDigitalModulationProperty();
+    CreateCmAnalogModulationProperty();
 
     CreateModulationCurrentHighSetpointProperty();
     CreateModulationCurrentLowSetpointProperty();

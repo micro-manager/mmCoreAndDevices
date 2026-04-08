@@ -97,8 +97,8 @@ protected:
     
     virtual void CreateLaserOnOffProperty() override;
     virtual void CreateShutterProperty( std::string saveCmd = "sdsn", std::string readCmd = "gdsn?" );
-    virtual void CreateDigitalModulationProperty() override;
-    virtual void CreateAnalogModulationProperty() override;
+    virtual void CreateCmDigitalModulationProperty() override;
+    virtual void CreateCmAnalogModulationProperty() override;
      
     virtual void CreatePmPowerSetpointProperty() override;
     virtual void CreateAnalogImpedanceProperty() override;

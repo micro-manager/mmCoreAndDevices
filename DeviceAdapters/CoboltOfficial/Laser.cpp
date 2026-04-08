@@ -272,7 +272,7 @@ void Laser::CreateCurrentReadingProperty()
 {
     DeviceProperty* property = new DeviceProperty( Property::Stereotype::Float, "Current Reading [" + currentUnit_ + "]", laserDriver_, "laser:current:reading?" );
     property->SetCaching( false );
-    RegisterPublicProperty( property )
+    RegisterPublicProperty( property );
 }
 
 void Laser::CreateCmDigitalModulationProperty()
