@@ -269,6 +269,10 @@ public:
 
    void setTimeoutMs(long timeoutMs);
    long getTimeoutMs();
+   void setDeviceTimeoutMs(const char* label, long timeoutMs) MMCORE_LEGACY_THROW(CMMError);
+   void unsetDeviceTimeout(const char* label) MMCORE_LEGACY_THROW(CMMError);
+   long getDeviceTimeoutMs(const char* label) MMCORE_LEGACY_THROW(CMMError);
+   bool hasDeviceTimeout(const char* label) MMCORE_LEGACY_THROW(CMMError);
 
    void sleep(double intervalMs) const;
    ///@}

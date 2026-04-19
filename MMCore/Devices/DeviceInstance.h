@@ -27,6 +27,7 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -81,6 +82,7 @@ private:
    logging::Logger coreLogger_;
    bool initializeCalled_ = false;
    bool initialized_ = false;
+   std::optional<long> timeoutMsOverride_{};
 
 public:
    DeviceInstance(const DeviceInstance&) = delete;
@@ -101,6 +103,10 @@ public:
 
    bool IsInitialized() const { return initialized_; }
    bool HasInitializationBeenAttempted() const { return initializeCalled_; }
+
+   std::optional<long> GetTimeoutMsOverride() const /* final */ { return timeoutMsOverride_; }
+   void SetTimeoutMsOverride(long ms) /* final */ { timeoutMsOverride_ = ms; }
+   void ClearTimeoutMsOverride() /* final */ { timeoutMsOverride_.reset(); }
 
 protected:
    // The DeviceInstance object owns the raw device pointer (pDevice) as soon
