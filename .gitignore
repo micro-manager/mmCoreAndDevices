@@ -73,8 +73,3 @@ test-reports/
 *.pb.cc
 *.pb.h
 bin
-*.dll
-*.exp
-*.lib
-*.pdb
-CoreLog*
