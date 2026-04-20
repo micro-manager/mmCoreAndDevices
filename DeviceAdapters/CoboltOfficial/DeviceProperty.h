@@ -62,9 +62,12 @@ public:
     using Property::GetValue;
     virtual int GetValue( std::string& string ) const;
 
+    virtual bool IsCacheEnabled() const;
+
+    virtual void Update() override;
+
 protected:
 
-    virtual bool IsCacheEnabled() const;
     void ClearCache() const;
     const std::string& GetCachedValue() const;
 

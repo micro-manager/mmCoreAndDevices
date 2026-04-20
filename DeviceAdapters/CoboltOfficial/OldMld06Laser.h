@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       Dpl06Laser.h
+// FILE:       OldMld06Laser.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,29 +34,27 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
 //
 
-#ifndef __COBOLT__DPL06_LASER_H
-#define __COBOLT__DPL06_LASER_H
+#ifndef __COBOLT__OLD_MLD06_LASER_H
+#define __COBOLT__OLD_MLD06_LASER_H
 
-#include "Laser.h"
+#include "LegacyLaser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
 class LaserDriver;
-class LaserStateProperty;
-class MutableDeviceProperty;
 
-class Dpl06Laser : public Laser
+class OldMld06Laser : public LegacyLaser
 {
 public:
 
-    Dpl06Laser( const std::string& wavelength, LaserDriver* device );
+    OldMld06Laser( const std::string& wavelength, LaserDriver* device );
 
-protected: 
-    
+protected:
+
     void CreateLaserStateProperty();
-    void CreateRunModeProperty();
+    void CreateRunmodeProperty();
 };
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__DPL06_LASER_H
+#endif // #ifndef __COBOLT__OLD_MLD06_LASER_H

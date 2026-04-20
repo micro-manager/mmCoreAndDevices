@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       SkyraLaser.h
+// FILE:       Gen5Laser.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -31,59 +31,31 @@
 //                specified in owner's manual may result in exposure to hazardous radiation and
 //                violation of the CE / CDRH laser safety compliance.
 //
-// AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
+// AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2025)
 //
 
-#ifndef __COBOLT__SKYRA_LASER_H
-#define __COBOLT__SKYRA_LASER_H
-
-#include <string>
+#ifndef __COBOLT__GEN5_LASER_H
+#define __COBOLT__GEN5_LASER_H
 
 #include "LegacyLaser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
-class SkyraLaser : public LegacyLaser
+class LaserDriver;
+
+class Gen5Laser : public LegacyLaser
 {
 public:
-    
-    SkyraLaser(
-        LaserDriver* driver,
-        const bool line1Enabled,
-        const bool line2Enabled,
-        const bool line3Enabled,
-        const bool line4Enabled );
+
+    Gen5Laser( const std::string& wavelength, LaserDriver* device );
 
 protected:
 
-    void CreateLineActivationProperty( const int line );
-    void CreateWavelengthProperty( const int line );
-    void CreateCcCurrentSetpointProperty( const int line );
-    void CreateCurrentReadingProperty( const int line );
-    void CreateCpPowerSetpointProperty( const int line );
+    virtual void CreateLaserStateProperty() override;
+    virtual void CreateRunmodeProperty() override;
     virtual void CreateFaultProperty() override;
-
-    void CreatePowerReadingProperty( const int line );
-    void CreateDigitalModulationEnabledProperty( const int line );
-    void CreateAnalogModulationEnabledProperty( const int line );
-
-    void CreateLaserStateProperty();
-
-    void CreateShutterProperty();
-    void CreateRunmodeProperty( const int line );
-
-    void CreateModulationCurrentLowSetpointProperty( const int line );
-    void CreateModulationCurrentHighSetpointProperty( const int line );
-
-private:
-
-    void CreateLineSpecificProperties( const int line );
-    double MaxCurrentSetpoint( const int line );
-
-    std::string MakeLineCommand( std::string command, const int line );
-    std::string MakeLineName( const int line );
 };
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__SKYRA_LASER_H
+#endif // #ifndef __COBOLT__GEN5_LASER_H

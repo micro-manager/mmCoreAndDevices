@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       Property.cpp
+// FILE:       Property.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,89 +34,61 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
 //
 
-#include "Property.h"
+#ifndef __COBOLT__MUTABLE_NUMERIC_PROPERTY_H
+#define __COBOLT__MUTABLE_NUMERIC_PROPERTY_H
+
+#include "MutableDeviceProperty.h"
 
 NAMESPACE_COBOLT_BEGIN
 
-int Property::NextPropertyId_ = 1;
-
-Property::Property( const Stereotype stereotype, const std::string& name ) :
-    stereotype_( stereotype ),
-    name_( name )
+template <typename T>
+class MutableNumericProperty : public MutableDeviceProperty
 {
-    const std::string propertyIdStr = std::to_string( NextPropertyId_++ );
-    name_ = ( std::string( 2 - propertyIdStr.length(), '0' ) + propertyIdStr ) + "-" + name;
-}
+public:
 
-int Property::IntroduceToGuiEnvironment( GuiEnvironment* )
-{
-    return return_code::ok;
-}
+    MutableNumericProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand, const std::string& setCommandBase, const T min, const T max ) :
+        MutableDeviceProperty( ResolveStereotype<T>(), name, laserDriver, getCommand ),
+        setCommandBase_( setCommandBase ),
+        min_( min ),
+        max_( max )
+    {}
 
-const std::string& Property::GetName() const
-{
-    return name_;
-}
-
-std::string Property::GetValue() const
-{
-    std::string value;
-    GetValue( value );
-    return value;
-}
-
-Property::Stereotype Property::GetStereotype() const
-{
-    return stereotype_;
-}
-
-bool Property::IsMutable() const
-{
-    return false;
-}
-
-int Property::OnGuiSetAction( GuiProperty& )
-{
-    Logger::Instance()->LogMessage( "Property[" + GetName() + "]::OnGuiSetAction(): Ignoring 'set' action on read-only property.", true );
-    return return_code::ok;
-}
-
-int Property::OnGuiGetAction( GuiProperty& guiProperty )
-{
-    std::string string;
-    int returnCode = GetValue( string );
-
-    if ( returnCode != return_code::ok ) {
-
-        SetToUnknownValue( guiProperty );
-        return returnCode;
+    virtual int IntroduceToGuiEnvironment( GuiEnvironment* environment )
+    {
+        return environment->RegisterAllowedGuiPropertyRange( GetName(), min_, max_ );
     }
 
-    guiProperty.Set( string );
+    virtual int SetValue( const std::string& value )
+    {
+        if ( !IsValidValue( value ) ) {
 
-    return returnCode;
-}
+            Logger::Instance()->LogError( "MutableNumericProperty[" + GetName() + "]::SetValue( ... ): Invalid value '" + value + "'" );
+            return return_code::invalid_value;
+        }
 
-/**
- * \brief The property object represented in a string. For logging/debug purposes.
- */
-std::string Property::ObjectString() const
-{
-    return "stereotype = " + std::to_string( (long double) stereotype_ ) + "; name_ = " + name_ + "; ";
-}
-
-void Property::SetToUnknownValue( std::string& string ) const
-{
-    string = "Unknown";
-}
-
-void Property::SetToUnknownValue( GuiProperty& guiProperty ) const
-{
-    switch ( GetStereotype() ) {
-        case Stereotype::Float:   guiProperty.Set( "0" ); break;
-        case Stereotype::Integer: guiProperty.Set( "0" ); break;
-        case Stereotype::String:  guiProperty.Set( "Unknown" ); break;
+        return laserDriver_->SendCommand( setCommandBase_ + " " + value );
     }
-}
+    
+protected:
+
+    bool IsValidValue( const std::string& value ) const
+    {
+        T numericValue = (T) atof( value.c_str() );
+        return ( min_ <= numericValue && numericValue <= max_ );
+    }
+
+private:
+
+    template <typename S>   static Property::Stereotype ResolveStereotype();
+    template <>             static Property::Stereotype ResolveStereotype<int>() { return Property::Stereotype::Integer; }
+    template <>             static Property::Stereotype ResolveStereotype<double>() { return Property::Stereotype::Float; }
+    
+    std::string setCommandBase_;
+
+    T min_;
+    T max_;
+}; 
 
 NAMESPACE_COBOLT_END
+
+#endif // #ifndef __COBOLT__MUTABLE_NUMERIC_PROPERTY_H

@@ -50,16 +50,9 @@ class EnumerationProperty : public MutableDeviceProperty
 
 public:
     
-    EnumerationProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand );
+    EnumerationProperty( const std::string& name, LaserDriver* laserDriver, const std::string& commandName );
 
     virtual int IntroduceToGuiEnvironment( GuiEnvironment* environment );
-
-    /**
-     * \param deviceValue The response of the getCommand that corresponds to the enumeration item (e.g. 1 might be matched to 'enabled').
-     * \param setCommand The set command (with argument, if applicable) to send when intending to set the property to the particular enumeration item.
-     * \param name The name of the value (e.g. 'on' or 'enabled' or 'constant current'). Use it when presenting the property in the GUI.
-     */
-    void RegisterEnumerationItem( const std::string& deviceValue, const std::string& setCommand, const std::string& name );
 
     virtual int GetValue( std::string& string ) const;
     virtual int SetValue( const std::string& guiValue );
@@ -68,21 +61,10 @@ protected:
 
     bool IsValidValue( const std::string& guiValue );
 
-    std::string ResolveDeviceValue( const std::string& guiValue ) const;
-    std::string ResolveEnumerationItem( const std::string& deviceValue ) const;
-
 private:
 
-    struct EnumerationItem
-    {
-        std::string deviceValue;
-        std::string setCommand;
-        std::string name;
-    };
-
-    typedef std::vector<EnumerationItem> enumeration_items_t;
-
-    enumeration_items_t enumerationItems_;
+    const std::string commandName_;
+    std::vector<std::string> enumerationItems_;
 };
 
 NAMESPACE_COBOLT_END

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       SkyraLaser.h
+// FILE:       CustomizableEnumerationProperty.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -34,56 +34,57 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
 //
 
-#ifndef __COBOLT__SKYRA_LASER_H
-#define __COBOLT__SKYRA_LASER_H
+#ifndef __COBOLT__CUSTOMIZABLE_ENUMERATION_PROPERTY_H
+#define __COBOLT__CUSTOMIZABLE_ENUMERATION_PROPERTY_H
 
-#include <string>
-
-#include "LegacyLaser.h"
+#include "MutableDeviceProperty.h"
 
 NAMESPACE_COBOLT_BEGIN
 
-class SkyraLaser : public LegacyLaser
+/**
+ * Any (mutable) property that only can be set to one of a pre-defined set of values.
+ */
+class CustomizableEnumerationProperty : public MutableDeviceProperty
 {
+    typedef MutableDeviceProperty Parent;
+
 public:
     
-    SkyraLaser(
-        LaserDriver* driver,
-        const bool line1Enabled,
-        const bool line2Enabled,
-        const bool line3Enabled,
-        const bool line4Enabled );
+    CustomizableEnumerationProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand );
+
+    virtual int IntroduceToGuiEnvironment( GuiEnvironment* environment );
+
+    /**
+     * \param deviceValue The response of the getCommand that corresponds to the enumeration item (e.g. 1 might be matched to 'enabled').
+     * \param setCommand The set command (with argument, if applicable) to send when intending to set the property to the particular enumeration item.
+     * \param name The name of the value (e.g. 'on' or 'enabled' or 'constant current'). Use it when presenting the property in the GUI.
+     */
+    void RegisterEnumerationItem( const std::string& deviceValue, const std::string& setCommand, const std::string& name );
+
+    virtual int GetValue( std::string& string ) const;
+    virtual int SetValue( const std::string& guiValue );
 
 protected:
 
-    void CreateLineActivationProperty( const int line );
-    void CreateWavelengthProperty( const int line );
-    void CreateCcCurrentSetpointProperty( const int line );
-    void CreateCurrentReadingProperty( const int line );
-    void CreateCpPowerSetpointProperty( const int line );
-    virtual void CreateFaultProperty() override;
+    bool IsValidValue( const std::string& guiValue );
 
-    void CreatePowerReadingProperty( const int line );
-    void CreateDigitalModulationEnabledProperty( const int line );
-    void CreateAnalogModulationEnabledProperty( const int line );
-
-    void CreateLaserStateProperty();
-
-    void CreateShutterProperty();
-    void CreateRunmodeProperty( const int line );
-
-    void CreateModulationCurrentLowSetpointProperty( const int line );
-    void CreateModulationCurrentHighSetpointProperty( const int line );
+    std::string ResolveDeviceValue( const std::string& guiValue ) const;
+    std::string ResolveEnumerationItem( const std::string& deviceValue ) const;
 
 private:
 
-    void CreateLineSpecificProperties( const int line );
-    double MaxCurrentSetpoint( const int line );
+    struct EnumerationItem
+    {
+        std::string deviceValue;
+        std::string setCommand;
+        std::string name;
+    };
 
-    std::string MakeLineCommand( std::string command, const int line );
-    std::string MakeLineName( const int line );
+    typedef std::vector<EnumerationItem> enumeration_items_t;
+
+    enumeration_items_t enumerationItems_;
 };
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__SKYRA_LASER_H
+#endif // #ifndef __COBOLT__CUSTOMIZABLE_ENUMERATION_PROPERTY_H

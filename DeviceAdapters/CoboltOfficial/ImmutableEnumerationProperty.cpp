@@ -35,12 +35,11 @@
 //
 
 #include "ImmutableEnumerationProperty.h"
-#include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
  
 ImmutableEnumerationProperty::ImmutableEnumerationProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand ) :
-    DeviceProperty( Property::String, name, laserDriver, getCommand )
+    DeviceProperty( Property::Stereotype::String, name, laserDriver, getCommand )
 {}
 
 void ImmutableEnumerationProperty::RegisterEnumerationItem( const std::string& deviceValue, const std::string& name )

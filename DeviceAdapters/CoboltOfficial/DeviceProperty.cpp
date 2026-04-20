@@ -35,7 +35,6 @@
 //
 
 #include "DeviceProperty.h"
-#include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
@@ -87,6 +86,13 @@ int DeviceProperty::GetValue( std::string& string ) const
 bool DeviceProperty::IsCacheEnabled() const
 {
     return doCache_;
+}
+
+void DeviceProperty::Update()
+{
+    if ( !IsCacheEnabled() ) {
+        laserDriver_->SendCommand( getCommand_, &cachedValue_ );
+    }
 }
 
 void DeviceProperty::ClearCache() const

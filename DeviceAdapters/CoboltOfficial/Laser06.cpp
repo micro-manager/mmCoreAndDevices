@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       Mld06Laser.h
+// FILE:       Laser06.cpp
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -31,30 +31,75 @@
 //                specified in owner's manual may result in exposure to hazardous radiation and
 //                violation of the CE / CDRH laser safety compliance.
 //
-// AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
+// AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2025)
 //
 
-#ifndef __COBOLT__MLD06_LASER_H
-#define __COBOLT__MLD06_LASER_H
+#include <assert.h>
 
-#include "Laser.h"
+#include "Laser06.h"
 
-NAMESPACE_COBOLT_BEGIN
+#include "LaserDriver.h"
+#include "LaserStateProperty.h"
+#include "CustomizableEnumerationProperty.h"
+#include "EnumerationProperty.h"
+#include "NoShutterCommandLegacyFix.h"
+#include "LaserShutterProperty.h"
+#include "MutableDeviceProperty.h"
+#include "ImmutableEnumerationProperty.h"
+#include "StaticStringProperty.h"
 
-class LaserDriver;
+using namespace std;
+using namespace cobolt;
 
-class Mld06Laser : public Laser
+Laser06::Laser06( const std::string& name, const std::string& wavelength, LaserDriver* driver ) :
+    Laser( name, wavelength, driver )
 {
-public:
+    currentUnit_ = Milliamperes;
+    powerUnit_ = Milliwatts;
 
-    Mld06Laser( const std::string& wavelength, LaserDriver* device );
+    CreateNameProperty();
+    CreateWavelengthProperty( wavelength );
+    CreateModelProperty();
+    CreateSerialNumberProperty();
+    CreateFirmwareVersionProperty();
+    CreateOperatingHoursProperty();
+    CreateKeyswitchProperty();
+    CreateLaserStateProperty();
+    CreateFaultProperty();
 
-protected:
+    // Laser06 Control Group
+    CreateClearFaultProperty();
+    CreateAutostartControlProperty();
+    CreateShutterProperty();
+    CreateRunmodeProperty();
 
-    void CreateLaserStateProperty();
-    void CreateRunModeProperty();
-};
+    // Readings Group
+    CreatePowerReadingProperty();
+    CreateCurrentReadingProperty();
 
-NAMESPACE_COBOLT_END
+    // Constant Power Runmode Group
+    CreateCpPowerSetpointProperty();
 
-#endif // #ifndef __COBOLT__MLD06_LASER_H
+    // Constant Current Runmode Group
+    CreateCcCurrentSetpointProperty();
+
+    // Power Modulation Runmode Group
+    CreatePmPowerSetpointProperty();
+    CreatePmDigitalModulationProperty();
+    CreatePmAnalogModulationProperty();
+
+    // Current Modulation Runmode Group
+    CreateCmCurrentHighSetpointProperty();
+    CreateCmDigitalModulationProperty();
+    CreateCmAnalogModulationProperty();
+
+    // Modulation Settings Group
+    CreateAnalogImpedanceProperty();
+    CreateModulationInputVoltageMaxProperty();
+
+    CreateAdapterVersionProperty();
+}
+
+Laser06::~Laser06()
+{
+}

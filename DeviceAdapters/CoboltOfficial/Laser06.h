@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:       SkyraLaser.h
+// FILE:       Laser06.h
 // PROJECT:    MicroManager
 // SUBSYSTEM:  DeviceAdapters
 //-----------------------------------------------------------------------------
@@ -31,59 +31,24 @@
 //                specified in owner's manual may result in exposure to hazardous radiation and
 //                violation of the CE / CDRH laser safety compliance.
 //
-// AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
+// AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2025)
 //
 
-#ifndef __COBOLT__SKYRA_LASER_H
-#define __COBOLT__SKYRA_LASER_H
+#ifndef __COBOLT__LASER06_H
+#define __COBOLT__LASER06_H
 
-#include <string>
-
-#include "LegacyLaser.h"
+#include "Laser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
-class SkyraLaser : public LegacyLaser
+class Laser06 : public Laser
 {
 public:
-    
-    SkyraLaser(
-        LaserDriver* driver,
-        const bool line1Enabled,
-        const bool line2Enabled,
-        const bool line3Enabled,
-        const bool line4Enabled );
 
-protected:
-
-    void CreateLineActivationProperty( const int line );
-    void CreateWavelengthProperty( const int line );
-    void CreateCcCurrentSetpointProperty( const int line );
-    void CreateCurrentReadingProperty( const int line );
-    void CreateCpPowerSetpointProperty( const int line );
-    virtual void CreateFaultProperty() override;
-
-    void CreatePowerReadingProperty( const int line );
-    void CreateDigitalModulationEnabledProperty( const int line );
-    void CreateAnalogModulationEnabledProperty( const int line );
-
-    void CreateLaserStateProperty();
-
-    void CreateShutterProperty();
-    void CreateRunmodeProperty( const int line );
-
-    void CreateModulationCurrentLowSetpointProperty( const int line );
-    void CreateModulationCurrentHighSetpointProperty( const int line );
-
-private:
-
-    void CreateLineSpecificProperties( const int line );
-    double MaxCurrentSetpoint( const int line );
-
-    std::string MakeLineCommand( std::string command, const int line );
-    std::string MakeLineName( const int line );
+    Laser06( const std::string& name, const std::string& wavelength, LaserDriver* driver );
+    ~Laser06();
 };
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__SKYRA_LASER_H
+#endif // #ifndef __COBOLT__LASER06_H

@@ -66,8 +66,9 @@ int LaserStateProperty::GetValue( std::string& string ) const
 bool LaserStateProperty::AllowsShutter() const
 {
     std::string deviceValue;
-    Parent::GetValue( deviceValue ); // Do not use local overload as it would translate deviceValue to guiValue.
 
+    Parent::GetValue( deviceValue ); // Do not use local overload as it would translate deviceValue to guiValue.
+    
     return ( shutterAllowedStates_.find( deviceValue ) != shutterAllowedStates_.end() );
 }
 

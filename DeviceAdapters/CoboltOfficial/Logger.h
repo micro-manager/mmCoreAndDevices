@@ -86,7 +86,7 @@ public:
 
 private:
 
-    Logger() {}
+    Logger() : gateway_( NULL ) {}
 
     const Gateway* gateway_;
 };

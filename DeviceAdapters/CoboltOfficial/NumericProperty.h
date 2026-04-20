@@ -34,19 +34,19 @@
 // AUTHORS:       Lukas Kalinski / lukas.kalinski@coboltlasers.com (2020)
 //
 
-#ifndef __COBOLT__NUMERIC_PROPERTY_H
-#define __COBOLT__NUMERIC_PROPERTY_H
+#ifndef __COBOLT__MUTABLE_NUMERIC_PROPERTY_H
+#define __COBOLT__MUTABLE_NUMERIC_PROPERTY_H
 
 #include "MutableDeviceProperty.h"
 
 NAMESPACE_COBOLT_BEGIN
 
 template <typename T>
-class NumericProperty : public MutableDeviceProperty
+class MutableNumericProperty : public MutableDeviceProperty
 {
 public:
 
-    NumericProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand, const std::string& setCommandBase, const T min, const T max ) :
+    MutableNumericProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand, const std::string& setCommandBase, const T min, const T max ) :
         MutableDeviceProperty( ResolveStereotype<T>(), name, laserDriver, getCommand ),
         setCommandBase_( setCommandBase ),
         min_( min ),
@@ -62,7 +62,7 @@ public:
     {
         if ( !IsValidValue( value ) ) {
 
-            Logger::Instance()->LogError( "NumericProperty[" + GetName() + "]::SetValue( ... ): Invalid value '" + value + "'" );
+            Logger::Instance()->LogError( "MutableNumericProperty[" + GetName() + "]::SetValue( ... ): Invalid value '" + value + "'" );
             return return_code::invalid_value;
         }
 
@@ -80,8 +80,8 @@ protected:
 private:
 
     template <typename S>   static Property::Stereotype ResolveStereotype();
-    template <>             static Property::Stereotype ResolveStereotype<int>() { return Property::Integer; }
-    template <>             static Property::Stereotype ResolveStereotype<double>() { return Property::Float; }
+    template <>             static Property::Stereotype ResolveStereotype<int>() { return Property::Stereotype::Integer; }
+    template <>             static Property::Stereotype ResolveStereotype<double>() { return Property::Stereotype::Float; }
     
     std::string setCommandBase_;
 
@@ -91,4 +91,4 @@ private:
 
 NAMESPACE_COBOLT_END
 
-#endif // #ifndef __COBOLT__NUMERIC_PROPERTY_H
+#endif // #ifndef __COBOLT__MUTABLE_NUMERIC_PROPERTY_H

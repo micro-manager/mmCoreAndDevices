@@ -114,9 +114,9 @@ CoboltOfficial::CoboltOfficial() :
     SetErrorText( cobolt::return_code::unsupported_device_property_value,       "Unsupported device response." );
     
     // Create non-laser properties:
-    CreateProperty( MM::g_Keyword_Name,         g_DeviceName,               MM::String, true );
-    CreateProperty( "Vendor",                   g_DeviceVendorName,         MM::String, true );
-    CreateProperty( MM::g_Keyword_Description,  g_DeviceDescription,        MM::String, true );
+    CreateProperty( "00-Name",                  g_DeviceName,               MM::String, true );
+    CreateProperty( "00-Vendor",                g_DeviceVendorName,         MM::String, true );
+    CreateProperty( "00-Description",           g_DeviceDescription,        MM::String, true );
     CreateProperty( MM::g_Keyword_Port,         g_Property_Port_None,       MM::String, false, new CPropertyAction( this, &CoboltOfficial::OnPropertyAction_Port ), true );
     
     UpdateStatus();
@@ -145,7 +145,7 @@ int CoboltOfficial::Initialize()
     }
 
     // Make sure 'device mode' is selected:
-    //SendCommand( "1" );
+    SendCommand( "1" );
 
     laser_ = LaserFactory::Create( this );
 
@@ -272,17 +272,25 @@ int CoboltOfficial::SendCommand( const std::string& command, std::string* respon
                     response->find( "Error" ) != std::string::npos ||
                     response->find( "ERROR" ) != std::string::npos ) {
 
-            Logger::Instance()->LogMessage( "CoboltOfficial::SendCommand: Sent: " + command + " Reply received: " + *response, true );
+            Logger::Instance()->LogMessage( "CoboltOfficial::SendCommand: Sent: '" + command + "' Reply received: '" + *response + "'", true);
             returnCode = cobolt::return_code::unsupported_command;
         }
+
     } else {
 
         // Flush the response (failing to do so will result in this response being provided as the response of the next command):
         std::string ignoredResponse;
         GetSerialAnswer( port_.c_str(), "\r\n", ignoredResponse );
+
+        const bool echoOn = ( command == ignoredResponse );
+        if ( echoOn ) {
+            GetSerialAnswer(port_.c_str(), "\r\n", ignoredResponse);
+        }
         
         if ( returnCode != cobolt::return_code::ok ) {
             Logger::Instance()->LogMessage( "CoboltOfficial::SendCommand: SendSerialCommand Failed: " + std::to_string( (long long) returnCode ), true );
+        } else {
+            Logger::Instance()->LogMessage( "CoboltOfficial::SendCommand: Sent: '" + command + "' Reply received and ignored: '" + ignoredResponse + "'", true);
         }
     }
     return returnCode;
@@ -348,9 +356,9 @@ MM::PropertyType CoboltOfficial::ResolvePropertyType( const cobolt::Property::St
 {
     switch ( stereotype ) {
 
-        case Property::Float:   return MM::Float;
-        case Property::Integer: return MM::Integer;
-        case Property::String:  return MM::String;
+        case Property::Stereotype::Float:   return MM::Float;
+        case Property::Stereotype::Integer: return MM::Integer;
+        case Property::Stereotype::String:  return MM::String;
     }
 
     return MM::Undef;

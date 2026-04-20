@@ -37,10 +37,10 @@
 #ifndef __COBOLT__NO_SHUTTER_COMMAND_LEGACY_FIX_H
 #define __COBOLT__NO_SHUTTER_COMMAND_LEGACY_FIX_H
 
-#include "EnumerationProperty.h"
+#include "CustomizableEnumerationProperty.h"
 #include "LaserShutterProperty.h"
-#include "NumericProperty.h"
-#include "Laser.h"
+#include "MutableNumericProperty.h"
+#include "LegacyLaser.h"
 
 NAMESPACE_COBOLT_BEGIN
 
@@ -51,15 +51,19 @@ namespace legacy
         class PersistedLaserState
         { 
         public:
+            std::string savedCurrentSetpoint;
+            std::string savedRunMode;
 
-            PersistedLaserState( LaserDriver* laserDriver ) :
-                laserDriver_( laserDriver )
+            PersistedLaserState( LaserDriver* laserDriver, const std::string& getPersistedDataCommand, const std::string& setPersistedDataCommand ) :
+                laserDriver_( laserDriver ),
+                _getPersistedDataCommand( getPersistedDataCommand ),
+                _setPersistedDataCommand( setPersistedDataCommand )
             {}
 
             bool PersistedStateExists() const
             {
                 std::string persistedValue;
-                laserDriver_->SendCommand( "gdsn?", &persistedValue );
+                laserDriver_->SendCommand( _getPersistedDataCommand, &persistedValue );
                 return IsValidPersistedState( persistedValue );
             }
             
@@ -69,8 +73,9 @@ namespace legacy
                 Fetch( &isShutterOpenStr, NULL, &currentSetpoint );
 
                 char valueToSave[ 128 ];
-                snprintf( valueToSave, sizeof(valueToSave), "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
-                const std::string saveCommand = "sdsn " + std::string( valueToSave );
+                snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
+                const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
+                Logger::Instance()->LogMessage("CoboltShutter :" + saveCommand, true);
 
                 return laserDriver_->SendCommand( saveCommand );
             }
@@ -81,8 +86,8 @@ namespace legacy
                 Fetch( &isShutterOpenStr, &runmode, NULL );
 
                 char valueToSave[ 128 ];
-                snprintf( valueToSave, sizeof(valueToSave), "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
-                const std::string saveCommand = "sdsn " + std::string( valueToSave );
+                snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
+                const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
 
                 return laserDriver_->SendCommand( saveCommand );
             }
@@ -90,8 +95,12 @@ namespace legacy
             int PersistState( const bool isShutterOpen, const std::string& runmode, const std::string& currentSetpoint )
             {
                 char valueToSave[ 128 ];
-                snprintf( valueToSave, sizeof(valueToSave), "MM[%s;%s;%s]", ( isShutterOpen ? "1" : "0" ), runmode.c_str(), currentSetpoint.c_str() );
-                const std::string saveCommand = "sdsn " + std::string( valueToSave );
+                snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", ( isShutterOpen ? "1" : "0" ), runmode.c_str(), currentSetpoint.c_str() );
+                const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
+
+                Logger::Instance()->LogMessage("CoboltShutter : Save state" + saveCommand, true);
+                savedCurrentSetpoint = currentSetpoint;
+                savedRunMode = runmode;
 
                 return laserDriver_->SendCommand( saveCommand );
             }
@@ -125,7 +134,7 @@ namespace legacy
             int Fetch( std::string* isShutterOpen, std::string* runmode, std::string* currentSetpoint ) const
             {
                 std::string persistedValue;
-                laserDriver_->SendCommand( "gdsn?", &persistedValue );
+                laserDriver_->SendCommand( _getPersistedDataCommand, &persistedValue );
 
                 if ( !IsValidPersistedState( persistedValue ) ) {
                     return return_code::error;
@@ -150,7 +159,7 @@ namespace legacy
                         case 2: if ( currentSetpoint != NULL )  { currentSetpoint->append( 1, persistedValue[ i ] ); }  break; 
                     }
                 }
-
+                
                 if ( isShutterOpen != NULL && *isShutterOpen == "" )     { return return_code::error; }
                 if ( runmode != NULL && *runmode == "" )                 { return return_code::error; }
                 if ( currentSetpoint != NULL && *currentSetpoint == "" ) { return return_code::error; }
@@ -164,19 +173,31 @@ namespace legacy
             }
 
             LaserDriver* laserDriver_;
+
+            const std::string _getPersistedDataCommand;
+            const std::string _setPersistedDataCommand;
         };
 
-        class LaserCurrentProperty : public NumericProperty<double>
+        class LaserCurrentProperty : public MutableNumericProperty<double>
         {
-            typedef NumericProperty<double> Parent;
+            typedef MutableNumericProperty<double> Parent;
 
         public:
 
-            LaserCurrentProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand,
-                const std::string& setCommandBase, const double min, const double max, Laser* laser ) :
-                NumericProperty<double>( name, laserDriver, getCommand, setCommandBase, min, max ),
+            LaserCurrentProperty(
+                const std::string& name,
+                LaserDriver* laserDriver,
+                const std::string& getCommand,
+                const std::string& setCommandBase,
+                const double min,
+                const double max,
+                LegacyLaser* laser,
+                const std::string& getPersistedDataCommand,
+                const std::string& setPersistedDataCommand
+            ) :
+                MutableNumericProperty<double>( name, laserDriver, getCommand, setCommandBase, min, max ),
                 laser_( laser ),
-                laserStatePersistence_( laserDriver )
+                laserStatePersistence_( laserDriver, getPersistedDataCommand, setPersistedDataCommand )
             {}
 
             virtual bool IsCacheEnabled() const
@@ -215,20 +236,27 @@ namespace legacy
 
         private:
 
-            Laser* laser_;
+            LegacyLaser* laser_;
             PersistedLaserState laserStatePersistence_;
         };
          
-        class LaserRunModeProperty : public EnumerationProperty
+        class LaserRunModeProperty : public CustomizableEnumerationProperty
         {
-            typedef EnumerationProperty Parent;
+            typedef CustomizableEnumerationProperty Parent;
 
         public:
             
-            LaserRunModeProperty( const std::string& name, LaserDriver* laserDriver, const std::string& getCommand, Laser* laser ) :
-                EnumerationProperty( name, laserDriver, getCommand ),
+            LaserRunModeProperty(
+                const std::string& name,
+                LaserDriver* laserDriver,
+                const std::string& getCommand,
+                LegacyLaser* laser,
+                const std::string& getPersistedDataCommand,
+                const std::string& setPersistedDataCommand
+            ) :
+                CustomizableEnumerationProperty( name, laserDriver, getCommand ),
                 laser_( laser ),
-                laserStatePersistence_( laserDriver )
+                laserStatePersistence_( laserDriver, getPersistedDataCommand, setPersistedDataCommand )
             {
                 // We don't want caching as the value retrieval is more complex here:
                 SetCaching( false );
@@ -281,7 +309,7 @@ namespace legacy
 
         private:
 
-            Laser* laser_;
+            LegacyLaser* laser_;
             PersistedLaserState laserStatePersistence_;
         };
 
@@ -289,7 +317,12 @@ namespace legacy
         {
         public:
 
-            LaserShutterPropertyCdrh( const std::string& name, LaserDriver* laserDriver, Laser* laser );
+            LaserShutterPropertyCdrh(
+                const std::string& name,
+                LaserDriver* laserDriver,
+                LegacyLaser* laser,
+                const std::string& getPersistedDataCommand,
+                const std::string& setPersistedDataCommand );
             
             virtual int IntroduceToGuiEnvironment( GuiEnvironment* environment );
 
@@ -306,11 +339,11 @@ namespace legacy
 
         class LaserShutterPropertyOem : public cobolt::LaserShutterProperty
         {
-            typedef EnumerationProperty Parent;
+            typedef CustomizableEnumerationProperty Parent;
 
         public:
 
-            LaserShutterPropertyOem( const std::string& name, LaserDriver* laserDriver, Laser* laser ) :
+            LaserShutterPropertyOem( const std::string& name, LaserDriver* laserDriver, LegacyLaser* laser ) :
                 cobolt::LaserShutterProperty( name, laserDriver, laser, "l0", "l1" ),
                 laser_( laser )
             {
@@ -327,22 +360,22 @@ namespace legacy
 
         private:
 
-            Laser* laser_;
+            LegacyLaser* laser_;
         };
 
         namespace skyra
         {
-            class LineActivationProperty : public EnumerationProperty
+            class LineActivationProperty : public CustomizableEnumerationProperty
             {
-                typedef EnumerationProperty Parent;
+                typedef CustomizableEnumerationProperty Parent;
 
             public:
 
                 static const std::string Value_Active;
                 static const std::string Value_Inactive;
 
-                LineActivationProperty( const int line, const std::string& name, LaserDriver* laserDriver, Laser* laser ) :
-                    EnumerationProperty( name, laserDriver, std::to_string( (long long) line ) + "gla?" ),
+                LineActivationProperty( const int line, const std::string& name, LaserDriver* laserDriver, LegacyLaser* laser ) :
+                    CustomizableEnumerationProperty( name, laserDriver, std::to_string( (long long) line ) + "gla?" ),
                     userValue_( "" ),
                     laser_( laser )
                 {
@@ -403,7 +436,7 @@ namespace legacy
                  */
                 std::string userValue_;
                 
-                Laser* laser_;
+                LegacyLaser* laser_;
             };
 
             class LaserShutterProperty : public cobolt::LaserShutterProperty
@@ -412,7 +445,7 @@ namespace legacy
 
             public:
 
-                LaserShutterProperty( const std::string& name, LaserDriver* laserDriver, Laser* laser ) :
+                LaserShutterProperty( const std::string& name, LaserDriver* laserDriver, LegacyLaser* laser ) :
                     cobolt::LaserShutterProperty( name, laserDriver, laser )
                 {
                 }

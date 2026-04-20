@@ -70,7 +70,7 @@ class Property
 {
 public:
 
-    enum Stereotype { String, Float, Integer };
+    enum class Stereotype { String, Float, Integer };
     
     static void ResetIdGenerator()
     {
@@ -78,6 +78,7 @@ public:
     }
 
     Property( const Stereotype stereotype, const std::string& name );
+    virtual ~Property() {}
     
     virtual int IntroduceToGuiEnvironment( GuiEnvironment* );
 
@@ -91,6 +92,8 @@ public:
     virtual bool IsMutable() const;
     virtual int OnGuiSetAction( GuiProperty& );
     virtual int OnGuiGetAction( GuiProperty& guiProperty );
+
+    virtual void Update() {}
 
     /**
      * \brief The property object represented in a string. For logging/debug purposes.
