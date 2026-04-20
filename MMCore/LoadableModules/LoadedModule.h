@@ -21,8 +21,11 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 
+namespace mmcore {
+namespace internal {
 
 class LoadedModuleImpl;
 
@@ -39,6 +42,9 @@ public:
    void* GetFunction(const char* funcName);
 
 private:
-   LoadedModuleImpl* pImpl_;
+   std::unique_ptr<LoadedModuleImpl> pImpl_;
    const std::string filename_;
 };
+
+} // namespace internal
+} // namespace mmcore

@@ -5,13 +5,14 @@
 #include "atcore++.h"
 #include "MMDeviceConstants.h"
 #include "Property.h"
+#include "IProperty.h"
 
 
 class MySequenceThread;
 class CAndorSDK3Camera;
 class SnapShotControl;
 
-class TEnumProperty : public andor::IObserver
+class TEnumProperty : public andor::IObserver, public IProperty
 {
 public:
    TEnumProperty(const std::string & MM_name, andor::IEnum* enum_feature,

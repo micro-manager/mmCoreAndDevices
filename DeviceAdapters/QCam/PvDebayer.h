@@ -28,6 +28,8 @@
 
 #include "ImgBuffer.h"
 
+#include <vector>
+
 /* 
 * RGB scales resulting from White 
 * Balance algorithm plugin

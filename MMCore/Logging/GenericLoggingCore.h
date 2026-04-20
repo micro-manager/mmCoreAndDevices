@@ -29,10 +29,9 @@
 #include <string>
 #include <vector>
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
 
 enum SinkMode
@@ -42,8 +41,7 @@ enum SinkMode
 };
 
 
-namespace internal
-{
+namespace internal {
 
 
 template <class TMetadata>
@@ -310,4 +308,5 @@ private:
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

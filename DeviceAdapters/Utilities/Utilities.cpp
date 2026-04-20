@@ -34,8 +34,6 @@
 
 #include "ModuleInterface.h"
 
-#include <boost/lexical_cast.hpp>
-
 #include <algorithm>
 
 
@@ -50,12 +48,14 @@ const char* g_DeviceNameDAShutter = "DA Shutter";
 const char* g_DeviceNameDAMonochromator = "DA Monochromator";
 const char* g_DeviceNameDAZStage = "DA Z Stage";
 const char* g_DeviceNameDAXYStage = "DA XY Stage";
+const char* g_DeviceNamePropertyShutter = "Property Shutter";
 const char* g_DeviceNameDATTLStateDevice = "DA TTL State Device";
 const char* g_DeviceNameDAGalvoDevice = "DA Galvo";
 const char* g_DeviceNameMultiDAStateDevice = "Multi DA State Device";
 const char* g_DeviceNameAutoFocusStage = "AutoFocus Stage";
 const char* g_DeviceNameStateDeviceShutter = "State Device Shutter";
 const char* g_DeviceNameSerialDTRShutter = "Serial port DTR Shutter";
+const char* g_DeviceNameStageStateDevice = "Stage State Device";
 
 const char* g_PropertyMinUm = "Stage Low Position(um)";
 const char* g_PropertyMaxUm = "Stage High Position(um)";
@@ -89,7 +89,9 @@ MODULE_API void InitializeModuleData()
    RegisterDevice(g_DeviceNameMultiDAStateDevice, MM::StateDevice, "Several DAs as a single state device allowing digital masking");
    RegisterDevice(g_DeviceNameAutoFocusStage, MM::StageDevice, "AutoFocus offset acting as a Z-stage");
    RegisterDevice(g_DeviceNameStateDeviceShutter, MM::ShutterDevice, "State device used as a shutter");
+   RegisterDevice(g_DeviceNamePropertyShutter, MM::ShutterDevice, "Any device property used as a shutter");
    RegisterDevice(g_DeviceNameSerialDTRShutter, MM::ShutterDevice, "Serial port DTR used as a shutter");
+   RegisterDevice(g_DeviceNameStageStateDevice, MM::StateDevice, "Stage used as a discrete state device");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)                  
@@ -125,8 +127,12 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
       return new AutoFocusStage();
    } else if (strcmp(deviceName, g_DeviceNameStateDeviceShutter) == 0) {
       return new StateDeviceShutter();
+   } else if (strcmp(deviceName, g_DeviceNamePropertyShutter) == 0) {
+      return new PropertyShutter();
    } else if (strcmp(deviceName, g_DeviceNameSerialDTRShutter) == 0) {
       return new SerialDTRShutter();
+   } else if (strcmp(deviceName, g_DeviceNameStageStateDevice) == 0) {
+      return new StageStateDevice();
    }
 
    return 0;

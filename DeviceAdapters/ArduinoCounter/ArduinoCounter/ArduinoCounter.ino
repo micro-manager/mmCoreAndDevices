@@ -15,7 +15,9 @@
 
 
 
-unsigned int version_ = 2;
+unsigned int version_ = 3;
+
+// V3: bug fix in sequence behavior when inverting the input
 
 // pin on which to receive the trigger (2 and 3 can be used with interrupts, although this code does not use interrupts)
 const int inPin = 2;
@@ -105,13 +107,13 @@ void loop() {
       if (invert) {
         if (inputWas && !(PIND & B00000100)) {
           inputWas = LOW;
-          PORTB = 1;
+          if (counter < limit) {
+            PORTB = 1;
+          }
         } else if (!inputWas && (PIND & B00000100)) {
           counter++;
           inputWas = HIGH;
-          if (counter <= limit) {
             PORTB = 0;
-          }
         }
       } else {  // do not invert output
         if (inputWas && !(PIND & B00000100)) {

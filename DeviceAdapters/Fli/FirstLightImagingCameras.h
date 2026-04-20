@@ -43,6 +43,7 @@ public:
 	int Initialize();
 	int Shutdown();
 	void GetName(char* name) const;
+	bool Busy() { return false; }
 	long GetImageBufferSize() const;
 	unsigned GetBitDepth() const;
 	int GetBinning() const;
@@ -59,6 +60,7 @@ public:
 	unsigned GetImageBytesPerPixel() const;
 	int SnapImage();
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+	int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
 	int StopSequenceAcquisition();
 	void OnThreadExiting() throw();
 	bool IsCapturing();

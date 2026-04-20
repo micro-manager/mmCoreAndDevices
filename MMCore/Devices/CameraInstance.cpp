@@ -22,22 +22,14 @@
 #include "CameraInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int CameraInstance::SnapImage() { RequireInitialized(__func__); return GetImpl()->SnapImage(); }
 const unsigned char* CameraInstance::GetImageBuffer() { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(); }
 const unsigned char* CameraInstance::GetImageBuffer(unsigned channelNr) { RequireInitialized(__func__); return GetImpl()->GetImageBuffer(channelNr); }
 const unsigned int* CameraInstance::GetImageBufferAsRGB32() { RequireInitialized(__func__); return GetImpl()->GetImageBufferAsRGB32(); }
 unsigned CameraInstance::GetNumberOfComponents() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfComponents(); }
-
-std::string CameraInstance::GetComponentName(unsigned component)
-{
-   RequireInitialized(__func__);
-   DeviceStringBuffer nameBuf(this, "GetComponentName");
-   int err = GetImpl()->GetComponentName(component, nameBuf.GetBuffer());
-   ThrowIfError(err, "Cannot get component name at index " +
-         ToString(component));
-   return nameBuf.Get();
-}
-
 int unsigned CameraInstance::GetNumberOfChannels() const { RequireInitialized(__func__); return GetImpl()->GetNumberOfChannels(); }
 
 std::string CameraInstance::GetChannelName(unsigned channel)
@@ -54,7 +46,6 @@ unsigned CameraInstance::GetImageWidth() const { RequireInitialized(__func__); r
 unsigned CameraInstance::GetImageHeight() const { RequireInitialized(__func__); return GetImpl()->GetImageHeight(); }
 unsigned CameraInstance::GetImageBytesPerPixel() const { RequireInitialized(__func__); return GetImpl()->GetImageBytesPerPixel(); }
 unsigned CameraInstance::GetBitDepth() const { RequireInitialized(__func__); return GetImpl()->GetBitDepth(); }
-double CameraInstance::GetPixelSizeUm() const { RequireInitialized(__func__); return GetImpl()->GetPixelSizeUm(); }
 int CameraInstance::GetBinning() const { RequireInitialized(__func__); return GetImpl()->GetBinning(); }
 int CameraInstance::SetBinning(int binSize) { RequireInitialized(__func__); return GetImpl()->SetBinning(binSize); }
 void CameraInstance::SetExposure(double exp_ms) { RequireInitialized(__func__); return GetImpl()->SetExposure(exp_ms); }
@@ -117,7 +108,7 @@ int CameraInstance::SetMultiROI(const unsigned int* xs, const unsigned int* ys,
  * @param ys (Return value) Y indices of upper-left corner of the ROIs.
  * @param widths (Return value) Widths of the ROIs, in pixels.
  * @param heights (Return value) Heights of the ROIs, in pixels.
- * @param numROIs Length of the input arrays. If there are fewer ROIs than
+ * @param length Length of the input arrays. If there are fewer ROIs than
  *        this, then this value must be updated to reflect the new count.
  */
 int CameraInstance::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
@@ -130,7 +121,6 @@ int CameraInstance::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
 int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow); }
 int CameraInstance::StartSequenceAcquisition(double interval_ms) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(interval_ms); }
 int CameraInstance::StopSequenceAcquisition() { RequireInitialized(__func__); return GetImpl()->StopSequenceAcquisition(); }
-int CameraInstance::PrepareSequenceAcqusition() { RequireInitialized(__func__); return GetImpl()->PrepareSequenceAcqusition(); }
 bool CameraInstance::IsCapturing() { RequireInitialized(__func__); return GetImpl()->IsCapturing(); }
 
 std::string CameraInstance::GetTags()
@@ -154,3 +144,6 @@ int CameraInstance::StopExposureSequence() { RequireInitialized(__func__); retur
 int CameraInstance::ClearExposureSequence() { RequireInitialized(__func__); return GetImpl()->ClearExposureSequence(); }
 int CameraInstance::AddToExposureSequence(double exposureTime_ms) { RequireInitialized(__func__); return GetImpl()->AddToExposureSequence(exposureTime_ms); }
 int CameraInstance::SendExposureSequence() const { RequireInitialized(__func__); return GetImpl()->SendExposureSequence(); }
+
+} // namespace internal
+} // namespace mmcore

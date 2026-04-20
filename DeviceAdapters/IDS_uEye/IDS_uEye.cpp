@@ -39,6 +39,7 @@
 #include <iostream>
 #include <algorithm>
 
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 #include "IDS_uEye.h"
@@ -138,7 +139,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CIDS_uEye::CIDS_uEye() :
-   CCameraBase<CIDS_uEye> (),
    dPhase_(0),
    initialized_(false),
    readoutUs_(0.0),
@@ -1300,22 +1300,12 @@ int CIDS_uEye::InsertImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   /*
-   // Copy the metadata inserted by other processes:
-   std::vector<std::string> keys = metadata_.GetKeys();
-   for (unsigned int i= 0; i < keys.size(); i++) {
-      MetadataSingleTag mst = metadata_.GetSingleTag(keys[i].c_str());
-      md.PutTag(mst.GetName(), mst.GetDevice(), mst.GetValue());
-   }
-   */
-
-   // Add our own metadata
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
    // Add a timestamp
    char tStamp[128], tStampRaw[64];
@@ -1333,15 +1323,15 @@ int CIDS_uEye::InsertImage()
 	   imgInfo_.dwIoStatus,
 	   imgInfo_.dwHostProcessTime );
 
-   md.put("uEye-Timestamp", tStamp);
-   md.put("uEye-rawStamp", tStampRaw);
+   md.AddTag("uEye-Timestamp", tStamp);
+   md.AddTag("uEye-rawStamp", tStampRaw);
 
 
    imageCounter_++;
 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
-   md.put(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
 
    MMThreadGuard g(imgPixelsLock_);
 
@@ -1350,15 +1340,7 @@ int CIDS_uEye::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-      return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-   } else
-      return ret;
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /*

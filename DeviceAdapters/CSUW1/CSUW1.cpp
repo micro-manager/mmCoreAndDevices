@@ -283,9 +283,13 @@ int FilterWheel::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   ret = g_hub.GetFilterWheelPosition(*this, *GetCoreCallback(), wheelNr_, pos_);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &FilterWheel::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct); 
+   ret = CreateProperty(MM::g_Keyword_State, std::to_string(pos_).c_str(), MM::Integer, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -305,9 +309,13 @@ int FilterWheel::Initialize()
    SetPositionLabel(8, "Filter-9");
    SetPositionLabel(9, "Filter-10");
 
+   ret = g_hub.GetFilterWheelSpeed(*this, *GetCoreCallback(), wheelNr_, speed_);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // Speed
    pAct = new CPropertyAction (this, &FilterWheel::OnSpeed);
-   ret = CreateProperty("Speed", "2", MM::Integer, false, pAct); 
+   ret = CreateProperty("Speed", std::to_string(speed_).c_str(), MM::Integer, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
    AddAllowedValue("Speed", "0");
@@ -319,7 +327,6 @@ int FilterWheel::Initialize()
    // extra delay to wait for vibrations to sibside.
    EnableDelay(true);
 
-   ret = UpdateStatus();
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -368,12 +375,7 @@ int FilterWheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      long pos;
-      int ret = g_hub.GetFilterWheelPosition(*this, *GetCoreCallback(), wheelNr_, pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pProp->Set(pos);
-      pos_ = pos;
+      pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
    {
@@ -398,17 +400,13 @@ int FilterWheel::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int FilterWheel::OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   long speed;
    if (eAct == MM::BeforeGet)
    {
-      int ret = g_hub.GetFilterWheelSpeed(*this, *GetCoreCallback(), wheelNr_, speed);
-      if (ret != DEVICE_OK)
-         return ret;
-      pProp->Set(speed);
-      speed_ = speed;
+      pProp->Set(speed_);
    }
    else if (eAct == MM::AfterSet)
    {
+      long speed;
       pProp->Get(speed);
       int ret = g_hub.SetFilterWheelSpeed(*this, *GetCoreCallback(), wheelNr_, speed);
       if (ret == DEVICE_OK) {
@@ -474,9 +472,13 @@ int Dichroic::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   ret = g_hub.GetDichroicPosition(*this, *GetCoreCallback(), pos_);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &Dichroic::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct); 
+   ret = CreateProperty(MM::g_Keyword_State, std::to_string(pos_).c_str(), MM::Integer, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -495,10 +497,6 @@ int Dichroic::Initialize()
    SetPositionLabel(0, "Dichroic-1");
    SetPositionLabel(1, "Dichroic-2");
    SetPositionLabel(2, "Dichroic-3");
-
-   ret = UpdateStatus();
-   if (ret != DEVICE_OK) 
-      return ret; 
 
    initialized_ = true;
 
@@ -528,11 +526,6 @@ int Dichroic::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      long csuPos;
-      int ret = g_hub.GetDichroicPosition(*this, *GetCoreCallback(), csuPos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pos_ = csuPos;
       pProp->Set(pos_);
    }
    else if (eAct == MM::AfterSet)
@@ -640,11 +633,10 @@ int Shutter::SetOpen(bool open)
 
 int Shutter::GetOpen(bool &open)
 {
-
    // Check current state of shutter: (this might not be necessary, since we cash ourselves)
-   int ret = g_hub.GetShutterPosition(*this, *GetCoreCallback(), isOpen_);
-   if (DEVICE_OK != ret)
-      return ret;
+   // int ret = g_hub.GetShutterPosition(*this, *GetCoreCallback(), isOpen_);
+   //if (DEVICE_OK != ret)
+   //   return ret;
    open = isOpen_;
    return DEVICE_OK;
 }
@@ -810,6 +802,7 @@ int DriveSpeed::OnRun(MM::PropertyBase* pProp, MM::ActionType eAct)
 BrightField::BrightField () :
    initialized_ (false),
    name_ (g_CSUW1BrightField),
+   pos_(0),
    numPos_ (2)
 {
    InitializeDefaultErrorMessages();
@@ -838,9 +831,12 @@ int BrightField::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   ret = g_hub.GetBrightFieldPosition(*this, *GetCoreCallback(), pos_);
+   if (ret != DEVICE_OK)
+      return ret;
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &BrightField::OnState);
-   ret = CreateProperty("BrightFieldPort", "Confocal", MM::String, false, pAct); 
+   ret = CreateProperty("BrightFieldPort", pos_ == 0 ? "Confocal" : "Bright Field", MM::String, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
    AddAllowedValue("BrightFieldPort", "Confocal");
@@ -848,10 +844,6 @@ int BrightField::Initialize()
 
    SetPositionLabel(0, "Confocal");
    SetPositionLabel(1, "Bright Field");
-
-   ret = UpdateStatus();
-   if (ret != DEVICE_OK) 
-      return ret; 
 
    initialized_ = true;
 
@@ -881,11 +873,7 @@ int BrightField::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = g_hub.GetBrightFieldPosition(*this, *GetCoreCallback(), pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      if (pos == 0)
+      if (pos_ == 0)
          pProp->Set("Confocal");
       else
          pProp->Set("Bright Field");
@@ -897,7 +885,10 @@ int BrightField::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       int pos = 1;
       if (setting == "Confocal")
          pos = 0;
-      return g_hub.SetBrightFieldPosition(*this, *GetCoreCallback(), pos);
+      int ret = g_hub.SetBrightFieldPosition(*this, *GetCoreCallback(), pos);
+      if (ret != DEVICE_OK)
+         return ret;
+      pos_ = pos;
    }
 
    return DEVICE_OK;
@@ -909,6 +900,7 @@ int BrightField::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 Disk::Disk () :
    initialized_ (false),
    name_ (g_CSUW1Disk),
+   pos_(0),
    numPos_ (2)
 {
    InitializeDefaultErrorMessages();
@@ -937,9 +929,12 @@ int Disk::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   ret = g_hub.GetDiskPosition(*this, *GetCoreCallback(), pos_);
+   if (ret != DEVICE_OK)
+      return ret;
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &Disk::OnState);
-   ret = CreateIntegerProperty(MM::g_Keyword_State, 0, false, pAct); 
+   ret = CreateIntegerProperty(MM::g_Keyword_State, pos_, false, pAct); 
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -988,17 +983,16 @@ int Disk::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos = 1;
-      int ret = g_hub.GetDiskPosition(*this, *GetCoreCallback(), pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      pProp->Set( (long) pos);
+      pProp->Set( (long) pos_);
    }
    else if (eAct == MM::AfterSet)
    {
-      long state;
-      pProp->Get(state);
-      return g_hub.SetDiskPosition(*this, *GetCoreCallback(), state);
+      long pos;
+      pProp->Get(pos);
+      int ret = g_hub.SetDiskPosition(*this, *GetCoreCallback(), pos);
+      if (ret != DEVICE_OK)
+         return ret;
+      pos_ = pos;
    }
 
    return DEVICE_OK;
@@ -1010,6 +1004,7 @@ int Disk::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 Port::Port () :
    initialized_ (false),
    name_ (g_CSUW1Port),
+   pos_(0),
    numPos_ (3)
 {
    InitializeDefaultErrorMessages();
@@ -1038,9 +1033,13 @@ int Port::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   ret = g_hub.GetPortPosition(*this, *GetCoreCallback(), pos_);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &Port::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct); 
+   ret = CreateProperty(MM::g_Keyword_State, std::to_string(pos_).c_str(), MM::Integer, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -1085,17 +1084,16 @@ int Port::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = g_hub.GetPortPosition(*this, *GetCoreCallback(), pos);
-      if (ret != DEVICE_OK)
-         return ret;
-	  pProp->Set((long)pos);
+	   pProp->Set((long)pos_);
    }
    else if (eAct == MM::AfterSet)
    {
       long pos;
       pProp->Get(pos);
-	  return g_hub.SetPortPosition(*this, *GetCoreCallback(), pos);
+      int ret = g_hub.SetPortPosition(*this, *GetCoreCallback(), pos);
+      if (ret != DEVICE_OK)
+         return ret;
+      pos_ = pos;
    }
 
    return DEVICE_OK;
@@ -1107,6 +1105,7 @@ int Port::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 Aperture::Aperture () :
    initialized_ (false),
    name_ (g_CSUW1Aperture),
+   pos_(1),
    numPos_ (10)
 {
    InitializeDefaultErrorMessages();
@@ -1135,9 +1134,13 @@ int Aperture::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   ret = g_hub.GetAperturePosition(*this, *GetCoreCallback(), pos_);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &Aperture::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, "9", MM::Integer, false, pAct); 
+   ret = CreateProperty(MM::g_Keyword_State, std::to_string(pos_).c_str(), MM::Integer, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -1175,17 +1178,17 @@ int Aperture::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = g_hub.GetAperturePosition(*this, *GetCoreCallback(), pos);
-      if (ret != DEVICE_OK)
-         return ret;
-	  pProp->Set((long)pos);
+      // for speed: use cached value
+      pProp->Set((long)pos_);
    }
    else if (eAct == MM::AfterSet)
    {
       long pos;
       pProp->Get(pos);
-	  return g_hub.SetAperturePosition(*this, *GetCoreCallback(), pos);
+	   int ret = g_hub.SetAperturePosition(*this, *GetCoreCallback(), pos);
+      if (ret != DEVICE_OK)
+         return ret;
+      pos_ = pos;
    }
    return DEVICE_OK;
 }
@@ -1196,6 +1199,7 @@ int Aperture::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 Frap::Frap () :
    initialized_ (false),
    name_ (g_CSUW1Frap),
+   pos_(0),
    numPos_ (3)
 {
    InitializeDefaultErrorMessages();
@@ -1224,9 +1228,14 @@ int Frap::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   // Get current state.  This is the only time the position is read from the device.
+   ret = g_hub.GetFrapPosition(*this, *GetCoreCallback(), pos_);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &Frap::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct); 
+   ret = CreateProperty(MM::g_Keyword_State, std::to_string(pos_).c_str(), MM::Integer, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -1238,10 +1247,6 @@ int Frap::Initialize()
    SetPositionLabel(0, "Position-1");
    SetPositionLabel(1, "Position-2");
    SetPositionLabel(2, "Position-3");
-
-   ret = UpdateStatus();
-   if (ret != DEVICE_OK)
-      return ret; 
 
    initialized_ = true;
 
@@ -1271,19 +1276,17 @@ int Frap::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = g_hub.GetFrapPosition(*this, *GetCoreCallback(), pos);
-      if (ret != DEVICE_OK)
-         return ret;
-	  pProp->Set((long)pos);
+	   pProp->Set((long) pos_);
    }
    else if (eAct == MM::AfterSet)
    {
       long pos;
       pProp->Get(pos);
-	  return g_hub.SetFrapPosition(*this, *GetCoreCallback(), pos);
+	   int ret = g_hub.SetFrapPosition(*this, *GetCoreCallback(), pos);
+      if (ret != DEVICE_OK)
+         return ret;
+      pos_ = pos;
    }
-
    return DEVICE_OK;
 }
 
@@ -1294,6 +1297,7 @@ Magnifier::Magnifier () :
    initialized_ (false),
    nr_ (1),
    name_ (g_CSUW1Magnifier),
+   pos_(0),
    numPos_ (2)
 {
    InitializeDefaultErrorMessages();
@@ -1328,9 +1332,13 @@ int Magnifier::Initialize()
    if (DEVICE_OK != ret)
       return ret;
 
+   ret = g_hub.GetMagnifierPosition(*this, *GetCoreCallback(), nr_, pos_);
+   if (ret != DEVICE_OK)
+      return ret;
+
    // State
    CPropertyAction* pAct = new CPropertyAction (this, &Magnifier::OnState);
-   ret = CreateProperty(MM::g_Keyword_State, "0", MM::Integer, false, pAct); 
+   ret = CreateProperty(MM::g_Keyword_State, std::to_string(pos_).c_str(), MM::Integer, false, pAct);
    if (ret != DEVICE_OK) 
       return ret; 
 
@@ -1374,19 +1382,17 @@ int Magnifier::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-      int pos;
-      int ret = g_hub.GetMagnifierPosition(*this, *GetCoreCallback(), nr_, pos);
-      if (ret != DEVICE_OK)
-         return ret;
-	  pProp->Set((long)pos);
+	   pProp->Set((long)pos_);
    }
    else if (eAct == MM::AfterSet)
    {
       long pos;
       pProp->Get(pos);
-	  return g_hub.SetMagnifierPosition(*this, *GetCoreCallback(), nr_, pos);
+	   int ret = g_hub.SetMagnifierPosition(*this, *GetCoreCallback(), nr_, pos);
+      if (ret != DEVICE_OK)
+         return ret;
+      pos_ = pos;
    }
-
    return DEVICE_OK;
 }
 

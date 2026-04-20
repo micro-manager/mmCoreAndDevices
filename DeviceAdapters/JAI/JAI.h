@@ -1,10 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          SpinnakerSDK.h
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Adapter for cameras compatible with Spinnaker SDK
-//                
 // AUTHOR:        Nenad Amodaj, 2018
 // COPYRIGHT:     Luminous Point LLC
 //
@@ -42,7 +39,7 @@
 #endif
 
 #include <string>
-#include <map>
+#include <vector>
 
 static const char* g_DeviceJAICam = "JAICamera";
 static const char* g_Gain = "Gain";
@@ -64,7 +61,8 @@ static const char* g_Positive = "Positive";
 static const char* g_Negative = "Negative";
 
 static const char* g_PixelType_32bitRGB = "32bitRGB";
-static const char* g_PixelType_64bitRGB = "64bitRGB";
+static const char* g_PixelType_64bitRGB_10bit = "64bitRGB-10bit";
+static const char* g_PixelType_64bitRGB_12bit = "64bitRGB-12bit";
 
 static const char* g_pv_BinH = "BinningHorizontal";
 static const char* g_pv_BinV = "BinningVertical";
@@ -75,6 +73,7 @@ static const char* g_pv_OffsetY = "OffsetY";
 static const char* g_pv_PixelFormat = "PixelFormat";
 
 static const char* g_pv_PixelFormat_BGR8 = "BGR8";
+static const char* g_pv_PixelFormat_BGR10 = "BGR10p";
 static const char* g_pv_PixelFormat_BGR12 = "BGR12p";
 
 //////////////////////////////////////////////////////////////////////////////
@@ -153,8 +152,6 @@ public:
    const unsigned char* GetImageBuffer();
 
    unsigned GetNumberOfComponents() const;
-   unsigned GetNumberOfChannels() const;
-   int GetChannelName(unsigned channel, char* name);
 
    unsigned GetImageWidth() const {return img.Width();}
    unsigned GetImageHeight() const {return img.Height();}
@@ -171,7 +168,6 @@ public:
 
    // overrides the same in the base class
    int InsertImage();
-   int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StartSequenceAcquisition(double interval);
    int StopSequenceAcquisition(); 
@@ -182,25 +178,39 @@ public:
    // action interface
    int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnExposureIsIndividual(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSelectorExposure(const std::string& selector, MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnGainIsIndividual(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSelectorGain(const std::string& selector, MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSelectorBlackLevel(const std::string& selector, MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnWhiteBalance(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnTemperatureSetPoint(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnTriggerPolarity(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    int ResizeImageBuffer();
-   int PushImage(unsigned char* imgBuf);
 	int processPvError(const PvResult& pvr);
-	static void convert_BGR8_RGBA32(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
-	static void convert_BGR12P_RGBA64(const uint8_t* src, uint8_t* dest, unsigned w, unsigned h);
+	static void convert_BGR8_BGRA32(const uint8_t* __restrict src, uint8_t* __restrict dest,
+			unsigned w, unsigned h, unsigned paddingX);
+	template <unsigned BitsPerComponent>
+	static void convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __restrict dest,
+			unsigned w, unsigned h, unsigned paddingX);
 	bool verifyPvFormat(const PvImage* pvimg);
 	void ClearPvBuffers();
+   int GetSelectorExposure(const std::string& selector, double& expMs);
+   int SetSelectorExposure(const std::string& selector, double expMs);
+   int GetSelectorExposureMinMax(const std::string& selector, double& eMinMs, double& eMaxMs);
+   int GetSelectorGain(const std::string& selector, double& gain);
+   int SetSelectorGain(const std::string& selector, double gain);
+   int GetSelectorGainMinMax(const std::string& selector, double& gMin, double& gMax);
+   int GetSelectorBlackLevel(const std::string& selector, double& level);
+   int SetSelectorBlackLevel(const std::string& selector, double level);
+   int GetSelectorBlackLevelMinMax(const std::string& selector, double& minLevel, double& maxLevel);
 
    ImgBuffer img;
    bool initialized;
@@ -215,6 +225,9 @@ private:
 	PvGenParameterArray* genParams;
 	std::string connectionId;
 	std::vector<PvBuffer*> pvBuffers;
+	std::string commonExposureSelector_;  // e.g., "Common"
+	std::vector<std::string> individualExposureSelectors_;  // e.g., {"Red", "Green", "Blue"}
+	std::string commonGainSelector_;      // e.g., "AnalogAll"
 
    friend class AcqSequenceThread;
    AcqSequenceThread*   liveAcqThd_;

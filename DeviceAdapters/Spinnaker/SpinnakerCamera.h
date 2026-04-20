@@ -24,6 +24,7 @@ public:
    int Initialize();
    int Shutdown();
    void GetName(char* name) const;
+   bool Busy() { return false; }
 
    int SnapImage();
    const unsigned char* GetImageBuffer();
@@ -42,7 +43,6 @@ public:
    int SetBinning(int binSize);
    int IsExposureSequenceable(bool& isSequenceable) const { isSequenceable = false; return DEVICE_OK; };
 
-   int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(double interval);
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();

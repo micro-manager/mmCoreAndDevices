@@ -451,7 +451,7 @@ int AndorCamera::GetListOfAvailableCameras()
                UnknownCameraIndex ++;
                id = UnknownCameraIndex;
             }
-            sprintf(chars, "%d", id);
+            snprintf(chars, sizeof(chars), "%d", id);
 
             std::string camType = getCameraType();
             vCameraType.push_back(camType);
@@ -720,7 +720,7 @@ int AndorCamera::GetListOfAvailableCameras()
          int depth;
          ::GetBitDepth(i, &depth);
          char * buffer = new char[MAX_CHARS_PER_DESCRIPTION];
-         sprintf(buffer, "%d. %dbit",(i+1), depth);
+         snprintf(buffer, MAX_CHARS_PER_DESCRIPTION, "%d. %dbit",(i+1), depth);
          std::string temp(buffer);
          vChannels.push_back(temp);
          delete [] buffer;
@@ -849,10 +849,10 @@ int AndorCamera::GetListOfAvailableCameras()
       for (int i=0; i<numSpeeds; i++)
       {
          float sp;
-         ret = GetHSSpeed(0, 0, i, &sp); 
+         ret = GetHSSpeed(0, 0, i, &sp);
          if (ret != DRV_SUCCESS)
             return ret;
-         sprintf(speedBuf, "%.3f MHz", sp);
+         snprintf(speedBuf, sizeof(speedBuf), "%.3f MHz", sp);
          readoutModes_.push_back(speedBuf);
       }
       if (readoutModes_.empty())
@@ -890,7 +890,7 @@ int AndorCamera::GetListOfAvailableCameras()
             ret = GetVSSpeed(i, &vsp);
             if (ret != DRV_SUCCESS)
                return ret;
-            sprintf(VSpeedBuf, "%.2f", vsp);
+            snprintf(VSpeedBuf, sizeof(VSpeedBuf), "%.2f", vsp);
             VSpeeds_.push_back(VSpeedBuf);
          }
          if (VSpeeds_.empty())
@@ -1794,7 +1794,7 @@ int AndorCamera::GetListOfAvailableCameras()
       int status;
       char statStr[20];
       GetStatus(&status);
-      sprintf(statStr,"%d",status);
+      snprintf(statStr, sizeof(statStr), "%d", status);
       LogMessage(statStr,false);
    }
 
@@ -2142,7 +2142,7 @@ int AndorCamera::GetListOfAvailableCameras()
       if(roiPosition !=-1)
       {
          char buffer[MAX_CHARS_PER_DESCRIPTION];
-         GetROIPropertyName(roiPosition, customROI_.xSize, customROI_.ySize, buffer,cropModeSwitch_ );
+         GetROIPropertyName(roiPosition, customROI_.xSize, customROI_.ySize, buffer, sizeof(buffer), cropModeSwitch_);
          ret = SetProperty(g_ROIProperty, buffer);
       }
       else
@@ -2197,20 +2197,6 @@ int AndorCamera::GetListOfAvailableCameras()
          SetProperty(g_ROIProperty, g_ROIFullImage);
       }
       return DEVICE_OK;
-   }
-
-
-   double AndorCamera::GetPixelSizeUm() const
-   {
-      DriverGuard dg(this);
-      float x, y;
-      unsigned ret = ::GetPixelSize(&x, &y);
-      if (ret == DRV_SUCCESS)
-      {
-         return (double)x;
-      }
-
-      return GetBinning();
    }
 
    ///////////////////////////////////////////////////////////////////////////////
@@ -4002,27 +3988,27 @@ int AndorCamera::GetListOfAvailableCameras()
       int i_temp;
       float f_temp;
       char c_temp[MAX_CHARS_PER_OA_DESCRIPTION];
-      memset(c_temp, '\0', MAX_CHARS_PER_OA_DESCRIPTION);  
+      memset(c_temp, '\0', MAX_CHARS_PER_OA_DESCRIPTION);
 
       ui_retVal = ::OA_GetString(OAModeName, "mode_description", &c_temp[0], MAX_CHARS_PER_OA_DESCRIPTION);
       optAcquireDescriptionStr_ = c_temp;
-      SetProperty("OptAcquireMode Description", c_temp);  
+      SetProperty("OptAcquireMode Description", c_temp);
       ui_retVal = ::OA_GetString(OAModeName, "frame_transfer", &c_temp[0], MAX_CHARS_PER_OA_DESCRIPTION);
       if (0 == stricmp(c_temp, "ON")){
-        SetProperty("FrameTransfer", "On");  
-      } 
+        SetProperty("FrameTransfer", "On");
+      }
       else {
-        SetProperty("FrameTransfer", "Off");  
+        SetProperty("FrameTransfer", "Off");
       }
 
       ui_retVal = ::OA_GetInt(OAModeName, "electron_multiplying_gain", &i_temp);
-      sprintf(c_temp, "%d", i_temp);
+      snprintf(c_temp, sizeof(c_temp), "%d", i_temp);
 
-      SetProperty("Gain",c_temp);  
+      SetProperty("Gain",c_temp);
       ui_retVal = ::OA_GetInt(OAModeName, "readout_rate", &i_temp);
       f_temp = static_cast<float>(i_temp);
 
-      sprintf(c_temp, "%.3f MHz", f_temp);
+      snprintf(c_temp, sizeof(c_temp), "%.3f MHz", f_temp);
 
       //check if Readout rate is valid
       int numADChannels;
@@ -4032,7 +4018,7 @@ int AndorCamera::GetListOfAvailableCameras()
         char * buffer = new char[MAX_CHARS_PER_DESCRIPTION];
         int depth;
         ::GetBitDepth(i, &depth);
-        sprintf(buffer, "%d. %dbit",(i+1), depth);
+        snprintf(buffer, MAX_CHARS_PER_DESCRIPTION, "%d. %dbit",(i+1), depth);
 
         char speedBuf[MAX_CHARS_PER_DESCRIPTION];
         int numSpeeds;
@@ -4041,7 +4027,7 @@ int AndorCamera::GetListOfAvailableCameras()
         {
            float sp;
            ret = GetHSSpeed(i, OutputAmplifierIndex_, j, &sp);
-           sprintf(speedBuf, "%.3f MHz", sp);
+           snprintf(speedBuf, sizeof(speedBuf), "%.3f MHz", sp);
            if(0 == stricmp(c_temp, speedBuf)){
              SetProperty("AD_Converter", buffer);
              SetProperty("ReadoutMode", speedBuf);
@@ -4059,14 +4045,14 @@ int AndorCamera::GetListOfAvailableCameras()
         SetProperty("VerticalClockVoltage", "Normal");
       }
       else {
-        sprintf(c_temp, "+%d", i_temp);
-        SetProperty("VerticalClockVoltage", c_temp);  
+        snprintf(c_temp, sizeof(c_temp), "+%d", i_temp);
+        SetProperty("VerticalClockVoltage", c_temp);
       }
       ui_retVal = ::OA_GetFloat(OAModeName, "preamplifier_gain", &f_temp);
-      sprintf(c_temp, "%.2f", f_temp);
-      SetProperty("Pre-Amp-Gain", c_temp);  
+      snprintf(c_temp, sizeof(c_temp), "%.2f", f_temp);
+      SetProperty("Pre-Amp-Gain", c_temp);
       ui_retVal = ::OA_GetFloat(OAModeName, "shift_speed", &f_temp);
-      sprintf(c_temp, "%.2f", f_temp);
+      snprintf(c_temp, sizeof(c_temp), "%.2f", f_temp);
       SetProperty(g_VerticalSpeedProperty, c_temp);
    }
 
@@ -4196,7 +4182,7 @@ int AndorCamera::GetListOfAvailableCameras()
 		      if(roiPosition !=-1)
             {
                char buffer[MAX_CHARS_PER_DESCRIPTION];
-               GetROIPropertyName(roiPosition, roi_.xSize, roi_.ySize, buffer,cropModeSwitch_);
+               GetROIPropertyName(roiPosition, roi_.xSize, roi_.ySize, buffer, sizeof(buffer), cropModeSwitch_);
                pProp->Set(buffer);
             }
             else
@@ -4606,10 +4592,10 @@ int AndorCamera::GetListOfAvailableCameras()
       for (int i=0; i<numSpeeds; i++)
       {
          float sp;
-         ret = GetHSSpeed(ADChannelIndex_, OutputAmplifierIndex_, i, &sp); 
+         ret = GetHSSpeed(ADChannelIndex_, OutputAmplifierIndex_, i, &sp);
          if (ret != DRV_SUCCESS)
             return;
-         sprintf(speedBuf, "%.3f MHz", sp);
+         snprintf(speedBuf, sizeof(speedBuf), "%.3f MHz", sp);
          readoutModes_.push_back(speedBuf);
       }
       SetAllowedValues(MM::g_Keyword_ReadoutMode, readoutModes_);
@@ -4755,7 +4741,7 @@ int AndorCamera::GetListOfAvailableCameras()
       {
          float pag;
          ret = GetPreAmpGain(PreAmpGainIdx, &pag); 
-         sprintf(PreAmpGainString, "%.2f", pag);
+         snprintf(PreAmpGainString, PreAmpGainStringLength, "%.2f", pag);
       }
       if (ret != DRV_SUCCESS)
          return ret;
@@ -5229,31 +5215,17 @@ int AndorCamera::GetCameraAcquisitionProgress(at_32* series)
    {
      MMThreadGuard g(imgPixelsLock_);
 
-     int retCode;
-     Metadata md;
+     MM::CameraImageMetadata md;
      AddMetadataInfo(md);
 
      imageCounter_++;
 
      // This method inserts new image in the circular buffer (residing in MMCore)
-     retCode = GetCoreCallback()->InsertImage(this, imagePtr,
+     return GetCoreCallback()->InsertImage(this, imagePtr,
        width,
        height,
        bytesPerPixel,
-       md.Serialize().c_str());
-
-     if (!stopOnOverflow_ && DEVICE_BUFFER_OVERFLOW == retCode)
-     {
-       // do not stop on overflow - just reset the buffer
-       GetCoreCallback()->ClearImageBuffer(this);
-       GetCoreCallback()->InsertImage(this, (unsigned char*)imagePtr,
-         width,
-         height,
-         bytesPerPixel,
-         md.Serialize().c_str(),
-         false);
-     }
-     return retCode;
+       md.Serialize());
    }
 
 
@@ -5310,7 +5282,7 @@ int AndorCamera::GetCameraAcquisitionProgress(at_32* series)
             AT_SRRF_U64 outputBufferSize = GetImageBufferSize();
             SRRFControl_->GetSRRFResult(SRRFImage_->GetPixelsRW(), outputBufferSize);
 
-            Metadata md;
+            MM::CameraImageMetadata md;
             AddSRRFMetadataInfo(md);
             startSRRFImageTime_ = GetCurrentMMTime();
 
@@ -5323,8 +5295,7 @@ int AndorCamera::GetCameraAcquisitionProgress(at_32* series)
                SRRFImage_->Width(),
                SRRFImage_->Height(),
                SRRFImage_->Depth(),
-               md.Serialize().c_str(),
-               false);
+               md.Serialize());
             //oss.str("");
             //oss << "[PushImageWithSRRF] sent up an image to MMCore and returned: " << corecallbackInsertImageReturn << endl;
             //Log(oss.str().c_str());
@@ -5332,21 +5303,6 @@ int AndorCamera::GetCameraAcquisitionProgress(at_32* series)
             if (DEVICE_OK != corecallbackInsertImageReturn)
             {
                return corecallbackInsertImageReturn;
-            }
-
-            if (!stopOnOverflow_ && DEVICE_BUFFER_OVERFLOW == corecallbackInsertImageReturn)
-            {
-               // do not stop on overflow - just reset the buffer
-               //Log("[PushImageWithSRRF] Circular Buffer overflowed. Clearing and sending up image again...");
-               GetCoreCallback()->ClearImageBuffer(this);
-               GetCoreCallback()->InsertImage(
-                  this,
-                  SRRFImage_->GetPixels(),
-                  SRRFImage_->Width(),
-                  SRRFImage_->Height(),
-                  SRRFImage_->Depth(),
-                  md.Serialize().c_str(),
-                  false);
             }
          }
 
@@ -5673,7 +5629,7 @@ unsigned int AndorCamera::PopulateROIDropdown()
          roiList.push_back(roi);
 
          char buffer[MAX_CHARS_PER_DESCRIPTION];
-         GetROIPropertyName(uiROICount, roi.xSize, roi.ySize, buffer,cropModeSwitch_);
+         GetROIPropertyName(uiROICount, roi.xSize, roi.ySize, buffer, sizeof(buffer), cropModeSwitch_);
          AddAllowedValue(g_ROIProperty, buffer,uiROICount);
 
          uiROICount++;
@@ -5695,7 +5651,7 @@ unsigned int AndorCamera::PopulateROIDropdown()
          ROI roi = UltraCropROIs[i];
          roiList.push_back(roi);
          char buffer[MAX_CHARS_PER_DESCRIPTION];
-         GetROIPropertyName(uiROICount, roi.xSize, roi.ySize, buffer,cropModeSwitch_);
+         GetROIPropertyName(uiROICount, roi.xSize, roi.ySize, buffer, sizeof(buffer), cropModeSwitch_);
          AddAllowedValue(g_ROIProperty, buffer,uiROICount);
          uiROICount++;
       }
@@ -5744,35 +5700,17 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
          return DRV_SUCCESS;
    }
 
-   void AndorCamera::AddSRRFMetadataInfo(Metadata & md)
+   void AndorCamera::AddSRRFMetadataInfo(MM::CameraImageMetadata & md)
    {
-      char label[MM::MaxStrLength];
-      this->GetLabel(label);
       MM::MMTime tEnd = GetCurrentMMTime();
 
-      // Copy the metadata inserted by other processes:
-      std::vector<std::string> keys = GetTagKeys();
-      for (unsigned int j = 0; j < keys.size(); j++) {
-         md.put(keys[j], GetTagValue(keys[j].c_str()).c_str());
-      }
-      
-      MetadataSingleTag mstSRRFFrameTime(SRRFControl_->GetSRRFFrameTimeMetadataName(), label, true);
-      mstSRRFFrameTime.SetValue(CDeviceUtils::ConvertToString((tEnd - startSRRFImageTime_).getMsec()));
-      md.SetTag(mstSRRFFrameTime);
+      md.AddTag(std::string("Andor-") + SRRFControl_->GetSRRFFrameTimeMetadataName(),
+         CDeviceUtils::ConvertToString((tEnd - startSRRFImageTime_).getMsec()));
    }
 
-   void AndorCamera::AddMetadataInfo(Metadata & md)
+   void AndorCamera::AddMetadataInfo(MM::CameraImageMetadata & md)
    {
-      // create metadata
-      char label[MM::MaxStrLength];
-      this->GetLabel(label);
-
       MM::MMTime timestamp = this->GetCurrentMMTime();
-      // Copy the metadata inserted by other processes:
-      std::vector<std::string> keys = GetTagKeys();
-      for (unsigned int j = 0; j < keys.size(); j++) {
-         md.put(keys[j], GetTagValue(keys[j].c_str()).c_str());
-      }
 
       //These append md tag name to label of device; transient props appear per image.  All in .txt file with stack.
       //Plan of attack...
@@ -5780,14 +5718,13 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
       // remove first .put deprecated and check if any changes. Perhaps take 5seq MDA first using current build, then rebuild and check difference
       // Check both MM Metadata, and .text file generated by stack images.
       // add SRRF - may need better timings, perhaps a new m_var_ but can decide during impl.
-      //md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-      //md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timestamp - startTime_).getMsec()));
-      //md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-      //md.put(MM::g_Keyword_Binning, binSize_);
+      //md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+      //md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timestamp - startTime_).getMsec()));
+      //md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+      //md.AddTag(MM::g_Keyword_Binning, binSize_);
 
-      MetadataSingleTag mst(MM::g_Keyword_Elapsed_Time_ms, label, true);
-      mst.SetValue(CDeviceUtils::ConvertToString(timestamp.getMsec()));
-      md.SetTag(mst);
+      md.AddTag(std::string("Andor-") + MM::g_Keyword_Elapsed_Time_ms,
+         CDeviceUtils::ConvertToString(timestamp.getMsec()));
 
       if (metaDataAvailable_)
       {
@@ -5796,44 +5733,36 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
          unsigned int ret = GetMetaDataInfo(&timeOfStart, &timeFromStart, imageCounter_);
          if (ret == DRV_SUCCESS)
          {
-            MetadataSingleTag mstHW("ElapsedTime-ms(HW)", label, true);
-            mstHW.SetValue(CDeviceUtils::ConvertToString(timeFromStart));
-            md.SetTag(mstHW);
+            md.AddTag(std::string("Andor-") + "ElapsedTime-ms(HW)",
+               CDeviceUtils::ConvertToString(timeFromStart));
          }
       }
 
-      MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-      mstCount.SetValue(CDeviceUtils::ConvertToString(imageCounter_));
-      md.SetTag(mstCount);
+      md.AddTag(std::string("Andor-") + MM::g_Keyword_Metadata_ImageNumber,
+         CDeviceUtils::ConvertToString(imageCounter_));
 
-      MetadataSingleTag mstB(MM::g_Keyword_Binning, label, true);
-      mstB.SetValue(CDeviceUtils::ConvertToString(binSize_));
-      md.SetTag(mstB);
+      md.AddTag(MM::g_Keyword_Binning,
+         CDeviceUtils::ConvertToString(binSize_));
 
       if (updateTemperatureWhileSequencing_) 
       {
          float temp = 0.;
          unsigned int ret = GetTemperatureF(&temp);
+         std::string currentTempTag = "Andor-CurrentTemperature";
 
          if(ret == DRV_NOT_INITIALIZED || ret == DRV_ACQUIRING || ret == DRV_ERROR_ACK)
          {
-            MetadataSingleTag mstTemperature("CurrentTemperature", label, true);
             ostringstream os;
 
             os << "Get Temperature failed with error: " << ret << endl;
 
-            mstTemperature.SetValue(os.str().c_str());
-            md.SetTag(mstTemperature);
+            md.AddTag(currentTempTag, os.str());
          }
          else
          {
-            char * buffer = new char[MAX_CHARS_PER_DESCRIPTION];
-            sprintf(buffer, "%.2f", temp);
-
-            MetadataSingleTag mstTemperature("CurrentTemperature", label, true);
-            mstTemperature.SetValue(buffer);
-            md.SetTag(mstTemperature);
-            delete buffer;
+            char buffer[MAX_CHARS_PER_DESCRIPTION];
+            snprintf(buffer, MAX_CHARS_PER_DESCRIPTION, "%.2f", temp);
+            md.AddTag(currentTempTag, buffer);
          }
       }
 
@@ -6134,28 +6063,30 @@ unsigned int AndorCamera::PopulateROIDropdownFVB()
       return s;
    }
 
-   void AndorCamera::GetROIPropertyName(int position, int hSize, int vSize, char * buffer, int mode)
+   void AndorCamera::GetROIPropertyName(int position, int hSize, int vSize, char * buffer, size_t bufferSize, int mode)
    {
       if(position==0) //full frame
       {
-         sprintf(buffer, "%s",g_ROIFullImage);
+         snprintf(buffer, bufferSize, "%s",g_ROIFullImage);
       }
       else
       {
-        
-         int offset = sprintf(buffer, "%d. %d x %d",position, hSize, vSize);
+
+         int offset = snprintf(buffer, bufferSize, "%d. %d x %d",position, hSize, vSize);
+         if (offset < 0 || (size_t)offset >= bufferSize)
+            return;  // Error or truncation; buffer is full
 
          if(OFF==mode)
          {
-            sprintf(buffer+offset," (centered)");
+            snprintf(buffer+offset, bufferSize - offset," (centered)");
          }
          else if(BOTTOM==mode)
          {
-           sprintf(buffer+offset," (bottom corner)");
+           snprintf(buffer+offset, bufferSize - offset," (bottom corner)");
          }
          else
          {
-           sprintf(buffer+offset," (centered - ROI optimised for performance)");
+           snprintf(buffer+offset, bufferSize - offset," (centered - ROI optimised for performance)");
          }
 
       }

@@ -149,6 +149,8 @@ public:
 
    void GetName(char* name) const;
 
+   bool Busy() { return false; } // TODO Should call physical cameras?
+
    int SnapImage();
    const unsigned char* GetImageBuffer();
    const unsigned char* GetImageBuffer(unsigned channelNr);
@@ -162,7 +164,6 @@ public:
    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
    int ClearROI();
-   int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(double interval);
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
@@ -864,6 +865,94 @@ private:
    bool invertedLogic_;
    bool initialized_;
    MM::MMTime lastMoveStartTime_;
+};
+
+/**
+ * PropertyShutter: Controls any device property as a shutter
+ * When open: sets property to "open value"  
+ * When closed: sets property to "closed value"
+ */
+class PropertyShutter : public CShutterBase<PropertyShutter>
+{
+public:
+   PropertyShutter();
+   ~PropertyShutter();
+  
+   // Device API
+   // ----------
+   int Initialize();
+   int Shutdown() {initialized_ = false; return DEVICE_OK;}
+  
+   void GetName(char* pszName) const;
+   bool Busy();
+
+   // Shutter API
+   int SetOpen(bool open = true);
+   int GetOpen(bool& open);
+   int Fire (double /* deltaT */) { return DEVICE_UNSUPPORTED_COMMAND;}
+   // ---------
+
+   // action interface
+   // ----------------
+   int OnTargetDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnTargetProperty(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnOpenValue(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnClosedValue(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnShutterDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnInvertLogic(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   void UpdateAllowedProperties();
+   std::vector<std::string> availableDevices_;
+   std::vector<std::string> availableProperties_;
+   std::string targetDeviceName_;
+   std::string targetPropertyName_;
+   std::string openValue_;
+   std::string closedValue_;
+   bool invertLogic_;
+   long shutterDelay_;
+   bool initialized_;
+};
+
+
+class StageStateDevice : public CStateDeviceBase<StageStateDevice>
+{
+public:
+   StageStateDevice();
+   virtual ~StageStateDevice();
+
+   virtual int Initialize();
+   virtual int Shutdown();
+   virtual void GetName(char* name) const;
+   virtual bool Busy();
+
+   virtual unsigned long GetNumberOfPositions() const;
+
+private:
+   double PositionForState(long state) const;
+
+   // Pre-init property action handlers
+   int OnNumberOfPositions(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPositionMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+   // Post-init property action handlers
+   int OnPhysicalStage(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPosition0(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPositionSpacing(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnIndividualPosition(MM::PropertyBase* pProp, MM::ActionType eAct, long index);
+   int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   unsigned int numberOfEngagedPositions_;
+   bool equallySpaced_;
+   std::string stageDeviceLabel_;
+   double position0Um_;
+   double positionSpacingUm_;
+   std::vector<double> positionsUm_;
+   long currentPosition_;
+   bool initialized_;
+   MM::MMTime lastChangeTime_;
 };
 
 

@@ -28,9 +28,8 @@
 
 #include <msgpack.hpp>
 
-#include <boost/shared_ptr.hpp>
-
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -132,10 +131,10 @@ public:
 class SettingEvent : public Serializable
 {
    SettingKey key_;
-   boost::shared_ptr<SettingValue> value_;
+   std::shared_ptr<SettingValue> value_;
    size_t count_;
 public:
-   SettingEvent(SettingKey key, boost::shared_ptr<SettingValue> value,
+   SettingEvent(SettingKey key, std::shared_ptr<SettingValue> value,
          uint64_t counterValue) :
       key_(key), value_(value), count_(counterValue)
    {}
@@ -213,7 +212,7 @@ private:
    uint64_t counterAtLastReset_;
    uint64_t nextGlobalImageNr_;
 
-   typedef std::map< SettingKey, boost::shared_ptr<SettingValue> > SettingMap;
+   typedef std::map< SettingKey, std::shared_ptr<SettingValue> > SettingMap;
    typedef SettingMap::const_iterator SettingConstIterator;
    SettingMap settingValues_;
    SettingMap startingValues_;

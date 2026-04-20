@@ -178,7 +178,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 CCameraFrontend::CCameraFrontend() :
-   CCameraBase<CCameraFrontend> (),
    cameraSupportsLiveView_(false),
    initialized_(false),
    grayScale_(true),
@@ -471,42 +470,6 @@ unsigned int CCameraFrontend::GetNumberOfComponents() const
       return 1; // grayscale
    else
       return 4; // rgb
-}
-
-/**
-* Returns the name for each channel. 
-*/
-int CCameraFrontend::GetComponentName(unsigned int channel, char* name)
-{
-   if (imgGrayScale_)
-   {
-      if (channel == 0)
-         CDeviceUtils::CopyLimitedString(name, "Grayscale");
-      else
-         return DEVICE_NONEXISTENT_CHANNEL;
-   }
-   else 
-   {
-      switch (channel)
-      {
-         case 0:
-            CDeviceUtils::CopyLimitedString(name, "Blue");
-            break;
-         case 1:
-            CDeviceUtils::CopyLimitedString(name, "Green");
-            break;
-         case 2:
-            CDeviceUtils::CopyLimitedString(name, "Red");
-            break;
-         case 3:
-            CDeviceUtils::CopyLimitedString(name, "Alpha");
-            break;
-         default:
-            return DEVICE_NONEXISTENT_CHANNEL;
-            break;
-      }
-   }
-   return DEVICE_OK;
 }
 
 /**

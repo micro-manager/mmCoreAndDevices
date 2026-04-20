@@ -4,10 +4,11 @@
 #include "atcore++.h"
 #include "MMDeviceConstants.h"
 #include "Property.h"
+#include "IProperty.h"
 
 class ICallBackManager;
 
-class TFloatProperty : public andor::IObserver
+class TFloatProperty : public andor::IObserver, public IProperty
 {
 public:
    TFloatProperty(const std::string & MM_name,

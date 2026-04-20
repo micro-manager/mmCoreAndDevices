@@ -226,7 +226,7 @@ const int g_UniversalParamsCount = sizeof(g_UniversalParams)/sizeof(ParamNameIdP
 //=================================================================== Universal
 
 Universal::Universal(short cameraId, const char* deviceName)
-    : CCameraBase<Universal>(),
+    :
     cameraId_(cameraId),
     deviceName_(deviceName),
     initialized_(false),
@@ -1990,9 +1990,9 @@ bool Universal::IsCapturing()
     return bCapturing;
 }
 
-int Universal::PrepareSequenceAcqusition()
+int Universal::PrepareSeqAcq() // Note: no longer a device interface function
 {
-    START_METHOD("Universal::PrepareSequenceAcqusition");
+    START_METHOD("Universal::PrepareSeqAcq");
 
     if (isAcquiring_)
         return ERR_BUSY_ACQUIRING;
@@ -2048,7 +2048,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     if (ret != DEVICE_OK)
         return ret;
 
-    ret = PrepareSequenceAcqusition();
+    ret = PrepareSeqAcq();
     if (ret != DEVICE_OK)
         return ret;
 
@@ -4152,25 +4152,14 @@ int Universal::FrameAcquired()
     return DEVICE_OK;
 }
 
-int Universal::PushImageToMmCore(const unsigned char* pPixBuffer, Metadata* pMd )
+int Universal::PushImageToMmCore(const unsigned char* pPixBuffer, MM::CameraImageMetadata* pMd )
 {
     START_METHOD("Universal::PushImageToMmCore");
 
-    int nRet = DEVICE_ERR;
     MM::Core* pCore = GetCoreCallback();
     // This method inserts a new image into the circular buffer (residing in MMCore)
-    nRet = pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
-        GetImageBytesPerPixel(), pMd->Serialize().c_str());
-
-    if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
-    {
-        // do not stop on overflow - just reset the buffer
-        pCore->ClearImageBuffer(this);
-        nRet = pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
-            GetImageBytesPerPixel(), pMd->Serialize().c_str(), false);
-    }
-
-    return nRet;
+    return pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
+        GetImageBytesPerPixel(), pMd->Serialize());
 }
 
 int Universal::ProcessNotification( const NotificationEntry& entry )
@@ -4204,20 +4193,20 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
     if (sendFrameToCore)
     {
         // Build the metadata
-        Metadata md;
-        md.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
-        md.PutImageTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
+        MM::CameraImageMetadata md;
+        md.AddTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
+        md.AddTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
 
 #ifdef PVCAM_FRAME_INFO_SUPPORTED
-        md.PutImageTag<int32>( "PVCAM-CameraHandle",  frameNfo.PvHCam() );
-        md.PutImageTag<int32>( "PVCAM-FrameNr",       frameNfo.PvFrameNr() );
-        md.PutImageTag<int32>( "PVCAM-ReadoutTime",   frameNfo.PvReadoutTime() );
-        md.PutImageTag<long64>( "PVCAM-TimeStamp",    frameNfo.PvTimeStamp() );
-        md.PutImageTag<long64>( "PVCAM-TimeStampBOF", frameNfo.PvTimeStampBOF() );
+        md.AddTag<int32>( "PVCAM-CameraHandle",  frameNfo.PvHCam() );
+        md.AddTag<int32>( "PVCAM-FrameNr",       frameNfo.PvFrameNr() );
+        md.AddTag<int32>( "PVCAM-ReadoutTime",   frameNfo.PvReadoutTime() );
+        md.AddTag<long64>( "PVCAM-TimeStamp",    frameNfo.PvTimeStamp() );
+        md.AddTag<long64>( "PVCAM-TimeStampBOF", frameNfo.PvTimeStampBOF() );
         if (circBufFrameRecoveryEnabled_)
         {
-            md.PutImageTag<bool>( "PVCAM-FrameRecovered", frameNfo.IsRecovered() );
-            md.PutImageTag<int32>( "PVCAM-FramesRecoveredTotal", imagesRecovered_ );
+            md.AddTag<bool>( "PVCAM-FrameRecovered", frameNfo.IsRecovered() );
+            md.AddTag<int32>( "PVCAM-FramesRecoveredTotal", imagesRecovered_ );
         }
 #endif
 
@@ -4226,7 +4215,7 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
 
         // The time elapsed since start of the acquisition until current frame readout
         // Now added by MM automatically, no need to do it here.
-        // md.PutTag(MM::g_Keyword_Elapsed_Time_ms, deviceLabel_, CDeviceUtils::ConvertToString(elapsedTimeMsec));
+        // md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(elapsedTimeMsec));
 
         const double actualInterval = elapsedTimeMsec / imagesInserted_;
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval)); 
@@ -4248,45 +4237,45 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             // metadata from other metadata and keep them grouped or close together.
             const md_frame_header* fHdr = metaFrameStruct_->header;
             // Selected metadata from the frame header
-            md.PutImageTag<uns16>("PVCAM-FMD-Version", fHdr->version); // Need to use uns16 because uns8 is displayed as char
-            md.PutImageTag<uns32>("PVCAM-FMD-FrameNr", fHdr->frameNr);
-            md.PutImageTag<uns16>("PVCAM-FMD-RoiCount", fHdr->roiCount);
-            md.PutImageTag<uns16>("PVCAM-FMD-BitDepth", fHdr->bitDepth); // Need to use uns16 because uns8 is displayed as char
+            md.AddTag<uns16>("PVCAM-FMD-Version", fHdr->version); // Need to use uns16 because uns8 is displayed as char
+            md.AddTag<uns32>("PVCAM-FMD-FrameNr", fHdr->frameNr);
+            md.AddTag<uns16>("PVCAM-FMD-RoiCount", fHdr->roiCount);
+            md.AddTag<uns16>("PVCAM-FMD-BitDepth", fHdr->bitDepth); // Need to use uns16 because uns8 is displayed as char
             const char* cKeywordColorMask = "PVCAM-FMD-ColorMask";
             switch (fHdr->colorMask)
             {
             case COLOR_NONE:
-                md.PutImageTag(cKeywordColorMask, "None");
+                md.AddTag(cKeywordColorMask, "None");
                 break;
             case COLOR_RGGB:
-                md.PutImageTag(cKeywordColorMask, "RGGB");
+                md.AddTag(cKeywordColorMask, "RGGB");
                 break;
             case COLOR_GRBG:
-                md.PutImageTag(cKeywordColorMask, "GRBG");
+                md.AddTag(cKeywordColorMask, "GRBG");
                 break;
             case COLOR_GBRG:
-                md.PutImageTag(cKeywordColorMask, "GBRG");
+                md.AddTag(cKeywordColorMask, "GBRG");
                 break;
             case COLOR_BGGR:
-                md.PutImageTag(cKeywordColorMask, "BGGR");
+                md.AddTag(cKeywordColorMask, "BGGR");
                 break;
             default:
-                md.PutImageTag(cKeywordColorMask, "Unknown");
+                md.AddTag(cKeywordColorMask, "Unknown");
                 break;
             }
-            md.PutImageTag<uns16>("PVCAM-FMD-Flags",  fHdr->flags); // Need to use uns16 because uns8 is displayed as char
+            md.AddTag<uns16>("PVCAM-FMD-Flags",  fHdr->flags); // Need to use uns16 because uns8 is displayed as char
             if (fHdr->version >= 2)
             {
-                md.PutImageTag("PVCAM-FMD-ImageFormat", getPvcamImageFormatString(fHdr->imageFormat));
-                md.PutImageTag("PVCAM-FMD-ImageCompression", getPvcamImageCompressionString(fHdr->imageCompression));
+                md.AddTag("PVCAM-FMD-ImageFormat", getPvcamImageFormatString(fHdr->imageFormat));
+                md.AddTag("PVCAM-FMD-ImageCompression", getPvcamImageCompressionString(fHdr->imageCompression));
             }
             if (fHdr->version < 3)
             {
-                md.PutImageTag<ulong64>( "PVCAM-FMD-ExposureTimeNs",
+                md.AddTag<ulong64>( "PVCAM-FMD-ExposureTimeNs",
                     (ulong64)fHdr->exposureTime * fHdr->exposureTimeResNs );
-                md.PutImageTag<ulong64>( "PVCAM-FMD-TimestampBofNs",
+                md.AddTag<ulong64>( "PVCAM-FMD-TimestampBofNs",
                     (ulong64)fHdr->timestampBOF * fHdr->timestampResNs );
-                md.PutImageTag<ulong64>( "PVCAM-FMD-TimestampEofNs",
+                md.AddTag<ulong64>( "PVCAM-FMD-TimestampEofNs",
                     (ulong64)fHdr->timestampEOF * fHdr->timestampResNs );
             }
             else
@@ -4294,18 +4283,18 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
                 const md_frame_header_v3* fHdr3 =
                     reinterpret_cast<const md_frame_header_v3*>(metaFrameStruct_->header);
                 // Version 3 of the metadata transfers the timestamps in picoseconds.
-                md.PutImageTag<ulong64>( "PVCAM-FMD-ExposureTimePs",
+                md.AddTag<ulong64>( "PVCAM-FMD-ExposureTimePs",
                     (ulong64)fHdr3->exposureTime );
-                md.PutImageTag<ulong64>( "PVCAM-FMD-TimestampBofPs",
+                md.AddTag<ulong64>( "PVCAM-FMD-TimestampBofPs",
                     (ulong64)fHdr3->timestampBOF );
-                md.PutImageTag<ulong64>( "PVCAM-FMD-TimestampEofPs",
+                md.AddTag<ulong64>( "PVCAM-FMD-TimestampEofPs",
                     (ulong64)fHdr3->timestampEOF );
             }
             // Implied ROI
             const rgn_type& iRoi = metaFrameStruct_->impliedRoi;
             snprintf(metaRoiStr_, sizeof(metaRoiStr_), "[%u,%u,%u,%u,%u,%u]",
                     iRoi.s1, iRoi.s2, iRoi.sbin, iRoi.p1, iRoi.p2, iRoi.pbin);
-            md.PutImageTag<std::string>("PVCAM-FMD-ImpliedRoi", metaRoiStr_); 
+            md.AddTag<std::string>("PVCAM-FMD-ImpliedRoi", metaRoiStr_); 
             // Per-ROI metadata
             metaAllRoisStr_ = "[";
             for (int i = 0; i < metaFrameStruct_->roiCount; ++i)
@@ -4372,7 +4361,7 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
                 metaAllRoisStr_.append("}");
             }
             metaAllRoisStr_.append("]");
-            md.PutImageTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
+            md.AddTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
         }
 #endif
 
@@ -4431,7 +4420,7 @@ int Universal::PollingThreadRun(void)
         }
         while (DEVICE_OK == ret && !pollingThd_->getStop() && imagesInserted_ < imagesToAcquire_);
 
-        sprintf( dbgBuf, "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u, imagesInserted_: %lu, imagesToAcquire_: %lu", \
+        snprintf( dbgBuf, sizeof(dbgBuf), "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u, imagesInserted_: %lu, imagesToAcquire_: %lu", \
             pollingThd_->getStop(), ret, imagesInserted_, imagesToAcquire_);
         LogAdapterMessage( __LINE__, dbgBuf );
 
@@ -4447,7 +4436,10 @@ int Universal::PollingThreadRun(void)
     catch(...)
     {
         LogAdapterMessage(g_Msg_EXCEPTION_IN_THREAD, false);
-        OnThreadExiting();
+        auto *core = GetCoreCallback();
+        if (core != nullptr) {
+           core->AcqFinished(this, 0);
+        }
         pollingThd_->setStop(true);
         return ret;
     }
@@ -4519,7 +4511,7 @@ int Universal::initializeStaticCameraParams()
         char buf[8]; // MMM.mmm
         uns16 versionMinor = fwVersion & 0x00FF;
         uns16 versionMajor = (fwVersion >> 8) & 0x00FF;
-        sprintf( buf, "%d.%d", versionMajor, versionMinor );
+        snprintf( buf, sizeof(buf), "%d.%d", versionMajor, versionMinor );
         nRet = CreateProperty(g_Keyword_FirmwareVersion, buf, MM::String, true);
         LogAdapterMessage("PARAM_CAM_FW_VERSION: " + std::string(buf));
     }
@@ -6151,7 +6143,7 @@ int Universal::selectDebayerAlgMask(int xRoiPos, int yRoiPos, int32 pvcamColorMo
     // G B G
     // R G R
     // Based on ROI shift it will simply help us to pick the correct mask
-    static const int maskMatrix[3][3] = {
+    static const int maskMatrix[3/*Y*/][3/*X*/] = {
         {CFA_RGGB, CFA_GRBG, CFA_RGGB},
         {CFA_GBRG, CFA_BGGR, CFA_GBRG},
         {CFA_RGGB, CFA_GRBG, CFA_RGGB}};
@@ -6159,13 +6151,13 @@ int Universal::selectDebayerAlgMask(int xRoiPos, int yRoiPos, int32 pvcamColorMo
         switch (pvcamColorMode)
         {
         case COLOR_RGGB:
-            return maskMatrix[xShift + 0][yShift + 0];
+            return maskMatrix[yShift + 0][xShift + 0];
         case COLOR_GRBG:
-            return maskMatrix[xShift + 1][yShift + 0];
+            return maskMatrix[yShift + 0][xShift + 1];
         case COLOR_GBRG:
-            return maskMatrix[xShift + 0][yShift + 1];
+            return maskMatrix[yShift + 1][xShift + 0];
         case COLOR_BGGR:
-            return maskMatrix[xShift + 1][yShift + 1];
+            return maskMatrix[yShift + 1][xShift + 1];
         default:
             return CFA_RGGB;
         }

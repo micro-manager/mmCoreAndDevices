@@ -117,7 +117,7 @@
 void QCAMAPI FrameDoneCallback(void* userPtr, unsigned long userData, QCam_Err errcode, unsigned long flags);
 
 // Helper Functions
-void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString);
+void ConvertReadoutSpeedToString(QCam_qcReadoutSpeed inSpeed, char *outString, size_t outStringSize);
 void ConvertReadoutSpeedToEnum(const char *inSpeed, QCam_qcReadoutSpeed *outSpeed);
 void ConvertReadoutPortToString(QCam_qcReadoutPort inPort, char *outString);
 void ConvertReadoutPortToEnum(const char *inSpeed, QCam_qcReadoutPort *outPort);
@@ -161,7 +161,7 @@ private:
 //////////////////////////////////////////////////////////////////////////////
 // QICamera class
 //////////////////////////////////////////////////////////////////////////////
-class QICamera : public CCameraBase<QICamera>  
+class QICamera : public CCameraBase<QICamera>
 {
 public:
     QICamera();
@@ -201,7 +201,6 @@ public:
     int RestartSequenceAcquisition();
     bool IsCapturing() { return m_sthd->IsRunning(); };
     unsigned GetNumberOfComponents() const;
-    int GetComponentName(unsigned comp, char* name);
 
     // action interface
     // ----------------
@@ -306,6 +305,7 @@ private:
     bool                m_rgbColor;         // is the camera in the color (debayer) mode
     double              m_dExposure;        // Current exposure setting
     double              m_interval;         // Current sequence capture interval
+    bool                m_stopWhenCBOverflows;  // Current 'stopOnOverflow' flag
     unsigned int        m_imageWidth;       // Current capture width
     unsigned int        m_imageHeight;      // Current capture height
     unsigned int        m_bitDepth;         // Current image depth in bits (8bit, 10bit, 12bit, etc..)

@@ -1,0 +1,68 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0
+        https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+    <id>full-sources</id>
+
+    <!-- This assembly is part of the Meson/Maven build system (see
+    full-sources-jar in pom.xml). It is not used when building with Ant or
+    Autoconf/Automake. -->
+
+    <formats>
+        <format>jar</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <!-- Include all source files under Git, plus subprojects mmdevice and
+    mmcore, for a full source package that can be built without additional LGPL
+    dependencies. Use scripts/verify-full-sources-jar.sh to verify
+    completeness. -->
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <useDefaultExcludes>true</useDefaultExcludes>
+            <excludes>
+                <!-- These exclusions will be simpler once we've removed the
+                legacy build systems -->
+                <!-- Build output -->
+                <exclude>builddir*/**</exclude>
+                <exclude>build/**</exclude>
+                <exclude>target/**</exclude>
+                <exclude>gensrc/**</exclude>
+                <!-- SWIG-generated (Autotools build) -->
+                <exclude>MMCoreJ_wrap.cxx</exclude>
+                <exclude>MMCoreJ_wrap.h</exclude>
+                <!-- Legacy build system -->
+                <exclude>**/Makefile.am</exclude>
+                <exclude>**/build.xml</exclude>
+                <exclude>**/*.vcxproj</exclude>
+                <exclude>**/*.vcxproj.filters</exclude>
+                <!-- Compiled/build artifacts -->
+                <exclude>**/*.o</exclude>
+                <exclude>**/*.lo</exclude>
+                <exclude>**/*.a</exclude>
+                <exclude>**/*.la</exclude>
+                <exclude>**/*.lai</exclude>
+                <exclude>**/*.so</exclude>
+                <exclude>**/*.dylib</exclude>
+                <exclude>**/*.jnilib</exclude>
+                <exclude>**/*.jar</exclude>
+                <exclude>**/*.class</exclude>
+                <exclude>**/*.stamp</exclude>
+                <exclude>**/*.Plo</exclude>
+                <!-- Autotools generated -->
+                <exclude>.deps/**</exclude>
+                <exclude>.libs/**</exclude>
+                <exclude>Makefile</exclude>
+                <exclude>Makefile.in</exclude>
+                <!-- IDE/editor files -->
+                <exclude>.vscode/**</exclude>
+                <exclude>.idea/**</exclude>
+                <!-- Meson wraps -->
+                <exclude>subprojects/.wraplock</exclude>
+                <exclude>subprojects/packagecache/**</exclude>
+                <exclude>**/.meson-subproject-wrap-hash.txt</exclude>
+            </excludes>
+        </fileSet>
+    </fileSets>
+</assembly>

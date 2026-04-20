@@ -5,8 +5,8 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef _ASILED_H_
-#define _ASILED_H_
+#ifndef ASILED_H
+#define ASILED_H
 
 #include "ASIBase.h"
 
@@ -19,10 +19,10 @@ public:
 	int Initialize();
 	int Shutdown();
 
-	bool SupportsDeviceDetection(void);
-	MM::DeviceDetectionStatus DetectDevice(void);
+	bool SupportsDeviceDetection();
+	MM::DeviceDetectionStatus DetectDevice();
 
-	void GetName(char* pszName) const;
+	void GetName(char* name) const;
 	bool Busy();
 
 	// Shutter API
@@ -39,6 +39,7 @@ public:
 private:
 	int IsOpen(bool* open); // queries the device rather than using a cached value
 	int CurrentIntensity(long* intensity); // queries the device rather than using a cached value
+
 	bool open_;
 	long intensity_;
 	std::string name_;
@@ -48,4 +49,4 @@ private:
 	bool hasDLED_;
 };
 
-#endif // _ASILED_H_
+#endif // ASILED_H

@@ -378,7 +378,7 @@ int PrizmatixLED::Initialize()
 		  OnOffLeds[i]=0;
 		  // CPropertyAction
 			   CPropertyActionEx* pAct = new CPropertyActionEx (this, &PrizmatixLED::OnPowerLEDEx,i);
-		   char Name[20],StateName[20];
+		   char Name[20],StateName[32];
 		   Until=Mik+1;
 		   while(Until< nmWrite && NameLeds[Until] !=',') Until++;
 		   if( Mik+1 < nmWrite && Mik  <Until )
@@ -389,13 +389,13 @@ int PrizmatixLED::Initialize()
 				  while(Mik< nmWrite && NameLeds[Mik] ==' ') Mik++;
 		   }
 		   else
-				sprintf(Name,"LED%d",i);  
+				snprintf(Name, sizeof(Name), "LED%d",i);  
 			nRet= CreateProperty(Name, "0", MM::Integer,  false, pAct);
 			 SetPropertyLimits(Name, 0, 100);
 			  
 		//-----
 					CPropertyActionEx* pAct5 = new CPropertyActionEx (this, &PrizmatixLED::OnOfOnEx,i);
-						sprintf(StateName,"State %s",Name); 
+						snprintf(StateName, sizeof(StateName), "State %s",Name); 
 					 ret = CreateProperty(StateName, "0", MM::Integer, false, pAct5);
 				   if (ret != DEVICE_OK)
 					  return ret;
@@ -489,7 +489,7 @@ int PrizmatixLED::WriteToPort(char *Str)
       long Stat;
       pProp->Get(Stat);
       char Buf[20];
-	 sprintf(Buf,"K:1,8,%d",Stat);
+	 snprintf(Buf, sizeof(Buf), "K:1,8,%d",Stat);
   
 	     return WriteToPort(Buf);
    }

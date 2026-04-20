@@ -111,11 +111,11 @@ void TiXmlBase::EncodeString( const TIXML_STRING& str, TIXML_STRING* outString )
 			// Easy pass at non-alpha/numeric/symbol
 			// Below 32 is symbolic.
 			char buf[ 32 ];
-			
-			#if defined(TIXML_SNPRINTF)		
+
+			#if defined(TIXML_SNPRINTF)
 				TIXML_SNPRINTF( buf, sizeof(buf), "&#x%02X;", (unsigned) ( c & 0xff ) );
 			#else
-				sprintf( buf, "&#x%02X;", (unsigned) ( c & 0xff ) );
+				snprintf( buf, sizeof(buf), "&#x%02X;", (unsigned) ( c & 0xff ) );
 			#endif		
 
 			//*ME:	warning C4267: convert 'size_t' to 'int'
@@ -1206,10 +1206,10 @@ int TiXmlAttribute::QueryDoubleValue( double* dval ) const
 void TiXmlAttribute::SetIntValue( int _value )
 {
 	char buf [64];
-	#if defined(TIXML_SNPRINTF)		
+	#if defined(TIXML_SNPRINTF)
 		TIXML_SNPRINTF(buf, sizeof(buf), "%d", _value);
 	#else
-		sprintf (buf, "%d", _value);
+		snprintf (buf, sizeof(buf), "%d", _value);
 	#endif
 	SetValue (buf);
 }
@@ -1217,10 +1217,10 @@ void TiXmlAttribute::SetIntValue( int _value )
 void TiXmlAttribute::SetDoubleValue( double _value )
 {
 	char buf [256];
-	#if defined(TIXML_SNPRINTF)		
+	#if defined(TIXML_SNPRINTF)
 		TIXML_SNPRINTF( buf, sizeof(buf), "%g", _value);
 	#else
-		sprintf (buf, "%g", _value);
+		snprintf (buf, sizeof(buf), "%g", _value);
 	#endif
 	SetValue (buf);
 }

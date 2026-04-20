@@ -778,7 +778,6 @@ int Wheel::OnSpeed(MM::PropertyBase* /*pProp*/, MM::ActionType /*eAct*/)
 // XYStage
 //
 XYStage::XYStage() :
-   CXYStageBase<XYStage>(),
    initialized_(false), 
    port_("Undefined"), 
    stepSizeXUm_(0.0), 

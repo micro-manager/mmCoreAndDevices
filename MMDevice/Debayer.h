@@ -30,8 +30,10 @@
 #include <vector>
 
 /**
- * Utility class to build color image from the Bayer grayscale image
- * Based on the Debayer_Image plugin for ImageJ, by Jennifer West, University of Manitoba
+ * @brief Utility class to build a color image from a Bayer grayscale image.
+ *
+ * Based on the Debayer_Image plugin for ImageJ, by Jennifer West, University
+ * of Manitoba.
  */
 class Debayer
 {

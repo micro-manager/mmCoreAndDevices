@@ -205,7 +205,6 @@ const int g_UniversalParamsCount = sizeof(g_UniversalParams)/sizeof(ParamNameIdP
 // The name parameter is only used to return the device name. The physical
 // camera to use is determined by the cameraId parameter.
 Universal::Universal(short cameraId, const char* name) :
-   CCameraBase<Universal> (),
    initialized_(false),
    curImageCnt_(0),
    hPICAM_(0),
@@ -357,7 +356,7 @@ PicamError Universal::AcquisitionUpdated(
             // So far there is no way to use metadada for single frame mode (SnapImage())
             if (sequenceModeReady_)
             {
-               Metadata md;
+               MM::CameraImageMetadata md;
                ret = BuildMetadata( md );
                if (ret==DEVICE_OK)
                {
@@ -1835,7 +1834,7 @@ int Universal::ClearROI()
 
 bool Universal::GetErrorText(int errorCode, char* text) const
 {
-   if (CCameraBase<Universal>::GetErrorText(errorCode, text))
+   if (CLegacyCameraBase<Universal>::GetErrorText(errorCode, text))
       return true; // base message
 
    return false;
@@ -1940,7 +1939,7 @@ int Universal::buildSpdTable()
 
 
    for (int portIndex = 0; portIndex < nPortMax; portIndex++){
-      const pichar* adc_string;
+      const pichar* adc_string = nullptr;
 
 
       if (port_capable){
@@ -2250,7 +2249,7 @@ int Universal::ResizeImageBufferSingle()
 
 #ifndef linux
 /*
- * Overrides a virtual function from the CCameraBase class
+ * Overrides a virtual function from the CLegacyCameraBase class
  * Do actual capture
  * Called from the acquisition thread function
  */
@@ -2262,7 +2261,7 @@ int Universal::ThreadRun(void)
    char dbgBuf[128]; // Debug log buffer
    uniAcqThd_->setStop(false); // make sure this thread's status is updated properly.
    pibln bRunning=TRUE;
-   Metadata md;
+   MM::CameraImageMetadata md;
 
    try
    {
@@ -2299,7 +2298,7 @@ int Universal::ThreadRun(void)
       }
       while (!uniAcqThd_->getStop() && curImageCnt_ < numImages_ && bRunning && ret==DEVICE_OK);
 
-      sprintf( dbgBuf, "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u,  curImageCnt_: %lu, numImages_: %lu", \
+      snprintf( dbgBuf, sizeof(dbgBuf), "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u,  curImageCnt_: %lu, numImages_: %lu", \
             uniAcqThd_->getStop(), ret, curImageCnt_, numImages_);
       LogMMMessage( __LINE__, dbgBuf );
 
@@ -2321,13 +2320,14 @@ int Universal::ThreadRun(void)
    }
 }
 
-/**
+/*
  * Micromanager calls the "live" acquisition a "sequence"
  *  don't get this confused with a PICAM sequence acquisition, it's actually circular buffer mode
  */
-int Universal::PrepareSequenceAcqusition()
+
+int Universal::PrepareSeqAcq() // Note: no longer a devcie interface function
 {
-   START_METHOD("Universal::PrepareSequenceAcqusition");
+   START_METHOD("Universal::PrepareSeqAcq");
 
    if (IsCapturing())
    {
@@ -2364,7 +2364,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
 {
    START_METHOD("Universal::StartSequenceAcquisition");
 
-   int ret = PrepareSequenceAcqusition();
+   int ret = PrepareSeqAcq();
    if (ret != DEVICE_OK)
       return ret;
 
@@ -2504,7 +2504,7 @@ void Universal::OnThreadExiting() throw ()
       isAcquiring_       = false;
 
       // The AcqFinished is called inside the parent OnThreadExiting()
-      CCameraBase<Universal>::OnThreadExiting();
+      CLegacyCameraBase<Universal>::OnThreadExiting();
    }
    catch (...)
    {
@@ -2518,65 +2518,41 @@ void Universal::OnThreadExiting() throw ()
 /**
  * Creates metadata for current frame
  */
-int Universal::BuildMetadata( Metadata& md )
+int Universal::BuildMetadata( MM::CameraImageMetadata& md )
 {
    char label[MM::MaxStrLength];
    GetLabel(label);
 
    MM::MMTime timestamp = GetCurrentMMTime();
    md.Clear();
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
 #ifdef PICAM_FRAME_INFO_SUPPORTED
-   md.PutImageTag<int32>("PICAM-FrameNr", pFrameInfo_->FrameNr);
-   md.PutImageTag<int32>("PICAM-ReadoutTime", pFrameInfo_->ReadoutTime);
-   md.PutImageTag<long64>("PICAM-TimeStamp",  pFrameInfo_->TimeStamp);
-   md.PutImageTag<long64>("PICAM-TimeStampBOF", pFrameInfo_->TimeStampBOF);
+   md.AddTag<int32>("PICAM-FrameNr", pFrameInfo_->FrameNr);
+   md.AddTag<int32>("PICAM-ReadoutTime", pFrameInfo_->ReadoutTime);
+   md.AddTag<long64>("PICAM-TimeStamp",  pFrameInfo_->TimeStamp);
+   md.AddTag<long64>("PICAM-TimeStampBOF", pFrameInfo_->TimeStampBOF);
 #endif
 
-   MetadataSingleTag mstElapsed(MM::g_Keyword_Elapsed_Time_ms, label, true);
    MM::MMTime elapsed = timestamp - startTime_;
-   mstElapsed.SetValue(CDeviceUtils::ConvertToString(elapsed.getMsec()));
-   md.SetTag(mstElapsed);
-
-   MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-   mstCount.SetValue(CDeviceUtils::ConvertToString(curImageCnt_));
-   md.SetTag(mstCount);
-
    double actualInterval = elapsed.getMsec() / curImageCnt_;
    SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval));
 
    return DEVICE_OK;
 }
 
-int Universal::PushImage(const unsigned char* pixBuffer, Metadata* pMd )
+int Universal::PushImage(const unsigned char* pixBuffer, MM::CameraImageMetadata* pMd )
 {
    START_METHOD("Universal::PushImage");
 
-   int nRet = DEVICE_ERR;
    MM::Core* pCore = GetCoreCallback();
    // This method inserts a new image into the circular buffer (residing in MMCore)
-   nRet = pCore->InsertMultiChannel(this,
+   return pCore->InsertImage(this,
          pixBuffer,
-         1,
          GetImageWidth(),
          GetImageHeight(),
          GetImageBytesPerPixel(),
-         pMd); // Inserting the md causes crash in debug builds
-   if (!stopOnOverflow_ && nRet == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      pCore->ClearImageBuffer(this);
-      nRet = pCore->InsertMultiChannel(this,
-            pixBuffer,
-            1,
-            GetImageWidth(),
-            GetImageHeight(),
-            GetImageBytesPerPixel(),
-            pMd);
-   }
-
-   return nRet;
+         pMd->Serialize());
 }
 
 
@@ -2592,7 +2568,7 @@ int Universal::LogMMError(int errCode, int lineNr, std::string message, bool deb
    try
    {
       char strText[MM::MaxStrLength];
-      if (!CCameraBase<Universal>::GetErrorText(errCode, strText))
+      if (!CLegacyCameraBase<Universal>::GetErrorText(errCode, strText))
       {
          CDeviceUtils::CopyLimitedString(strText, "Unknown");
       }

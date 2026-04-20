@@ -32,8 +32,6 @@
 
 #include "Utilities.h"
 
-#include <boost/lexical_cast.hpp>
-
 extern const char* g_DeviceNameMultiDAStateDevice;
 
 
@@ -54,7 +52,7 @@ MultiDAStateDevice::MultiDAStateDevice() :
       false, pAct, true);
    for (int i = 1; i <= 8; ++i)
    {
-      AddAllowedValue("NumberOfDADevices", boost::lexical_cast<std::string>(i).c_str());
+      AddAllowedValue("NumberOfDADevices", std::to_string(i).c_str());
    }
 
    pAct = new CPropertyAction(this, &MultiDAStateDevice::OnMinVoltage);
@@ -102,8 +100,7 @@ int MultiDAStateDevice::Initialize()
 
    for (unsigned int i = 0; i < numberOfDADevices_; ++i)
    {
-      const std::string propName =
-         "DADevice-" + boost::lexical_cast<std::string>(i);
+      const std::string propName = "DADevice-" + std::to_string(i);
       CPropertyActionEx* pAct = new CPropertyActionEx(this,
          &MultiDAStateDevice::OnDADevice, i);
       int ret = CreateStringProperty(propName.c_str(), "", false, pAct);
@@ -121,7 +118,7 @@ int MultiDAStateDevice::Initialize()
    int numPos = GetNumberOfPositions();
    for (int i = 0; i < numPos; ++i)
    {
-      SetPositionLabel(i, boost::lexical_cast<std::string>(i).c_str());
+      SetPositionLabel(i, std::to_string(i).c_str());
    }
 
    if (minVoltage_ > maxVoltage_)
@@ -146,8 +143,7 @@ int MultiDAStateDevice::Initialize()
 
    for (unsigned int i = 0; i < numberOfDADevices_; ++i)
    {
-      const std::string propName =
-         "DADevice-" + boost::lexical_cast<std::string>(i) + "-Voltage";
+      const std::string propName = "DADevice-" + std::to_string(i) + "-Voltage";
       CPropertyActionEx* pActEx = new CPropertyActionEx(this, &MultiDAStateDevice::OnVoltage, i);
       ret = CreateFloatProperty(propName.c_str(), voltages_[i], false, pActEx);
       if (ret != DEVICE_OK)
@@ -343,9 +339,13 @@ int MultiDAStateDevice::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
       {
          try
          {
-            values.push_back(boost::lexical_cast<long>(*it));
+            values.push_back(std::stol(*it));
          }
-         catch (boost::bad_lexical_cast&)
+         catch (const std::invalid_argument&)
+         {
+            return DEVICE_ERR;
+         }
+         catch (const std::out_of_range&)
          {
             return DEVICE_ERR;
          }

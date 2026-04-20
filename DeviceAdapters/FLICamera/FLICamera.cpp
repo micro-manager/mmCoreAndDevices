@@ -111,7 +111,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 CFLICamera::CFLICamera() :
-	CCameraBase<CFLICamera> (),
 	initialized_(false),
 	pDemoResourceLock_(0),
 	dev_(FLI_INVALID_DEVICE),
@@ -155,7 +154,6 @@ int CFLICamera::Initialize()
 
 	DOFLIAPIERR(FLIOpen(&dev_, "flipro0", FLIDOMAIN_USB | FLIDEVICE_CAMERA), DEVICE_NOT_CONNECTED);
 	DOFLIAPIERR(FLIControlShutter(dev_, shutter_), DEVICE_NOT_CONNECTED);
-	DOFLIAPIERR(FLIGetPixelSize(dev_, &pixel_x_, &pixel_y_), DEVICE_NOT_CONNECTED);
 	DOFLIAPIERR(FLIGetVisibleArea(dev_, &ul_x, &ul_y, &lr_x, &lr_y), DEVICE_NOT_CONNECTED);
 
 	image_offset_x_ = ul_x;
@@ -203,7 +201,7 @@ int CFLICamera::Initialize()
 	for(int i = 1; i <= 8; i += 1)
 	{
 	  char b[16];
-		sprintf(b, "%d", i);
+		snprintf(b, sizeof(b), "%d", i);
 		binValues.push_back(b);
 	}
   ret = SetAllowedValues(MM::g_Keyword_Binning, binValues);
@@ -392,23 +390,6 @@ const unsigned char* CFLICamera::GetImageBuffer()
 	}  
 
 	return img_.GetPixels();
-}
-
-int CFLICamera::GetComponentName(unsigned channel, char* name)
-{
-  if (channel >= GetNumberOfComponents())
-     return DEVICE_NONEXISTENT_CHANNEL;
-
-	char buf[32];
-	sprintf(buf, "Channel %d", channel);
-
-  CDeviceUtils::CopyLimitedString(name, buf);
-  return DEVICE_OK;
-}
-
-unsigned CFLICamera::GetNumberOfChannels() const 
-{
-  return 1;
 }
 
 unsigned CFLICamera::GetNumberOfComponents() const 
@@ -714,21 +695,6 @@ int CFLICamera::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 	}
 
 	return ret; 
-}
-
-int CFLICamera::PrepareSequenceAcqusition()
-{
-	return DEVICE_OK;
-}
-
-double CFLICamera::GetNominalPixelSizeUm() const
-{
-	return pixel_x_;
-}
-
-double CFLICamera::GetPixelSizeUm() const
-{
-	return pixel_x_;
 }
 
 int CFLICamera::ResizeImageBuffer()

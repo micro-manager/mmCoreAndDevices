@@ -24,14 +24,14 @@
 #include "POACamera.h"
 #include "ConvFuncs.h"
 
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
 
 #include <cstdio>
 #include <string>
 #include <math.h>
-#include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm>
-//#include "WriteCompactTiffRGB.h"
 #include <iostream>
 #include <future>
 
@@ -179,7 +179,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 POACamera::POACamera() :
-    CCameraBase<POACamera>(),
     exposureMaximum_(2000000.0),
     initialized_(false),
     roiX_(0),
@@ -193,7 +192,6 @@ POACamera::POACamera() :
     gammaValue_(g_gamma_def),
     p8bitGammaTable(nullptr),
     p16bitGammaTable(nullptr),
-    nominalPixelSizeUm_(1.0),
     pRGB24(nullptr),
     RGB24BufSize_(0),
     readoutUs_(0.0),
@@ -235,7 +233,10 @@ POACamera::POACamera() :
             continue;
         }
 
-        connectCamerasName_.push_back(std::string(camProp.cameraModelName));
+        std::string itemName = camProp.cameraModelName;
+        itemName += ' ';
+        itemName += camProp.SN;
+        connectCamerasName_.push_back(itemName);
     }
     
     CPropertyAction* pAct = new CPropertyAction(this, &POACamera::OnSelectCamIndex);
@@ -379,8 +380,6 @@ int POACamera::Initialize()
     p16bitGammaTable = new unsigned short[65536];
     ResetGammaTable();
 
-    nominalPixelSizeUm_ = camProp_.pixelSize;
-
     char* pCameraName = camProp_.cameraModelName;
 
     // CameraName
@@ -388,7 +387,7 @@ int POACamera::Initialize()
     assert(nRet == DEVICE_OK);
 
     // CameraID(SN)
-    sprintf(cameraIDStr, "Serial number %s", camProp_.SN);
+    snprintf(cameraIDStr, sizeof(cameraIDStr), "Serial number %s", camProp_.SN);
     nRet = CreateStringProperty(MM::g_Keyword_CameraID, cameraIDStr, true);
     assert(nRet == DEVICE_OK);
 
@@ -427,15 +426,15 @@ int POACamera::Initialize()
     assert(nRet == DEVICE_OK);
 
     std::vector<std::string> binningStrVec;
-    char binStr[2];
+    char binStr[12];
     for (int i = 0; i < 8; i++) //int bins[8]; in camera property
     {
         if (camProp_.bins[i] == 0)
         {
             break;
         }
-        memset(binStr, 0, 2);
-        sprintf(binStr, "%d", camProp_.bins[i]);
+        memset(binStr, 0, sizeof(binStr));
+        snprintf(binStr, sizeof(binStr), "%d", camProp_.bins[i]);
         binningStrVec.push_back(binStr);
     }
 
@@ -815,6 +814,11 @@ int POACamera::SnapImage()
     }
 
     m_bIsToStopExposure = false;
+
+    if (exp > 20.0)
+    {
+       CDeviceUtils::SleepMs((long) (exp - 10.0));
+    }
     
     do
     {
@@ -1283,16 +1287,6 @@ int POACamera::SendExposureSequence() const {
     return DEVICE_OK;
 }
 
-
-int POACamera::PrepareSequenceAcqusition()
-{
-    LOG("PrepareSequenceAcqusition")
-    if (IsCapturing())
-        return DEVICE_CAMERA_BUSY_ACQUIRING;
-
-    return DEVICE_OK;
-}
-
 /**
  * Required by the MM::Camera API
  * Please implement this yourself and do not rely on the base class implementation
@@ -1370,17 +1364,17 @@ int POACamera::InsertImage()
     this->GetLabel(label);
 
     // Important:  metadata about the image are generated here:
-    Metadata md;
-    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-    md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-    md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)roiX_));
-    md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)roiY_));
+    MM::CameraImageMetadata md;
+    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+    md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+    md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)roiX_));
+    md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)roiY_));
 
     imageCounter_++;
 
     char buf[MM::MaxStrLength];
     GetProperty(MM::g_Keyword_Binning, buf);
-    md.put(MM::g_Keyword_Binning, buf);
+    md.AddTag(MM::g_Keyword_Binning, buf);
 
 
     MMThreadGuard g(imgPixelsLock_);
@@ -1392,17 +1386,7 @@ int POACamera::InsertImage()
     unsigned int h = GetImageHeight();
     unsigned int b = GetImageBytesPerPixel();
 
-    int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-
-    if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-    {
-        // do not stop on overflow - just reset the buffer
-        GetCoreCallback()->ClearImageBuffer(this);
-        // don't process this same image again...
-        return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-    }
-    else
-        return ret;
+    return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /*

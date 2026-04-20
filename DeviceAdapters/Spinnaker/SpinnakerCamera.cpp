@@ -3,6 +3,7 @@
 #pragma warning(disable : 4251) // Note: need to have a C++ interface, i.e., compiler versions need to match!
 
 #include "SpinnakerCamera.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include <vector>
 #include <string>
@@ -123,7 +124,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 SpinnakerCamera::SpinnakerCamera(GENICAM::gcstring name)
-   : CCameraBase<SpinnakerCamera>(),
+   :
    m_system(nullptr),
    m_cam(nullptr),
    m_imageBuff(nullptr),
@@ -891,7 +892,8 @@ const unsigned char* SpinnakerCamera::GetImageBuffer()
 
          if (m_imageBuff)
          {
-            if (m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8) {
+            if (m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8 
+                     || m_imagePtr->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed) {
                size_t theirSizeD3 = m_imagePtr->GetBufferSize() / 3;
                size_t ourSizeD4 = this->GetImageBufferSize() / 4;
                size_t minSize = theirSizeD3 > ourSizeD4 ? ourSizeD4 : theirSizeD3;
@@ -961,6 +963,8 @@ unsigned SpinnakerCamera::GetImageBytesPerPixel() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8)
       return 4;
+   if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
+      return 4;
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
       return 4;
 
@@ -996,6 +1000,8 @@ unsigned SpinnakerCamera::GetNumberOfComponents() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8)
       return 4;
+   if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
+      return 4;
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
       return 4;
 
@@ -1005,7 +1011,8 @@ unsigned SpinnakerCamera::GetNumberOfComponents() const
 unsigned SpinnakerCamera::GetBitDepth() const
 {
    if (m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8 ||
-      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8)
+      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_BGRa8 ||
+      m_cam->PixelFormat.GetValue() == SPKR::PixelFormat_RGB8Packed)
    {
       return 8;
    }
@@ -1533,12 +1540,6 @@ int SpinnakerCamera::allocateImageBuffer(const std::size_t size, const SPKR::Pix
    return DEVICE_OK;
 }
 
-
-int SpinnakerCamera::PrepareSequenceAcqusition()
-{
-   return DEVICE_OK;
-}
-
 int SpinnakerCamera::StartSequenceAcquisition(double interval)
 {
    if (!m_aqThread->IsStopped())
@@ -1607,15 +1608,15 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          char label[MM::MaxStrLength];
          this->GetLabel(label);
 
-         Metadata md;
-         md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-         md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - m_aqThread->GetStartTime()).getMsec()));
-         md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)m_cam->Width.GetValue()));
-         md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)m_cam->Height.GetValue()));
+         MM::CameraImageMetadata md;
+         md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+         md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - m_aqThread->GetStartTime()).getMsec()));
+         md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)m_cam->Width.GetValue()));
+         md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)m_cam->Height.GetValue()));
 
          char buf[MM::MaxStrLength];
          GetProperty(MM::g_Keyword_Binning, buf);
-         md.put(MM::g_Keyword_Binning, buf);
+         md.AddTag(MM::g_Keyword_Binning, buf);
 
          MMThreadGuard g(m_pixelLock);
 
@@ -1623,7 +1624,8 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
 
          if (ip->GetPixelFormat() == SPKR::PixelFormat_Mono12p ||
             ip->GetPixelFormat() == SPKR::PixelFormat_Mono12Packed ||
-            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8)
+            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8 ||
+            ip->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed)
          {
             if (m_imageBuff == NULL)
             {
@@ -1631,7 +1633,7 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
                if (ret != DEVICE_OK) return ret;
             }
 
-            if (ip->GetPixelFormat() == SPKR::PixelFormat_RGB8) 
+            if (ip->GetPixelFormat() == SPKR::PixelFormat_RGB8 || ip->GetPixelFormat() == SPKR::PixelFormat_RGB8Packed) 
             {
                size_t theirSizeD3 = ip->GetBufferSize() / 3;
                size_t ourSizeD4 = this->GetImageBufferSize() / 4;
@@ -1653,21 +1655,11 @@ int SpinnakerCamera::MoveImageToCircularBuffer()
          unsigned int h = GetImageHeight();
          unsigned int b = GetImageBytesPerPixel();
 
-         int ret = GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize().c_str());
-         if (!m_stopOnOverflow && ret == DEVICE_BUFFER_OVERFLOW)
-         {
-            // do not stop on overflow - just reset the buffer
-            GetCoreCallback()->ClearImageBuffer(this);
-            // don't process this same image again...
-            return GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize().c_str(), false);
-         }
-         else
-         {
-            if (ip != nullptr)
-               ip->Release();
+         int ret = GetCoreCallback()->InsertImage(this, imageData, w, h, b, md.Serialize());
+         if (ip != nullptr)
+            ip->Release();
 
-            return ret;
-         }
+         return ret;
       }
       else
       {
@@ -1792,7 +1784,10 @@ int SpinnakerAcquisitionThread::svc(void) throw()
    m_actualDuration = m_spkrCam->GetCurrentMMTime() - m_startTime;
    m_spkrCam->m_cam->EndAcquisition();
    m_spkrCam->m_cam->AcquisitionMode.SetValue(SPKR::AcquisitionMode_SingleFrame);
-   m_spkrCam->OnThreadExiting();
+   auto* core = m_spkrCam->GetCoreCallback();
+   if (core != nullptr) {
+      core->AcqFinished(m_spkrCam, 0);
+   }
    return DEVICE_OK;
 }
 

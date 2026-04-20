@@ -22,6 +22,9 @@
 #include "XYStageInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int XYStageInstance::SetPositionUm(double x, double y) { RequireInitialized(__func__); return GetImpl()->SetPositionUm(x, y); }
 int XYStageInstance::SetRelativePositionUm(double dx, double dy) { RequireInitialized(__func__); return GetImpl()->SetRelativePositionUm(dx, dy); }
 int XYStageInstance::SetAdapterOriginUm(double x, double y) { RequireInitialized(__func__); return GetImpl()->SetAdapterOriginUm(x, y); }
@@ -39,6 +42,7 @@ int XYStageInstance::SetYOrigin() { RequireInitialized(__func__); return GetImpl
 int XYStageInstance::GetStepLimits(long& xMin, long& xMax, long& yMin, long& yMax) { RequireInitialized(__func__); return GetImpl()->GetStepLimits(xMin, xMax, yMin, yMax); }
 double XYStageInstance::GetStepSizeXUm() { RequireInitialized(__func__); return GetImpl()->GetStepSizeXUm(); }
 double XYStageInstance::GetStepSizeYUm() { RequireInitialized(__func__); return GetImpl()->GetStepSizeYUm(); }
+int XYStageInstance::UsesOnXYStagePositionChanged(bool& result) const { RequireInitialized(__func__); return GetImpl()->UsesOnXYStagePositionChanged(result); }
 int XYStageInstance::IsXYStageSequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsXYStageSequenceable(isSequenceable); }
 int XYStageInstance::GetXYStageSequenceMaxLength(long& nrEvents) const { RequireInitialized(__func__); return GetImpl()->GetXYStageSequenceMaxLength(nrEvents); }
 int XYStageInstance::StartXYStageSequence() { RequireInitialized(__func__); return GetImpl()->StartXYStageSequence(); }
@@ -46,3 +50,6 @@ int XYStageInstance::StopXYStageSequence() { RequireInitialized(__func__); retur
 int XYStageInstance::ClearXYStageSequence() { RequireInitialized(__func__); return GetImpl()->ClearXYStageSequence(); }
 int XYStageInstance::AddToXYStageSequence(double positionX, double positionY) { RequireInitialized(__func__); return GetImpl()->AddToXYStageSequence(positionX, positionY); }
 int XYStageInstance::SendXYStageSequence() { RequireInitialized(__func__); return GetImpl()->SendXYStageSequence(); }
+
+} // namespace internal
+} // namespace mmcore

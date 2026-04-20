@@ -787,7 +787,7 @@ int CPCOCam::InitLineTiming()
       szhelp = "Off";
     else
       szhelp = "On";
-    csh = "Light Sheet Mode";
+    csh = "Line Scanning Mode";
     nRet = CreateProperty(csh.c_str(), szhelp.c_str(), MM::String, false, pAct);
     if (nRet != DEVICE_OK)
       return nRet;
@@ -807,7 +807,7 @@ int CPCOCam::InitLineTiming()
         szhelp = "us";
       else
         szhelp = "ms";
-    csh = "Light Sheet Mode Timebase";
+    csh = "Line Scanning Mode Timebase";
     nRet = CreateProperty(csh.c_str(), szhelp.c_str(), MM::String, false, pAct);
     if (nRet != DEVICE_OK)
       return nRet;
@@ -823,21 +823,21 @@ int CPCOCam::InitLineTiming()
 
 
     pAct = new CPropertyAction(this, &CPCOCam::OnCmosLineTime);
-    csh = "Light Sheet Mode Line Time";
+    csh = "Line Scanning Mode Line Time";
     sprintf_s(szh, 100, "%d", m_dwCMOSLineTime);
     nRet = CreateProperty(csh.c_str(), szh, MM::Integer, false, pAct);
     if (nRet != DEVICE_OK)
       return nRet;
 
     pAct = new CPropertyAction(this, &CPCOCam::OnCmosDelayLines);
-    csh = "Light Sheet Mode Delay Lines";
+    csh = "Line Scanning Mode Delay Lines";
     sprintf_s(szh, 100, "%d", m_dwCMOSDelayLines);
     nRet = CreateProperty(csh.c_str(), szh, MM::Integer, false, pAct);
     if (nRet != DEVICE_OK)
       return nRet;
 
     pAct = new CPropertyAction(this, &CPCOCam::OnCmosExposureLines);
-    csh = "Light Sheet Mode Exposure Lines";
+    csh = "Line Scanning Mode Exposure Lines";
     sprintf_s(szh, 100, "%d", m_dwCMOSExposureLines);
     nRet = CreateProperty(csh.c_str(), szh, MM::Integer, false, pAct);
     if (nRet != DEVICE_OK)

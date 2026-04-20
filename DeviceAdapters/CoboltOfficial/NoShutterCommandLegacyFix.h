@@ -72,7 +72,7 @@ namespace legacy
                 std::string isShutterOpenStr, currentSetpoint;
                 Fetch( &isShutterOpenStr, NULL, &currentSetpoint );
 
-                char valueToSave[ 32 ];
+                char valueToSave[ 128 ];
                 snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
                 const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
                 Logger::Instance()->LogMessage("CoboltShutter :" + saveCommand, true);
@@ -85,7 +85,7 @@ namespace legacy
                 std::string isShutterOpenStr, runmode;
                 Fetch( &isShutterOpenStr, &runmode, NULL );
 
-                char valueToSave[ 32 ];
+                char valueToSave[ 128 ];
                 snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
                 const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
 
@@ -94,10 +94,10 @@ namespace legacy
 
             int PersistState( const bool isShutterOpen, const std::string& runmode, const std::string& currentSetpoint )
             {
-                char valueToSave[ 32 ];
+                char valueToSave[ 128 ];
                 snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", ( isShutterOpen ? "1" : "0" ), runmode.c_str(), currentSetpoint.c_str() );
                 const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
-                
+
                 Logger::Instance()->LogMessage("CoboltShutter : Save state" + saveCommand, true);
                 savedCurrentSetpoint = currentSetpoint;
                 savedRunMode = runmode;

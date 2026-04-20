@@ -57,9 +57,12 @@ public:
    int OnPort(MM::PropertyBase* pPropt, MM::ActionType eAct);
    int OnLogic(MM::PropertyBase* pPropt, MM::ActionType eAct);
    int OnVersion(MM::PropertyBase* pPropt, MM::ActionType eAct);
+   int OnExtendedVersion(MM::PropertyBase* pPropt, MM::ActionType eAct);
    unsigned int GetMaxNumPatterns() {
       return maxNumPatterns_;
    };
+   unsigned int GetNumDAChannels() { return numDAChannels_; }
+   unsigned int GetNumDigitalPins() { return numDigitalPins_; }
 
    // custom interface for child devices
    bool IsPortAvailable() {return portAvailable_;}
@@ -80,6 +83,7 @@ public:
    void SetSwitchState(unsigned state) {switchState_ = state;}
    const unsigned GetShutterState() {return shutterState_;}
    const unsigned GetSwitchState() {return switchState_;}
+   const int GetControllerVersionCached() {return version_;}
 
 private:
    int GetControllerVersion(int&);
@@ -89,7 +93,10 @@ private:
    bool invertedLogic_;
    bool timedOutputActive_;
    int version_;
+   long extendedVersion_;
    unsigned int maxNumPatterns_;
+   unsigned int numDAChannels_;
+   unsigned int numDigitalPins_;
    CArduinoMagnifier* magnifier_;
    std::mutex mutex_;
    unsigned switchState_;
@@ -239,7 +246,11 @@ public:
    int OnAnalogInput(MM::PropertyBase* pProp, MM::ActionType eAct, long channel);
 
    int GetDigitalInput(long* state);
+   int GetAnalogInput(long channel, long* value);
    int ReportStateChange(long newState);
+   int ReportAnalogStateChange(long channel, long value);
+   int GetStartPin() const { return startPin_; }
+   int GetEndPin() const { return endPin_; }
 
 private:
    int ReadNBytes(CArduinoHub* h, unsigned int n, unsigned char* answer);
@@ -250,6 +261,8 @@ private:
    char pins_[MM::MaxStrLength];
    char pullUp_[MM::MaxStrLength];
    int pin_;
+   int startPin_;
+   int endPin_;
    bool initialized_;
    std::string name_;
 };
@@ -297,6 +310,7 @@ class ArduinoInputMonitorThread : public MMDeviceThreadBase
 
    private:
       long state_;
+      long analogState_[6];
       CArduinoInput& aInput_;
       std::mutex mutex_;
       bool stop_;

@@ -94,7 +94,6 @@ int ClearPort(MM::Device& device, MM::Core& core, std::string port)
 // XYStage
 //
 XYStage::XYStage() :
-   CXYStageBase<XYStage>(),
    initialized_(false), 
    port_("Undefined"), 
    stepSizeXUm_(0.1), 

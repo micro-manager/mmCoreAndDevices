@@ -26,10 +26,13 @@
 //
 
 #include "OpenCVgrabber.h"
+
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
+
 #include <cstdio>
 #include <string>
 #include <math.h>
-#include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm>
 
@@ -41,9 +44,6 @@ using namespace std;
 
 CvCapture* capture_;
 IplImage* frame_; // do not modify, do not release!
-
-const double COpenCVgrabber::nominalPixelSizeUm_ = 1.0;
-
 
 // External names used used by the rest of the system
 // to load particular device from the "DemoCamera.dll" library
@@ -138,7 +138,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 COpenCVgrabber::COpenCVgrabber() :
-   CCameraBase<COpenCVgrabber> (),
    cameraID_(0),
    initialized_(false),
    readoutUs_(0.0),
@@ -814,18 +813,18 @@ int COpenCVgrabber::InsertImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
    
    imageCounter_++;
    
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
-   md.put(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
    
    MMThreadGuard g(imgPixelsLock_);
 
@@ -835,16 +834,7 @@ int COpenCVgrabber::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-   if (!stopOnOverFlow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-	  return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-	  //return GetCoreCallback()->InsertImage(this, pI, w, h, b);
-   } else
-      return ret;
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /*

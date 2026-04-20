@@ -63,9 +63,6 @@
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
-    <ClCompile Include="LoadableModules\LoadedModuleImplWindows.cpp">
-      <Filter>Source Files\LoadableModules</Filter>
-    </ClCompile>
     <ClCompile Include="LoadableModules\LoadedModule.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
@@ -114,7 +111,7 @@
     <ClCompile Include="Devices\XYStageInstance.cpp">
       <Filter>Source Files\Devices</Filter>
     </ClCompile>
-    <ClCompile Include="LibraryInfo\LibraryPathsWindows.cpp">
+    <ClCompile Include="LibraryInfo\LibraryPaths.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LogManager.cpp">
@@ -122,6 +119,9 @@
     </ClCompile>
     <ClCompile Include="DeviceManager.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Logging\FileRotation.cpp">
+      <Filter>Source Files\Logging</Filter>
     </ClCompile>
     <ClCompile Include="Logging\Metadata.cpp">
       <Filter>Source Files\Logging</Filter>
@@ -141,6 +141,18 @@
     <ClCompile Include="ThreadPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Devices\PressurePumpInstance.cpp">
+      <Filter>Source Files\Devices</Filter>
+    </ClCompile>
+    <ClCompile Include="Devices\VolumetricPumpInstance.cpp">
+      <Filter>Source Files\Devices</Filter>
+    </ClCompile>
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplRegular.cpp">
+      <Filter>Source Files\LoadableModules</Filter>
+    </ClCompile>
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplMock.cpp">
+      <Filter>Source Files\LoadableModules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CircularBuffer.h">
@@ -153,6 +165,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CoreCallback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreDeclHelpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CoreFeatures.h">
@@ -168,6 +183,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FrameBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageMetadata.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MMCore.h">
@@ -227,9 +245,6 @@
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h">
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
-    <ClInclude Include="LoadableModules\LoadedModuleImplWindows.h">
-      <Filter>Header Files\LoadableModules</Filter>
-    </ClInclude>
     <ClInclude Include="LoadableModules\LoadedModule.h">
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
@@ -245,11 +260,17 @@
     <ClInclude Include="LibraryInfo\LibraryPaths.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LogLevel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="LogManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DeviceManager.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Logging\FileRotation.h">
+      <Filter>Header Files\Logging</Filter>
     </ClInclude>
     <ClInclude Include="Logging\GenericEntryFilter.h">
       <Filter>Header Files\Logging</Filter>
@@ -278,6 +299,9 @@
     <ClInclude Include="Logging\Logging.h">
       <Filter>Header Files\Logging</Filter>
     </ClInclude>
+    <ClInclude Include="Logging\StderrColor.h">
+      <Filter>Header Files\Logging</Filter>
+    </ClInclude>
     <ClInclude Include="Logging\Metadata.h">
       <Filter>Header Files\Logging</Filter>
     </ClInclude>
@@ -290,7 +314,19 @@
     <ClInclude Include="Logging\GenericPacketArray.h">
       <Filter>Header Files\Logging</Filter>
     </ClInclude>
+    <ClInclude Include="ErrorCodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Notification.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NotificationQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Semaphore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SynchronizedConfiguration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Task.h">
@@ -304,6 +340,24 @@
     </ClInclude>
     <ClInclude Include="ThreadPool.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Devices\VolumetricPumpInstance.h">
+      <Filter>Header Files\Devices</Filter>
+    </ClInclude>
+    <ClInclude Include="Devices\PressurePumpInstance.h">
+      <Filter>Header Files\Devices</Filter>
+    </ClInclude>
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImpl.h">
+      <Filter>Header Files\LoadableModules</Filter>
+    </ClInclude>
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplRegular.h">
+      <Filter>Header Files\LoadableModules</Filter>
+    </ClInclude>
+    <ClInclude Include="MockDeviceAdapter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplMock.h">
+      <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

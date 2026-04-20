@@ -25,6 +25,9 @@
 
 #include "TaskSet.h"
 
+namespace mmcore {
+namespace internal {
+
 class TaskSet_CopyMemory : public TaskSet
 {
 private:
@@ -54,3 +57,6 @@ public:
     // Helper blocking method calling SetUp, Execute and Wait
     void MemCopy(void* dst, const void* src, size_t bytes);
 };
+
+} // namespace internal
+} // namespace mmcore

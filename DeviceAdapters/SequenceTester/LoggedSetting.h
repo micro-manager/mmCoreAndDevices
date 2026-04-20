@@ -25,10 +25,9 @@
 
 #include "DeviceBase.h"
 
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/signals2.hpp>
+
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -52,7 +51,7 @@ typedef boost::signals2::signal<void ()> EdgeTriggerSignal;
 
 // A "setting" in this device adapter is a property or a property-like entity
 // (e.g. camera exposure, stage position).
-class LoggedSetting : public boost::enable_shared_from_this<LoggedSetting>
+class LoggedSetting : public std::enable_shared_from_this<LoggedSetting>
 {
    typedef LoggedSetting Self;
 
@@ -60,12 +59,12 @@ class LoggedSetting : public boost::enable_shared_from_this<LoggedSetting>
    InterDevice* device_;
    const std::string name_;
 
-   boost::shared_ptr<CountDownSetting> busySetting_;
+   std::shared_ptr<CountDownSetting> busySetting_;
 
    boost::signals2::signal<void ()> postSetSignal_;
 
    // Zero is interpreted as triggering disabled
-   boost::shared_ptr<IntegerSetting> sequenceMaxLengthSetting_;
+   std::shared_ptr<IntegerSetting> sequenceMaxLengthSetting_;
 
    boost::signals2::connection edgeTriggerConnection_;
 
@@ -81,21 +80,21 @@ protected:
    void FirePostSetSignal() { postSetSignal_(); }
 
 public:
-   typedef boost::shared_ptr<Self> Ptr;
-   typedef boost::shared_ptr<const Self> ConstPtr;
+   typedef std::shared_ptr<Self> Ptr;
+   typedef std::shared_ptr<const Self> ConstPtr;
 
    LoggedSetting(SettingLogger* logger, InterDevice* device,
          const std::string& name);
    virtual ~LoggedSetting() {}
 
-   void SetBusySetting(boost::shared_ptr<CountDownSetting> setting)
+   void SetBusySetting(std::shared_ptr<CountDownSetting> setting)
    { busySetting_ = setting; }
    void MarkBusy();
 
    typedef boost::signals2::signal<void ()> PostSetSignal;
    PostSetSignal& GetPostSetSignal() { return postSetSignal_; }
 
-   void SetSequenceMaxLengthSetting(boost::shared_ptr<IntegerSetting> setting)
+   void SetSequenceMaxLengthSetting(std::shared_ptr<IntegerSetting> setting)
    { sequenceMaxLengthSetting_ = setting; }
    int GetSequenceMaxLength(long& len) const;
    long GetSequenceMaxLength() const;
@@ -123,15 +122,15 @@ class BoolSetting : public LoggedSetting
    size_t nextTriggerIndex_;
 
 public:
-   typedef boost::shared_ptr<Self> Ptr;
-   typedef boost::shared_ptr<const Self> ConstPtr;
+   typedef std::shared_ptr<Self> Ptr;
+   typedef std::shared_ptr<const Self> ConstPtr;
 
    BoolSetting(SettingLogger* logger, InterDevice* device,
          const std::string& name, bool initialValue);
 
    static Ptr New(SettingLogger* logger, InterDevice* device,
          const std::string& name, bool initialValue)
-   { return boost::make_shared<Self>(logger, device, name, initialValue); }
+   { return std::make_shared<Self>(logger, device, name, initialValue); }
 
    int Set(bool newValue);
    int Get(bool& value) const;
@@ -165,8 +164,8 @@ class IntegerSetting : public LoggedSetting
    typedef IntegerSetting Self;
 
 public:
-   typedef boost::shared_ptr<Self> Ptr;
-   typedef boost::shared_ptr<const Self> ConstPtr;
+   typedef std::shared_ptr<Self> Ptr;
+   typedef std::shared_ptr<const Self> ConstPtr;
 
    IntegerSetting(SettingLogger* logger, InterDevice* device,
          const std::string& name, long initialValue,
@@ -176,7 +175,7 @@ public:
          const std::string& name, long initialValue,
          bool hasMinMax, long minimum = 0, long maximum = 0)
    {
-      return boost::make_shared<Self>(logger, device, name, initialValue,
+      return std::make_shared<Self>(logger, device, name, initialValue,
          hasMinMax, minimum, maximum);
    }
 
@@ -210,8 +209,8 @@ class FloatSetting : public LoggedSetting
    typedef FloatSetting Self;
 
 public:
-   typedef boost::shared_ptr<Self> Ptr;
-   typedef boost::shared_ptr<const Self> ConstPtr;
+   typedef std::shared_ptr<Self> Ptr;
+   typedef std::shared_ptr<const Self> ConstPtr;
 
    FloatSetting(SettingLogger* logger, InterDevice* device,
          const std::string& name, double initialValue,
@@ -221,7 +220,7 @@ public:
          const std::string& name, double initialValue,
          bool hasMinMax, double minimum = 0.0, double maximum = 0.0)
    {
-      return boost::make_shared<Self>(logger, device, name, initialValue,
+      return std::make_shared<Self>(logger, device, name, initialValue,
             hasMinMax, minimum, maximum);
    }
 
@@ -250,15 +249,15 @@ class StringSetting : public LoggedSetting
    typedef StringSetting Self;
 
 public:
-   typedef boost::shared_ptr<Self> Ptr;
-   typedef boost::shared_ptr<const Self> ConstPtr;
+   typedef std::shared_ptr<Self> Ptr;
+   typedef std::shared_ptr<const Self> ConstPtr;
 
    StringSetting(SettingLogger* logger, InterDevice* device,
          const std::string& name, const std::string& initialValue);
 
    static Ptr New(SettingLogger* logger, InterDevice* device,
          const std::string& name, const std::string& initialValue = "")
-   { return boost::make_shared<Self>(logger, device, name, initialValue); }
+   { return std::make_shared<Self>(logger, device, name, initialValue); }
 
    int Set(const std::string& newValue);
    int Get(std::string& value) const;
@@ -273,15 +272,15 @@ class OneShotSetting : public LoggedSetting
    typedef OneShotSetting Self;
 
 public:
-   typedef boost::shared_ptr<Self> Ptr;
-   typedef boost::shared_ptr<const Self> ConstPtr;
+   typedef std::shared_ptr<Self> Ptr;
+   typedef std::shared_ptr<const Self> ConstPtr;
 
    OneShotSetting(SettingLogger* logger, InterDevice* device,
          const std::string& name);
 
    static Ptr New(SettingLogger* logger, InterDevice* device,
          const std::string& name)
-   { return boost::make_shared<Self>(logger, device, name); }
+   { return std::make_shared<Self>(logger, device, name); }
 
 
    int Set();
@@ -297,8 +296,8 @@ class CountDownSetting : public LoggedSetting
    long defaultIncrement_;
 
 public:
-   typedef boost::shared_ptr<Self> Ptr;
-   typedef boost::shared_ptr<const Self> ConstPtr;
+   typedef std::shared_ptr<Self> Ptr;
+   typedef std::shared_ptr<const Self> ConstPtr;
 
    CountDownSetting(SettingLogger* logger, InterDevice* device,
          const std::string& name, long initialCount,
@@ -308,7 +307,7 @@ public:
          const std::string& name, long initialCount,
          long defaultIncrement = 1)
    {
-      return boost::make_shared<Self>(logger, device, name,
+      return std::make_shared<Self>(logger, device, name,
             initialCount, defaultIncrement);
    }
 

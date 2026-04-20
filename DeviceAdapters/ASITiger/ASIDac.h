@@ -19,22 +19,19 @@
 //
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 08/2019
 //
-// BASED ON:      ASIStage.h and others
-//
 
-#ifndef _ASIDAC_H_
-#define _ASIDAC_H_
+#ifndef ASIDAC_H
+#define ASIDAC_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-
 class CDAC : public ASIPeripheralBase<CSignalIOBase, CDAC>
 {
 public:
-	CDAC(const char* name);
-	~CDAC() { }
+    explicit CDAC(const char* name);
+    ~CDAC() = default;
 
 	// Device API
 	int Initialize();
@@ -94,8 +91,16 @@ public:
 	int OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+	int GetMaxVolts(double& volts);
+	int GetMinVolts(double& volts);
+	int SetSignalmv(double millivolts);
+	int GetSignalmv(double& millivolts);
+
+	// Properties
+	void CreateSingleAxisRiseTimeProperty();
+
 	double unitMult_;
-	string axisLetter_;
+	std::string axisLetter_;
 	double maxvolts_;
 	double minvolts_;
 	bool ring_buffer_supported_;
@@ -103,16 +108,6 @@ private:
 	bool ttl_trigger_supported_;
 	bool ttl_trigger_enabled_;
 	std::vector<double> sequence_; // carries data in volts
-
-	int GetMaxVolts(double &volts);
-	int GetMinVolts(double &volts);
-	int SetSignalmv(double millivolts);
-	int GetSignalmv(double& millivolts);
-
-	
-
 };
 
-
-
-#endif//_ASIDAC_H_
+#endif // ASIDAC_H

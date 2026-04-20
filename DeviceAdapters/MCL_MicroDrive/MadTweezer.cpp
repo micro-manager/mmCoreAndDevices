@@ -154,19 +154,19 @@ int MadTweezer::CreateMadTweezerProperties()
 		return err;
 
 	// Device handle
-	sprintf(iToChar, "%d", handle_);
+	snprintf(iToChar, sizeof(iToChar), "%d", handle_);
 	err = CreateProperty(g_Keyword_Handle, iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Product ID
-	sprintf(iToChar, "%hu", pid_);
+	snprintf(iToChar, sizeof(iToChar), "%hu", pid_);
 	err = CreateProperty(g_Keyword_ProductID, iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Serial Number
-	sprintf(iToChar, "%d", serialNumber_);
+	snprintf(iToChar, sizeof(iToChar), "%d", serialNumber_);
 	err = CreateProperty(g_Keyword_Serial_Num, iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
@@ -200,7 +200,7 @@ int MadTweezer::CreateMadTweezerProperties()
 
 
 	// Location
-	sprintf(iToChar, "%f", location_mrad_);
+	snprintf(iToChar, sizeof(iToChar), "%f", location_mrad_);
 	pAct = new CPropertyAction(this, &MadTweezer::OnLocation);
 	err = CreateProperty(g_Keyword_Location, iToChar, MM::Float, false, pAct);
 	if (err != DEVICE_OK)
@@ -234,28 +234,28 @@ int MadTweezer::CreateMadTweezerProperties()
 	err = SetAllowedValues(g_Keyword_Direction, directionList);
 
 	// Rotation
-	sprintf(iToChar, "%f", 0.0);
+	snprintf(iToChar, sizeof(iToChar), "%f", 0.0);
 	pAct = new CPropertyAction(this, &MadTweezer::OnRotation);
 	err = CreateProperty(g_Keyword_Rotations, iToChar, MM::Float, false, pAct);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Velocity
-	sprintf(iToChar, "%f", velocity_rad_);
+	snprintf(iToChar, sizeof(iToChar), "%f", velocity_rad_);
 	pAct = new CPropertyAction(this, &MadTweezer::OnVelocity);
 	err = CreateProperty(g_Keyword_Velocity, iToChar, MM::Float, false, pAct);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Steps
-	sprintf(iToChar, "%d", 0);
+	snprintf(iToChar, sizeof(iToChar), "%d", 0);
 	pAct = new CPropertyAction(this, &MadTweezer::OnSteps);
 	err = CreateProperty(g_Keyword_Steps, iToChar, MM::Integer, false, pAct);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Milliradians
-	sprintf(iToChar, "%f", 0.0);
+	snprintf(iToChar, sizeof(iToChar), "%f", 0.0);
 	pAct = new CPropertyAction(this, &MadTweezer::OnMrad);
 	err = CreateProperty(g_Keyword_Milliradians, iToChar, MM::Float, false, pAct);
 	if (err != DEVICE_OK)
@@ -418,7 +418,7 @@ int MadTweezer::UpdateVelocity() {
 		maxVelocity_ = MAX_VEL_HIGH_PRECISION;
 	}
 
-	sprintf(iToChar, "%f", maxVelocity_);
+	snprintf(iToChar, sizeof(iToChar), "%f", maxVelocity_);
 	SetProperty(g_Keyword_Velocity, iToChar);
 
 	return DEVICE_OK;
@@ -429,7 +429,7 @@ int MadTweezer::UpdateLocation() {
 	char iToChar[25];
 
 	GetLocation();
-	sprintf(iToChar, "%f", location_mrad_);
+	snprintf(iToChar, sizeof(iToChar), "%f", location_mrad_);
 	SetProperty(g_Keyword_Location, iToChar);
 
 	return DEVICE_OK;

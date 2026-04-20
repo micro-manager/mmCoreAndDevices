@@ -33,3 +33,5 @@
 #include "SLMInstance.h"
 #include "GalvoInstance.h"
 #include "HubInstance.h"
+#include "PressurePumpInstance.h"
+#include "VolumetricPumpInstance.h"

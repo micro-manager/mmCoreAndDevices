@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 
-AM_CPPFLAGS = -DMMDEVICE_CLIENT_BUILD
+AM_CPPFLAGS = -std=c++17 -DMMDEVICE_CLIENT_BUILD -I../MMDevice
 
 noinst_LTLIBRARIES = libMMCore.la
 
@@ -17,6 +17,7 @@ libMMCore_la_SOURCES = \
 	Configuration.h \
 	CoreCallback.cpp \
 	CoreCallback.h \
+	CoreDeclHelpers.h \
 	CoreFeatures.cpp \
 	CoreFeatures.h \
 	CoreProperty.cpp \
@@ -30,7 +31,7 @@ libMMCore_la_SOURCES = \
 	Devices/CameraInstance.h \
 	Devices/DeviceInstance.cpp \
 	Devices/DeviceInstance.h \
-	Devices/GenericDeviceInstance.h \
+	Devices/DeviceInstanceBase.h \
 	Devices/DeviceInstances.h \
 	Devices/GalvoInstance.cpp \
 	Devices/GalvoInstance.h \
@@ -41,6 +42,8 @@ libMMCore_la_SOURCES = \
 	Devices/ImageProcessorInstance.h \
 	Devices/MagnifierInstance.cpp \
 	Devices/MagnifierInstance.h \
+	Devices/PressurePumpInstance.cpp \
+	Devices/PressurePumpInstance.h \
 	Devices/SLMInstance.cpp \
 	Devices/SLMInstance.h \
 	Devices/SerialInstance.cpp \
@@ -53,6 +56,8 @@ libMMCore_la_SOURCES = \
 	Devices/StageInstance.h \
 	Devices/StateInstance.cpp \
 	Devices/StateInstance.h \
+	Devices/VolumetricPumpInstance.cpp \
+	Devices/VolumetricPumpInstance.h \
 	Devices/XYStageInstance.cpp \
 	Devices/XYStageInstance.h \
 	Error.cpp \
@@ -60,18 +65,25 @@ libMMCore_la_SOURCES = \
 	ErrorCodes.h \
 	FrameBuffer.cpp \
 	FrameBuffer.h \
+	ImageMetadata.h \
+	LibraryInfo/LibraryPaths.cpp \
 	LibraryInfo/LibraryPaths.h \
-	LibraryInfo/LibraryPathsUnix.cpp \
 	LoadableModules/LoadedDeviceAdapter.cpp \
 	LoadableModules/LoadedDeviceAdapter.h \
+	LoadableModules/LoadedDeviceAdapterImpl.h \
+	LoadableModules/LoadedDeviceAdapterImplMock.cpp \
+	LoadableModules/LoadedDeviceAdapterImplMock.h \
+	LoadableModules/LoadedDeviceAdapterImplRegular.cpp \
+	LoadableModules/LoadedDeviceAdapterImplRegular.h \
 	LoadableModules/LoadedModule.cpp \
 	LoadableModules/LoadedModule.h \
 	LoadableModules/LoadedModuleImpl.cpp \
 	LoadableModules/LoadedModuleImpl.h \
-	LoadableModules/LoadedModuleImplUnix.cpp \
-	LoadableModules/LoadedModuleImplUnix.h \
 	LogManager.cpp \
 	LogManager.h \
+	LogLevel.h \
+	Logging/FileRotation.cpp \
+	Logging/FileRotation.h \
 	Logging/GenericStreamSink.h \
 	Logging/GenericEntryFilter.h \
 	Logging/GenericLinePacket.h \
@@ -83,15 +95,20 @@ libMMCore_la_SOURCES = \
 	Logging/GenericSink.h \
 	Logging/Logger.h \
 	Logging/Logging.h \
+	Logging/StderrColor.h \
 	Logging/Metadata.cpp \
 	Logging/Metadata.h \
 	Logging/MetadataFormatter.h \
 	MMCore.cpp \
 	MMCore.h \
+	MockDeviceAdapter.h \
+	Notification.h \
+	NotificationQueue.h \
 	PluginManager.cpp \
 	PluginManager.h \
 	Semaphore.cpp \
 	Semaphore.h \
+	SynchronizedConfiguration.h \
 	Task.cpp \
 	Task.h \
 	TaskSet.cpp \

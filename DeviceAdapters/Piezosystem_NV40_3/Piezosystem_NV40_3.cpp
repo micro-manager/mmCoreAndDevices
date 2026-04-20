@@ -471,7 +471,7 @@ int Hub::GetVersion()
 int Hub::GetStatus(int ch,int& stat){
 	LogMessage("GetStatus");
 	char s[20];
-	sprintf(s,"stat,%d",ch);
+	snprintf(s, sizeof(s),"stat,%d",ch);
 	std::string result;
 	int returnStatus = SendSerialCommand(port_.c_str(),s , g_Mesg_Send_term);
    if (returnStatus != DEVICE_OK) 
@@ -513,7 +513,7 @@ int Hub::GetLoop(int ch,bool& loop){
 	LogMessage("GetLoop");
 	std::string result;
 	char cmd[20];
-	sprintf(cmd,"cloop,%d",ch);
+	snprintf(cmd, sizeof(cmd),"cloop,%d",ch);
 	int returnStatus = SendSerialCommand(port_.c_str(),cmd , g_Mesg_Send_term);
    if (returnStatus != DEVICE_OK) 
       return returnStatus;
@@ -582,7 +582,7 @@ int Hub::GetRemoteValues(){
 	std::string type;
 	char* dest[50];
 	for (int i=0;i<3;i++){
-		sprintf(s,"stat,%d",i);	
+		snprintf(s, sizeof(s),"stat,%d",i);	
 		returnStatus = SendSerialCommand(port_.c_str(),s , g_Mesg_Send_term);
 		if (returnStatus != DEVICE_OK) 
 			return returnStatus;
@@ -632,7 +632,7 @@ int Hub::GetCommandValue(const char* c,double& d){
 	LogMessage ("Get command value d");
 
 	char str[50]="";
-	sprintf(str,"%s",c);	
+	snprintf(str, sizeof(str),"%s",c);	
 	const char* cmd = str; 
 	//LogMessage (cmd);
     int ret;
@@ -680,7 +680,7 @@ int Hub::GetCommandValue(const char* c,double& d){
 int Hub::SetCommandValue(const char* c,double fkt){
 	LogMessage ("Set command value d");
 	char str[50]="";
-	sprintf(str,"%s,%.3lf",c,fkt);	
+	snprintf(str, sizeof(str),"%s,%.3lf",c,fkt);	
 	const char* cmd = str; 
 	LogMessage (cmd);
     int ret;
@@ -697,7 +697,7 @@ int Hub::GetCommandValue(const char* c,int& i){
 	LogMessage ("Get command value i");
 
 	char str[50]="";
-	sprintf(str,"%s",c);	
+	snprintf(str, sizeof(str),"%s",c);	
 	const char* cmd = str; 
 	//LogMessage (cmd);
     int ret;
@@ -745,7 +745,7 @@ int Hub::GetCommandValue(const char* c,int& i){
 int Hub::SetCommandValue(const char* c,int fkt){
 	LogMessage ("Set command value d");
 	char str[50]="";
-	sprintf(str,"%s,%d",c,fkt);	
+	snprintf(str, sizeof(str),"%s,%d",c,fkt);	
 	const char* cmd = str; 
 	LogMessage (cmd);
     int ret;
@@ -760,7 +760,7 @@ int Hub::GetCommandValue(const char* c,int ch,double& d){
 	LogMessage ("Get command value d");
 
 	char str[50]="";
-	sprintf(str,"%s,%d",c,ch);	
+	snprintf(str, sizeof(str),"%s,%d",c,ch);	
 	const char* cmd = str; 
 	//LogMessage (cmd);
     int ret;
@@ -793,7 +793,7 @@ int Hub::GetCommandValue(const char* c,int ch,double& d){
 int Hub::SetCommandValue(const char* c,int ch,double fkt){
 	LogMessage ("Set command value d");
 	char str[50]="";
-	sprintf(str,"%s,%d,%.3lf",c,ch,fkt);	
+	snprintf(str, sizeof(str),"%s,%d,%.3lf",c,ch,fkt);	
 	const char* cmd = str; 
 	LogMessage (cmd);
     int ret;
@@ -808,7 +808,7 @@ int Hub::GetCommandValue(const char* c,int ch,int& i){
 	LogMessage ("Get command value d");
 
 	char str[50]="";
-	sprintf(str,"%s,%d",c,ch);	
+	snprintf(str, sizeof(str),"%s,%d",c,ch);	
 	const char* cmd = str; 
 	//LogMessage (cmd);
     int ret;
@@ -841,7 +841,7 @@ int Hub::GetCommandValue(const char* c,int ch,int& i){
 int Hub::SetCommandValue(const char* c,int ch,int fkt){
 	LogMessage ("Set command value d");
 	char str[50]="";
-	sprintf(str,"%s,%d,%d",c,ch,fkt);	
+	snprintf(str, sizeof(str),"%s,%d,%d",c,ch,fkt);	
 	const char* cmd = str; 
 	LogMessage (cmd);
     int ret;
@@ -882,11 +882,11 @@ int Hub::OnLight(MM::PropertyBase* pProp, MM::ActionType eAct){
 		bright_=i;
 		pProp->Set((long)bright_);
 	}
-	 else if (eAct == MM::AfterSet){	  
+	 else if (eAct == MM::AfterSet){
 		int i;
 		char light[20];
 		pProp->Get((long&)i);
-		sprintf(light,"light,%d",i);
+		snprintf(light, sizeof(light),"light,%d",i);
 		int ret = SendSerialCommand(port_.c_str(), light, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
 			return ret;		
@@ -1087,7 +1087,7 @@ Stage::Stage(int nr):
 	
 	// Channel:
 	char p[20];
-	sprintf(p,"PIEZO %d",nr_);
+	snprintf(p, sizeof(p),"PIEZO %d",nr_);
 	CPropertyAction *pAct = new CPropertyAction(this, &Stage::OnChannel);
    CreateProperty(MM::g_Keyword_Channel, p, MM::String, false, pAct, true);
 	AddAllowedValue(MM::g_Keyword_Channel, g_Port1);
@@ -1252,7 +1252,7 @@ int Stage::GetLoop(bool& loop){
 	LogMessage("GetLoop");
 	std::string result;
 	char cmd[20];
-	sprintf(cmd,"cloop,%d",nr_);
+	snprintf(cmd, sizeof(cmd),"cloop,%d",nr_);
 	int returnStatus = SendSerialCommand(port_.c_str(),cmd , g_Mesg_Send_term);
    if (returnStatus != DEVICE_OK) 
       return returnStatus;
@@ -1314,7 +1314,7 @@ int Stage::SendCommand(const char* cmd,std::string &result){
 int Stage::GetStatus(int& stat){
 	LogMessage("GetStatus");
 	char s[20];
-	sprintf(s,"stat,%d",nr_);
+	snprintf(s, sizeof(s),"stat,%d",nr_);
 	std::string result;
 	int returnStatus = SendSerialCommand(port_.c_str(),s , g_Mesg_Send_term);
    if (returnStatus != DEVICE_OK) 
@@ -1347,7 +1347,7 @@ int Stage::GetStatus(int& stat){
 		loop_= ((stat&STATUS_LOOP)==STATUS_LOOP)?true:false;
 		//monwpa_=(stat&STATUS_MONWPA2)>>5;		  //only set on start, no change
 		char value[20];
-		sprintf(value,"Monwpa,%d",monwpa_);
+		snprintf(value, sizeof(value),"Monwpa,%d",monwpa_);
 		LogMessage(value);
 	}else{
 		stat=stat_;
@@ -1376,7 +1376,7 @@ int Stage::GetActorname(std::string& name)
 {
 	std::string result;
 	char c[20];
-	sprintf(c,"acdescr,%d",nr_);
+	snprintf(c, sizeof(c),"acdescr,%d",nr_);
 	const char* cm = c;		
    int returnStatus = SendSerialCommand(port_.c_str(), cm, g_Mesg_Send_term);
    if (returnStatus != DEVICE_OK) 
@@ -1396,7 +1396,7 @@ int Stage::GetAxisname(std::string& name)
 	std::string result;
 	int i=0;
 	char c[20];
-	sprintf(c,"accoor,%d",nr_);
+	snprintf(c, sizeof(c),"accoor,%d",nr_);
 	const char* cm = c ;		
    int returnStatus = SendSerialCommand(port_.c_str(), cm, g_Mesg_Send_term);
    if (returnStatus != DEVICE_OK) 
@@ -1569,19 +1569,19 @@ int Stage::OnLoop(MM::PropertyBase* pProp, MM::ActionType eAct){
       pProp->Get(loop);
 		if (loop == g_Loop_close){
          loop_ = true;
-			sprintf(cmd,"cloop,%d,1",nr_); 			
-			l=1; 
+			snprintf(cmd, sizeof(cmd),"cloop,%d,1",nr_);
+			l=1;
 		}else{
          loop_ = false;
-			sprintf(cmd,"cloop,%d,0",nr_);			
+			snprintf(cmd, sizeof(cmd),"cloop,%d,0",nr_);
 			l=0;
 		}
 		int ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
-				return ret;	 		
+				return ret;
 		CDeviceUtils::SleepMs(300);
 		clearPort(*this, *GetCoreCallback(), port_.c_str());
-		sprintf(cmd,"cloop,%d",nr_);
+		snprintf(cmd, sizeof(cmd),"cloop,%d",nr_);
 		ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
 		ret = GetSerialAnswer(port_.c_str(), g_Mesg_Receive_term, result);  
 		if (ret != DEVICE_OK) 
@@ -1820,12 +1820,12 @@ int XYStage::Shutdown()
 int XYStage::Initialize()
 {
    LogMessage ("Initialize",true);
-   char c[5];   
+   char c[5];
 	//Channel only for Info
-   sprintf(c,"%d",xChannel_+1);
-   const char* ch=c;   
-   CreateProperty(g_ChannelX_, ch, MM::Integer, true);	//read-only 
-   sprintf(c,"%d",yChannel_+1);
+   snprintf(c, sizeof(c),"%d",xChannel_+1);
+   const char* ch=c;
+   CreateProperty(g_ChannelX_, ch, MM::Integer, true);	//read-only
+   snprintf(c, sizeof(c),"%d",yChannel_+1);
    ch=c;   
    CreateProperty(g_ChannelY_, ch, MM::Integer, true);  //read-only
 
@@ -2127,19 +2127,19 @@ int XYStage::OnLoopX(MM::PropertyBase* pProp, MM::ActionType eAct){
       pProp->Get(loop);
 		if (loop == g_Loop_close){
          x_loop_ = true;
-			sprintf(cmd,"cloop,%d,1",xChannel_); 			
-			l=1; 
+			snprintf(cmd, sizeof(cmd),"cloop,%d,1",xChannel_);
+			l=1;
 		}else{
          x_loop_ = false;
-			sprintf(cmd,"cloop,%d,0",xChannel_);			
+			snprintf(cmd, sizeof(cmd),"cloop,%d,0",xChannel_);
 			l=0;
 		}
 		int ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
-				return ret;	 		
+				return ret;
 		CDeviceUtils::SleepMs(300);
 		clearPort(*this, *GetCoreCallback(), port_.c_str());
-		sprintf(cmd,"cloop,%d",xChannel_);
+		snprintf(cmd, sizeof(cmd),"cloop,%d",xChannel_);
 		ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
 		ret = GetSerialAnswer(port_.c_str(), g_Mesg_Receive_term, result);  
 		if (ret != DEVICE_OK) 
@@ -2179,19 +2179,19 @@ int XYStage::OnLoopY(MM::PropertyBase* pProp, MM::ActionType eAct){
       pProp->Get(loop);
 		if (loop == g_Loop_close){
          y_loop_ = true;
-			sprintf(cmd,"cloop,%d,1",yChannel_); 			
-			l=1; 
+			snprintf(cmd, sizeof(cmd),"cloop,%d,1",yChannel_);
+			l=1;
 		}else{
          y_loop_ = false;
-			sprintf(cmd,"cloop,%d,0",yChannel_);			
+			snprintf(cmd, sizeof(cmd),"cloop,%d,0",yChannel_);
 			l=0;
 		}
 		int ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
 		if (ret!=DEVICE_OK)
-				return ret;	 		
+				return ret;
 		CDeviceUtils::SleepMs(300);
 		clearPort(*this, *GetCoreCallback(), port_.c_str());
-		sprintf(cmd,"cloop,%d",yChannel_);
+		snprintf(cmd, sizeof(cmd),"cloop,%d",yChannel_);
 		ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
 		ret = GetSerialAnswer(port_.c_str(), g_Mesg_Receive_term, result);  
 		if (ret != DEVICE_OK) 

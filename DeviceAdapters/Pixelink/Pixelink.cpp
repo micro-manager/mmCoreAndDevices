@@ -9,7 +9,9 @@
 
 #include <PixeLINKAPI.h>
 #include "Pixelink.h"
-#include "../../MMDevice/ModuleInterface.h"
+
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
 
 
 /*
@@ -282,19 +284,19 @@ int Pixelink::Initialize()
 	// camera identification and other read-only information
 	char buf[512] = "";
 
-	sprintf(buf, "%d", cameraInfo.SerialNumber);
+	snprintf(buf, sizeof(buf), "%d", cameraInfo.SerialNumber);
 	int ret = CreateProperty(MM::g_Keyword_CameraID, buf, MM::String, true);
 	assert(ret == DEVICE_OK);
 
-	sprintf(buf, "%s", cameraInfo.ModelName);
+	snprintf(buf, sizeof(buf), "%s", cameraInfo.ModelName);
 	ret = CreateProperty(MM::g_Keyword_CameraName, buf, MM::String, true);
 	assert(ret == DEVICE_OK);
 
-	sprintf(buf, "%s", cameraInfo.CameraName);
+	snprintf(buf, sizeof(buf), "%s", cameraInfo.CameraName);
 	ret = CreateProperty(MM::g_Keyword_Description, buf, MM::String, true);
 	assert(ret == DEVICE_OK);
 
-	sprintf(buf, "%s", cameraInfo.VendorName);
+	snprintf(buf, sizeof(buf), "%s", cameraInfo.VendorName);
 	ret = CreateProperty(g_VendorName, buf, MM::String, true);
 	assert(ret == DEVICE_OK);
 
@@ -834,7 +836,7 @@ int Pixelink::InsertImage()
 	b = GetImageBytesPerPixel();
 
 
-	unsigned char* pPixel;
+	unsigned char* pPixel = nullptr;
 	//////////////////////
 
 	if (!isColour)
@@ -903,31 +905,12 @@ int Pixelink::InsertImage()
 
 	
 
-	Metadata md;
+	MM::CameraImageMetadata md;
 	//md.put(MM::g_Keyword_Metadata_StartTime, CDeviceUtils::ConvertToString(sequenceStartTime_.getMsec()));
-	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-	md.put("FrameCounter", frameCounter);
+	md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+	md.AddTag("FrameCounter", frameCounter);
 
-
-
-
-	//GetCoreCallback()->ClearImageBuffer(this);
-	ret = GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize().c_str(), false);
-
-	if (ret == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize().c_str(), false);
-		return DEVICE_OK;
-	}
-
-
-	
-	//frameBuffer.clear();
-
-
-	return ret;
+	return GetCoreCallback()->InsertImage(this, pPixel, w, h, b, md.Serialize());
 }
 
 

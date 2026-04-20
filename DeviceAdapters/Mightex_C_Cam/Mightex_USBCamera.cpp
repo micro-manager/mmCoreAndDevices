@@ -26,10 +26,13 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
 #include "Mightex_USBCamera.h"
+
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
+
 #include <cstdio>
 #include <string>
 #include <math.h>
-#include "ModuleInterface.h"
 #include <sstream>
 #include <algorithm>
 #include <iostream>
@@ -38,7 +41,6 @@
 
 
 using namespace std;
-const double CMightex_BUF_USBCCDCamera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 int OnExposureCnt = 0;
 //CMightex_BUF_USBCCDCamera *gMyCamera;
@@ -446,7 +448,7 @@ int CMightex_BUF_USBCCDCamera::InitCamera()
 		char *s_ModuleNo = strchr(ModuleNo, ' ');
 		if(s_ModuleNo)
 			*s_ModuleNo = '\0';
-		sprintf(camNames, "%s:%s\0", ModuleNo, SerialNo);
+		snprintf(camNames, sizeof(camNames), "%s:%s", ModuleNo, SerialNo);
 	}
 
 		BUFCCDUSB_AddDeviceToWorkingSet(1);
@@ -610,7 +612,6 @@ int CMightex_BUF_USBCCDCamera::GetCameraBufferCount(int width, int height)
 * perform most of the initialization in the Initialize() method.
 */
 CMightex_BUF_USBCCDCamera::CMightex_BUF_USBCCDCamera() :
-   CCameraBase<CMightex_BUF_USBCCDCamera> (),
    dPhase_(0),
    initialized_(false),
    readoutUs_(0.0),
@@ -1552,17 +1553,17 @@ int CMightex_BUF_USBCCDCamera::InsertImage()
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
    imageCounter_++;
 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
-   md.put(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
 
    MMThreadGuard g(imgPixelsLock_);
 
@@ -1573,15 +1574,7 @@ int CMightex_BUF_USBCCDCamera::InsertImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-      return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-   } else
-      return ret;
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /*
@@ -1782,7 +1775,7 @@ int CMightex_BUF_USBCCDCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType
 				//	 return DEVICE_ERR;
 				binSize_ = binFactor;
 
-				sprintf(s_resolution, "%d*%d", cameraCCDXSize_, cameraCCDYSize_);
+				snprintf(s_resolution, sizeof(s_resolution), "%d*%d", cameraCCDXSize_, cameraCCDYSize_);
 			   vector<string> ResValues;
 			   for(int i = 0; i <= s_MAX_RESOLUTION; i++)
 				   ResValues.push_back(g_Res[i]);
@@ -1817,7 +1810,7 @@ int CMightex_BUF_USBCCDCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType
 					return DEVICE_ERR;
 				binSize_ = binFactor;
 
-				sprintf(s_resolution, "%d*%d(1:%d)", p_frmSize[binFactor-1].width, p_frmSize[binFactor-1].height, binFactor);
+				snprintf(s_resolution, sizeof(s_resolution), "%d*%d(1:%d)", p_frmSize[binFactor-1].width, p_frmSize[binFactor-1].height, binFactor);
 				vector<string> resolutionValue;
 				resolutionValue.push_back(s_resolution);
 				ret = SetAllowedValues(g_Keyword_Resolution, resolutionValue);

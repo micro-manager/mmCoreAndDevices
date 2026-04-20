@@ -56,11 +56,11 @@ void DbgPrintf(LPTSTR fmt,...    )
 {
     va_list marker;
     char szBuf[256];
- 
+
     va_start(marker, fmt);
     //wvsprintf(szBuf, fmt, marker);
     //vswprintf(szBuf, fmt, marker);
-	vsprintf(szBuf, fmt, marker);
+	vsnprintf(szBuf, sizeof(szBuf), fmt, marker);
 	va_end(marker);
  
     //OutputDebugString(szBuf);

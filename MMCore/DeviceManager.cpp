@@ -25,8 +25,8 @@
 
 #include <algorithm>
 
-namespace mm
-{
+namespace mmcore {
+namespace internal {
 
 
 DeviceManager::~DeviceManager()
@@ -38,16 +38,17 @@ DeviceManager::~DeviceManager()
 std::shared_ptr<DeviceInstance>
 DeviceManager::LoadDevice(std::shared_ptr<LoadedDeviceAdapter> module,
       const std::string& deviceName, const std::string& label, CMMCore* core,
-      mm::logging::Logger deviceLogger,
-      mm::logging::Logger coreLogger)
+      logging::Logger deviceLogger,
+      logging::Logger coreLogger)
 {
-   for (DeviceConstIterator it = devices_.begin(), end = devices_.end(); it != end; ++it)
+   // For now, "Core" (which always exists) is not a real-enough device to be
+   // in 'devices_'; check as a special case.
+   if (std::find_if(devices_.begin(), devices_.end(),
+         [&](const auto& p) { return p.first == label; }) != devices_.end() ||
+      label == MM::g_Keyword_CoreDevice)
    {
-      if (it->first == label)
-      {
-         throw CMMError("The specified device label " + ToQuotedString(label) +
-               " is already in use", MMERR_DuplicateLabel);
-      }
+      throw CMMError("The specified device label " + ToQuotedString(label) +
+         " is already in use", MMERR_DuplicateLabel);
    }
 
    std::shared_ptr<DeviceInstance> device = module->LoadDevice(core,
@@ -297,4 +298,5 @@ DeviceModuleLockGuard::DeviceModuleLockGuard(std::shared_ptr<DeviceInstance> dev
 {}
 
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

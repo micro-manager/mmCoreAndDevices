@@ -124,7 +124,7 @@ int MP285Ctrl::Initialize()
 
     // Name
     char sCtrlName[120];
-	sprintf(sCtrlName, "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_CtrlDevNameLabel).c_str(), MM::g_Keyword_Name);
+	snprintf(sCtrlName, sizeof(sCtrlName), "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_CtrlDevNameLabel).c_str(), MM::g_Keyword_Name);
     ret = CreateProperty(sCtrlName, MP285::Instance()->GetMPStr(MP285::MPSTR_CtrlDevName).c_str(), MM::String, true);
 
     if (MP285::Instance()->GetDebugLogFlag() > 0)
@@ -138,7 +138,7 @@ int MP285Ctrl::Initialize()
 
     // Description
     char sCtrlDesc[120];
-	sprintf(sCtrlDesc, "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_CtrlDevDescLabel).c_str(), MM::g_Keyword_Description);
+	snprintf(sCtrlDesc, sizeof(sCtrlDesc), "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_CtrlDevDescLabel).c_str(), MM::g_Keyword_Description);
     ret = CreateProperty(sCtrlDesc, "Sutter MP-285 Controller", MM::String, true);
 
     if (MP285::Instance()->GetDebugLogFlag() > 0)
@@ -167,7 +167,7 @@ int MP285Ctrl::Initialize()
 
     char sTimeoutInterval[20];
     memset(sTimeoutInterval, 0, 20);
-    sprintf(sTimeoutInterval, "%d", MP285::Instance()->GetTimeoutInterval());
+    snprintf(sTimeoutInterval, sizeof(sTimeoutInterval), "%d", MP285::Instance()->GetTimeoutInterval());
 
     CPropertyAction* pActOnTimeoutInterval = new CPropertyAction(this, &MP285Ctrl::OnTimeoutInterval);
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_TimeoutInterval).c_str(), sTimeoutInterval, MM::Integer,  false, pActOnTimeoutInterval); 
@@ -183,7 +183,7 @@ int MP285Ctrl::Initialize()
 
     char sTimeoutTrys[20];
     memset(sTimeoutTrys, 0, 20);
-    sprintf(sTimeoutTrys, "%d", MP285::Instance()->GetTimeoutTrys());
+    snprintf(sTimeoutTrys, sizeof(sTimeoutTrys), "%d", MP285::Instance()->GetTimeoutTrys());
 
     CPropertyAction* pActOnTimeoutTrys = new CPropertyAction(this, &MP285Ctrl::OnTimeoutTrys);
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_TimeoutTrys).c_str(), sTimeoutTrys, MM::Integer,  false, pActOnTimeoutTrys); 
@@ -209,7 +209,7 @@ int MP285Ctrl::Initialize()
 
     char sCommStat[30];
     if (yCommError)
-        sprintf((char*)sCommStat, "Error Code ==> <%2x>", sResponse[0]);
+        snprintf(sCommStat, sizeof(sCommStat), "Error Code ==> <%2x>", sResponse[0]);
     else
         strcpy(sCommStat, "Success");
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_CommStateLabel).c_str(), sCommStat, MM::String, true);
@@ -221,7 +221,7 @@ int MP285Ctrl::Initialize()
     if (!yCommError)
     {
         unsigned int nFirmVersion = sResponse[31] * 256 + sResponse[30];
-        sprintf(sFirmVersion, "%d", nFirmVersion);
+        snprintf(sFirmVersion, sizeof(sFirmVersion), "%d", nFirmVersion);
     }
     else
     {
@@ -249,7 +249,7 @@ int MP285Ctrl::Initialize()
         nUm2UStepUnit = sResponse[25] * 256 + sResponse[24];
         MP285::Instance()->SetUm2UStep(nUm2UStepUnit);
     }
-    sprintf(sUm2UStepUnit, "%d", nUm2UStepUnit);
+    snprintf(sUm2UStepUnit, sizeof(sUm2UStepUnit), "%d", nUm2UStepUnit);
 
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_Um2UStepUnit).c_str(), sUm2UStepUnit, MM::Integer, true);
 
@@ -272,7 +272,7 @@ int MP285Ctrl::Initialize()
         nUStep2NmUnit = sResponse[27] * 256 + sResponse[26];
         MP285::Instance()->SetUStep2Nm(nUStep2NmUnit);
     }
-    sprintf(sUStep2NmUnit, "%d", nUStep2NmUnit);
+    snprintf(sUStep2NmUnit, sizeof(sUStep2NmUnit), "%d", nUStep2NmUnit);
 
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_UStep2NmUnit).c_str(), sUStep2NmUnit, MM::Integer, true);
 
@@ -297,7 +297,7 @@ int MP285Ctrl::Initialize()
         //lVelocity = (sResponse[29] & 0x7F) * 256 + sResponse[28];
         MP285::Instance()->SetVelocity(lVelocity);
     }
-    sprintf(sVelocity, "%ld", lVelocity);
+    snprintf(sVelocity, sizeof(sVelocity), "%ld", lVelocity);
 
     CPropertyAction* pActOnSpeed = new CPropertyAction(this, &MP285Ctrl::OnSpeed);
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_VelocityLabel).c_str(), sVelocity, MM::Integer,  false, pActOnSpeed); // usteps/step
@@ -321,9 +321,9 @@ int MP285Ctrl::Initialize()
     if (!yCommError)
     {
         nResolution = (sResponse[29]&0x80) ? 50 : 10;
-        MP285::Instance()->SetResolution(nResolution);    
+        MP285::Instance()->SetResolution(nResolution);
     }
-    sprintf(sResolution, "%d", nResolution);
+    snprintf(sResolution, sizeof(sResolution), "%d", nResolution);
 
     CPropertyAction* pActOnResolution = new CPropertyAction(this, &MP285Ctrl::OnResolution);
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_ResolutionLabel).c_str(), sResolution, MM::Integer, false, pActOnResolution);  // 0x0000 = 10 ; 0x8000 = 50
@@ -338,7 +338,7 @@ int MP285Ctrl::Initialize()
     MP285::Instance()->SetMotionMode(0);
     char sMotionMode[20];
     memset(sMotionMode, 0, 20);
-    sprintf(sMotionMode, "0");
+    snprintf(sMotionMode, sizeof(sMotionMode), "0");
 
     CPropertyAction* pActOnMotionMode = new CPropertyAction(this, &MP285Ctrl::OnMotionMode);
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_MotionMode).c_str(), "Undefined", MM::Integer, false, pActOnMotionMode);  // Absolute  vs Relative 
@@ -537,7 +537,7 @@ int MP285Ctrl::SetOrigin()
 
     char sCommStat[30];
     if (yCommError)
-        sprintf(sCommStat, "Error Code ==> <%2x>", sResponse[0]);
+        snprintf(sCommStat, sizeof(sCommStat), "Error Code ==> <%2x>", sResponse[0]);
     else
         strcpy(sCommStat, "Success");
 
@@ -639,7 +639,7 @@ int MP285Ctrl::SetVelocity(long lVelocity)
 
     yCommError = CheckError(sResponse[0]);
     if (yCommError)
-        sprintf((char*)sCommStat, "Error Code ==> <%2x>", sResponse[0]);
+        snprintf(sCommStat, sizeof(sCommStat), "Error Code ==> <%2x>", sResponse[0]);
     else
         strcpy(sCommStat, "Success");
 
@@ -686,7 +686,7 @@ int MP285Ctrl::SetMotionMode(long lMotionMode)
 
     yCommError = CheckError(sResponse[0]);
     if (yCommError)
-        sprintf((char*)sCommStat, "Error Code ==> <%2x>", sResponse[0]);
+        snprintf(sCommStat, sizeof(sCommStat), "Error Code ==> <%2x>", sResponse[0]);
     else
         strcpy((char*)sCommStat, "Success");
 

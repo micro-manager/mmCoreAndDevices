@@ -1,4 +1,5 @@
 #include "ABSCamera.h"
+#include "CameraImageMetadata.h"
 #include <cstdio>
 #include <string>
 #include <math.h>
@@ -16,7 +17,6 @@ using namespace std;
 
 #include "AutoTimeMeasure.h"
 
-const double CABSCamera::nominalPixelSizeUm_ = 1.0;
 double g_IntensityFactor_ = 1.0;
 // External names used used by the rest of the system
 // to load particular device from the "DemoCamera.dll" library
@@ -175,7 +175,6 @@ const char* g_IOPort_None = " none";
 * perform most of the initialization in the Initialize() method.
 */
 CABSCamera::CABSCamera() :
-CCameraBase<CABSCamera> (),
 dPhase_(0),
 initialized_(false),
 readoutUs_(1.0),
@@ -1257,16 +1256,16 @@ int CABSCamera::InsertImage()
   this->GetLabel(label);
 
   // Important: metadata about the image are generated here:
-  Metadata md;
-  md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-  md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-  md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( imageCounter_ ));
-  md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) GetImageWidth()));
-  md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) GetImageHeight()));
+  MM::CameraImageMetadata md;
+  md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+  md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+  md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( imageCounter_ ));
+  md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) GetImageWidth()));
+  md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) GetImageHeight()));
 
   char buf[MM::MaxStrLength];
   GetProperty(MM::g_Keyword_Binning, buf);
-  md.put(MM::g_Keyword_Binning, buf);
+  md.AddTag(MM::g_Keyword_Binning, buf);
 
   const unsigned char* pI = GetImageBuffer();
   unsigned int w = GetImageWidth();
@@ -1275,15 +1274,7 @@ int CABSCamera::InsertImage()
 
   
 
-  int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str() );
-
-  if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-  {  
-    // do not stop on overflow - just reset the buffer
-    GetCoreCallback()->ClearImageBuffer(this);
-    // don't process this same image again...
-    ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-  }
+  int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 
   if (ret == DEVICE_OK)
     imageCounter_++;

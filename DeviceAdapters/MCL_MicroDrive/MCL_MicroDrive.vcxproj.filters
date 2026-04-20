@@ -35,6 +35,9 @@
     <ClCompile Include="MadTweezer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MotorizedMicroMirrorTIRF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MCL_MicroDrive.h">
@@ -62,6 +65,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MadTweezer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MotorizedMicroMirrorTIRF.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

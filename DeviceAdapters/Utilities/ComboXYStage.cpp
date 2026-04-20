@@ -32,7 +32,6 @@
 
 #include "Utilities.h"
 
-#include <boost/lexical_cast.hpp>
 #include <algorithm>
 
 extern const char* g_DeviceNameComboXYStage;
@@ -202,7 +201,7 @@ int ComboXYStage::Home()
 
 int ComboXYStage::SetPositionSteps(long x, long y)
 {
-   LogMessage(("SetPositionSteps(" + boost::lexical_cast<std::string>(x) + ", " + boost::lexical_cast<std::string>(y) + ")").c_str(), true);
+   LogMessage(("SetPositionSteps(" + std::to_string(x) + ", " + std::to_string(y) + ")").c_str(), true);
 
    for (int i = 0; i < 2; ++i)
    {
@@ -250,7 +249,7 @@ int ComboXYStage::GetPositionSteps(long& x, long& y)
       posSteps = Round(logicalPosUm / simulatedStepSizeUm);
    }
 
-   LogMessage(("GetPositionSteps() -> (" + boost::lexical_cast<std::string>(x) + ", " + boost::lexical_cast<std::string>(y) + ")").c_str(), true);
+   LogMessage(("GetPositionSteps() -> (" + std::to_string(x) + ", " + std::to_string(y) + ")").c_str(), true);
    return DEVICE_OK;
 }
 

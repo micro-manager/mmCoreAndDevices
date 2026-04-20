@@ -97,7 +97,6 @@ int ClearPort(MM::Device& device, MM::Core& core, std::string port)
 // XYStageH128
 //
 XYStage::XYStage() : // LIN 01/01/2012 DIDN'T RENAME FUNCTION. ASSUMING MMCORE WILL EXPECT TO CALL ON XYStage()
-   CXYStageBase<XYStage>(),
    initialized_(false), 
    port_("Undefined"), 
    stepSizeXUm_(0.1), // LIN 01/02/2012 changed initial value from 0.0 to 0.1

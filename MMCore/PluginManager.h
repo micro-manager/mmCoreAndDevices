@@ -22,12 +22,15 @@
 
 #pragma once
 
-#include "../MMDevice/DeviceThreads.h"
+#include "MockDeviceAdapter.h"
 
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+
+namespace mmcore {
+namespace internal {
 
 class LoadedDeviceAdapter;
 
@@ -55,6 +58,8 @@ public:
    std::shared_ptr<LoadedDeviceAdapter>
    GetDeviceAdapter(const char* moduleName);
 
+   void LoadMockAdapter(const std::string& name, MockDeviceAdapter* impl);
+
 private:
    static std::vector<std::string> GetDefaultSearchPaths();
    static void GetModules(std::vector<std::string> &modules, const char *path);
@@ -64,3 +69,6 @@ private:
 
    std::map< std::string, std::shared_ptr<LoadedDeviceAdapter> > moduleMap_;
 };
+
+} // namespace internal
+} // namespace mmcore

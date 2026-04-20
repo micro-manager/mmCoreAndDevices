@@ -142,6 +142,7 @@ class DCCDCUHubDevice : public HubBase<DCCDCUHubDevice<Model>> {
 
    // Forbid simultaneous creation of more than one instance (per model).
    static int instanceCount_;
+   bool instanceCountIncremented_ = false;
 
  public:
    DCCDCUHubDevice(std::string name) : deviceName_(std::move(name)) {
@@ -166,6 +167,7 @@ class DCCDCUHubDevice : public HubBase<DCCDCUHubDevice<Model>> {
          return static_cast<int>(Errors::CANNOT_CREATE_TWO_HUBS);
       }
       ++instanceCount_;
+      instanceCountIncremented_ = true;
 
       const bool simulate = RequestedSimulation();
       const auto moduleSet = RequestedModuleSet();
@@ -198,7 +200,9 @@ class DCCDCUHubDevice : public HubBase<DCCDCUHubDevice<Model>> {
 
    auto Shutdown() -> int final {
       interface_.reset();
-      --instanceCount_;
+      if (instanceCountIncremented_) {
+         --instanceCount_;
+      }
       return DEVICE_OK;
    }
 
@@ -308,7 +312,9 @@ class DCCDCUModuleDevice : public CGenericBase<DCCDCUModuleDevice<Model>> {
    }
 
    auto Shutdown() -> int final {
-      module_->Close();
+      if (module_) {
+         module_->Close();
+      }
       return DEVICE_OK;
    }
 

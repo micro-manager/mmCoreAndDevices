@@ -183,8 +183,6 @@ void CALLBACK PipeCallback( INT16 /*nPipe*/, INT16 nCmd, LPVOID pvCam, LPVOID ap
    }
 }
 
-const double CCameraAdapter::nominalPixelSizeUm_ = 1.0;
-
 // Local property names
 static LPCTSTR sc_pszPropFrameGrabber = "CameraID-FrameGrabber";
 static LPCTSTR sc_pszPropCameraName = "CameraID-Name";
@@ -649,7 +647,7 @@ int CCameraAdapter::Initialize()
    RETURN_ON_PIL_ERROR( pilGetLibraryId( (LPTSTR)pszLib, 100, nMajor, nMinor, nBuild ) );
 
    char sVersion[100];
-   sprintf(sVersion, "v%d.%d.%02d", nMajor, nMinor, nBuild);
+   snprintf(sVersion, sizeof(sVersion), "v%d.%d.%02d", nMajor, nMinor, nBuild);
    RETURN_ON_MM_ERROR( CreateProperty(MM::g_Keyword_Version, sVersion, MM::String, true) );
 
    // Enable all log messages for the local group
@@ -1835,8 +1833,8 @@ INT16 CCameraAdapter::GetProperties()
 
    m_bExposureInSync = ( m_nFrameClocks == m_nMMFrameClocks );
 
-   char sPixel[8];
-   sprintf(sPixel, "%dbit", m_nCapBits );
+   char sPixel[16];
+   snprintf(sPixel, sizeof(sPixel), "%dbit", m_nCapBits );
    m_sPixel = sPixel;
    m_asPixelTypes.clear();
    m_asPixelTypes.push_back( m_sPixel.c_str() );
@@ -2123,25 +2121,7 @@ void CCameraAdapter::Capture()
          );
       if (ret != DEVICE_OK)
       {
-         // Micro-Manager can't keep up
-         if (!m_bStopOnOverflow && ret == DEVICE_BUFFER_OVERFLOW)
-         {
-            // do not stop on overflow - just reset the buffer
-            GetCoreCallback()->ClearImageBuffer(this);
-            piulLogMessage( m_sMyName.c_str(), s_unLogMethodCallTrace, "MM can't keep up, clearing its buffer" );
-            ret = GetCoreCallback()->InsertImage
-                  (
-                     this,
-                     punBuffer,
-                     m_nStreamWidth,
-                     m_nStreamHeight,
-                     m_nStreamPixelBytes
-                  );
-            if (ret != DEVICE_OK)
-            {
-               m_bStream = FALSE;
-            }
-         }
+         m_bStream = FALSE;
       }
       //oCS.Unlock();
 

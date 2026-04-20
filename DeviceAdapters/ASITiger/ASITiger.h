@@ -21,18 +21,13 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h, ASIFW1000.h, Arduino.h, and DemoCamera.h
-//
 
-#ifndef _ASITiger_H_
-#define _ASITiger_H_
+#ifndef ASITIGER_H
+#define ASITIGER_H
 
 #include <string>
 #include <vector>
 #include <iostream>
-
-using namespace std;
-
 
 //////////////////////////////////////////////////////////////////////////////
 // ASI-specific macros
@@ -63,49 +58,49 @@ using namespace std;
 //////////////////////////////////////////////////////////////////////////////
 // ASI-specific error codes and messages
 //
-#define ERR_UNKNOWN_POSITION         10002
-#define ERR_PORT_CHANGE_FORBIDDEN    10004
-#define ERR_SET_POSITION_FAILED      10005
-#define ERR_INVALID_STEP_SIZE        10006
-#define ERR_INVALID_MODE             10008
-#define ERR_UNRECOGNIZED_ANSWER      10009
+constexpr int ERR_UNKNOWN_POSITION = 10002;
+constexpr int ERR_PORT_CHANGE_FORBIDDEN = 10004;
+constexpr int ERR_SET_POSITION_FAILED = 10005;
+constexpr int ERR_INVALID_STEP_SIZE = 10006;
+constexpr int ERR_INVALID_MODE = 10008;
+constexpr int ERR_UNRECOGNIZED_ANSWER = 10009;
 const char* const g_Msg_ERR_UNRECOGNIZED_ANSWER = "Unrecognized serial answer from ASI device";
-#define ERR_UNSPECIFIED_ERROR        10010
-#define ERR_NOT_LOCKED               10011
-#define ERR_NOT_CALIBRATED           10012
-#define ERR_NOT_ENOUGH_AXES          10021   // if TigerComm gets back too few axes on BU X
+constexpr int ERR_UNSPECIFIED_ERROR = 10010;
+constexpr int ERR_NOT_LOCKED = 10011;
+constexpr int ERR_NOT_CALIBRATED = 10012;
+constexpr int ERR_NOT_ENOUGH_AXES = 10021; // if TigerComm gets back too few axes on BU X
 const char* const g_Msg_ERR_NOT_ENOUGH_AXES = "Do not have any axes installed";
-#define ERR_TOO_LARGE_ADDRESSES      10022   // if we have addresses 0x81 and higher without new firmware
+constexpr int ERR_TOO_LARGE_ADDRESSES = 10022; // if we have addresses 0x81 and higher without new firmware
 const char* const g_Msg_ERR_TOO_LARGE_ADDRESSES = "Need new firmware for more than 10 cards";
-#define ERR_INFO_COMMAND_NOT_SUPPORTED   10023   // can't receive output from INFO command because >1023 characters
+constexpr int ERR_INFO_COMMAND_NOT_SUPPORTED = 10023; // can't receive output from INFO command because >1023 characters
 const char* const g_Msg_ERR_INFO_COMMAND_NOT_SUPPORTED = "Cannot use the INFO command due to Micro-Manager limitations";
-#define ERR_FILTER_WHEEL_NOT_READY   10030   // if filter wheel responds with error, e.g. it is not plugged in
+constexpr int ERR_FILTER_WHEEL_NOT_READY = 10030; // if filter wheel responds with error, e.g. it is not plugged in
 const char* const g_Msg_ERR_FILTER_WHEEL_NOT_READY = "Filter wheel doesn't appear to be connected";
-#define ERR_FILTER_WHEEL_SPINNING    10031   // if filter wheel is spinning and try to do something with it
+constexpr int ERR_FILTER_WHEEL_SPINNING = 10031; // if filter wheel is spinning and try to do something with it
 const char* const g_Msg_ERR_FILTER_WHEEL_SPINNING = "Filter wheel cannot be moved to position or settings changed while spinning";
-#define ERR_TIGER_DEV_NOT_SUPPORTED  10040
+constexpr int ERR_TIGER_DEV_NOT_SUPPORTED = 10040;
 const char* const g_Msg_ERR_TIGER_DEV_NOT_SUPPORTED = "Device type not yet supported by Tiger device adapter";
-#define ERR_TIGER_PAIR_NOT_PRESENT   10041
+constexpr int ERR_TIGER_PAIR_NOT_PRESENT = 10041;
 const char* const g_Msg_ERR_TIGER_PAIR_NOT_PRESENT = "Axis should be present in pair";
-#define ERR_CRISP_NOT_CALIBRATED     10050
-const char* const g_Msg_ERR_CRISP_NOT_CALIBRATED = "CRISP is not calibrated.  Try focusing close to a coverslip and selecting 'Calibrate'";
-#define ERR_CRISP_NOT_LOCKED         10051
+constexpr int ERR_CRISP_NOT_CALIBRATED = 10050;
+const char* const g_Msg_ERR_CRISP_NOT_CALIBRATED = "CRISP is not calibrated. Try focusing close to a coverslip and selecting 'Calibrate'";
+constexpr int ERR_CRISP_NOT_LOCKED = 10051;
 const char* const g_Msg_ERR_CRISP_NOT_LOCKED = "The CRISP failed to lock";
 
-#define ERR_ASICODE_OFFSET 10100  // offset when reporting error number from controller
-#define ERR_UNKNOWN_COMMAND         10101
+constexpr int ERR_ASICODE_OFFSET = 10100; // offset when reporting error number from controller
+constexpr int ERR_UNKNOWN_COMMAND = 10101;
 const char* const g_Msg_ERR_UNKNOWN_COMMAND = "Unknown serial command";
-#define ERR_UNKNOWN_AXIS            10102
+constexpr int ERR_UNKNOWN_AXIS = 10102;
 const char* const g_Msg_ERR_UNKNOWN_AXIS = "Unrecognized controller axis";
-#define ERR_MISSING_PARAM           10103
+constexpr int ERR_MISSING_PARAM = 10103;
 const char* const g_Msg_ERR_MISSING_PARAM = "Missing required parameter";
-#define ERR_PARAM_OUT_OF_RANGE      10104
+constexpr int ERR_PARAM_OUT_OF_RANGE = 10104;
 const char* const g_Msg_ERR_PARAM_OUT_OF_RANGE = "Parameter out of range";
-#define ERR_OPERATION_FAILED        10105
+constexpr int ERR_OPERATION_FAILED = 10105;
 const char* const g_Msg_ERR_OPERATION_FAILED = "Controller operation failed";
-#define ERR_UNDEFINED_ERROR         10106
+constexpr int ERR_UNDEFINED_ERROR = 10106;
 const char* const g_Msg_ERR_UNDEFINED_ERROR = "Undefined controller error";
-#define ERR_INVALID_ADDRESS         10107
+constexpr int ERR_INVALID_ADDRESS = 10107;
 const char* const g_Msg_ERR_INVALID_ADDRESS = "Invalid Tiger address (e.g. missing card)";
 
 
@@ -118,7 +113,6 @@ const char* const g_PortSwitchDeviceName =  "PortSwitch";
 const char* const g_TurretDeviceName =  "Turret";
 const char* const g_FWheelDeviceName =  "FilterWheel";
 const char* const g_ScannerDeviceName =  "Scanner";
-const char* const g_MMirrorDeviceName = "MicroMirror";  // deprecated
 const char* const g_PiezoDeviceName = "PiezoStage";
 const char* const g_CRISPDeviceName = "CRISPAFocus";
 const char* const g_LEDDeviceName = "LED";
@@ -138,7 +132,7 @@ const char* const g_FWheelDeviceDescription =   "ASI Filter Wheel";
 const char* const g_TurretDeviceDescription =   "ASI Turret";
 const char* const g_ScannerDeviceDescription = "ASI 2-axis Scanner";
 const char* const g_PiezoDeviceDescription = "ASI Piezo Stage";
-const char* const g_CRISPDeviceDescription = "ASI CRISP AutoFocus";
+const char* const g_CRISPDeviceDescription = "ASI CRISP Autofocus";
 const char* const g_LEDDeviceDescription = "ASI LED Illuminator";
 const char* const g_PLogicDeviceDescription = "ASI Programmable Logic";
 const char* const g_PMTDeviceDescription = "ASI Photo Multiplier Tube";  
@@ -147,18 +141,18 @@ const char* const g_DacDeviceDescription = "ASI DAC";
 const char* const g_DacXYStageDeviceDescription = "ASI DAC XY Stage";
 
 // constant values
-const double g_StageMinStepSize = 0.001;   // in units of um
-const double g_StageDefaultUnitMult = 10;  // in units of um
-const double g_ScannerDefaultUnitMult = 1000;  // units per degree
+const double g_StageMinStepSize = 0.001; // in units of um
+const double g_StageDefaultUnitMult = 10.0; // in units of um
+const double g_ScannerDefaultUnitMult = 1000.0; // units per degree
 const char* const g_SerialTerminatorDefault = "\r\n";
 const char* const g_SerialTerminatorFW = "\n\r";
 const char* const g_SerialTerminatorLine = "\r";
 const char* const g_SerialTerminatorOverall = "\n";
 const char* const g_SerialTerminatorMultiLine = "\r";
-const string g_EmptyAxisLetterStr = " ";     // single char but like convenience of strings
-const string g_EmptyCardAddressCode = " ";   // ascii 0x31 for '1' through ascii 0x39 for '9', then 0x81 upward (extended ascii)
-const string g_EmptyCardAddressStr = "00";   // hex representation of the address, eg 31..39, 81 upward
-const string g_EmptyCardAddressChar = "";    // Tiger address character (stored as string)
+const std::string g_EmptyAxisLetterStr = " ";     // single char but like convenience of strings
+const std::string g_EmptyCardAddressCode = " ";   // ascii 0x31 for '1' through ascii 0x39 for '9', then 0x81 upward (extended ascii)
+const std::string g_EmptyCardAddressStr = "00";   // hex representation of the address, eg 31..39, 81 upward
+const std::string g_EmptyCardAddressChar = "";    // Tiger address character (stored as string)
 const char g_NameInfoDelimiter = ':';
 
 // general device property names
@@ -359,23 +353,6 @@ const char* const g_ScanSettlingTimePropertyName = "ScanSettlingTime(ms)";
 const char* const g_ScanOvershootDistancePropertyName = "ScanOvershootDistance(um)";
 const char* const g_ScanRetraceSpeedPercentPropertyName = "ScanRetraceSpeedPercent(%)";
 
-// CRISP property names
-const char* const g_CRISPWaitAfterLockPropertyName = "Wait ms after Lock";
-const char* const g_CRISPObjectiveNAPropertyName = "Objective NA";
-const char* const g_CRISPLockRangePropertyName = "Max Lock Range(mm)";
-const char* const g_CRISPCalibrationGainPropertyName = "Calibration Gain";
-const char* const g_CRISPLEDIntensityPropertyName = "LED Intensity";
-const char* const g_CRISPLoopGainMultiplierPropertyName = "GainMultiplier";
-const char* const g_CRISPNumberAveragesPropertyName = "Number of Averages";
-const char* const g_CRISPSNRPropertyName = "Signal Noise Ratio";
-const char* const g_CRISPDitherErrorPropertyName = "Dither Error";
-const char* const g_CRISPLogAmpAGCPropertyName = "LogAmpAGC";
-const char* const g_CRISPNumberSkipsPropertyName = "Number of Skips";
-const char* const g_CRISPInFocusRangePropertyName = "In Focus Range(um)";
-const char* const g_CRISPOffsetPropertyName = "Lock Offset";
-const char* const g_CRISPSumPropertyName = "Sum";
-const char* const g_CRISPStatePropertyName = "CRISP State Character";
-
 // ring buffer property names
 const char* const g_RB_DelayPropertyName = "RingBufferDelayBetweenPoints(ms)";
 const char* const g_RB_ModePropertyName = "RingBufferMode";
@@ -480,6 +457,7 @@ const char* const g_CellTypeCode14 = "14 - one shot (NRT)";
 const char* const g_CellTypeCode15 = "15 - delay (NRT)";
 const char* const g_CellTypeCode16 = "16 - one shot OR2 (NRT)";
 const char* const g_CellTypeCode17 = "17 - delay OR2 (NRT)";
+const char* const g_CellTypeCode18 = "18 - D flop (sync/async)";
 const char* const g_IOTypeCode0 = "0 - input";
 const char* const g_IOTypeCode1 = "1 - output (open-drain)";
 const char* const g_IOTypeCode2 = "2 - output (push-pull)";
@@ -550,6 +528,7 @@ const char* const g_PresetCode56 = "56 - BNC2/5 enabled of 7";
 const char* const g_PresetCode57 = "57 - BNC3/6 enabled of 7";
 const char* const g_PresetCode58 = "58 - BNC1/5 enabled of 7";
 const char* const g_PresetCode59 = "59 - BNC2/6 enabled of 7";
+const char* const g_PresetCode60 = "60 - mod3 counter";
 const char* const g_PLogicModeNone = "None";
 const char* const g_PLogicModediSPIMShutter = "diSPIM Shutter";
 const char* const g_PLogicMode4ChShutter = "Four-channel shutter";
@@ -669,7 +648,6 @@ const char* const g_OnState = "On";
 // yes/no control settings
 const char* const g_YesState = "Yes";
 const char* const g_NoState = "No";
-const char* const g_OneTimeState = "One time";
 const char* const g_ArmedState = "Armed";
 // shutter states
 const char* const g_OpenState = "Open";
@@ -684,6 +662,7 @@ const char* const g_SAPattern_0 = "0 - Ramp";
 const char* const g_SAPattern_1 = "1 - Triangle";
 const char* const g_SAPattern_2 = "2 - Square";
 const char* const g_SAPattern_3 = "3 - Sine";
+const char* const g_SAPattern_4 = "4 - Variable Triangle";
 // single-axis clock source
 const char* const g_SAClkSrc_0 = "internal 4kHz clock";
 const char* const g_SAClkSrc_1 = "external clock";
@@ -733,7 +712,6 @@ const char* const g_FocusPolarityMicroManagerDefault = "Positive towards sample"
 const char* const g_AxisPolarityNormal = "Normal";  // used for other stages
 const char* const g_AxisPolarityReversed = "Reversed";  // used for other stages
 // CRISP states
-const char* const g_CRISPState = "CRISP State";
 const char* const g_CRISP_I = "Idle";
 const char* const g_CRISP_R = "Ready";  // LED on and ready to move to K/lock state
 const char* const g_CRISP_D = "Dim";
@@ -758,7 +736,7 @@ const char* const g_PMTOverload="PMT Overloaded";
 const char* const g_PMTOverloadReset="PMT Overload Reset";
 const char* const g_PMTOverloadDone="Reset Applied";
 // SIGNAL_DAC
-const double	  g_DACDefaultUnitMult = 1000;  // in units of volts
+const double g_DACDefaultUnitMult = 1000.0; // in units of volts
 const char* const g_DACModePropertyName = "OutputMode (Restart Needed)";
 const char* const g_DACMaxVoltsPropertyName = "MaxVoltage(V)";
 const char* const g_DACMinVoltsPropertyName = "MinVoltage(V)";
@@ -776,20 +754,20 @@ const char* const g_DACGateYPropertyName = "DAC Gate Y";
 const char* const g_DACMicronsPerMvXPropertyName = "MicronsPerMillivoltX"; // pre-init property
 const char* const g_DACMicronsPerMvYPropertyName = "MicronsPerMillivoltY"; // pre-init property
 
-struct build_info_type
+// The firmware build information parsed from the "BU X" command
+struct FirmwareBuild
 {
-   string buildname;
-   unsigned char numAxes;
-   vector<char> vAxesLetter;
-   vector<char> vAxesType;
-   vector<string> vAxesAddr;  // string to handle unprintable characters
-   vector<string> vAxesAddrHex;  // string for simplicity, logically it should be int though
-   vector<int> vAxesProps;
-   vector<string> defines;
+   std::string buildName;
+   unsigned int numAxes = 0;
+   std::vector<char> vAxesLetter;
+   std::vector<char> vAxesType;
+   std::vector<std::string> vAxesAddr;  // string to handle unprintable characters
+   std::vector<std::string> vAxesAddrHex;  // string for simplicity, logically it should be int though
+   std::vector<int> vAxesProps;
+   std::vector<std::string> defines;
 };
 
 // define names
 const char* const g_Define_SINGLEAXIS_FUNCTION = "SINGLEAXIS_FUNCTION";
 
-
-#endif //_ASITiger_H_
+#endif // ASITIGER_H

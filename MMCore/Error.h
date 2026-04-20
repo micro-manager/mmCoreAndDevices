@@ -26,10 +26,11 @@
 
 #include "ErrorCodes.h"
 
+#include "CoreDeclHelpers.h"
+
 #include <exception>
 #include <memory>
 #include <string>
-
 
 /// Core error class. Exceptions thrown by the Core public API are of this type.
 /**
@@ -116,10 +117,10 @@ public:
    /// Copy constructor (perform a deep copy).
    CMMError(const CMMError& other);
 
-   virtual ~CMMError() throw() {}
+   virtual ~CMMError() {}
 
    /// Implements std::exception interface.
-   virtual const char* what() const throw() { return message_.c_str(); }
+   virtual const char* what() const MMCORE_NOEXCEPT { return message_.c_str(); }
 
    /// Get the error message for this error.
    virtual std::string getMsg() const;

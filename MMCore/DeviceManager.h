@@ -17,25 +17,27 @@
 
 #pragma once
 
-#include "../MMDevice/MMDevice.h"
-#include "../MMDevice/DeviceThreads.h"
 #include "CoreUtils.h"
 #include "Devices/DeviceInstance.h"
 #include "Error.h"
 #include "Logging/Logger.h"
 
+#include "MMDevice.h"
+
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 class CMMCore;
-class HubInstance;
+
+
+namespace mmcore {
+namespace internal {
+
 class LoadedDeviceAdapter;
-
-
-namespace mm
-{
+class HubInstance;
 
 class DeviceManager /* final */
 {
@@ -61,8 +63,8 @@ public:
    std::shared_ptr<DeviceInstance>
    LoadDevice(std::shared_ptr<LoadedDeviceAdapter> module,
          const std::string& deviceName, const std::string& label, CMMCore* core,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger);
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger);
 
    /**
     * \brief Unload a device.
@@ -135,9 +137,10 @@ public:
 // Scoped acquisition of a device's module's lock
 class DeviceModuleLockGuard
 {
-   MMThreadGuard g_;
+   std::lock_guard<std::recursive_mutex> g_;
 public:
    explicit DeviceModuleLockGuard(std::shared_ptr<DeviceInstance> device);
 };
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

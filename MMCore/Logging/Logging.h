@@ -24,18 +24,25 @@
 #include "Logger.h"
 #include "Metadata.h"
 #include "MetadataFormatter.h"
+#include "StderrColor.h"
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
 
 typedef internal::GenericLoggingCore<Metadata> LoggingCore;
 
 typedef internal::GenericSink<Metadata> LogSink;
-typedef internal::GenericStdErrLogSink<Metadata, internal::MetadataFormatter>
+namespace internal {
+class StderrMetadataFormatter : public MetadataFormatter {
+public:
+   StderrMetadataFormatter() : MetadataFormatter(ShouldColorStderr()) {}
+};
+} // namespace internal
+
+typedef internal::GenericStdErrLogSink<Metadata, internal::StderrMetadataFormatter>
    StdErrLogSink;
 typedef internal::GenericFileLogSink<Metadata, internal::MetadataFormatter>
    FileLogSink;
@@ -56,4 +63,5 @@ public:
 
 
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

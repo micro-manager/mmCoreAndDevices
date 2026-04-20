@@ -273,7 +273,6 @@ int MotorFocus::OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct)
  * ZeissXYStageX: Micro-Manager implementation of X and Y Stage
  */
 XYStageX::XYStageX (): 
-   CXYStageBase<XYStageX>(),
    stepSize_um_(0.001),
    initialized_ (false),
    moveMode_ (0),

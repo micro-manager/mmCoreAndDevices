@@ -83,8 +83,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // SpotCamera device adapter
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-//const double SpotCamera::fNominalPixelSizeUm = 1.0;
-
 /**
  * SpotCamera constructor.
  * Setup default all variables and create device properties required to exist
@@ -95,7 +93,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
  * the constructor. We should do as little as possible in the constructor and
  * perform most of the initialization in the Initialize() method.
  */
-SpotCamera::SpotCamera(const char* /*szDeviceName*/) : CCameraBase<SpotCamera>(),
+SpotCamera::SpotCamera(const char* /*szDeviceName*/) :
    initialized( false ),   
    numberOfChannels_( 4 ), // EF - changed to 4 for valid number for MMImageWindow, line 125ff, byteDepth = 4
 	pImplementation_(NULL),
@@ -762,36 +760,6 @@ unsigned int SpotCamera::GetNumberOfComponents() const
   return this->numberOfChannels_;  
 }
 
-
-int SpotCamera::GetComponentName(unsigned channel, char* name)
-{
-	bool bColor = (pImplementation_->CanDoColor() && (1 == pImplementation_->BinSize()));
-  if (!bColor && (channel > 0))  return DEVICE_NONEXISTENT_CHANNEL;      
-  
-  switch (channel)
-  {
-  case 0:      
-    if (!bColor) 
-      CDeviceUtils::CopyLimitedString(name, "Grayscale");
-    else 
-      CDeviceUtils::CopyLimitedString(name, "B");
-    break;
-
-  case 1:
-    CDeviceUtils::CopyLimitedString(name, "G");
-    break;
-
-  case 2:
-    CDeviceUtils::CopyLimitedString(name, "R");
-    break;
-
-  default:
-    return DEVICE_NONEXISTENT_CHANNEL;
-    break;
-  }
-  return DEVICE_OK;
-}
- 
 
 /**
  * Returns image buffer X-size in pixels.

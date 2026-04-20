@@ -23,14 +23,6 @@
 
 #include <string>
 
-#include "ImageMetadata.h"
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// CImgBuffer class
-// ~~~~~~~~~~~~~~~~~~
-// Variable pixel depth image buffer
-//
 
 class ImgBuffer
 {
@@ -55,8 +47,6 @@ public:
 
    void SetName(const char* name) {name_ = name;}
    const std::string& GetName() {return name_;}
-   void SetMetadata(const Metadata& md);
-   const Metadata& GetMetadata() const {return metadata_;}
 
    void Copy(const ImgBuffer& rhs);
    ImgBuffer& operator=(const ImgBuffer& rhs);
@@ -67,5 +57,4 @@ private:
    unsigned int height_;
    unsigned int pixDepth_;
    std::string name_;
-   Metadata metadata_;
 };

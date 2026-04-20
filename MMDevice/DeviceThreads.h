@@ -28,7 +28,7 @@
 #endif
 
 /**
- * Base class for threads in MM devices
+ * @brief Base class for threads in MM devices.
  */
 class MMDeviceThreadBase
 {
@@ -89,7 +89,7 @@ private:
 };
 
 /**
- * Critical section lock.
+ * @brief Critical section lock.
  */
 class MMThreadLock
 {
@@ -101,14 +101,7 @@ public:
 #else
       pthread_mutexattr_t a;
       pthread_mutexattr_init(&a);
-      pthread_mutexattr_settype(&a,
-#ifdef __linux__
-         // Not sure if _NP is needed any more
-         PTHREAD_MUTEX_RECURSIVE_NP
-#else
-         PTHREAD_MUTEX_RECURSIVE
-#endif
-      );
+      pthread_mutexattr_settype(&a, PTHREAD_MUTEX_RECURSIVE);
       pthread_mutex_init(&lock_, &a);
       pthread_mutexattr_destroy(&a);
 #endif

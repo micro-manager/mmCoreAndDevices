@@ -19,35 +19,30 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h and others
-//
 
-#ifndef _ASIZStage_H_
-#define _ASIZStage_H_
+#ifndef ASIZSTAGE_H
+#define ASIZSTAGE_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CZStage : public ASIPeripheralBase<CStageBase, CZStage>
-{
+class CZStage : public ASIPeripheralBase<CStageBase, CZStage> {
 public:
-   CZStage(const char* name);
-   ~CZStage() { }
-  
+    explicit CZStage(const char* name);
+    ~CZStage() = default;
+
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // ZStage API
-   // -----------
    int Stop();
    int Home();
 
    // the step size is the programming unit for dimensions and is integer
    // see http://micro-manager.3463995.n2.nabble.com/what-are-quot-steps-quot-for-stages-td7580724.html
-   double GetStepSize() {return stepSizeUm_;}
+   double GetStepSize() const { return stepSizeUm_; }
    int GetPositionSteps(long& steps);
    int SetPositionSteps(long steps);
    int SetPositionUm(double pos);
@@ -55,7 +50,7 @@ public:
    int SetRelativePositionUm(double d);
    int GetLimits(double& min, double& max);
    int SetOrigin();
-   int 	Move (double velocity);
+   int Move(double velocity);
 
    bool IsContinuousFocusDrive() const {return false;}  // todo figure out what this means and if it's accurate
 
@@ -69,7 +64,6 @@ public:
    int SendStageSequence();
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnWaitTime             (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -125,9 +119,14 @@ public:
    int OnTTLInputMode         (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+    int OnSaveJoystickSettings();
+
+    // Properties
+    void CreateSingleAxisRiseTimeProperty();
+
+    std::string axisLetter_;
    double unitMult_;
    double stepSizeUm_;
-   string axisLetter_;
    bool advancedPropsEnabled_;
    bool speedTruth_;
    double lastSpeed_;
@@ -136,11 +135,8 @@ private:
    bool ttl_trigger_supported_;
    bool ttl_trigger_enabled_;
    bool runningFastSequence_;
-   std::vector<double> sequence_;
    unsigned int axisIndex_;
-
-   // private helper functions
-   int OnSaveJoystickSettings();
+   std::vector<double> sequence_;
 };
 
-#endif //_ASIZStage_H_
+#endif // ASIZSTAGE_H

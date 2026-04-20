@@ -29,7 +29,7 @@ inline static void OutputDbgPrint(const char* strOutPutString, ...)
 {
 #ifdef _DEBUG
 	char strBuf[128] = {0};
-	sprintf(strBuf, "<%s> ", "MM_ASI");
+	snprintf(strBuf, sizeof(strBuf), "<%s> ", "MM_ASI");
 	va_list vlArgs;
 	va_start(vlArgs, strOutPutString);
 	vsnprintf((char*)(strBuf+strlen(strBuf)), sizeof(strBuf)-strlen(strBuf), strOutPutString, vlArgs);
@@ -90,7 +90,10 @@ int SequenceThread::svc(void) throw()
          ret = camera_->RunSequenceOnThread(MM::MMTime{});//startTime_
       } while (!IsStopped() );//DEVICE_OK == ret &&           && imageCounter_++ < numImages_-1
 	  ASIStopVideoCapture(camera_->ASICameraInfo.CameraID);
-   camera_->OnThreadExiting();
+   auto* core = camera_->GetCoreCallback();
+   if (core != nullptr) {
+      core->AcqFinished(camera_, 0);
+   }
    Stop();
    return ret;
 }

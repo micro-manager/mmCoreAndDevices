@@ -173,7 +173,7 @@ int MicroDriveXYStage::InitDeviceAdapter()
 
 	// Create velocity error text.
 	char velErrText[50];
-	sprintf(velErrText, "Velocity must be between %f and %f", minVelocity_, maxVelocity_);
+	snprintf(velErrText, sizeof(velErrText), "Velocity must be between %f and %f", minVelocity_, maxVelocity_);
 	SetErrorText(INVALID_VELOCITY, velErrText);
 
 	// Create Stage properties.
@@ -216,31 +216,31 @@ int MicroDriveXYStage::CreateMicroDriveXYProperties()
 		return err;
 
 	// Device handle
-	sprintf(iToChar, "%d", handle_);
+	snprintf(iToChar, sizeof(iToChar), "%d", handle_);
 	err = CreateProperty(g_Keyword_Handle, iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Serial Number
-	sprintf(iToChar, "%hu", pid_);
+	snprintf(iToChar, sizeof(iToChar), "%hu", pid_);
 	err = CreateProperty(g_Keyword_Serial_Num, iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Product ID
-	sprintf(iToChar, "%hu", pid_);
+	snprintf(iToChar, sizeof(iToChar), "%hu", pid_);
 	err = CreateProperty(g_Keyword_ProductID, iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Maximum velocity
-	sprintf(iToChar, "%f", maxVelocity_);
+	snprintf(iToChar, sizeof(iToChar), "%f", maxVelocity_);
 	err = CreateProperty(g_Keyword_MaxVelocity, iToChar, MM::Float, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Minumum velocity
-	sprintf(iToChar, "%f", minVelocity_);
+	snprintf(iToChar, sizeof(iToChar), "%f", minVelocity_);
 	err = CreateProperty(g_Keyword_MinVelocity, iToChar, MM::Float, true);
 	if (err != DEVICE_OK)
 		return err;
@@ -252,7 +252,7 @@ int MicroDriveXYStage::CreateMicroDriveXYProperties()
 
 	if (deviceHasTirfModuleAxis_)
 	{
-		sprintf(iToChar, "%f", tirfModCalibrationMm_);
+		snprintf(iToChar, sizeof(iToChar), "%f", tirfModCalibrationMm_);
 		err = CreateProperty(g_Keyword_DistanceToEpi, iToChar, MM::Float, true);
 		if (err != DEVICE_OK)
 			return err;
@@ -261,7 +261,7 @@ int MicroDriveXYStage::CreateMicroDriveXYProperties()
 	/// Action properties
 
 	// Change velocity
-	sprintf(iToChar, "%f", maxVelocity_);
+	snprintf(iToChar, sizeof(iToChar), "%f", maxVelocity_);
 	CPropertyAction* pAct = new CPropertyAction(this, &MicroDriveXYStage::OnVelocity);
 	err = CreateProperty("Velocity", iToChar, MM::Float, false, pAct);
 	if (err != DEVICE_OK)
@@ -346,7 +346,7 @@ int MicroDriveXYStage::CreateMicroDriveXYProperties()
 		return err;
 
 	// Iterative Tolerance
-	sprintf(iToChar, "%f", imToleranceUm_);
+	snprintf(iToChar, sizeof(iToChar), "%f", imToleranceUm_);
 	pAct = new CPropertyAction(this, &MicroDriveXYStage::OnImToleranceUm);
 	err = CreateProperty(g_Keyword_ImTolerance, iToChar, MM::Float, false, pAct);
 	if (err != DEVICE_OK)
@@ -515,7 +515,7 @@ int MicroDriveXYStage::SetPositionMmSync(double goalX, double goalY)
 		err = MCL_MicroDriveGetWaitTime(&waitTime, handle_);
 		if (err != MCL_SUCCESS)
 			return err;
-		sprintf(iToChar, "%d", waitTime);
+		snprintf(iToChar, sizeof(iToChar), "%d", waitTime);
 		SetProperty(g_Keyword_WaitTime, iToChar);
 	
 		PauseDevice();
@@ -1185,10 +1185,10 @@ int MicroDriveXYStage::OnPositionXYmm(MM::PropertyBase* pProp, MM::ActionType eA
 	char* pEnd;
 
 	if (eAct == MM::BeforeGet)
-	{ 
+	{
 		GetPositionMm(x, y);
 		char iToChar[30];
-		sprintf(iToChar, "X = %f Y = %f", x, y);
+		snprintf(iToChar, sizeof(iToChar), "X = %f Y = %f", x, y);
 		pProp->Set(iToChar);
 	}
 	else if (eAct == MM::AfterSet)

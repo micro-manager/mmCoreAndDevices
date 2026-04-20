@@ -50,6 +50,9 @@ m4/lt~obsolete.m4
 missing
 test-driver
 
+# Meson build system
+.wraplock
+
 # Python
 *.pyc
 *.pyo

@@ -240,6 +240,7 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   
   void GetName(char* name) const;      
 
+  bool Busy() { return false; }
    
   // MMCamera API
   // ------------
@@ -256,11 +257,6 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
   int ClearROI();
   
-  int PrepareSequenceAcqusition()
-  {
-    return DEVICE_OK;
-  }
-
   int StartSequenceAcquisition(double interval);
   int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
   int StopSequenceAcquisition();
@@ -268,12 +264,6 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   int ThreadRun();
   bool IsCapturing();
   void OnThreadExiting() throw(); 
-
-  double GetNominalPixelSizeUm() const 
-  {return nominalPixelSizeUm_;}
-
-  double GetPixelSizeUm() const 
-  {return nominalPixelSizeUm_ * GetBinning();}
 
   int GetBinning() const;
   int SetBinning(int bS);

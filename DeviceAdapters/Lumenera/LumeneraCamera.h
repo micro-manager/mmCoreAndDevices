@@ -38,7 +38,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "ImageMetadata.h"
 #include "ImgBuffer.h"
 #include <iostream>
 
@@ -81,7 +80,7 @@ enum
 //class CircularBufferInserter;
 class VideoSequenceThread;
 
-class LumeneraCamera : public CCameraBase<LumeneraCamera> {
+class LumeneraCamera : public CLegacyCameraBase<LumeneraCamera> {
 
 	friend class VideoSequenceThread;
 
@@ -125,7 +124,6 @@ public:
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StartSequenceAcquisition(double interval_ms);
 	int StopSequenceAcquisition();
-	int PrepareSequenceAcqusition();
 	bool IsCapturing();
 
 

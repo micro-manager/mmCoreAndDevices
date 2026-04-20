@@ -16,7 +16,6 @@
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "DeviceThreads.h"
-#include "Debayer.h"
 
 #include <string>
 #include <map>
@@ -84,6 +83,8 @@ public:
 	*/
 	void GetName( char* name ) const {  CDeviceUtils::CopyLimitedString( name, g_CameraDeviceName );  }
 
+	bool Busy() { return false; }
+
 	/////////////////
 	// MMCamera API
 	// ------------
@@ -111,11 +112,6 @@ public:
 	* and '4' for RGB cameras.
 	*/
 	unsigned GetNumberOfComponents() const;
-
-	/**
-    * Returns the name for each component
-    */
-	int GetComponentName(unsigned comp, char* name);
 
 	/**
 	* Returns the size in bytes of the image buffer.
@@ -182,15 +178,10 @@ public:
 	int ClearROI();
 
 	// sequence-acquisition-related functions
-	int PrepareSequenceAcqusition() { return DEVICE_OK; }
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+	int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
 	int StopSequenceAcquisition();
 	bool IsCapturing();
-
-	// pixel-size-related functions
-	// the GenICam spec and the JAI sdk have no way to query sensor pixel size.
-	double GetNominalPixelSizeUm() const {return 1.0;}
-	double GetPixelSizeUm() const {return 1.0 * GetBinning();}
 
 	// action interface
 	// ----------------

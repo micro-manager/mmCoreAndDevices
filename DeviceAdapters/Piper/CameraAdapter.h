@@ -46,7 +46,7 @@
 // CCameraAdapter class
 // Simulation of the Camera device
 //////////////////////////////////////////////////////////////////////////////
-class CCameraAdapter : public CCameraBase<CCameraAdapter>  
+class CCameraAdapter : public CCameraBase<CCameraAdapter>
 {
 public:
    CCameraAdapter( LPCTSTR pszName );
@@ -90,6 +90,7 @@ public:
    virtual int IsExposureSequenceable(bool& isSequenceable) const { isSequenceable=false; return 0; }
    virtual const unsigned char* GetImageBuffer();
    virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
+   virtual int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
    virtual int StopSequenceAcquisition();
    virtual unsigned GetImageWidth() const;
    virtual unsigned GetImageHeight() const;
@@ -101,8 +102,6 @@ public:
    virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
    virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    virtual int ClearROI();
-   virtual double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   virtual double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    virtual int GetBinning() const;
    virtual int SetBinning(int binSize);
    virtual bool IsCapturing();
@@ -158,8 +157,6 @@ public:
    int OnReadoutTime(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   static const double nominalPixelSizeUm_;
-
    string m_sMyName;
    BOOL m_bIsConnected;
    bool m_bIsInitialized;

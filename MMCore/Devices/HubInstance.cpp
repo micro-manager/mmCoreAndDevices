@@ -25,6 +25,9 @@
 #include "../MMCore.h"
 
 
+namespace mmcore {
+namespace internal {
+
 // Raw pointers to peripherals are used here (at least for now), because we are
 // dealing with devices that are not "loaded" as far as the core is concerned.
 // In other words, such peripherals have not been assigned labels.
@@ -118,3 +121,6 @@ MM::Device* HubInstance::GetInstalledDevice(int devIdx)
             " returned a null peripheral at index " + ToString(devIdx));
    return peripheral;
 }
+
+} // namespace internal
+} // namespace mmcore

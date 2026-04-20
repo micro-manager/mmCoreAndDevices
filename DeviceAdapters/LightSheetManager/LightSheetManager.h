@@ -5,15 +5,15 @@
  * Copyright (c) 2022, Applied Scientific Instrumentation
  */
 
-#ifndef _LIGHTSHEET_MANAGER_H_
-#define _LIGHTSHEET_MANAGER_H_
+#ifndef LIGHTSHEET_MANAGER_H
+#define LIGHTSHEET_MANAGER_H
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include "LightSheetDeviceManager.h"
 
 // version number
-const char* const gVersionNumber = "0.1.0";
+const char* const gVersionNumber = "0.1.1";
 const char* const gVersionNumberPropertyName = "Version";
 
 // device name and description
@@ -28,13 +28,6 @@ const char* const gIllumBeamPropertyName = "IllumBeam";
 const std::string gIllumPrefix = "Illum";
 const std::string gImagingPrefix = "Imaging";
 
-// pre-init properties
-const char* const gMicroscopeGeometry = "MicroscopeGeometry";
-const char* const gSimultaneousCameras = "SimultaneousCameras";
-const char* const gIlluminationPaths = "IlluminationPaths";
-const char* const gLightSheetType = "LightSheetType";
-const char* const gImagingPaths = "ImagingPaths";
-
 // types of light sheets
 const char* const gLightSheetTypeStatic = "Static";
 const char* const gLightSheetTypeScanned = "Scanned";
@@ -42,4 +35,4 @@ const char* const gLightSheetTypeScanned = "Scanned";
 // no device selected
 const char* const gUndefined = "Undefined";
 
-#endif // _LIGHTSHEET_MANAGER_H_
+#endif // LIGHTSHEET_MANAGER_H

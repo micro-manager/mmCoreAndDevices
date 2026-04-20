@@ -34,6 +34,7 @@
 #include "IIDCVideoMode.h"
 #include "IIDCVendorAVT.h"
 
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 #include "ModuleInterface.h"
 
@@ -44,7 +45,7 @@
 #include <unistd.h> // swab()
 #endif
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
@@ -491,6 +492,7 @@ MMIIDCCamera::Initialize()
 
    try
    {
+      using namespace boost::placeholders;
       // We use this device for MMCore logging, if this is the first device.
       hub_ = MMIIDCHub::GetInstance(
             boost::bind(&MMIIDCCamera::LogIIDCMessage, this, _1, _2));
@@ -619,6 +621,7 @@ MMIIDCCamera::SnapImage()
 
    try
    {
+      using namespace boost::placeholders;
       if (iidcCamera_->IsOneShotCapable())
          iidcCamera_->StartOneShotCapture(3, timeoutMs,
                boost::bind(&MMIIDCCamera::SnapCallback, this, _1, _2, _3, _4, _5),
@@ -908,6 +911,7 @@ MMIIDCCamera::StartSequenceAcquisition(long count, double /*intervalMs*/, bool s
 
    try
    {
+      using namespace boost::placeholders;
       if (iidcCamera_->IsMultiShotCapable() && count < 65536)
       {
          iidcCamera_->StartMultiShotCapture(16, static_cast<uint16_t>(count), timeoutMs,
@@ -2024,6 +2028,7 @@ void
 MMIIDCCamera::SnapCallback(const void* pixels, size_t width, size_t height,
    IIDC::PixelFormat format, uint32_t timestampUs)
 {
+   using namespace boost::placeholders;
    // Request that the callback be passed an owned pixel buffer
    ProcessImage(pixels, true, format, width, height,
          softROILeft_, softROITop_, roiWidth_, roiHeight_,
@@ -2037,6 +2042,7 @@ void
 MMIIDCCamera::SequenceCallback(const void* pixels, size_t width, size_t height,
    IIDC::PixelFormat format, uint32_t timestampUs)
 {
+   using namespace boost::placeholders;
    // Request that the callback be passed an unowned pixel buffer, since the
    // pixels will be copied to the Core
    ProcessImage(pixels, false, format, width, height,
@@ -2067,11 +2073,11 @@ MMIIDCCamera::ProcessedSequenceCallback(const void* pixels,
       size_t width, size_t height, size_t bytesPerPixel,
       uint32_t timestampUs )
 {
-   Metadata md;
+   MM::CameraImageMetadata md;
 
    char label[MM::MaxStrLength];
    GetLabel(label);
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
 #ifndef _WIN32
    // The Windows CMU backend does not provide a valid timestamp (the field
@@ -2080,11 +2086,9 @@ MMIIDCCamera::ProcessedSequenceCallback(const void* pixels,
    // pretty accurate.
    double timestampMs = ComputeRelativeTimestampMs(timestampUs);
 
-   md.put(MM::g_Keyword_Elapsed_Time_ms,
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms,
          CDeviceUtils::ConvertToString(timestampMs));
 #endif
-
-   std::string serializedMD(md.Serialize());
 
    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(pixels);
 
@@ -2095,20 +2099,7 @@ MMIIDCCamera::ProcessedSequenceCallback(const void* pixels,
 
    int err;
    err = GetCoreCallback()->InsertImage(this, bytes, uWidth, uHeight, uBytesPerPixel,
-         serializedMD.c_str());
-   if (err == DEVICE_BUFFER_OVERFLOW)
-   {
-      if (!stopOnOverflow_)
-      {
-         GetCoreCallback()->ClearImageBuffer(this);
-         err = GetCoreCallback()->InsertImage(this, bytes, uWidth, uHeight, uBytesPerPixel,
-               serializedMD.c_str(), false);
-      }
-      else
-      {
-         BOOST_THROW_EXCEPTION(Error("Sequence buffer overflow"));
-      }
-   }
+         md.Serialize());
    if (err != DEVICE_OK)
       BOOST_THROW_EXCEPTION(Error("Unknown error (" +
                boost::lexical_cast<std::string>(err) +

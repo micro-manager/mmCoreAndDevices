@@ -27,6 +27,9 @@
 
 #include <cassert>
 
+namespace mmcore {
+namespace internal {
+
 Task::Task(std::shared_ptr<Semaphore> semaphore, size_t taskIndex, size_t totalTaskCount)
     : semaphore_(semaphore),
     taskIndex_(taskIndex),
@@ -46,3 +49,6 @@ void Task::Done()
 {
     semaphore_->Release();
 }
+
+} // namespace internal
+} // namespace mmcore

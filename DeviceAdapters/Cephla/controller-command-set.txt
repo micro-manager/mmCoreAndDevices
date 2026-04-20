@@ -1,0 +1,334 @@
+The Cephla Octopi-Research controller has an Arduino Teensy inside that communicates with the computer through a USB-serial interace.  
+I had no problem getting it detected by my Windows OS.  The command interface can be gleaned from  https://github.com/hongquanli/octopi-research.  
+This is an attempt to document the interface while getting the device to do something.
+
+   Commands are send to the device in binary.  Command Length is defined in _def.py/MicrocontrollerDef.CMD_LENGTH which currently is set to 8.  
+   A checksum is calculated fro each command using the CRC8.CCITT protocol.  The last byte of the 8 byte command is set to the value of this checksum.  
+   XCTU (https://hub.digi.com/support/products/xctu/?path=/support/asset/xctu-v-659-windows-x86x64/) is pretty good at sending 
+   commands to the controller (but does not calculate the CRC checksum).
+
+   Answers from the controller are called Messages (MSG). Their lenght is currently set to 24 byets.  
+
+   The Teensy serial port is set to 2,000,000 baud (sleep 200ms, after opening port).
+
+   The Controller will answer each command with a message that contains the command ID.  The python code reads the messages in a differen thread
+   (i.e., asynchronously).  Unclear whether this is essential or not.
+
+   Messages are send at regular intervals (>= interval_send_pos_updatem which is currently set to ). The 24 bytes in the messages have teh following meanings
+   0 - command id of the last received command
+   1 - either COMMAND_CHECKSUM_ERROR (2), IN_PROGRESS (1), or COMPLETED_WITHOUT_ERRORS(0)
+   2-5 - uint32_t x pos in Big Endian
+   6-9 - uint32_t y pos in Big Endian
+   10-13 - uint32_t Z pos in Big Endian
+   14-17 - uint32_t Theta position
+   18 - Joystick Button
+   19-22 - Reserved
+   23 - CRC checksum (appears not to be set)
+
+   Currently unclear when/how the (obligatory?) answer from the controller is read.
+
+   
+   Public domain code from https://www.3dbrew.org/wiki/CRC-8-CCITT is used to calculate checksums in C(C++)
+
+   Motion.STEPS_PER_MM_XY is no longer used. Below is how distance in mm is translated to microsteps. 
+   The constants are defined in _def.py / ini configuration files:
+    HCS_V2: fullsteps_per_rev_x = 200
+            fullsteps_per_rev_y = 200
+            fullsteps_per_rev_z = 200
+            fullsteps_per_rev_theta = 200
+            screw_pitch_x_mm = 2.54
+            screw_pitch_y_mm = 2.54
+            screw_pitch_z_mm = 0.3
+    Squid+ and octopi_v2 have the same values
+
+    microstepping_default_x HCS_V2: 32, Squid+ 16, Squid+_H117_ORCA 256, octopi_v2 256, squid_6060 256
+
+    def move_x(self, delta) =  move_x_usteps((int) delta / (screw_pitch_x_mm / (x_microstepping*fullsteps_per_rev_x)))
+
+
+
+
+
+
+
+
+def initialize_drivers(self):
+        self._cmd_id = 0
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.INITIALIZE
+        self.send_command(cmd)
+        print('initialize the drivers') # debug
+
+def turn_on_illumination(self):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.TURN_ON_ILLUMINATION
+        self.send_command(cmd)
+
+def turn_off_illumination(self):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.TURN_OFF_ILLUMINATION
+        self.send_command(cmd)
+
+def set_illumination_led_matrix(self,illumination_source,r,g,b):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.SET_ILLUMINATION_LED_MATRIX
+        cmd[2] = illumination_source
+        cmd[3] = min(int(r*255),255)
+        cmd[4] = min(int(g*255),255)
+        cmd[5] = min(int(b*255),255)
+        self.send_command(cmd)
+
+def send_command(self,command):
+        self._cmd_id = (self._cmd_id + 1)%256
+        command[0] = self._cmd_id
+        command[-1] = self.crc_calculator.calculate_checksum(command[:-1])
+        self.serial.write(command)
+        self.mcu_cmd_execution_in_progress = True
+        self.last_command = command
+        self.timeout_counter = 0
+        self.last_command_timestamp = time.time()
+        self.retry = 0
+
+ def set_piezo_um(self, z_piezo_um):
+        dac = int(65535 * (z_piezo_um / OBJECTIVE_PIEZO_RANGE_UM))
+        dac = 65535 - dac if OBJECTIVE_PIEZO_FLIP_DIR else dac
+        self.microcontroller.analog_write_onboard_DAC(7, dac)
+
+def analog_write_onboard_DAC(self,dac,value):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.ANALOG_WRITE_ONBOARD_DAC
+        cmd[2] = dac
+        cmd[3] = (value >> 8) & 0xff
+        cmd[4] = value & 0xff
+        self.send_command(cmd)
+
+def configure_dac80508_refdiv_and_gain(self, div, gains):
+        cmd = bytearray(self.tx_buffer_length)
+        cmd[1] = CMD_SET.SET_DAC80508_REFDIV_GAIN
+        cmd[2] = div
+        cmd[3] = gains
+        self.send_command(cmd)
+
+def read_received_packet(self):
+        while self.terminate_reading_received_packet_thread == False:
+            # wait to receive data
+            if self.serial.in_waiting==0:
+                continue
+            if self.serial.in_waiting % self.rx_buffer_length != 0:
+                continue
+            
+            # get rid of old data
+            num_bytes_in_rx_buffer = self.serial.in_waiting
+            if num_bytes_in_rx_buffer > self.rx_buffer_length:
+                # print('getting rid of old data')
+                for i in range(num_bytes_in_rx_buffer-self.rx_buffer_length):
+                    self.serial.read()
+            
+            # read the buffer
+            msg=[]
+            for i in range(self.rx_buffer_length):
+                msg.append(ord(self.serial.read()))
+
+            # parse the message
+            '''
+            - command ID (1 byte)
+            - execution status (1 byte)
+            - X pos (4 bytes)
+            - Y pos (4 bytes)
+            - Z pos (4 bytes)
+            - Theta (4 bytes)
+            - buttons and switches (1 byte)
+            - reserved (4 bytes)
+            - CRC (1 byte)
+            '''
+            self._cmd_id_mcu = msg[0]
+            self._cmd_execution_status = msg[1]
+            if (self._cmd_id_mcu == self._cmd_id) and (self._cmd_execution_status == CMD_EXECUTION_STATUS.COMPLETED_WITHOUT_ERRORS):
+                if self.mcu_cmd_execution_in_progress == True:
+                    self.mcu_cmd_execution_in_progress = False
+                    print('   mcu command ' + str(self._cmd_id) + ' complete')
+            elif self._cmd_id_mcu != self._cmd_id and time.time() - self.last_command_timestamp > 5 and self.last_command != None:
+                self.timeout_counter = self.timeout_counter + 1
+                if self.timeout_counter > 10:
+                    self.resend_last_command()
+                    print('      *** resend the last command')
+            elif self._cmd_execution_status == CMD_EXECUTION_STATUS.CMD_CHECKSUM_ERROR:
+                print('! cmd checksum error, resending command')
+                if self.retry > 10:
+                    print('!! resending command failed for more than 10 times, the program will exit')
+                    sys.exit(1)
+                else:
+                    self.resend_last_command()
+            # print('command id ' + str(self._cmd_id) + '; mcu command ' + str(self._cmd_id_mcu) + ' status: ' + str(msg[1]) )
+
+            self.x_pos = self._payload_to_int(msg[2:6],MicrocontrollerDef.N_BYTES_POS) # unit: microstep or encoder resolution
+            self.y_pos = self._payload_to_int(msg[6:10],MicrocontrollerDef.N_BYTES_POS) # unit: microstep or encoder resolution
+            self.z_pos = self._payload_to_int(msg[10:14],MicrocontrollerDef.N_BYTES_POS) # unit: microstep or encoder resolution
+            self.theta_pos = self._payload_to_int(msg[14:18],MicrocontrollerDef.N_BYTES_POS) # unit: microstep or encoder resolution
+
+            self.button_and_switch_state = msg[18]
+            # joystick button
+            tmp = self.button_and_switch_state & (1 << BIT_POS_JOYSTICK_BUTTON)
+            joystick_button_pressed = tmp > 0
+            if self.joystick_button_pressed == False and joystick_button_pressed == True:
+                self.signal_joystick_button_pressed_event = True
+                self.ack_joystick_button_pressed()
+            self.joystick_button_pressed = joystick_button_pressed
+            # switch
+            tmp = self.button_and_switch_state & (1 << BIT_POS_SWITCH)
+            self.switch_state = tmp > 0
+
+            if self.new_packet_callback_external is not None:
+                self.new_packet_callback_external(self)
+
+
+from: https://github.com/hongquanli/octopi-research/blob/master/software/control/_def.py
+
+
+class TriggerMode:
+    SOFTWARE = 'Software Trigger'
+    HARDWARE = 'Hardware Trigger'
+    CONTINUOUS = 'Continuous Acquisition'
+
+class Acquisition:
+    CROP_WIDTH = 3000
+    CROP_HEIGHT = 3000
+    NUMBER_OF_FOVS_PER_AF = 3
+    IMAGE_FORMAT = 'bmp'
+    IMAGE_DISPLAY_SCALING_FACTOR = 0.3
+    DX = 0.9
+    DY = 0.9
+    DZ = 1.5
+    NX = 1
+    NY = 1
+
+class PosUpdate:
+    INTERVAL_MS = 25
+
+class MicrocontrollerDef:
+    MSG_LENGTH = 24
+    CMD_LENGTH = 8
+    N_BYTES_POS = 4
+
+class Microcontroller2Def:
+    MSG_LENGTH = 4
+    CMD_LENGTH = 8
+    N_BYTES_POS = 4
+
+USE_SEPARATE_MCU_FOR_DAC = False
+
+class MCU_PINS:
+    PWM1 = 5
+    PWM2 = 4
+    PWM3 = 22
+    PWM4 = 3
+    PWM5 = 23
+    PWM6 = 2
+    PWM7 = 1
+    PWM9 = 6
+    PWM10 = 7
+    PWM11 = 8
+    PWM12 = 9
+    PWM13 = 10
+    PWM14 = 15
+    PWM15 = 24
+    PWM16 = 25
+    AF_LASER = 15
+
+class CMD_SET:
+    MOVE_X = 0
+    MOVE_Y = 1
+    MOVE_Z = 2
+    MOVE_THETA = 3
+    HOME_OR_ZERO = 5
+    TURN_ON_ILLUMINATION = 10
+    TURN_OFF_ILLUMINATION = 11
+    SET_ILLUMINATION = 12
+    SET_ILLUMINATION_LED_MATRIX = 13
+    ACK_JOYSTICK_BUTTON_PRESSED = 14
+    ANALOG_WRITE_ONBOARD_DAC = 15
+    SET_DAC80508_REFDIV_GAIN = 16
+    SET_ILLUMINATION_INTENSITY_FACTOR = 17
+    MOVETO_X = 6
+    MOVETO_Y = 7
+    MOVETO_Z = 8
+    SET_LIM = 9
+    SET_LIM_SWITCH_POLARITY = 20
+    CONFIGURE_STEPPER_DRIVER = 21
+    SET_MAX_VELOCITY_ACCELERATION = 22
+    SET_LEAD_SCREW_PITCH = 23
+    SET_OFFSET_VELOCITY = 24
+    CONFIGURE_STAGE_PID = 25
+    ENABLE_STAGE_PID = 26
+    DISABLE_STAGE_PID = 27
+    SET_HOME_SAFETY_MERGIN = 28
+    SET_PID_ARGUMENTS = 29
+    SEND_HARDWARE_TRIGGER = 30
+    SET_STROBE_DELAY = 31
+    SET_PIN_LEVEL = 41
+    INITIALIZE = 254
+    RESET = 255
+
+class CMD_SET2:
+    ANALOG_WRITE_DAC8050X = 0
+    SET_CAMERA_TRIGGER_FREQUENCY = 1
+    START_CAMERA_TRIGGERING = 2
+    STOP_CAMERA_TRIGGERING = 3
+
+BIT_POS_JOYSTICK_BUTTON = 0
+BIT_POS_SWITCH = 1
+
+class HOME_OR_ZERO:
+    HOME_NEGATIVE = 1 # motor moves along the negative direction (MCU coordinates)
+    HOME_POSITIVE = 0 # motor moves along the negative direction (MCU coordinates)
+    ZERO = 2
+
+class AXIS:
+    X = 0
+    Y = 1
+    Z = 2
+    THETA = 3
+    XY = 4
+
+class LIMIT_CODE:
+    X_POSITIVE = 0
+    X_NEGATIVE = 1
+    Y_POSITIVE = 2
+    Y_NEGATIVE = 3
+    Z_POSITIVE = 4
+    Z_NEGATIVE = 5
+
+class LIMIT_SWITCH_POLARITY:
+    ACTIVE_LOW = 0
+    ACTIVE_HIGH = 1
+    DISABLED = 2
+    X_HOME= 1
+    Y_HOME= 1
+    Z_HOME= 2
+
+
+class ILLUMINATION_CODE:
+    ILLUMINATION_SOURCE_LED_ARRAY_FULL = 0
+    ILLUMINATION_SOURCE_LED_ARRAY_LEFT_HALF = 1
+    ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_HALF = 2
+    ILLUMINATION_SOURCE_LED_ARRAY_LEFTB_RIGHTR = 3
+    ILLUMINATION_SOURCE_LED_ARRAY_LOW_NA = 4
+    ILLUMINATION_SOURCE_LED_ARRAY_LEFT_DOT = 5
+    ILLUMINATION_SOURCE_LED_ARRAY_RIGHT_DOT = 6
+    ILLUMINATION_SOURCE_LED_EXTERNAL_FET = 20
+    ILLUMINATION_SOURCE_405NM = 11
+    ILLUMINATION_SOURCE_488NM = 12
+    ILLUMINATION_SOURCE_638NM = 13
+    ILLUMINATION_SOURCE_561NM = 14
+    ILLUMINATION_SOURCE_730NM = 15
+
+class VOLUMETRIC_IMAGING:
+    NUM_PLANES_PER_VOLUME = 20
+
+class CMD_EXECUTION_STATUS:
+    COMPLETED_WITHOUT_ERRORS = 0
+    IN_PROGRESS = 1
+    CMD_CHECKSUM_ERROR = 2
+    CMD_INVALID = 3
+    CMD_EXECUTION_ERROR = 4
+    ERROR_CODE_EMPTYING_THE_FLUDIIC_LINE_FAILED = 10

@@ -68,6 +68,7 @@ public:
 	void GetName(char* pszName) const;
 	int Initialize();
 	int Shutdown();
+	bool Busy() { return false; }
 #pragma endregion Device_Api
 
 #pragma region Camera_Api
@@ -85,7 +86,6 @@ public:
 	int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
 	int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
 	int ClearROI();
-	int PrepareSequenceAcqusition() { return DEVICE_OK; };
 	int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StartSequenceAcquisition(double interval_ms);
 	int StopSequenceAcquisition();

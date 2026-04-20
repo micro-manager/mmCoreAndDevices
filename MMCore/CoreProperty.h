@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   Implements the "core property" mechanism. The MMCore exposes
 //                some of its own settings as a virtual device.
-//              
+//
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 10/23/2005
 //
 // COPYRIGHT:     University of California, San Francisco, 2006
@@ -24,38 +24,27 @@
 
 #pragma once
 
-#include <string>
-#include <set>
-#include <vector>
-#include <map>
 #include "MMEventCallback.h"
+
+#include "MMDeviceConstants.h"
+
+#include <functional>
+#include <map>
+#include <string>
+#include <vector>
 
 class CMMCore;
 class MMEventCallback;
 
-class CoreProperty
-{
-public:
-   CoreProperty() : value_("Undefined"), readOnly_(false) {}
-   CoreProperty(const char* v, bool ro) : value_(v), readOnly_(ro) {} 
-   ~CoreProperty(){}
+namespace mmcore {
+namespace internal {
 
-   bool IsReadOnly()const {return readOnly_;}
-
-   bool Set(const char* value);
-   std::string Get() const;
-
-   // discrete set of allowed values
-   std::vector<std::string> GetAllowedValues() const;
-   void AddAllowedValue(const char* value);
-   void AddAllowedValue(const char* value, long data);
-   bool IsAllowed(const char* value) const;
-   void ClearAllowedValues() {values_.clear();}
-
-protected:
-   std::string value_;
-   bool readOnly_;
-   std::set<std::string> values_; // allowed values
+struct CorePropertyDef {
+   MM::PropertyType type;
+   bool readOnly;
+   std::function<std::string()> getter;
+   std::function<void(const std::string&)> setter;
+   std::function<std::vector<std::string>()> allowedValues;
 };
 
 class CorePropertyCollection
@@ -64,20 +53,30 @@ public:
    CorePropertyCollection(CMMCore* core) : core_(core) {}
    ~CorePropertyCollection() {}
 
-   std::string Get(const char* PropName) const;
+   std::string Get(const char* propName) const;
    bool Has(const char* name) const;
    std::vector<std::string> GetAllowedValues(const char* propName) const;
-   void ClearAllowedValues(const char* propName);
-   void AddAllowedValue(const char* propName, const char* value);
    bool IsReadOnly(const char* propName) const;
+   MM::PropertyType GetPropertyType(const char* propName) const;
    std::vector<std::string> GetNames() const;
-   void Add(const char* name, CoreProperty& p) {properties_[name] = p;}
-   void Refresh();
-   void Execute(const char* PropName, const char* Value);
-   void Set(const char* PropName, const char* Value);
-   void Clear() {properties_.clear();}
+   void Set(const char* propName, const std::string& value);
+
+   bool IsPropertyPreInit(const char* propName) const;
+   bool HasPropertyLimits(const char* propName) const;
+   double GetPropertyLowerLimit(const char* propName) const;
+   double GetPropertyUpperLimit(const char* propName) const;
+   bool IsPropertySequenceable(const char* propName) const;
+   long GetPropertySequenceMaxLength(const char* propName) const;
+
+   void Add(const char* name, CorePropertyDef def);
+   void Clear() { properties_.clear(); }
 
 private:
+   const CorePropertyDef& FindOrThrow(const char* propName) const;
+
    CMMCore* core_;
-   std::map<std::string, CoreProperty> properties_;
+   std::map<std::string, CorePropertyDef> properties_;
 };
+
+} // namespace internal
+} // namespace mmcore

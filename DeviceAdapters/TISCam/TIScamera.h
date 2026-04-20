@@ -78,7 +78,8 @@ int Initialize();
 int Shutdown();
 
 void GetName(char* name) const;      
-//bool Busy();
+
+bool Busy() { return false; }
 
 // MMCamera API
 int SnapImage();
@@ -90,7 +91,6 @@ long     GetImageBufferSize() const;
 unsigned GetBitDepth() const;
 
     unsigned GetNumberOfComponents() const;
-	double GetPixelSizeUm() const {return 1.0 * GetBinning();};
 	int GetBinning() const;
 	int SetBinning(int binSize);
    int IsExposureSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
@@ -114,7 +114,6 @@ unsigned GetBitDepth() const;
 	int StopSequenceAcquisition();
     int StopSequenceAcquisition(bool temporary);
 
-	int RestartSequenceAcquisition();
 	bool IsCapturing();
 
 	// action interface for the camera
@@ -194,12 +193,8 @@ private:
 
 	long binSize_;
 
-
-	MM::MMTime sequenceStartTime_;
-
 	double interval_ms_;
 	long lastImage_;
-	long imageCounter_;
     MM::MMTime startTime_;
  	unsigned long sequenceLength_;
    bool stopOnOverflow_;

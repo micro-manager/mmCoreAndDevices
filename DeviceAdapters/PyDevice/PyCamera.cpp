@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "PyCamera.h"
 
+#include "CameraImageMetadata.h"
+
 #include "buffer.h"
 
 const char* g_Keyword_Width = "Width";
@@ -231,22 +233,13 @@ int CPyCamera::InsertImage()
 {
     char label[MM::MaxStrLength];
     this->GetLabel(label);
-    Metadata md;
-    md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+    MM::CameraImageMetadata md;
+    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
     auto buffer = GetImageBuffer();
     if (!buffer)
         return DEVICE_ERR;
 
-    int ret = GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
+    return GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
                                              GetImageHeight(), GetImageBytesPerPixel(),
-                                             md.Serialize().c_str());
-    if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW)
-    {
-        // do not stop on overflow - just reset the buffer
-        GetCoreCallback()->ClearImageBuffer(this);
-        return GetCoreCallback()->InsertImage(this, buffer, GetImageWidth(),
-                                              GetImageHeight(), GetImageBytesPerPixel(),
-                                              md.Serialize().c_str());
-    }
-    return ret;
+                                             md.Serialize());
 }

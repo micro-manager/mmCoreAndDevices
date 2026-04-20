@@ -26,6 +26,9 @@
 #include <cstddef>
 #include <memory>
 
+namespace mmcore {
+namespace internal {
+
 class Semaphore;
 
 class Task
@@ -48,3 +51,6 @@ protected:
     const size_t totalTaskCount_;
     size_t usedTaskCount_;
 };
+
+} // namespace internal
+} // namespace mmcore

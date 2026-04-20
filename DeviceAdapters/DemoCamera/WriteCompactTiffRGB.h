@@ -12,11 +12,11 @@
 // k.h
 // can be useful to intercept stream of pixels directly from camera
 
-int writeCompactTiffRGB( const int /* width */, const int /* height*/ , const unsigned char* /* address of array of BGR bytes*/, const char* const /* the output filename*/ );
+static inline int writeCompactTiffRGB( const int /* width */, const int /* height*/ , const unsigned char* /* address of array of BGR bytes*/, const char* const /* the output filename*/ );
 
 
 // from somewhere
-unsigned int htoi (const char *ptr)
+static inline unsigned int htoi (const char *ptr)
 {
 unsigned int value = 0;
 char ch = *ptr;
@@ -41,7 +41,7 @@ char ch = *ptr;
 }
 
 // always send in an even number of ASCII charaters!!
-void WriteHexString (FILE* fpw, const char*const pdata)
+static inline void WriteHexString (FILE* fpw, const char*const pdata)
 {
    const char*  p = pdata;
 
@@ -62,7 +62,7 @@ void WriteHexString (FILE* fpw, const char*const pdata)
 
 
 
-int writeCompactTiffRGB( const int nx, const int ny, const unsigned char* pdata, const char* const fname )
+static inline int writeCompactTiffRGB( const int nx, const int ny, const unsigned char* pdata, const char* const fname )
 {
    int offset;
 	int retval = 0;
@@ -200,7 +200,7 @@ int writeCompactTiffRGB( const int nx, const int ny, const unsigned char* pdata,
 // G 
 // B
 
-void GenerateRGBTestImage( const int nx, const int ny, const char color, unsigned char* pdata )
+static inline void GenerateRGBTestImage( const int nx, const int ny, const char color, unsigned char* pdata )
 {
    int i,j;
    double irmax = 1./sqrt( double(nx*nx + ny*ny) );

@@ -20,21 +20,23 @@
 
 #pragma once
 
-#include "LoadedModule.h"
-
-#include "../../MMDevice/DeviceThreads.h"
-#include "../../MMDevice/MMDevice.h"
-#include "../../MMDevice/ModuleInterface.h"
 #include "../Logging/Logger.h"
+#include "LoadedDeviceAdapterImpl.h"
+
+#include "MMDevice.h"
+#include "ModuleInterface.h"
 
 #include <cstring>
 #include <memory>
+#include <mutex>
 
 class CMMCore;
 
 
-class DeviceInstance;
+namespace mmcore {
+namespace internal {
 
+class DeviceInstance;
 
 class LoadedDeviceAdapter /* final */ :
 	public std::enable_shared_from_this<LoadedDeviceAdapter>
@@ -43,17 +45,18 @@ public:
    LoadedDeviceAdapter(const LoadedDeviceAdapter&) = delete;
    LoadedDeviceAdapter& operator=(const LoadedDeviceAdapter&) = delete;
 
-   LoadedDeviceAdapter(const std::string& name, const std::string& filename);
+   LoadedDeviceAdapter(const std::string& name,
+      std::unique_ptr<LoadedDeviceAdapterImpl>&& impl);
 
    // TODO Unload() should mark the instance invalid (or require instance
    // deletion to unload)
-   void Unload() { module_->Unload(); } // For developer use only
+   void Unload() { impl_->Unload(); } // For developer use only
 
    std::string GetName() const { return name_; }
 
    // The "module lock", used to synchronize _most_ access to the device
    // adapter.
-   MMThreadLock* GetLock();
+   std::recursive_mutex& GetLock();
 
    std::vector<std::string> GetAvailableDeviceNames() const;
    std::string GetDeviceDescription(const std::string& deviceName) const;
@@ -61,8 +64,8 @@ public:
 
    std::shared_ptr<DeviceInstance> LoadDevice(CMMCore* core,
          const std::string& name, const std::string& label,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger);
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger);
 
 private:
    /**
@@ -96,31 +99,10 @@ private:
 
    void CheckInterfaceVersion() const;
 
-   // Wrappers around raw module interface functions
-   void InitializeModuleData();
-   long GetModuleVersion() const;
-   long GetDeviceInterfaceVersion() const;
-   unsigned GetNumberOfDevices() const;
-   bool GetDeviceName(unsigned index, char* buf, unsigned bufLen) const;
-   bool GetDeviceDescription(const char* deviceName,
-         char* buf, unsigned bufLen) const;
-   bool GetDeviceType(const char* deviceName, int* type) const;
-   MM::Device* CreateDevice(const char* deviceName);
-   void DeleteDevice(MM::Device* device);
-
    const std::string name_;
-   std::shared_ptr<LoadedModule> module_;
-
-   MMThreadLock lock_;
-
-   // Cached function pointers
-   mutable fnInitializeModuleData InitializeModuleData_;
-   mutable fnCreateDevice CreateDevice_;
-   mutable fnDeleteDevice DeleteDevice_;
-   mutable fnGetModuleVersion GetModuleVersion_;
-   mutable fnGetDeviceInterfaceVersion GetDeviceInterfaceVersion_;
-   mutable fnGetNumberOfDevices GetNumberOfDevices_;
-   mutable fnGetDeviceName GetDeviceName_;
-   mutable fnGetDeviceType GetDeviceType_;
-   mutable fnGetDeviceDescription GetDeviceDescription_;
+   std::recursive_mutex lock_;
+   std::unique_ptr<LoadedDeviceAdapterImpl> impl_;
 };
+
+} // namespace internal
+} // namespace mmcore

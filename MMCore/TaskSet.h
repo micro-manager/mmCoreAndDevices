@@ -30,6 +30,9 @@
 #include <memory>
 #include <vector>
 
+namespace mmcore {
+namespace internal {
+
 class TaskSet
 {
 public:
@@ -57,7 +60,7 @@ protected:
             Task* task = new(std::nothrow) T(semaphore_, n, taskCount);
             if (!task)
                 continue;
-            tasks_.push_back(task);
+            tasks_.push_back(std::unique_ptr<Task>(task));
         }
         usedTaskCount_ = tasks_.size();
     }
@@ -65,6 +68,9 @@ protected:
 protected:
     const std::shared_ptr<ThreadPool> pool_;
     const std::shared_ptr<Semaphore> semaphore_;
-    std::vector<Task*> tasks_{};
+    std::vector<std::unique_ptr<Task>> tasks_{};
     size_t usedTaskCount_{ 0 };
 };
+
+} // namespace internal
+} // namespace mmcore

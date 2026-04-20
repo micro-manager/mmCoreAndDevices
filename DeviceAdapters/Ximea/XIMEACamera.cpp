@@ -21,6 +21,7 @@
 //
 
 #include "XIMEACamera.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 using namespace std;
@@ -789,26 +790,24 @@ int XimeaCamera::StartSequenceAcquisition(long numImages, double interval_ms, bo
 */
 int XimeaCamera::InsertImage()
 {
-	int ret = DEVICE_OK;
-
 	MM::MMTime timeStamp = readoutStartTime_;
 	char label[MM::MaxStrLength];
 	this->GetLabel(label);
 
 	// Important:  metadata about the image are generated here:
-	Metadata md;
+	MM::CameraImageMetadata md;
 	double exp_time = (double)image.GetExpTime() / 1000;
-	md.put(MM::g_Keyword_Meatdata_Exposure, CDeviceUtils::ConvertToString(exp_time));
-	md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-	md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-	md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)roiX_));
-	md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)roiY_));
-	md.put(MM::g_Keyword_Gain, CDeviceUtils::ConvertToString(image.GetGain()));
+	md.AddTag(MM::g_Keyword_Metadata_Exposure, CDeviceUtils::ConvertToString(exp_time));
+	md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+	md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
+	md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString((long)roiX_));
+	md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString((long)roiY_));
+	md.AddTag(MM::g_Keyword_Gain, CDeviceUtils::ConvertToString(image.GetGain()));
 	imageCounter_++;
 
 	char buf[MM::MaxStrLength];
 	GetProperty(MM::g_Keyword_Binning, buf);
-	md.put(MM::g_Keyword_Binning, buf);
+	md.AddTag(MM::g_Keyword_Binning, buf);
 
 	MMThreadGuard g(imgPixelsLock_);
 	const unsigned char* pI = GetImageBuffer();
@@ -816,19 +815,7 @@ int XimeaCamera::InsertImage()
 	unsigned int h = GetImageHeight();
 	unsigned int b = GetImageBytesPerPixel();
 
-	ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-	if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		// don't process this same image again...
-		// return GetCoreCallback()->InsertImage(this, pI, w, h, b, &md, false);
-		return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-	}
-	else
-	{
-		return ret;
-	}
+	return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 /***********************************************************************
@@ -1143,7 +1130,7 @@ void XimeaCamera::CreateCameraProperties()
 		try {
 			char buf[16] = "";
 			camera->SetXIAPIParamInt(XI_PRM_DOWNSAMPLING, i); // will throw exception if it fails
-			sprintf(buf, "%d", i);
+			snprintf(buf, sizeof(buf), "%d", i);
 			binningValues.push_back(buf);
 		}
 		catch (xiAPIplus_Exception exc) { /* No need to log or take action */ }

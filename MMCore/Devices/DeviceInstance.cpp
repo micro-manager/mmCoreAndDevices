@@ -21,7 +21,6 @@
 
 #include "DeviceInstance.h"
 
-#include "../../MMDevice/MMDevice.h"
 #include "../CoreFeatures.h"
 #include "../CoreUtils.h"
 #include "../Error.h"
@@ -29,12 +28,21 @@
 #include "../Logging/Logger.h"
 #include "../MMCore.h"
 
+#include "MMDevice.h"
+
+
+namespace mmcore {
+namespace internal {
+
+using mmcore::internal::logging::Logger;
+using mmcore::LogLevelDebug;
+using mmcore::LogLevelInfo;
 
 int
 DeviceInstance::LogMessage(const char* msg, bool debugOnly)
 {
-   deviceLogger_(debugOnly ? mm::logging::LogLevelDebug :
-         mm::logging::LogLevelInfo, msg);
+   deviceLogger_(debugOnly ? LogLevelDebug :
+         LogLevelInfo, msg);
    return DEVICE_OK;
 }
 
@@ -45,25 +53,27 @@ DeviceInstance::DeviceInstance(CMMCore* core,
       MM::Device* pDevice,
       DeleteDeviceFunction deleteFunction,
       const std::string& label,
-      mm::logging::Logger deviceLogger,
-      mm::logging::Logger coreLogger) :
+      logging::Logger deviceLogger,
+      logging::Logger coreLogger) :
    pImpl_(pDevice),
    core_(core),
    adapter_(adapter),
+   name_(name),
    label_(label),
    deleteFunction_(deleteFunction),
    deviceLogger_(deviceLogger),
    coreLogger_(coreLogger)
 {
-   const std::string actualName = GetName();
+   // MM::Device::GetName() is not used any more outside of peripheral
+   // discovery, but we still have it for legacy reasons. For what it's worth,
+   // log a warning if GetName() doesn't return the expected name.
+   DeviceStringBuffer nameBuf(this, "GetName");
+   pImpl_->GetName(nameBuf.GetBuffer());
+   const std::string actualName = nameBuf.Get();
    if (actualName != name)
    {
       LOG_WARNING(Logger()) << "Requested device named \"" << name <<
          "\" but the actual device is named \"" << actualName << "\"";
-
-      // TODO This should ideally be an error, but currently it breaks some
-      // device adapters. Probably best to remove GetName() from MM::Device
-      // entirely and handle it solely in the Core.
    }
 
    pImpl_->SetLabel(label_.c_str());
@@ -127,7 +137,7 @@ DeviceInstance::RequireInitialized(const char* operation) const
 {
    if (!initialized_)
    {
-      if (mm::features::flags().strictInitializationChecks)
+      if (features::flags().strictInitializationChecks)
       {
          std::ostringstream stream;
          stream << "Operation (" << operation <<
@@ -184,7 +194,7 @@ DeviceInstance::SetProperty(const std::string& name,
       // Note: Some features (port scanning) may depend on setting serial port
       // properties post-init. We may want to exclude SerialManager from this
       // check (regardless of whether strictInitializationChecks is enabled).
-      if (mm::features::flags().strictInitializationChecks)
+      if (features::flags().strictInitializationChecks)
       {
          ThrowError("Cannot set pre-init property after initialization");
       }
@@ -391,14 +401,6 @@ MM::DeviceType
 DeviceInstance::GetType() const
 { return pImpl_->GetType(); }
 
-std::string
-DeviceInstance::GetName() const
-{
-   DeviceStringBuffer nameBuf(this, "GetName");
-   pImpl_->GetName(nameBuf.GetBuffer());
-   return nameBuf.Get();
-}
-
 void
 DeviceInstance::SetCallback(MM::Core* callback) { 
    pImpl_->SetCallback(callback); 
@@ -425,3 +427,6 @@ DeviceInstance::GetParentID() const
    pImpl_->GetParentID(nameBuf.GetBuffer());
    return nameBuf.Get();
 }
+
+} // namespace internal
+} // namespace mmcore

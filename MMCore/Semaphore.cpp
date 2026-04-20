@@ -25,6 +25,9 @@
 
 #include <mutex>
 
+namespace mmcore {
+namespace internal {
+
 Semaphore::Semaphore()
 {
 }
@@ -49,3 +52,6 @@ void Semaphore::Release(size_t count)
     }
     cv_.notify_all();
 }
+
+} // namespace internal
+} // namespace mmcore

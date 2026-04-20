@@ -1,0 +1,10 @@
+Install the Thorlabs TSP01 SDK
+(https://www.thorlabs.com/software_pages/viewsoftwarepage.cfm?code=TSP).
+
+Create a directory called "3rdparty" at the same level as the "micro-manager"
+source code directory. In there, create 'Thorlabs/TSP01-2.1/VISA/Win64' as a
+copy of C:/Program Files/IVI Foundation/VISA/Win64.
+
+(If using a version other than 2.1 or a different location, adjust the project
+settings (AdditionalIncludeDirectories and AdditionalLibraryDirectories) as
+appropriate.)

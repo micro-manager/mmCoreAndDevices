@@ -62,7 +62,7 @@ public:
 // TwainCamera class
 //streaming Camera device
 //////////////////////////////////////////////////////////////////////////////
-class TwainCamera : public CCameraBase<TwainCamera>  
+class TwainCamera : public CLegacyCameraBase<TwainCamera>
 {
 public:
    TwainCamera();
@@ -82,7 +82,6 @@ public:
    const unsigned char* GetImageBuffer();
    const unsigned int* GetImageBufferAsRGB32();
    unsigned GetNumberOfComponents() const;
-   int GetComponentName(unsigned int channel, char* name);
    unsigned GetImageWidth() const;
    unsigned GetImageHeight() const;
    unsigned GetImageBytesPerPixel() const;
@@ -95,8 +94,6 @@ public:
    int ClearROI();
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int StopSequenceAcquisition();
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    int GetBinning() const;
    int SetBinning(int binSize);
    int IsExposureSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
@@ -108,7 +105,7 @@ public:
 	// expose  CDeviceBase accessors, so that PImpl can use them
 	MM::MMTime GetCurrentMMTime()
 	{
-		return CCameraBase<TwainCamera>::GetCurrentMMTime();
+		return CLegacyCameraBase<TwainCamera>::GetCurrentMMTime();
 	};
 
 
@@ -127,13 +124,12 @@ private:
 
    //Do necessary for capturing
    //Is called from the thread function
-   //Overrides ones defined in the CCameraBase class 
+   //Overrides ones defined in the CLegacyCameraBase class
    bool IsCapturing();
 
    int ThreadRun();
    int PushImage();
 
-   static const double nominalPixelSizeUm_;
    static int imageSizeW_;
    static int imageSizeH_;
 

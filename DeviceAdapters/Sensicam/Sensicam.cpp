@@ -80,7 +80,6 @@ MODULE_API MM::Device* CreateDevice(const char* pszDeviceName)
 // CSensicam constructor/destructor
 
 CSensicam::CSensicam() :
-   CCameraBase<CSensicam> (),
    sequenceRunning_(false),
    m_bInitialized(false),
    m_bBusy(false),
@@ -238,7 +237,7 @@ int CSensicam::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 		  StopSequenceAcquisition();
 	  }
       pProp->Get(m_dExposure);
-      sprintf(m_pszTimes, "0,%d,-1,-1", (int)m_dExposure); 
+      snprintf(m_pszTimes, sizeof(m_pszTimes), "0,%d,-1,-1", (int)m_dExposure); 
       nErr = SET_COC(m_nMode, m_nTrig, m_nRoiXMin, m_nRoiXMax, m_nRoiYMin, m_nRoiYMax,
                      m_nHBin, m_nVBin, m_pszTimes);
 	  if (0!=nErr)
@@ -849,17 +848,7 @@ int CSensicam::InsertImage()
    if (img == 0) 
       return ERR_TIMEOUT;
 
-   int ret = GetCoreCallback()->InsertImage(this, img, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-
-
-
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      return GetCoreCallback()->InsertImage(this, img, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-   } else
-      return ret;
+   return GetCoreCallback()->InsertImage(this, img, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
 }
 
 

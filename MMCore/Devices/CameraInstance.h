@@ -22,6 +22,9 @@
 #include "DeviceInstanceBase.h"
 
 
+namespace mmcore {
+namespace internal {
+
 class CameraInstance : public DeviceInstanceBase<MM::Camera>
 {
 public:
@@ -31,8 +34,8 @@ public:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger) :
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger) :
       DeviceInstanceBase<MM::Camera>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
    {}
 
@@ -41,7 +44,6 @@ public:
    const unsigned char* GetImageBuffer(unsigned channelNr);
    const unsigned int* GetImageBufferAsRGB32();
    unsigned GetNumberOfComponents() const;
-   std::string GetComponentName(unsigned component);
    int unsigned GetNumberOfChannels() const;
    std::string GetChannelName(unsigned channel);
    long GetImageBufferSize()const;
@@ -49,7 +51,6 @@ public:
    unsigned GetImageHeight() const;
    unsigned GetImageBytesPerPixel() const;
    unsigned GetBitDepth() const;
-   double GetPixelSizeUm() const;
    int GetBinning() const;
    int SetBinning(int binSize);
    void SetExposure(double exp_ms);
@@ -70,7 +71,6 @@ public:
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StartSequenceAcquisition(double interval_ms);
    int StopSequenceAcquisition();
-   int PrepareSequenceAcqusition();
    bool IsCapturing();
    std::string GetTags();
    void AddTag(const char* key, const char* deviceLabel, const char* value);
@@ -83,3 +83,6 @@ public:
    int AddToExposureSequence(double exposureTime_ms);
    int SendExposureSequence() const;
 };
+
+} // namespace internal
+} // namespace mmcore

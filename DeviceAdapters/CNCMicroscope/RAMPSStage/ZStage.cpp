@@ -135,7 +135,7 @@ int RAMPSZStage::SetPositionSteps(long steps)
   posZ_um_ = steps * stepSize_um_;
 
   char buff[100];
-  sprintf(buff, "G0 Z%f", posZ_um_/1000.);
+  snprintf(buff, sizeof(buff), "G0 Z%f", posZ_um_/1000.);
   std::string buffAsStdStr = buff;
   int ret = pHub->SendCommand(buffAsStdStr);
   if (ret != DEVICE_OK)
@@ -148,7 +148,7 @@ int RAMPSZStage::SetPositionSteps(long steps)
 	  LogMessage("Error sending Z move.");
 	  return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
 	  LogMessage("Failed to get ok response to Z move.");
   }
   ret = OnStagePositionChanged(posZ_um_);
@@ -185,7 +185,7 @@ int RAMPSZStage::Home() {
     LogMessage("error getting response to homing command.");
     return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
     LogMessage("Homing command: expected ok.");
     return DEVICE_ERR;
   }
@@ -212,7 +212,7 @@ int RAMPSZStage::SetAdapterOriginUm(double z) {
     LogMessage("error getting response to origin command.");
     return ret;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
     LogMessage("origin command: expected ok.");
     return DEVICE_ERR;
   }

@@ -29,8 +29,9 @@
 
 #include "MMDevice.h"
 
-/// Module interface version.
 /**
+ * @brief Module interface version.
+ *
  * The Core ensures that any loaded device adapter modules have a matching
  * version, to ensure ABI compatibility.
  */
@@ -53,8 +54,9 @@ extern "C" {
     * Exported module interface
     */
 
-   /// Initialize the device adapter module.
    /**
+    * @brief Initialize the device adapter module.
+    *
     * Device adapter modules must provide an implementation of this function.
     *
     * The implementation of this function should call RegisterDevice() to
@@ -65,30 +67,32 @@ extern "C" {
     * idempotent (since RegisterDevice() is idempotent, nothing special has to
     * be done in most cases).
     *
-    * \see RegisterDevice()
+    * @see RegisterDevice()
     */
    MODULE_API void InitializeModuleData();
 
-   /// Instantiate the named device.
    /**
+    * @brief Instantiate the named device.
+    *
     * Device adapter modules must provide an implementation of this function.
     *
     * The implementation of this function should create an instance of the
     * device and return a raw pointer to it.
     *
-    * \see DeleteDevice()
+    * @see DeleteDevice()
     */
    MODULE_API MM::Device* CreateDevice(const char* name);
 
-   /// Destroy a device instance.
    /**
+    * @brief Destroy a device instance.
+    *
     * Device adapter modules must provide an implementation of this function.
     *
     * The implementation of this function should deallocate (delete) the given
     * device instance (which is guaranteed to be one that was previously
     * returned by CreateDevice()).
     *
-    * \see CreateDevice()
+    * @see CreateDevice()
     */
    MODULE_API void DeleteDevice(MM::Device* pDevice);
 
@@ -123,15 +127,16 @@ extern "C" {
  * Functions for use by the device adapter module
  */
 
-/// Register a device class provided by the device adapter library.
 /**
+ * @brief Register a device class provided by the device adapter library.
+ *
  * To be called in the device adapter module's implementation of
  * InitializeModuleData().
  *
  * Calling this function indicates that the module provides a device with the
  * given name and type, and provides a user-visible description string.
  *
- * \see InitializeModuleData()
+ * @see InitializeModuleData()
  */
 void RegisterDevice(const char* deviceName, MM::DeviceType deviceType, const char* description);
 

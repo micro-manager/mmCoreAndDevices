@@ -23,6 +23,7 @@
 //
 
 #include "AmScope.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 //#include <iostream>
@@ -105,7 +106,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 AmScope::AmScope() :
-	CCameraBase<AmScope> (),
 	dPhase_(0),
 	binning_(1),
 	autoExposure_(1),
@@ -342,8 +342,7 @@ int AmScope::Initialize()
 
    // Physical pixel size (um)
    Toupcam_get_PixelSize(m_Htoupcam, 0, &orgPixelSizeXUm_, &orgPixelSizeYUm_);
-   nominalPixelSizeUm_ = orgPixelSizeXUm_;
-   pixelSizeXUm_ = (float)nominalPixelSizeUm_;
+   pixelSizeXUm_ = orgPixelSizeXUm_;
    pixelSizeYUm_ = orgPixelSizeYUm_;
    pAct = new CPropertyAction (this, &AmScope::OnPixelSizeXUm);
    CreateFloatProperty("PixelSizeX(um)", pixelSizeXUm_, true, pAct);
@@ -694,19 +693,6 @@ int AmScope::SetBinning(int binF)
    return SetProperty("Binning-Software", CDeviceUtils::ConvertToString(binF));
 }
 
-//int AmScope::PrepareSequenceAcqusition()
-//{
-//   if (IsCapturing())
-//      return DEVICE_CAMERA_BUSY_ACQUIRING;
-//
-//   int ret = GetCoreCallback()->PrepareForAcq(this);
-//   if (ret != DEVICE_OK)
-//      return ret;
-//
-//   return DEVICE_OK;
-//}
-
-
 /**
  * Required by the MM::Camera API
  * Please implement this yourself and do not rely on the base class implementation
@@ -752,7 +738,6 @@ int AmScope::StartSequenceAcquisition(long numImages, double interval_ms, bool s
    sequenceStartTime_ = GetCurrentMMTime();
    imageCounter_ = 0;
    thd_->Start(numImages,interval_ms);
-   stopOnOverflow_ = stopOnOverflow;
 
    return DEVICE_OK;
 }
@@ -768,27 +753,19 @@ int AmScope::InsertImage()
  
    MMThreadGuard g(imgPixelsLock_);
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-  md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-  md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( imageCounter_ ));
-  md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_));
-  md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_));
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+  md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
+  md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString( imageCounter_ ));
+  md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_));
+  md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_));
   
   const unsigned char* pI = GetImageBuffer();
   unsigned int w = GetImageWidth();
   unsigned int h = GetImageHeight();
   unsigned int b = GetImageBytesPerPixel();  
 
-  int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str() );
-
-  if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-  {  
-    // do not stop on overflow - just reset the buffer
-    GetCoreCallback()->ClearImageBuffer(this);
-    // don't process this same image again...
-    ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-  }
+  int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
   
   if (ret == DEVICE_OK)
   {

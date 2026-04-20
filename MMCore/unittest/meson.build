@@ -11,9 +11,22 @@ catch2_with_main_dep = dependency(
 
 mmcore_test_sources = files(
     'APIError-Tests.cpp',
+    'CircularBuffer-Tests.cpp',
     'CoreCreateDestroy-Tests.cpp',
+    'CoreProperties-Tests.cpp',
+    'EventCallback-Tests.cpp',
+    'ImageMetadata-Tests.cpp',
+    'ImageMetadataTags-Tests.cpp',
+    'LogManager-Tests.cpp',
     'Logger-Tests.cpp',
     'LoggingSplitEntryIntoLines-Tests.cpp',
+    'LoggingStreamSink-Tests.cpp',
+    'MockDeviceAdapter-Tests.cpp',
+    'Notification-Tests.cpp',
+    'PixelSize-Tests.cpp',
+    'SequenceAcquisition-Tests.cpp',
+    'StubDevices-Tests.cpp',
+    'UnloadDevice-Tests.cpp',
 )
 
 mmcore_test_exe = executable(

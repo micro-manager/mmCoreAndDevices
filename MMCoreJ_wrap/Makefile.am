@@ -10,8 +10,8 @@ AUTOMAKE_OPTIONS = foreign subdir-objects
 # (We used to globally use -O by default, rather than -O2, on Linux, presumably
 # for the above reason (though the intent was never documented). But there is
 # nothing Linux-specific about this.)
-AM_CXXFLAGS = -fno-strict-aliasing
-AM_CPPFLAGS = $(JNI_CPPFLAGS) -DMMDEVICE_CLIENT_BUILD
+AM_CXXFLAGS = -std=c++17 -fno-strict-aliasing
+AM_CPPFLAGS = $(JNI_CPPFLAGS) -DMMDEVICE_CLIENT_BUILD -I../MMDevice -I../MMCore
 
 
 # This ugly list of headers is necessary to trigger the rebuild of the
@@ -21,15 +21,16 @@ swig_sources = MMCoreJ.i \
 	../MMCore/CircularBuffer.h  \
 	../MMCore/ConfigGroup.h  \
 	../MMCore/Configuration.h \
+	../MMCore/CoreDeclHelpers.h \
 	../MMCore/CoreCallback.h \
 	../MMCore/CoreProperty.h \
 	../MMCore/CoreUtils.h \
 	../MMCore/Error.h \
 	../MMCore/ErrorCodes.h \
+	../MMCore/ImageMetadata.h \
 	../MMCore/MMCore.h  \
 	../MMCore/MMEventCallback.h \
 	../MMCore/PluginManager.h \
-	../MMDevice/ImageMetadata.h \
 	../MMDevice/MMDevice.h \
 	../MMDevice/MMDeviceConstants.h
 
@@ -43,6 +44,7 @@ MMCoreJ.stamp: $(swig_sources)
 	$(MKDIR_P) gensrc/mmcorej
 	$(SWIG) -c++ -java -package mmcorej -outdir gensrc/mmcorej -module MMCoreJ \
 		"-DMMCOREJ_LIBRARY_PATH=\"$(MMCOREJ_LIBRARY_PATH)\"" \
+		-I../MMCore -I../MMDevice \
 		-o MMCoreJ_wrap.cxx $(srcdir)/MMCoreJ.i
 	@mv -f MMCoreJ.tmp $@
 MMCoreJ_wrap.h MMCoreJ_wrap.cxx: MMCoreJ.stamp

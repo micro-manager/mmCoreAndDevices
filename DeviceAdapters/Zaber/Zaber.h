@@ -35,6 +35,7 @@
 #include "ConnectionManager.h"
 
 namespace zmlbase = zaber::motion;
+namespace zmlexc = zaber::motion::exceptions;
 namespace zml = zaber::motion::ascii;
 namespace zmlmi = zaber::motion::microscopy;
 

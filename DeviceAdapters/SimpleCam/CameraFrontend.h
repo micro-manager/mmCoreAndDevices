@@ -60,7 +60,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // CCameraFrontend class
 //////////////////////////////////////////////////////////////////////////////
-class CCameraFrontend : public CCameraBase<CCameraFrontend>  
+class CCameraFrontend : public CLegacyCameraBase<CCameraFrontend>
 {
 public:
    CCameraFrontend();
@@ -79,7 +79,6 @@ public:
    const unsigned char* GetImageBuffer();
    const unsigned int* GetImageBufferAsRGB32();
    unsigned GetNumberOfComponents() const;
-   int GetComponentName(unsigned int channel, char* name);
    unsigned GetImageWidth() const;
    unsigned GetImageHeight() const;
    unsigned GetImageBytesPerPixel() const;
@@ -90,7 +89,6 @@ public:
    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    int ClearROI();
-   double GetPixelSizeUm() const {return GetBinning();}
    int GetBinning() const;
    int SetBinning(int binSize);
 

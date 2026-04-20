@@ -4,13 +4,14 @@
 #include "atcore++.h"
 #include "MMDeviceConstants.h"
 #include "Property.h"
+#include "IProperty.h"
 
 class ICallBackManager;
 
 static const char * const g_StatusON = "On";
 static const char * const g_StatusOFF = "Off";
 
-class TBooleanProperty : public andor::IObserver
+class TBooleanProperty : public andor::IObserver, public IProperty
 {
 public:
    TBooleanProperty(const std::string & MM_name, andor::IBool* bool_feature,

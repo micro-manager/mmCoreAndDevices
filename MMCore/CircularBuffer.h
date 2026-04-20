@@ -28,26 +28,19 @@
 #include "ErrorCodes.h"
 #include "FrameBuffer.h"
 
-#include "../MMDevice/DeviceThreads.h"
-#include "../MMDevice/MMDevice.h"
+#include "MMDevice.h"
 
 #include <chrono>
 #include <memory>
+#include <mutex>
 #include <vector>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4290) // 'C++ exception specification ignored'
-#endif
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
-#pragma GCC diagnostic ignored "-Wdeprecated"
-#endif
+namespace mmcore {
+namespace internal {
 
 class ThreadPool;
 class TaskSet_CopyMemory;
+
 
 class CircularBuffer
 {
@@ -55,35 +48,42 @@ public:
    CircularBuffer(unsigned int memorySizeMB);
    ~CircularBuffer();
 
+   int SetOverwriteData(bool overwrite);
+
    unsigned GetMemorySizeMB() const { return memorySizeMB_; }
 
-   bool Initialize(unsigned channels, unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
+   bool Initialize(unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
    unsigned long GetSize() const;
    unsigned long GetFreeSize() const;
    unsigned long GetRemainingImageCount() const;
 
-   unsigned int Width() const {MMThreadGuard guard(g_bufferLock); return width_;}
-   unsigned int Height() const {MMThreadGuard guard(g_bufferLock); return height_;}
-   unsigned int Depth() const {MMThreadGuard guard(g_bufferLock); return pixDepth_;}
+   unsigned int Width() const {std::lock_guard<std::mutex> guard(bufferLock_); return width_;}
+   unsigned int Height() const {std::lock_guard<std::mutex> guard(bufferLock_); return height_;}
+   unsigned int Depth() const {std::lock_guard<std::mutex> guard(bufferLock_); return pixDepth_;}
 
-   bool InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError);
-   bool InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, const Metadata* pMd) throw (CMMError);
-   bool InsertImage(const unsigned char* pixArray, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError);
-   bool InsertMultiChannel(const unsigned char* pixArray, unsigned int numChannels, unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents, const Metadata* pMd) throw (CMMError);
+   bool InsertImage(const unsigned char* pixArray,
+      unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
+      const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError);
    const unsigned char* GetTopImage() const;
    const unsigned char* GetNextImage();
-   const mm::ImgBuffer* GetTopImageBuffer(unsigned channel) const;
-   const mm::ImgBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
-   const mm::ImgBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
-   const mm::ImgBuffer* GetNextImageBuffer(unsigned channel);
+   const ImgBuffer* GetTopImageBuffer(unsigned channel) const;
+   const ImgBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
+   const ImgBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
+   const ImgBuffer* GetNextImageBuffer(unsigned channel);
    void Clear(); 
 
-   bool Overflow() {MMThreadGuard guard(g_bufferLock); return overflow_;}
-
-   mutable MMThreadLock g_bufferLock;
-   mutable MMThreadLock g_insertLock;
+   bool Overflow() {std::lock_guard<std::mutex> guard(bufferLock_); return overflow_;}
 
 private:
+   void ClearLocked();
+
+   // Serializes InsertImage calls so that the pixel copy can occur
+   // without holding bufferLock_.
+   mutable std::mutex insertLock_;
+
+   // Guards all mutable state below except where noted.
+   mutable std::mutex bufferLock_;
+
    unsigned int width_;
    unsigned int height_;
    unsigned int pixDepth_;
@@ -97,19 +97,15 @@ private:
    long insertIndex_;
    long saveIndex_;
 
-   unsigned long memorySizeMB_;
-   unsigned int numChannels_;
    bool overflow_;
-   std::vector<mm::FrameBuffer> frameArray_;
+   bool overwriteData_;
+   std::vector<FrameBuffer> frameArray_;
 
+   // Effectively const after construction.
+   unsigned long memorySizeMB_;
    std::shared_ptr<ThreadPool> threadPool_;
    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };
 
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+} // namespace internal
+} // namespace mmcore

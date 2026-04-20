@@ -146,7 +146,7 @@ int MCL_MicroDrive_ZStage::InitDeviceAdapter()
 
 	// Create velocity error text.
 	char velErrText[50];
-	sprintf(velErrText, "Velocity must be between %f and %f", minVelocity_, maxVelocity_);
+	snprintf(velErrText, sizeof(velErrText), "Velocity must be between %f and %f", minVelocity_, maxVelocity_);
 	SetErrorText(INVALID_VELOCITY, velErrText);
 
 	// Create Stage properties.
@@ -642,38 +642,38 @@ int MCL_MicroDrive_ZStage::CreateZStageProperties()
 		return err;
 
 	// Device handle
-	sprintf(iToChar, "%d", handle_);
+	snprintf(iToChar, sizeof(iToChar), "%d", handle_);
 	err = CreateProperty("Handle", iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Product ID
-	sprintf(iToChar, "%hu", pid_);
+	snprintf(iToChar, sizeof(iToChar), "%hu", pid_);
 	err = CreateProperty("Product ID", iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Serial Number
-	sprintf(iToChar, "%d", serialNumber_);
+	snprintf(iToChar, sizeof(iToChar), "%d", serialNumber_);
 	err = CreateProperty("Serial number", iToChar, MM::String, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Maximum velocity
-	sprintf(iToChar, "%f", maxVelocity_);
+	snprintf(iToChar, sizeof(iToChar), "%f", maxVelocity_);
 	err = CreateProperty("Maximum velocity (mm/s)", iToChar, MM::Float, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	// Minimum velocity
-	sprintf(iToChar, "%f", minVelocity_);
+	snprintf(iToChar, sizeof(iToChar), "%f", minVelocity_);
 	err = CreateProperty("Minimum velocity (mm/s)", iToChar, MM::Float, true);
 	if (err != DEVICE_OK)
 		return err;
 
 	if (deviceHasTirfModuleAxis_)
 	{
-		sprintf(iToChar, "%f", tirfModCalibrationMm_);
+		snprintf(iToChar, sizeof(iToChar), "%f", tirfModCalibrationMm_);
 		err = CreateProperty("Distance to epi", iToChar, MM::Float, true);
 		if (err != DEVICE_OK)
 			return err;
@@ -687,7 +687,7 @@ int MCL_MicroDrive_ZStage::CreateZStageProperties()
 	///// Action properties
 
 	// Change velocity
-	sprintf(iToChar, "%f", maxVelocity_);
+	snprintf(iToChar, sizeof(iToChar), "%f", maxVelocity_);
 	CPropertyAction* pAct = new CPropertyAction(this, &MCL_MicroDrive_ZStage::OnVelocity);
 	err = CreateProperty("Velocity", iToChar, MM::Float, false, pAct);
 	if (err != DEVICE_OK)
@@ -760,7 +760,7 @@ int MCL_MicroDrive_ZStage::CreateZStageProperties()
 		return err;
 
 	// Iterative Tolerance
-	sprintf(iToChar, "%f", imToleranceUm_);
+	snprintf(iToChar, sizeof(iToChar), "%f", imToleranceUm_);
 	pAct = new CPropertyAction(this, &MCL_MicroDrive_ZStage::OnImToleranceUm);
 	err = CreateProperty(g_Keyword_ImTolerance, iToChar, MM::Float, false, pAct);
 	if (err != DEVICE_OK)
@@ -834,7 +834,7 @@ int MCL_MicroDrive_ZStage::SetPositionMmSync(double goalZ)
 		err = MCL_MicroDriveGetWaitTime(&waitTime, handle_);
 		if (err != MCL_SUCCESS)
 			return err;
-		sprintf(iToChar, "%d", waitTime);
+		snprintf(iToChar, sizeof(iToChar), "%d", waitTime);
 		SetProperty(g_Keyword_WaitTime, iToChar);
 
 		PauseDevice();

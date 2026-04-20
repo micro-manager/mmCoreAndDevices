@@ -19,11 +19,9 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      MicroPoint.h and others
-//
 
-#ifndef _ASIScanner_H_
-#define _ASIScanner_H_
+#ifndef ASISCANNER_H
+#define ASISCANNER_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -32,16 +30,14 @@
 class CScanner : public ASIPeripheralBase<CGalvoBase, CScanner>
 {
 public:
-   CScanner(const char* name);
-   ~CScanner() { }
+    explicit CScanner(const char* name);
+    ~CScanner() = default;
 
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // Galvo API
-   // -----------
    int SetPosition(double x, double y);
    int GetPosition(double& x, double& y);
    double GetXRange() { return (upperLimitX_ - lowerLimitX_); }  // this is only positive limit, on power-up limits are +/- this value
@@ -65,7 +61,6 @@ public:
    void UpdateIlluminationState();
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLowerLimX            (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -151,15 +146,19 @@ public:
    int OnFastCirclesAsymmetry(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFastCirclesState    (MM::PropertyBase* pProp, MM::ActionType eAct);
    // vector properties
-   int OnVectorGeneric		  (MM::PropertyBase* pProp, MM::ActionType eAct, string axisLetter);
-   int OnVectorX			  (MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterX_); }
-   int OnVectorY              (MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterY_); }
-
-
+   int OnVectorGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const std::string& axisLetter);
+   int OnVectorX(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterX_); }
+   int OnVectorY(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterY_); }
 
 private:
-   string axisLetterX_;
-   string axisLetterY_;
+    int SetIlluminationStateHelper(bool on);
+    int OnSaveJoystickSettings();
+
+    // Properties
+    void CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter);
+
+   std::string axisLetterX_;
+   std::string axisLetterY_;
    double unitMultX_;  // units per degree
    double unitMultY_;  // units per degree
    double upperLimitX_;   // positive limit only (on power-up things are symmetric about 0)
@@ -179,16 +178,16 @@ private:
    unsigned int axisIndexX_;
    unsigned int axisIndexY_;
 
-   struct saStateType {
+   struct SingleAxisState {
       long mode;
       long pattern;
    };
 
-   saStateType saStateX_;
-   saStateType saStateY_;
+   SingleAxisState saStateX_;
+   SingleAxisState saStateY_;
 
    // for polygons
-   vector< pair<double,double> > polygons_;
+   std::vector<std::pair<double,double> > polygons_;
    long polygonRepetitions_;
    bool ring_buffer_supported_;
 
@@ -199,9 +198,6 @@ private:
 
    bool dac4ch_;
    bool signalDAC_;
-   
-   int SetIlluminationStateHelper(bool on);
-   int OnSaveJoystickSettings();
 };
 
-#endif //_ASIScanner_H_
+#endif // ASISCANNER_H

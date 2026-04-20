@@ -81,7 +81,7 @@ XYStage::XYStage() :
 
     // Name, read-only (RO)
     char sXYName[120];
-	sprintf(sXYName, "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_XYDevNameLabel).c_str(), MM::g_Keyword_Name);
+	snprintf(sXYName, sizeof(sXYName), "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_XYDevNameLabel).c_str(), MM::g_Keyword_Name);
     int ret = CreateProperty(sXYName, MP285::Instance()->GetMPStr(MP285::MPSTR_XYStgaeDevName).c_str(), MM::String, true);
 
     std::ostringstream osMessage;
@@ -95,7 +95,7 @@ XYStage::XYStage() :
 
     // Description, RO
     char sXYDesc[120];
-	sprintf(sXYDesc, "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_XYDevDescLabel).c_str(), MM::g_Keyword_Description);
+	snprintf(sXYDesc, sizeof(sXYDesc), "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_XYDevDescLabel).c_str(), MM::g_Keyword_Description);
     ret = CreateProperty(sXYDesc, "MP-285 XY Stage Driver", MM::String, true);
 
     if (MP285::Instance()->GetDebugLogFlag() > 0)
@@ -129,11 +129,11 @@ int XYStage::Initialize()
 
     if (!MP285::Instance()->GetDeviceAvailability()) return DEVICE_NOT_CONNECTED;
 
-    // int ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionX).c_str(), "undefined", MM::String, true);  // Get Position X 
+    // int ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionX).c_str(), "undefined", MM::String, true);  // Get Position X
 	CPropertyAction* pActOnGetPosX = new CPropertyAction(this, &XYStage::OnGetPositionX);
 	char sPosX[20];
 	double dPosX = MP285::Instance()->GetPositionX();
-	sprintf(sPosX, "%ld", (long)(dPosX * (double)MP285::Instance()->GetUm2UStep()));
+	snprintf(sPosX, sizeof(sPosX), "%ld", (long)(dPosX * (double)MP285::Instance()->GetUm2UStep()));
 	int ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionX).c_str(), sPosX, MM::Integer, false, pActOnGetPosX);  // Get Position X 
 
     if (MP285::Instance()->GetDebugLogFlag() > 0)
@@ -145,11 +145,11 @@ int XYStage::Initialize()
 
     if (ret != DEVICE_OK)  return ret;
 
-    //ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionY).c_str(), "undefined", MM::String, true);  // Get Position Y 
+    //ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionY).c_str(), "undefined", MM::String, true);  // Get Position Y
 	CPropertyAction* pActOnGetPosY = new CPropertyAction(this, &XYStage::OnGetPositionY);
 	char sPosY[20];
     double dPosY = MP285::Instance()->GetPositionY();
-	sprintf(sPosY, "%ld", (long)(dPosY * (double)MP285::Instance()->GetUm2UStep()));
+	snprintf(sPosY, sizeof(sPosY), "%ld", (long)(dPosY * (double)MP285::Instance()->GetUm2UStep()));
 	ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionY).c_str(), sPosY, MM::Integer, false, pActOnGetPosY);  // Get Position Y 
  
     if (MP285::Instance()->GetDebugLogFlag() > 0)
@@ -163,8 +163,8 @@ int XYStage::Initialize()
 
     ret = GetPositionUm(dPosX, dPosY);
 
-	sprintf(sPosX, "%ld", (long)(dPosX*(double)MP285::Instance()->GetUm2UStep()));
-	sprintf(sPosY, "%ld", (long)(dPosY*(double)MP285::Instance()->GetUm2UStep()));
+	snprintf(sPosX, sizeof(sPosX), "%ld", (long)(dPosX*(double)MP285::Instance()->GetUm2UStep()));
+	snprintf(sPosY, sizeof(sPosY), "%ld", (long)(dPosY*(double)MP285::Instance()->GetUm2UStep()));
 
     if (MP285::Instance()->GetDebugLogFlag() > 0)
     {
@@ -177,7 +177,7 @@ int XYStage::Initialize()
     if (ret!=DEVICE_OK) return ret;
 
     CPropertyAction* pActOnSetPosX = new CPropertyAction(this, &XYStage::OnSetPositionX);
-	sprintf(sPosX, "%.2f", dPosX);
+	snprintf(sPosX, sizeof(sPosX), "%.2f", dPosX);
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_SetPositionX).c_str(), sPosX, MM::Float, false, pActOnSetPosX);  // Set Position X 
     //ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_SetPositionX).c_str(), "Undefined", MM::Integer, true);  // Set Position X 
 
@@ -191,7 +191,7 @@ int XYStage::Initialize()
     if (ret != DEVICE_OK)  return ret;
 
     CPropertyAction* pActOnSetPosY = new CPropertyAction(this, &XYStage::OnSetPositionY);
-	sprintf(sPosY, "%.2f", dPosY);
+	snprintf(sPosY, sizeof(sPosY), "%.2f", dPosY);
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_SetPositionY).c_str(), sPosY, MM::Float, false, pActOnSetPosY);  // Set Position Y 
     //ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_SetPositionY).c_str(), "Undefined", MM::Integer, true);  // Set Position Y 
 
@@ -452,7 +452,7 @@ int XYStage::GetPositionSteps(long& lXPosSteps, long& lYPosSteps)
 				osMessage.str("");
 				osMessage << "<XYStage::GetPositionSteps> Response = (" << nError << "," << nTrys << ")" ;
 			}
-			sprintf(sCommStat, "Error Code ==> <%2x>", sResponse[0]);
+			snprintf(sCommStat, sizeof(sCommStat), "Error Code ==> <%2x>", sResponse[0]);
         }
         else
         {
@@ -704,7 +704,7 @@ int XYStage::SetOrigin()
 
     char sCommStat[30];
     if (yCommError)
-        sprintf(sCommStat, "Error Code ==> <%2x>", sResponse[0]);
+        snprintf(sCommStat, sizeof(sCommStat), "Error Code ==> <%2x>", sResponse[0]);
     else
         strcpy(sCommStat, "Success");
 
@@ -801,7 +801,7 @@ int XYStage::OnGetPositionY(MM::PropertyBase* pProp, MM::ActionType /*eAct*/)
         ret = GetPositionUm(dPosX, dPosY);
 		long lPosY = (long)(dPosY*(double)MP285::Instance()->GetUm2UStep());
 		char sPosY[20];
-		sprintf(sPosY, "%ld", (long)lPosY);
+		snprintf(sPosY, sizeof(sPosY), "%ld", (long)lPosY);
 
         pProp->Set(sPosY);
 

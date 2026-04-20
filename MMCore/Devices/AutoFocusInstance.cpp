@@ -22,6 +22,9 @@
 #include "AutoFocusInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int AutoFocusInstance::SetContinuousFocusing(bool state) { RequireInitialized(__func__); return GetImpl()->SetContinuousFocusing(state); }
 int AutoFocusInstance::GetContinuousFocusing(bool& state) { RequireInitialized(__func__); return GetImpl()->GetContinuousFocusing(state); }
 bool AutoFocusInstance::IsContinuousFocusLocked() { RequireInitialized(__func__); return GetImpl()->IsContinuousFocusLocked(); }
@@ -32,3 +35,6 @@ int AutoFocusInstance::GetCurrentFocusScore(double& score) { RequireInitialized(
 int AutoFocusInstance::AutoSetParameters() { RequireInitialized(__func__); return GetImpl()->AutoSetParameters(); }
 int AutoFocusInstance::GetOffset(double &offset) { RequireInitialized(__func__); return GetImpl()->GetOffset(offset); }
 int AutoFocusInstance::SetOffset(double offset) { RequireInitialized(__func__); return GetImpl()->SetOffset(offset); }
+
+} // namespace internal
+} // namespace mmcore

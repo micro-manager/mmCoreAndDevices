@@ -84,16 +84,14 @@ protected:
    std::string port_;
    MM::Device *device_;
    MM::Core *core_;
-   double speed_;
-   double acceleration_;
    double coef_;
 };
 
-class X_Axis : public CStageBase<X_Axis>, public Conex_AxisBase
+class Axis : public CStageBase<Axis>, public Conex_AxisBase
 {
 public:
-   X_Axis();
-   ~X_Axis();
+   Axis(const char* axis);
+   ~Axis();
   
    // Device API
    // ----------
@@ -124,81 +122,18 @@ public:
    // ----------------
    int OnPort     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnLowerLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnUpperLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSpeed(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnAcceleration(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+private:
+   std::string axisDeviceName_;
+   double negativeLimit_;
+   double positiveLimit_;
+   double speed_;
+   double acceleration_;
 };
-
-
-class Y_Axis : public CStageBase<Y_Axis>, public Conex_AxisBase
-{
-public:
-   Y_Axis();
-   ~Y_Axis();
-  
-   // Device API
-   // ----------/  
-   int Initialize();
-   int Shutdown();
-   void GetName(char* pszName) const;
-   bool Busy();
-
-   // Stage API
-   // ---------
-   int SetPositionUm(double pos);
-   int SetRelativePositionUm(double d);
-   int Move(double velocity);
-
-   int GetPositionUm(double& pos);
-   int SetPositionSteps(long steps);
-   int GetPositionSteps(long& steps);
-   int SetOrigin();
-  
-   int GetLimits(double& min, double& max);
-
-   int IsStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
-
-   bool IsContinuousFocusDrive() const {return false;}
-
-   // action interface
-   // ----------------
-   int OnPort     (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct);
-};
-
-
-class Z_Axis : public CStageBase<Z_Axis>, public Conex_AxisBase
-{
-public:
-   Z_Axis();
-   ~Z_Axis();
-  
-   // Device API
-   // ----------
-   int Initialize();
-   int Shutdown();
-   void GetName(char* pszName) const;
-   bool Busy();
-
-   // Stage API
-   // ---------
-   int SetPositionUm(double pos);
-   int SetRelativePositionUm(double d);
-   int Move(double velocity);
-
-   int GetPositionUm(double& pos);
-   int SetPositionSteps(long steps);
-   int GetPositionSteps(long& steps);
-   int SetOrigin();
-   
-   int GetLimits(double& min, double& max);
-
-   int IsStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
-
-   bool IsContinuousFocusDrive() const {return false;}
-
-   // action interface
-   // ----------------
-   int OnPort     (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct);
-};
-
 
 #endif //_Conex_Axis_H_

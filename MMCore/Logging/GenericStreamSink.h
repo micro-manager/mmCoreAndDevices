@@ -16,29 +16,72 @@
 
 #pragma once
 
+#include "FileRotation.h"
 #include "GenericSink.h"
 
-#include <exception>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <streambuf>
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
 
 class CannotOpenFileException : public std::exception
 {
 public:
-   virtual const char* what() const throw() { return "Cannot open log file"; }
+   virtual const char* what() const noexcept { return "Cannot open log file"; }
 };
 
 
-namespace internal
+namespace internal {
+
+
+class CountingStreambuf : public std::streambuf
 {
+   std::streambuf* wrapped_;
+   std::size_t count_;
+
+public:
+   explicit CountingStreambuf(std::streambuf* wrapped) :
+      wrapped_(wrapped),
+      count_(0)
+   {}
+
+   std::size_t Count() const { return count_; }
+   void ResetCount() { count_ = 0; }
+
+   void SetWrapped(std::streambuf* wrapped) { wrapped_ = wrapped; }
+
+protected:
+   int_type overflow(int_type c) override
+   {
+      if (!traits_type::eq_int_type(c, traits_type::eof()))
+      {
+         auto result = wrapped_->sputc(traits_type::to_char_type(c));
+         if (!traits_type::eq_int_type(result, traits_type::eof()))
+            ++count_;
+         return result;
+      }
+      return traits_type::not_eof(c);
+   }
+
+   std::streamsize xsputn(const char_type* s, std::streamsize n) override
+   {
+      auto written = wrapped_->sputn(s, n);
+      count_ += static_cast<std::size_t>(written);
+      return written;
+   }
+
+   int sync() override
+   {
+      return wrapped_->pubsync();
+   }
+};
 
 
 template <class TFormatter, class UMetadata, typename VPacketIter>
@@ -98,22 +141,23 @@ public:
 
    virtual void Consume(const PacketArrayType& packets)
    {
+      std::clog.clear();
       WritePacketsToStream<UFormatter>(std::clog,
             packets.Begin(), packets.End(), this->GetFilter());
-      try
+      std::clog.flush();
+      if (std::clog.fail())
       {
-         std::clog.flush();
-      }
-      catch (const std::ios_base::failure& e)
-      {
+         std::clog.clear();
          if (!hadError_)
          {
             hadError_ = true;
-            // There's not much we can do if stderr is failing on us. But let's
-            // try anyway in a manner that doesn't throw.
-            std::cerr << "Logging: cannot write to stderr: " <<
-               e.what() << '\n';
+            // Probably futile but try anyway:
+            std::cerr << "Logging: cannot write to stderr\n";
          }
+      }
+      else
+      {
+         hadError_ = false;
       }
    }
 };
@@ -124,7 +168,12 @@ class GenericFileLogSink : public GenericSink<TMetadata>
 {
    std::string filename_;
    std::ofstream fileStream_;
+   CountingStreambuf countingBuf_;
+   std::ostream countingStream_;
    bool hadError_;
+   std::size_t maxFileSize_;
+   int maxBackupFiles_;
+   std::size_t initialFileSize_;
 
 public:
    typedef GenericSink<TMetadata> Super;
@@ -133,9 +182,15 @@ public:
    GenericFileLogSink(const GenericFileLogSink&) = delete;
    GenericFileLogSink& operator=(const GenericFileLogSink&) = delete;
 
-   GenericFileLogSink(const std::string& filename, bool append = false) :
+   GenericFileLogSink(const std::string& filename, bool append = false,
+         std::size_t maxFileSize = 0, int maxBackupFiles = 0) :
       filename_(filename),
-      hadError_(false)
+      countingBuf_(nullptr),
+      countingStream_(nullptr),
+      hadError_(false),
+      maxFileSize_(maxFileSize),
+      maxBackupFiles_(maxBackupFiles),
+      initialFileSize_(0)
    {
       std::ios_base::openmode mode = std::ios_base::out;
       mode |= (append ? std::ios_base::app : std::ios_base::trunc);
@@ -143,24 +198,79 @@ public:
       fileStream_.open(filename_.c_str(), mode);
       if (!fileStream_)
          throw CannotOpenFileException();
+
+      if (append)
+      {
+         auto pos = fileStream_.tellp();
+         if (pos > 0)
+            initialFileSize_ = static_cast<std::size_t>(pos);
+      }
+
+      countingBuf_.SetWrapped(fileStream_.rdbuf());
+      countingStream_.rdbuf(&countingBuf_);
    }
 
    virtual void Consume(const PacketArrayType& packets)
    {
-      WritePacketsToStream<UFormatter>(fileStream_,
+      countingStream_.clear();
+      WritePacketsToStream<UFormatter>(countingStream_,
             packets.Begin(), packets.End(), this->GetFilter());
-      try
+      countingStream_.flush();
+      if (countingStream_.fail())
       {
-         fileStream_.flush();
+         countingStream_.clear();
+         if (!hadError_)
+         {
+            hadError_ = true;
+            std::cerr << "Logging: cannot write to file " << filename_ << '\n';
+         }
       }
-      catch (const std::ios_base::failure& e)
+      else
+      {
+         hadError_ = false;
+      }
+
+      if (maxFileSize_ > 0 &&
+            initialFileSize_ + countingBuf_.Count() > maxFileSize_)
+      {
+         RotateFile();
+      }
+   }
+
+private:
+   void RotateFile()
+   {
+      countingStream_.flush();
+      fileStream_.close();
+
+      std::string rotatedName = MakeRotatedFilename(filename_);
+      if (std::rename(filename_.c_str(), rotatedName.c_str()) != 0)
       {
          if (!hadError_)
          {
             hadError_ = true;
-            std::cerr << "Logging: cannot write to file " << filename_ <<
-               ": " << e.what() << '\n';
+            std::cerr << "Logging: cannot rotate file " << filename_ << '\n';
          }
+         fileStream_.open(filename_.c_str(),
+               std::ios_base::out | std::ios_base::app);
+         return;
+      }
+
+      DeleteExcessRotatedFiles(filename_, maxBackupFiles_);
+
+      fileStream_.open(filename_.c_str(),
+            std::ios_base::out | std::ios_base::trunc);
+      if (fileStream_)
+      {
+         countingBuf_.SetWrapped(fileStream_.rdbuf());
+         countingBuf_.ResetCount();
+         initialFileSize_ = 0;
+         hadError_ = false;
+      }
+      else
+      {
+         std::cerr << "Logging: cannot reopen file " << filename_
+               << " after rotation\n";
       }
    }
 };
@@ -168,4 +278,5 @@ public:
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

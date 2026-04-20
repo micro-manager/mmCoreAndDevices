@@ -8,6 +8,7 @@
 #include <memory>
 
 namespace zmlbase = zaber::motion;
+namespace zmlexc = zaber::motion::exceptions;
 namespace zml = zaber::motion::ascii;
 
 class ConnectionManager
@@ -19,4 +20,3 @@ private:
 	std::mutex lock_;
 	std::map<std::string, std::weak_ptr<zml::Connection>> connections_;
 };
-

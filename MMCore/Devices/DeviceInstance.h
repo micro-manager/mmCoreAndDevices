@@ -19,9 +19,10 @@
 
 #pragma once
 
-#include "../../MMDevice/MMDeviceConstants.h"
 #include "../Error.h"
 #include "../Logging/Logger.h"
+
+#include "MMDeviceConstants.h"
 
 #include <cstring>
 #include <functional>
@@ -30,8 +31,7 @@
 #include <vector>
 
 class CMMCore;
-class HubInstance;
-class LoadedDeviceAdapter;
+
 namespace MM
 {
    class Core;
@@ -39,6 +39,13 @@ namespace MM
 }
 
 typedef std::function<void (MM::Device*)> DeleteDeviceFunction;
+
+
+namespace mmcore {
+namespace internal {
+
+class LoadedDeviceAdapter;
+class HubInstance;
 
 
 /// Device instance wrapper class
@@ -66,11 +73,12 @@ protected:
 private:
    CMMCore* core_; // Weak reference
    std::shared_ptr<LoadedDeviceAdapter> adapter_;
+   const std::string name_;
    const std::string label_;
    std::string description_;
    DeleteDeviceFunction deleteFunction_;
-   mm::logging::Logger deviceLogger_;
-   mm::logging::Logger coreLogger_;
+   logging::Logger deviceLogger_;
+   logging::Logger coreLogger_;
    bool initializeCalled_ = false;
    bool initialized_ = false;
 
@@ -79,6 +87,7 @@ public:
    DeviceInstance& operator=(const DeviceInstance&) = delete;
 
    std::shared_ptr<LoadedDeviceAdapter> GetAdapterModule() const /* final */ { return adapter_; }
+   std::string GetName() const /* final */ { return name_; }
    std::string GetLabel() const /* final */ { return label_; }
    std::string GetDescription() const /* final */ { return description_; }
    void SetDescription(const std::string& description) /* final */ { description_ = description; }
@@ -102,14 +111,14 @@ protected:
          MM::Device* pDevice,
          DeleteDeviceFunction deleteFunction,
          const std::string& label,
-         mm::logging::Logger deviceLogger,
-         mm::logging::Logger coreLogger);
+         logging::Logger deviceLogger,
+         logging::Logger coreLogger);
 
    virtual ~DeviceInstance();
 
    CMMCore* GetCore() const /* final */ { return core_; }
 
-   const mm::logging::Logger& Logger() const
+   const logging::Logger& Logger() const
    { return coreLogger_; }
 
    CMMError MakeException() const;
@@ -214,10 +223,12 @@ public:
    void Initialize();
    void Shutdown();
    MM::DeviceType GetType() const; // TODO Make private (can use RTTI)
-   std::string GetName() const;
    void SetCallback(MM::Core* callback);
    bool SupportsDeviceDetection();
    MM::DeviceDetectionStatus DetectDevice();
    void SetParentID(const char* parentId); // TODO Remove
    std::string GetParentID() const; // TODO Remove
 };
+
+} // namespace internal
+} // namespace mmcore

@@ -149,7 +149,7 @@ void xiAPIplus_Camera::CheckResultParam(XI_RETURN res, const char* location, con
 	if (res != XI_OK)
 	{
 		char buff[MAX_PATH] = "";
-		sprintf(buff, "%s - %s", location, param);
+		snprintf(buff, sizeof(buff), "%s - %s", location, param);
 		ReportException(res, buff);
 	}
 }

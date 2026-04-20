@@ -22,6 +22,9 @@
 #include "GalvoInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int GalvoInstance::PointAndFire(double x, double y, double time_us) { RequireInitialized(__func__); return GetImpl()->PointAndFire(x, y, time_us); }
 int GalvoInstance::SetSpotInterval(double pulseInterval_us) { RequireInitialized(__func__); return GetImpl()->SetSpotInterval(pulseInterval_us); }
 int GalvoInstance::SetPosition(double x, double y) { RequireInitialized(__func__); return GetImpl()->SetPosition(x, y); }
@@ -47,3 +50,6 @@ std::string GalvoInstance::GetChannel()
    ThrowIfError(err, "Cannot get current channel name");
    return nameBuf.Get();
 }
+
+} // namespace internal
+} // namespace mmcore

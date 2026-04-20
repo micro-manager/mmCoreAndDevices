@@ -25,6 +25,7 @@
 #ifndef _PICAMADAPTER_H_
 #define _PICAMADAPTER_H_
 
+#include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 #include "ImgBuffer.h"
 #include "Debayer.h"
@@ -202,7 +203,7 @@ class PProc
 /***
  * Implementation of the MMDevice and MMCamera interfaces for all PICAM cameras
  */
-class Universal : public CCameraBase<Universal>
+class Universal : public CLegacyCameraBase<Universal>
 {
 
    public:
@@ -235,7 +236,6 @@ class Universal : public CCameraBase<Universal>
 #ifndef linux
       // micromanager calls the "live" acquisition a "sequence"
       //  don't get this confused with a PICAM sequence acquisition, it's actually circular buffer mode
-      int PrepareSequenceAcqusition();
       int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
       int StopSequenceAcquisition();
 #endif
@@ -284,10 +284,13 @@ class Universal : public CCameraBase<Universal>
 #endif
 
       //   int FrameDone();
-      int BuildMetadata( Metadata& md );
-      int PushImage(const unsigned char* pixBuffer, Metadata* pMd );
+      int BuildMetadata( MM::CameraImageMetadata& md );
+      int PushImage(const unsigned char* pixBuffer, MM::CameraImageMetadata* pMd );
 
    private:
+#ifndef linux
+      int PrepareSeqAcq();
+#endif
 
       Universal(Universal&) {}
       int GetExposureValue(piflt& exposureValue);

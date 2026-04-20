@@ -43,6 +43,7 @@
 
 #include <string>
 #include <map>
+#include <mutex>
 
 struct Tsi3RoiBin
 {
@@ -121,8 +122,6 @@ public:
    const unsigned char* GetImageBuffer();
 
    unsigned GetNumberOfComponents() const;
-   unsigned GetNumberOfChannels() const;
-   int GetChannelName(unsigned channel, char* name);
 
    unsigned GetImageWidth() const {return img.Width();}
    unsigned GetImageHeight() const {return img.Height();}
@@ -139,7 +138,6 @@ public:
 
    // overrides the same in the base class
    int InsertImage();
-   int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StartSequenceAcquisition(double interval);
    int StopSequenceAcquisition(); 
@@ -183,6 +181,8 @@ private:
 	int ApplyWhiteBalance(double redScaler, double greenScaler, double blueScaler);
 	void EnableColorOutputLUTs();
 	int GetCameraROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
+   int OpenDLLAndSDK();
+   int CloseDLLAndSDK();
 
    static void frame_available_callback(void* sender, unsigned short* image_buffer, int frame_count, unsigned char* metadata, int metadata_size_in_bytes, void* context);
 
@@ -190,9 +190,11 @@ private:
    int frameNumber;
 	std::vector<unsigned short> demosaicBuffer;
    bool initialized;
-   bool prepared;
 	static bool globalColorInitialized;
 	static bool globalPolarizationInitialized;
+   static uint16_t dllCount;
+   static uint16_t sdkCount;
+   static std::mutex mtx;
    bool stopOnOverflow;
    void* camHandle;
    void* colorProcessor;

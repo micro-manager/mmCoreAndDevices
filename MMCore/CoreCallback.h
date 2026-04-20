@@ -27,13 +27,13 @@
 #include "Devices/DeviceInstances.h"
 #include "CoreUtils.h"
 #include "MMCore.h"
-#include "MMEventCallback.h"
-#include "../MMDevice/DeviceUtils.h"
 
-namespace mm
-{
-   class DeviceManager;
-}
+#include "DeviceUtils.h"
+
+namespace mmcore {
+namespace internal {
+
+class DeviceManager;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -83,34 +83,19 @@ public:
    void Sleep(const MM::Device* caller, double intervalMs);
 
    // continuous acquisition support
-   int InsertImage(const MM::Device* caller, const ImgBuffer& imgBuf); // Note: _not_ mm::ImgBuffer
-   int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess = true);
-   int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess = true);
-
-   /*Deprecated*/ int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* pMd = 0, const bool doProcess = true);
-   /*Deprecated*/ int InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const Metadata* pMd = 0, const bool doProcess = true);
-
-   /*Deprecated*/ int InsertMultiChannel(const MM::Device* caller, const unsigned char* buf, unsigned numChannels, unsigned width, unsigned height, unsigned byteDepth, Metadata* pMd = 0);
-   void ClearImageBuffer(const MM::Device* caller);
+   int InsertImage(const MM::Device* caller, const unsigned char* buf,
+      unsigned width, unsigned height, unsigned bytesPerPixel,
+      const char* serializedMetadata);
+   int InsertImage(const MM::Device* caller, const unsigned char* buf,
+      unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
+      const char* serializedMetadata);
    bool InitializeImageBuffer(unsigned channels, unsigned slices, unsigned int w, unsigned int h, unsigned int pixDepth);
 
    int AcqFinished(const MM::Device* caller, int statusCode);
    int PrepareForAcq(const MM::Device* caller);
 
-   // autofocus support
-   const char* GetImage();
-   int GetImageDimensions(int& width, int& height, int& depth);
+   // Deprecated
    int GetFocusPosition(double& pos);
-   int SetFocusPosition(double pos);
-   int MoveFocus(double v);
-   int SetXYPosition(double x, double y);
-   int GetXYPosition(double& x, double& y);
-   int MoveXYStage(double vX, double vY);
-   int SetExposure(double expMs);
-   int GetExposure(double& expMs);
-   int SetConfig(const char* group, const char* name);
-   int GetCurrentConfig(const char* group, int bufLen, char* name);
-   int GetChannelConfig(char* channelConfigName, const unsigned int channelConfigIterator);
 
    // notification handlers
    int OnPropertiesChanged(const MM::Device* caller);
@@ -120,29 +105,26 @@ public:
    int OnExposureChanged(const MM::Device* device, double newExposure);
    int OnSLMExposureChanged(const MM::Device* device, double newExposure);
    int OnMagnifierChanged(const MM::Device* device);
+   int OnShutterOpenChanged(const MM::Device* device, bool open);
 
-
-   void NextPostedError(int& errorCode, char* pMessage, int maxlen, int& messageLength);
-   void PostError(const int errorCode, const char* pMessage);
-   void ClearPostedErrors();
-
-
-   MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);
-   MM::State* GetStateDevice(const MM::Device* caller, const char* label);
+   // Deprecated
    MM::SignalIO* GetSignalIODevice(const MM::Device* caller,
          const char* label);
-   MM::AutoFocus* GetAutoFocus(const MM::Device* caller);
+
    MM::Hub* GetParentHub(const MM::Device* caller) const;
    void GetLoadedDeviceOfType(const MM::Device* caller, MM::DeviceType devType,
          char* deviceName, const unsigned int deviceIterator);
 
 private:
    CMMCore* core_;
-   MMThreadLock* pValueChangeLock_;
+   // Serializes OnPropertyChanged calls to reduce (but not eliminate)
+   // races between the state cache update and the subsequent config
+   // lookups used to determine which notifications to post.
+   std::mutex onPropertyChangedLock_;
 
    Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
-
-   int OnConfigGroupChanged(const char* groupName, const char* newConfigName);
-   int OnPixelSizeChanged(double newPixelSizeUm);
-   int OnPixelSizeAffineChanged(std::vector<double> newPixelSizeAffine);
+   MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);
 };
+
+} // namespace internal
+} // namespace mmcore

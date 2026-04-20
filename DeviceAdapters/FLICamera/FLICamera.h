@@ -31,7 +31,7 @@
 #include <string>
 #include <map>
 
-class CFLICamera : public CCameraBase<CFLICamera>
+class CFLICamera : public CLegacyCameraBase<CFLICamera>
 {
 	public:
 		CFLICamera();
@@ -58,14 +58,9 @@ class CFLICamera : public CCameraBase<CFLICamera>
 		int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
 		int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
 		int ClearROI();
-		int PrepareSequenceAcqusition();
-		double GetNominalPixelSizeUm() const;
-		double GetPixelSizeUm() const;
 		int GetBinning() const;
 		int SetBinning(int binSize);
 		int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
-		int GetComponentName(unsigned channel, char* name);
-		unsigned GetNumberOfChannels() const;
 		unsigned GetNumberOfComponents() const;
 
     // action interface
@@ -108,9 +103,6 @@ class CFLICamera : public CCameraBase<CFLICamera>
 		long exposure_;
 		long shutter_;
 		long downloaded_;
-
-		double pixel_x_;
-		double pixel_y_;
 
 public:
 	void Disconnect(void);

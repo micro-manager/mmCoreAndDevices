@@ -56,7 +56,7 @@ using namespace std;
 
 class SequenceThread;
 
-class CMoticCamera : public CCameraBase<CMoticCamera>  
+class CMoticCamera : public CLegacyCameraBase<CMoticCamera>
 {
 public:
   CMoticCamera();
@@ -83,7 +83,6 @@ public:
   int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
   int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
   int ClearROI();
-  int PrepareSequenceAcqusition();
   //int StartSequenceAcquisition(double interval);
  // int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
  // int StopSequenceAcquisition();
@@ -98,67 +97,6 @@ public:
     if(m_iBytesPerPixel == 1 || m_iBytesPerPixel == 2)return 1;
     return 4;
   }
-
-  int GetComponentName(unsigned channel, char* name)
-  {
-    if(m_iBytesPerPixel == 1 || m_iBytesPerPixel == 2)
-    {
-       CDeviceUtils::CopyLimitedString(name, "Grayscale");
-    }
-    else if(channel == 0)
-    {
-      CDeviceUtils::CopyLimitedString(name, "Blue");
-    }
-    else if(channel == 1)
-    {
-      CDeviceUtils::CopyLimitedString(name, "Green");
-    }
-    else if(channel == 2)
-    {
-      CDeviceUtils::CopyLimitedString(name, "Red");
-    }
-    else if(channel == 3)
-    {
-      CDeviceUtils::CopyLimitedString(name, "Alpha");
-    }
-    else
-    {
-      return DEVICE_NONEXISTENT_CHANNEL;
-    }
-    return DEVICE_OK; 
-  }
-//    unsigned GetNumberOfChannels() const 
-//    {
-//       return 3;
-//    }
-// 
-//    virtual int GetChannelName(unsigned  channel , char* name)
-//    {
-//      if(channel == 0)
-//      {
-//        CDeviceUtils::CopyLimitedString(name, "Blue");
-//      }
-//      else if(channel == 1)
-//      {
-//        CDeviceUtils::CopyLimitedString(name, "Green");
-//      }
-//      else if(channel == 2)
-//      {
-//        CDeviceUtils::CopyLimitedString(name, "Red");
-//      }
-//      else
-//      {
-//        return DEVICE_NONEXISTENT_CHANNEL;
-//      }
-//      return DEVICE_OK;      
-//    }
-// 
-//    virtual const unsigned char* GetImageBuffer(unsigned /* channelNr */)
-//    {
-//       if (GetNumberOfChannels() == 1)
-//          return GetImageBuffer();
-//       return 0;
-//    }
 
    const unsigned int* GetImageBufferAsRGB32()
    {

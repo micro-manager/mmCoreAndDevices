@@ -9,7 +9,7 @@
 
 Magnifier::Magnifier() :
     ASIBase(this, ""),
-    axis_("M"), // normally the zoom axis is the M axis.
+    axis_("M"), // normally the zoom axis is the M axis
     answerTimeoutMs_(1000)
 {
     InitializeDefaultErrorMessages();
@@ -30,7 +30,7 @@ Magnifier::Magnifier() :
     // Axis
     pAct = new CPropertyAction(this, &Magnifier::OnAxis);
     CreateProperty("Axis", "M", MM::String, false, pAct, true);
-    // AddAllowedValue("Axis", "(LETTER)");
+    AddAllowedValue("Axis", "M");
 }
 
 Magnifier::~Magnifier()
@@ -38,19 +38,19 @@ Magnifier::~Magnifier()
     Shutdown();
 }
 
-void Magnifier::GetName(char* Name) const
+void Magnifier::GetName(char* name) const
 {
-    CDeviceUtils::CopyLimitedString(Name, g_MagnifierDeviceName);
+    CDeviceUtils::CopyLimitedString(name, g_MagnifierDeviceName);
 }
 
-bool Magnifier::SupportsDeviceDetection(void)
+bool Magnifier::SupportsDeviceDetection()
 {
     return true;
 }
 
-MM::DeviceDetectionStatus Magnifier::DetectDevice(void)
+MM::DeviceDetectionStatus Magnifier::DetectDevice()
 {
-    return ASICheckSerialPort(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
+    return ASIDetectDevice(*this, *GetCoreCallback(), port_, answerTimeoutMs_);
 }
 
 int Magnifier::Initialize()
@@ -67,28 +67,36 @@ int Magnifier::Initialize()
         return ret;
     }
 
+	 ret = GetVersion(firmwareVersion_);
+	 if (ret != DEVICE_OK)
+       return ret;
     CPropertyAction* pAct = new CPropertyAction(this, &Magnifier::OnVersion);
-    CreateProperty("Version", "", MM::String, true, pAct);
+    CreateProperty("Version", firmwareVersion_.c_str(), MM::String, true, pAct);
 
+    // get the firmware version data from cached value
+    version_ = Version::ParseString(firmwareVersion_);
+
+    ret = GetCompileDate(firmwareDate_);
+    if (ret != DEVICE_OK)
+    {
+        return ret;
+    }
     pAct = new CPropertyAction(this, &Magnifier::OnCompileDate);
     CreateProperty("CompileDate", "", MM::String, true, pAct);
-    UpdateProperty("CompileDate");
-
-    // get the date of the firmware
-    char compile_date[MM::MaxStrLength];
-    if (GetProperty("CompileDate", compile_date) == DEVICE_OK)
-    {
-        compileDay_ = ExtractCompileDay(compile_date);
-    }
 
     // if really old firmware then don't get build name
     // build name is really just for diagnostic purposes anyway
     // I think it was present before 2010 but this is easy way
-    if (compileDay_ >= ConvertDay(2010, 1, 1))
-    {
+
+    // previously compared against compile date (2010, 1, 1)
+    if (version_ >= Version(8, 8, 'a')) {
+        ret = GetBuildName(firmwareBuild_);
+        if (ret != DEVICE_OK)
+        {
+            return ret;
+        }
         pAct = new CPropertyAction(this, &Magnifier::OnBuildName);
         CreateProperty("BuildName", "", MM::String, true, pAct);
-        UpdateProperty("BuildName");
     }
 
     pAct = new CPropertyAction(this, &Magnifier::OnMagnification);
@@ -127,12 +135,11 @@ int Magnifier::SetMagnification(double mag)
         return ret;
     }
 
-    if (answer.substr(0, 2).compare(":A") == 0 || answer.substr(1, 2).compare(":A") == 0)
-    {
+    if (answer.compare(0, 2, ":A") == 0) {
         return DEVICE_OK;
     }
     // deal with error later
-    else if (answer.substr(0, 2).compare(":N") == 0 && answer.length() > 2)
+    else if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(4).c_str());
         return ERR_OFFSET + errNo;
@@ -157,7 +164,7 @@ double Magnifier::GetMagnification()
         return ret;
     }
 
-    if (answer.length() > 2 && answer.substr(0, 2).compare(":N") == 0)
+    if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0)
     {
         int errNo = atoi(answer.substr(2).c_str());
         return ERR_OFFSET + errNo;
@@ -168,8 +175,7 @@ double Magnifier::GetMagnification()
         char head[64];
         char iBuf[256];
         strcpy(iBuf, answer.c_str());
-        sscanf(iBuf, "%s %lf\r\n", head, &mag);
-
+        (void)sscanf(iBuf, "%s %lf\r\n", head, &mag);
         return mag;
     }
 
@@ -181,37 +187,17 @@ bool Magnifier::Busy()
     // empty the Rx serial buffer before sending command
     ClearPort();
 
-    const char* command = "/";
     std::string answer;
-    // query command
-    int ret = QueryCommand(command, answer);
+    int ret = QueryCommand("/", answer);
     if (ret != DEVICE_OK)
     {
         return false;
     }
 
-    if (answer.length() >= 1)
-    {
-        if (answer.substr(0, 1) == "B")
-        {
-            return true;
-        }
-        else if (answer.substr(0, 1) == "N")
-        {
-            return false;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    return false;
+    return !answer.empty() && answer.front() == 'B';
 }
 
-///////////////////////////////////////////////////////////////////////////////
 // Action handlers
-///////////////////////////////////////////////////////////////////////////////
 
 int Magnifier::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {

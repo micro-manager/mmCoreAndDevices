@@ -120,6 +120,7 @@ SUBDIRS = \
 	CARVII \
 	CNCMicroscope \
 	CSUW1 \
+	Cephla \
 	ChuoSeiki_MD5000 \
 	ChuoSeiki_QT \
 	Cobolt \
@@ -133,6 +134,7 @@ SUBDIRS = \
 	DTOpenLayer \
 	DemoCamera \
 	Diskovery \
+	EvidentIX85 \
 	FocalPoint \
 	FreeSerialPort \
 	HamiltonMVP \
@@ -164,8 +166,9 @@ SUBDIRS = \
 	Nikon \
 	NikonTE2000 \
 	NotificationTester \
-	OVP_ECS2 \
 	Omicron \
+	OpenUC2 \
+	OVP_ECS2 \
 	Oxxius \
 	OxxiusCombiner \
 	PI \
@@ -183,6 +186,7 @@ SUBDIRS = \
 	PrecisExcite \
 	Prior \
 	PriorLegacy \
+	RappLasers \
 	Sapphire \
 	Scientifica \
 	SerialManager \

@@ -3,8 +3,6 @@ deviceadapter_LTLIBRARIES = libmmgr_dal_ASIStage.la
 libmmgr_dal_ASIStage_la_SOURCES = \
 	ASIBase.cpp \
 	ASIBase.h \
-	ASICRIF.cpp \
-	ASICRIF.h \
 	ASICRISP.cpp \
 	ASICRISP.h \
 	ASILED.cpp \

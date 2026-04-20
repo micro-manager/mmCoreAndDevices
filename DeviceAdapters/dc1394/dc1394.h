@@ -138,7 +138,6 @@ public:
    unsigned GetImageHeight() const {return img_.Height();}
    unsigned GetImageBytesPerPixel() const {return img_.Depth();} 
    unsigned int GetNumberOfComponents() const;
-   int GetComponentName(unsigned channel, char* name);
    long GetImageBufferSize() const {return img_.Width() * img_.Height() * GetImageBytesPerPixel();}
    unsigned GetBitDepth() const;
    int GetBinning() const;

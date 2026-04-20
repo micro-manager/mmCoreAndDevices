@@ -69,7 +69,7 @@ ZStage::ZStage() :
 
     // Name
     char sZName[120];
-	sprintf(sZName, "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_ZDevNameLabel).c_str(), MM::g_Keyword_Name);
+	snprintf(sZName, sizeof(sZName), "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_ZDevNameLabel).c_str(), MM::g_Keyword_Name);
     int ret = CreateProperty(sZName, MP285::Instance()->GetMPStr(MP285::MPSTR_ZStageDevName).c_str(), MM::String, true);
 
     m_nAnswerTimeoutMs = MP285::Instance()->GetTimeoutInterval();
@@ -86,7 +86,7 @@ ZStage::ZStage() :
 
     // Description
     char sZDesc[120];
-	sprintf(sZDesc, "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_ZDevDescLabel).c_str(), MM::g_Keyword_Description);
+	snprintf(sZDesc, sizeof(sZDesc), "%s%s", MP285::Instance()->GetMPStr(MP285::MPSTR_ZDevDescLabel).c_str(), MM::g_Keyword_Description);
     ret = CreateProperty(sZDesc, "MP-285 Z Stage Driver", MM::String, true);
 
     // osMessage.clear();
@@ -121,11 +121,11 @@ int ZStage::Initialize()
     if (!MP285::Instance()->GetDeviceAvailability()) return DEVICE_NOT_CONNECTED;
     //if (MP285::Instance()->GetNumberOfAxes() < 3) return DEVICE_NOT_CONNECTED;
 
-    //int ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionZ).c_str(), "undefined", MM::String, true);  // get position Z 
+    //int ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionZ).c_str(), "undefined", MM::String, true);  // get position Z
     CPropertyAction* pActOnGetPosZ = new CPropertyAction(this, &ZStage::OnGetPositionZ);
 	char sPosZ[20];
     double dPosZ = MP285::Instance()->GetPositionZ();
-	sprintf(sPosZ, "%ld", (long)(dPosZ * (double)MP285::Instance()->GetUm2UStep()));
+	snprintf(sPosZ, sizeof(sPosZ), "%ld", (long)(dPosZ * (double)MP285::Instance()->GetUm2UStep()));
 	int ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_GetPositionZ).c_str(), sPosZ, MM::Integer, false, pActOnGetPosZ);  // get position Z 
 
 	if (MP285::Instance()->GetDebugLogFlag() > 0)
@@ -138,7 +138,7 @@ int ZStage::Initialize()
     if (ret != DEVICE_OK)  return ret;
 
     ret = GetPositionUm(dPosZ);
-	sprintf(sPosZ, "%ld", (long)(dPosZ * (double)MP285::Instance()->GetPositionZ()));
+	snprintf(sPosZ, sizeof(sPosZ), "%ld", (long)(dPosZ * (double)MP285::Instance()->GetPositionZ()));
 
 	if (MP285::Instance()->GetDebugLogFlag() > 0)
 	{
@@ -150,7 +150,7 @@ int ZStage::Initialize()
     if (ret != DEVICE_OK)  return ret;
 
     CPropertyAction* pActOnSetPosZ = new CPropertyAction(this, &ZStage::OnSetPositionZ);
-	sprintf(sPosZ, "%.2f", dPosZ);
+	snprintf(sPosZ, sizeof(sPosZ), "%.2f", dPosZ);
     ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_SetPositionZ).c_str(), sPosZ, MM::Float, false, pActOnSetPosZ);  // Absolute  vs Relative 
     // ret = CreateProperty(MP285::Instance()->GetMPStr(MP285::MPSTR_SetPositionZ).c_str(), "Undefined", MM::Integer, true);  // Absolute  vs Relative 
 
@@ -402,7 +402,7 @@ int ZStage::GetPositionSteps(long& lZPosSteps)
 				osMessage << "<XYStage::GetPositionSteps> Response = (" << nError << "," << nTrys << ")" ;
 			}
 
-            sprintf(sCommStat, "Error Code ==> <%2x>", sResponse[0]);
+            snprintf(sCommStat, sizeof(sCommStat), "Error Code ==> <%2x>", sResponse[0]);
         }
         else
         {
@@ -639,7 +639,7 @@ int ZStage::SetOrigin()
 
     char sCommStat[30];
     if (yCommError)
-        sprintf(sCommStat, "Error Code ==> <%2x>", sResponse[0]);
+        snprintf(sCommStat, sizeof(sCommStat), "Error Code ==> <%2x>", sResponse[0]);
     else
         strcpy(sCommStat, "Success");
 
@@ -713,7 +713,7 @@ int ZStage::OnGetPositionZ(MM::PropertyBase* pProp, MM::ActionType /*eAct*/)
         ret = GetPositionUm(dPos);
 		dPos *= (double)MP285::Instance()->GetUm2UStep();
 		char sPos[20];
-		sprintf(sPos, "%ld", (long)dPos);
+		snprintf(sPos, sizeof(sPos), "%ld", (long)dPos);
 
         pProp->Set(dPos);
 

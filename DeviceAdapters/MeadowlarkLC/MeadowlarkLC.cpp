@@ -196,9 +196,6 @@ MeadowlarkLC::MeadowlarkLC() :
 
 	int devCount = devcnt;
 
-	UINT pipeCount = 0;
-	int pipeCountInt = pipeCount;
-
 	ClearAllowedValues(g_ControllerDevices); // clear old vals
 
 	if (devCount > 0) {
@@ -216,18 +213,13 @@ MeadowlarkLC::MeadowlarkLC() :
 			std::string device = IntToString(devIdx);
 			std::string temp = ((char*)status);
 
-			if (dev_Handle >= 0) {
-				AddAllowedValue(g_ControllerDevices, device.c_str());
-				devNameList.push_back(device.c_str());
-				descriptionUnparsed_ = temp + '\n';
-				description_ = temp;
-				description_ = RemoveChars(description_, ".");
-				description_ = RemoveChars(description_, ",");
-				cur_dev_name = device;
-
-				pipeCount = USBDRVD_GetPipeCount(dev_Handle);
-				pipeCountInt = pipeCount;
-			}
+			AddAllowedValue(g_ControllerDevices, device.c_str());
+			devNameList.push_back(device.c_str());
+			descriptionUnparsed_ = temp + '\n';
+			description_ = temp;
+			description_ = RemoveChars(description_, ".");
+			description_ = RemoveChars(description_, ",");
+			cur_dev_name = device;
 
 			USBDRVD_CloseDevice(dev_Handle);
 		}

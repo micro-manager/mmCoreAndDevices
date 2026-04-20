@@ -60,6 +60,7 @@ public:
 	void GetName(char* name) const;
 	int  Initialize();
 	int  Shutdown();
+	bool Busy() { return false; }
 	//////////////////////////////////////////////////////////////
 	int                  SnapImage();
 	const unsigned char* GetImageBuffer();
@@ -89,7 +90,6 @@ public:
 	int      SetMultiROI(const unsigned* xs, const unsigned* ys, const unsigned* widths, const unsigned* heights, unsigned numROIs);
 	int      GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths, unsigned* heights, unsigned* length);
 	//////////////////////////////////////////////////////////////
-	int      PrepareSequenceAcqusition() { return DEVICE_OK; }
 	int      StartSequenceAcquisition(double interval);
 	int      StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
 	int      StopSequenceAcquisition();

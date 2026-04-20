@@ -61,6 +61,7 @@ there is too much uncommented magic in this code.
 
 #include "BaumerOptronic.h"
 
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "MMDeviceConstants.h"
 
@@ -79,9 +80,6 @@ there is too much uncommented magic in this code.
 #pragma warning(disable: 4505)
 
 using namespace std;
-
-
-const double CBaumerOptronic::nominalPixelSizeUm_ = 1.0;
 
 // External names used by the rest of the system
 const char* g_CameraDeviceName = "BaumerOptronic";
@@ -1013,50 +1011,50 @@ int BOImplementationThread::BOInitializationSequence()
                         fxReturn = FX_StartDataCapture(gCameraId[0], TRUE);
                         if (fxReturn != CE_SUCCESS)
                         {
-                           sprintf(fxMess,"FX_StartDataCapture error: %08x", fxReturn);
+                           snprintf(fxMess, sizeof(fxMess), "FX_StartDataCapture error: %08x", fxReturn);
                            LLogMessage(fxMess);
                         }
                      }
                      else
                      {
-                        sprintf(fxMess,"FX_AllocateResources error: %08x", fxReturn);
+                        snprintf(fxMess, sizeof(fxMess), "FX_AllocateResources error: %08x", fxReturn);
                         LLogMessage(fxMess);
                      }
                   }
                   else
                   {
-                     sprintf(fxMess,"FX_DefineImageNotificationEvent error: %08x", fxReturn);
+                     snprintf(fxMess, sizeof(fxMess), "FX_DefineImageNotificationEvent error: %08x", fxReturn);
                      LLogMessage(fxMess);
                   }
                }
                else
                {
-                  sprintf(fxMess,"FX_OpenCamera error: %08x", fxReturn);
+                  snprintf(fxMess, sizeof(fxMess), "FX_OpenCamera error: %08x", fxReturn);
                   LLogMessage(fxMess);
                }
             }
             else
             {
-               sprintf(fxMess,"FX_LabelDevice error: %08x", fxReturn);
+               snprintf(fxMess, sizeof(fxMess), "FX_LabelDevice error: %08x", fxReturn);
                LLogMessage(fxMess);
             }
          }
          else
          {
             // XXX BUG! We should be returning an error in this case, but we're not.
-            sprintf(fxMess,"# cameras must be 1, but %d cameras found \n", DevCount);
+            snprintf(fxMess, sizeof(fxMess), "# cameras must be 1, but %d cameras found \n", DevCount);
             LLogMessage(fxMess);
          }
       }
       else
       {
-         sprintf(fxMess,"FX_EnumerateDevices error: %08x", fxReturn);
+         snprintf(fxMess, sizeof(fxMess), "FX_EnumerateDevices error: %08x", fxReturn);
          LLogMessage(fxMess);
       }
    }
    else
    {
-      sprintf(fxMess,"FX_InitLibrary error: %08x", fxReturn);
+      snprintf(fxMess, sizeof(fxMess), "FX_InitLibrary error: %08x", fxReturn);
       LLogMessage(fxMess);
    }
 
@@ -1544,7 +1542,6 @@ unsigned int __stdcall mSeqEventHandler(void* pArguments)
  * perform most of the initialization in the Initialize() method.
  */
 CBaumerOptronic::CBaumerOptronic() :
-   CCameraBase<CBaumerOptronic>(),
    initialized_(false),
    pWorkerThread_(NULL),
    stopOnOverflow_(false)
@@ -2272,8 +2269,8 @@ int CBaumerOptronic::SendImageToCore()
 {
    char label[MM::MaxStrLength];
    this->GetLabel(label);
-   Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
    int err = WaitForImageAndCopyToBuffer();
    if (err != DEVICE_OK)
@@ -2286,18 +2283,7 @@ int CBaumerOptronic::SendImageToCore()
    unsigned h = GetImageHeight();
    unsigned b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
-
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      return GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize().c_str());
-   }
-   else
-   {
-      return ret;
-   }
+   return GetCoreCallback()->InsertImage(this, p, w, h, b, md.Serialize());
 }
 
 

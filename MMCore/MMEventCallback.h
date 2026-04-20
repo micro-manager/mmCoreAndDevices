@@ -50,9 +50,15 @@ public:
       std::cout << "onConfigGroupChanged() " << groupName << " " << newConfigName << '\n';
    }
 
+   /**
+    * \brief Called when the system configuration has changed.
+    * 
+    * "Changed" includes when a configuration was unloaded, for example because
+    * loading a new config file failed.
+    */
    virtual void onSystemConfigurationLoaded()
    {
-      std::cout << "onSystemConfigurationLoaded() \n";
+      std::cout << "onSystemConfigurationLoaded()\n";
    }
 
    virtual void onPixelSizeChanged(double newPixelSizeUm)
@@ -65,25 +71,45 @@ public:
       std::cout << "onPixelSizeAffineChanged() " << v0 << "-" << v1 << "-" << v2 << "-" << v3 << "-" << v4 << "-" << v5 << '\n';
    }
 
-   virtual void onStagePositionChanged(char* name, double pos)
+   virtual void onStagePositionChanged(const char* name, double pos)
    {
       std::cout << "onStagePositionChanged()" << name << " " << pos  << '\n';
    }
 
-   virtual void onXYStagePositionChanged(char* name, double xpos, double ypos)
+   virtual void onXYStagePositionChanged(const char* name, double xpos, double ypos)
    {
       std::cout << "onXYStagePositionChanged()" << name << " " << xpos;
       std::cout << " " <<  ypos << '\n';
    }
 
-   virtual void onExposureChanged(char* name, double newExposure)
+   virtual void onExposureChanged(const char* name, double newExposure)
    {
       std::cout << "onExposureChanged()" << name << " " << newExposure << '\n';
    }
 
-   virtual void onSLMExposureChanged(char* name, double newExposure)
+   virtual void onShutterOpenChanged(const char* name, bool open)
+   {
+      std::cout << "onShutterOpenChanged()" << name << " " << open << '\n';
+   }
+
+   virtual void onSLMExposureChanged(const char* name, double newExposure)
    {
       std::cout << "onSLMExposureChanged()" << name << " " << newExposure << '\n';
+   }
+
+   virtual void onImageSnapped(const char* cameraLabel)
+   {
+      std::cout << "onImageSnapped() " << cameraLabel << '\n';
+   }
+
+   virtual void onSequenceAcquisitionStarted(const char* cameraLabel)
+   {
+      std::cout << "onSequenceAcquisitionStarted() " << cameraLabel << '\n';
+   }
+
+   virtual void onSequenceAcquisitionStopped(const char* cameraLabel)
+   {
+      std::cout << "onSequenceAcquisitionStopped() " << cameraLabel << '\n';
    }
 
 };

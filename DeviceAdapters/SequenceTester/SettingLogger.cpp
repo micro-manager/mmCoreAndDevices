@@ -26,8 +26,7 @@
 
 #include <msgpack.hpp>
 
-#include <boost/make_shared.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -186,8 +185,8 @@ SettingLogger::SetBool(const std::string& device, const std::string& key,
       bool value, bool logEvent)
 {
    SettingKey keyRecord = SettingKey(device, key);
-   boost::shared_ptr<SettingValue> valueRecord =
-      boost::make_shared<BoolSettingValue>(value);
+   std::shared_ptr<SettingValue> valueRecord =
+      std::make_shared<BoolSettingValue>(value);
    settingValues_[keyRecord] = valueRecord;
 
    if (logEvent)
@@ -216,8 +215,8 @@ SettingLogger::SetInteger(const std::string& device, const std::string& key,
       long value, bool logEvent)
 {
    SettingKey keyRecord = SettingKey(device, key);
-   boost::shared_ptr<SettingValue> valueRecord =
-      boost::make_shared<IntegerSettingValue>(value);
+   std::shared_ptr<SettingValue> valueRecord =
+      std::make_shared<IntegerSettingValue>(value);
    settingValues_[keyRecord] = valueRecord;
 
    if (logEvent)
@@ -246,8 +245,8 @@ SettingLogger::SetFloat(const std::string& device, const std::string& key,
       double value, bool logEvent)
 {
    SettingKey keyRecord = SettingKey(device, key);
-   boost::shared_ptr<SettingValue> valueRecord =
-      boost::make_shared<FloatSettingValue>(value);
+   std::shared_ptr<SettingValue> valueRecord =
+      std::make_shared<FloatSettingValue>(value);
    settingValues_[keyRecord] = valueRecord;
 
    if (logEvent)
@@ -276,8 +275,8 @@ SettingLogger::SetString(const std::string& device, const std::string& key,
       const std::string& value, bool logEvent)
 {
    SettingKey keyRecord = SettingKey(device, key);
-   boost::shared_ptr<SettingValue> valueRecord =
-      boost::make_shared<StringSettingValue>(value);
+   std::shared_ptr<SettingValue> valueRecord =
+      std::make_shared<StringSettingValue>(value);
    settingValues_[keyRecord] = valueRecord;
 
    if (logEvent)
@@ -306,8 +305,8 @@ SettingLogger::FireOneShot(const std::string& device, const std::string& key,
       bool logEvent)
 {
    SettingKey keyRecord = SettingKey(device, key);
-   boost::shared_ptr<SettingValue> valueRecord =
-      boost::make_shared<OneShotSettingValue>();
+   std::shared_ptr<SettingValue> valueRecord =
+      std::make_shared<OneShotSettingValue>();
    settingValues_[keyRecord] = valueRecord;
 
    if (logEvent)
@@ -415,7 +414,7 @@ SettingLogger::SettingMapAsText(const SettingMap& values) const
    for (SettingConstIterator it = values.begin(), end = values.end();
          it != end; ++it)
    {
-      if (boost::dynamic_pointer_cast<OneShotSettingValue>(it->second))
+      if (std::dynamic_pointer_cast<OneShotSettingValue>(it->second))
          continue; // Skip one-shot settings
 
       if (first)

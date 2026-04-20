@@ -91,8 +91,6 @@ public:
    const unsigned char* GetImageBuffer();
 
    unsigned GetNumberOfComponents() const;
-   unsigned GetNumberOfChannels() const;
-   int GetChannelName(unsigned channel, char* name);
 
    unsigned GetImageWidth() const {return img.Width();}
    unsigned GetImageHeight() const {return img.Height();}
@@ -109,7 +107,6 @@ public:
 
    // overrides the same in the base class
    int InsertImage();
-   int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StartSequenceAcquisition(double interval);
    int StopSequenceAcquisition(); 

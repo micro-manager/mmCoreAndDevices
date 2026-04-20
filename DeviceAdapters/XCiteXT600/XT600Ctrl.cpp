@@ -389,7 +389,7 @@ char* XLedCtrl::GetXLedStatus(unsigned char* sResp, char* sXLedStatus)
 //
 // Get Status Text Message
 //
-int XLedCtrl::GetStatusDescription(long lStatus, char* sStatus)
+int XLedCtrl::GetStatusDescription(long lStatus, char* sStatus, size_t sStatusSize)
 {
     const char* sStatusBitsOn[] =
     {
@@ -434,19 +434,19 @@ int XLedCtrl::GetStatusDescription(long lStatus, char* sStatus)
     };
     long lValue = 1;
     // memset(sStatus, 0, 800);
-    sprintf(sStatus, "%s", "[");
+    snprintf(sStatus, sStatusSize, "%s", "[");
     for (int nBit = 0; nBit < 16; nBit++, lValue *= 2)
     {
         long lBit = lStatus & lValue;
         if (lBit == lValue)
         {
             if (strcmp(sStatusBitsOn[nBit],"Reserved") != 0)
-                sprintf(&sStatus[strlen(sStatus)], " %s,", sStatusBitsOn[nBit]);
+                snprintf(&sStatus[strlen(sStatus)], sStatusSize - strlen(sStatus), " %s,", sStatusBitsOn[nBit]);
         }
         else if (lBit == 0)
         {
             if (strcmp(sStatusBitsOff[nBit],"X") != 0)
-                sprintf(&sStatus[strlen(sStatus)], " %s,", sStatusBitsOff[nBit]);
+                snprintf(&sStatus[strlen(sStatus)], sStatusSize - strlen(sStatus), " %s,", sStatusBitsOff[nBit]);
         }
     }
     sStatus[strlen(sStatus) - 1] = ']';
@@ -489,7 +489,7 @@ int XLedCtrl::Initialize()
     // Name
     char sCtrlNameLabel[120];
     memset(sCtrlNameLabel, 0, 120);
-    sprintf(sCtrlNameLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardNameLabel).c_str(), MM::g_Keyword_Name);
+    snprintf(sCtrlNameLabel, sizeof(sCtrlNameLabel), "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardNameLabel).c_str(), MM::g_Keyword_Name);
     ret = CreateProperty(sCtrlNameLabel/*MM::g_Keyword_Name*/, m_DeviceName, MM::String, true);
 
     if (nDebugLog > 0)
@@ -507,7 +507,7 @@ int XLedCtrl::Initialize()
 
         char sCtrlDescLabel[120];
         memset(sCtrlDescLabel, 0, 120);
-        sprintf(sCtrlDescLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardDescLabel).c_str(), MM::g_Keyword_Description);
+        snprintf(sCtrlDescLabel, sizeof(sCtrlDescLabel), "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_CtrlBoardDescLabel).c_str(), MM::g_Keyword_Description);
         ret = CreateProperty(sCtrlDescLabel/*MM::g_Keyword_Description*/, m_DeviceDescription, MM::String, true);
 
         if (nDebugLog > 0)
@@ -581,7 +581,7 @@ int XLedCtrl::Initialize()
     {
         lLedStatus = atol((const char*)sXLedStatus);
         memset(sXLedStatus, 0, XLed::XL_MaxPropSize);
-        sprintf(sXLedStatus, "%04lx", lLedStatus);
+        snprintf(sXLedStatus, sizeof(sXLedStatus), "%04lx", lLedStatus);
     }
 
     pAct = new CPropertyAction(this, &XLedCtrl::OnState);
@@ -598,7 +598,7 @@ int XLedCtrl::Initialize()
 
     char sStatus[800];
     memset(sStatus, 0, 800);
-    GetStatusDescription(lLedStatus, sStatus);
+    GetStatusDescription(lLedStatus, sStatus, sizeof(sStatus));
 
     ret = CreateProperty(XLed::Instance()->GetXLedStr(XLed::XL_XLedStatusDescLabel).c_str(), (const char*)sStatus, MM::String, false);
     
@@ -641,7 +641,7 @@ int XLedCtrl::Initialize()
 
     // get All On/Off
     char sAllOnOff[8];
-    sprintf(sAllOnOff, "%ld", m_lAllOnOff);
+    snprintf(sAllOnOff, sizeof(sAllOnOff), "%ld", m_lAllOnOff);
     pAct = new CPropertyAction(this, &XLedCtrl::OnAllOnOff);
 
     // Create all on/off property
@@ -933,7 +933,7 @@ int XLedCtrl::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         char sStatus[800];
         memset(sStatus, 0, 800);
-        GetStatusDescription(lStatus, sStatus);
+        GetStatusDescription(lStatus, sStatus, sizeof(sStatus));
 
         SetProperty(XLed::Instance()->GetXLedStr(XLed::XL_XLedStatusDescLabel).c_str(), (const char*) sStatus);
     }
@@ -1311,7 +1311,7 @@ int XLedCtrl::OnLCDScrnNumber(MM::PropertyBase* pProp, MM::ActionType pAct)
         if (lScrnNumber > 13) lScrnNumber = 13;
         if (lScrnNumber == 7) lScrnNumber = 6;
 
-        sprintf((char*)&sCmdSet[3], "%ld", lScrnNumber);
+        snprintf((char*)&sCmdSet[3], sizeof(sCmdSet) - 3, "%ld", lScrnNumber);
         sCmdSet[strlen((char*)sCmdSet)] = (unsigned char)XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1384,7 +1384,7 @@ int XLedCtrl::OnLCDScrnBrite(MM::PropertyBase* pProp, MM::ActionType pAct)
         if (lScrnBrite < 0) lScrnBrite = 0;
         if (lScrnBrite > 255) lScrnBrite = 255;
 
-        sprintf((char*)&sCmdSet[3], "%ld", lScrnBrite);
+        snprintf((char*)&sCmdSet[3], sizeof(sCmdSet) - 3, "%ld", lScrnBrite);
         sCmdSet[strlen((char*)sCmdSet)] = (unsigned char)XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1443,7 +1443,7 @@ int XLedCtrl::OnLCDScrnSaver(MM::PropertyBase* pProp, MM::ActionType pAct)
         if (lScrnTimeout < 0) lScrnTimeout = 0;
         if (lScrnTimeout > 9999) lScrnTimeout = 9999;
 
-        sprintf((char*)&sCmdSet[3], "%ld", lScrnTimeout);
+        snprintf((char*)&sCmdSet[3], sizeof(sCmdSet) - 3, "%ld", lScrnTimeout);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1575,7 +1575,7 @@ int XLedCtrl::OnSpeakerVolume(MM::PropertyBase* pProp, MM::ActionType pAct)
         if (lSPeakerVol < 0) lSPeakerVol = 0;
         if (lSPeakerVol > 255) lSPeakerVol = 255;
 
-        sprintf((char*)&sCmdSet[3], "%ld", lSPeakerVol);
+        snprintf((char*)&sCmdSet[3], sizeof(sCmdSet) - 3, "%ld", lSPeakerVol);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);

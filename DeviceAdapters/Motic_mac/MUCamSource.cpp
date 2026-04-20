@@ -616,7 +616,7 @@ int MUCamSource::SetBinning(int binF)
 
 bool MUCamSource::IsCapturing()
 {
-    if(CCameraBase<MUCamSource>::IsCapturing())
+    if(CLegacyCameraBase<MUCamSource>::IsCapturing())
     {
         return true;
     }
@@ -628,35 +628,6 @@ unsigned MUCamSource::GetNumberOfComponents() const
 {
     if(bytesPerPixel_ == 1 || bytesPerPixel_ == 2)return 1;
     return 4;
-}
-
-int MUCamSource::GetComponentName(unsigned channel, char* name)
-{
-    if(bytesPerPixel_ == 1 || bytesPerPixel_ == 2)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Grayscale");
-    }
-    else if(channel == 0)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Blue");
-    }
-    else if(channel == 1)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Green");
-    }
-    else if(channel == 2)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Red");
-    }
-    else if(channel == 3)
-    {
-        CDeviceUtils::CopyLimitedString(name, "Alpha");
-    }
-    else
-    {
-        return DEVICE_NONEXISTENT_CHANNEL;
-    }
-    return DEVICE_OK;
 }
 
 const unsigned int* MUCamSource::GetImageBufferAsRGB32()
@@ -1148,8 +1119,8 @@ void MUCamSource::InitExposure()
     MUCam_getExposureRange(hCameras_[currentCam_], &exposureMin_, &exposureMax_);
     exposureMs_ = 10.0;
     MUCam_setExposure(hCameras_[currentCam_], (float)exposureMs_);
-    char buf[10];
-    sprintf(buf, "%0.1f", (float)exposureMs_);
+    char buf[20];
+    snprintf(buf, sizeof(buf), "%0.1f", (float)exposureMs_);
     CPropertyAction *pAct = new CPropertyAction (this, &MUCamSource::OnExposure);
     int ret = CreateProperty(MM::g_Keyword_Exposure, buf, MM::Float, false, pAct);
     assert(ret == DEVICE_OK);

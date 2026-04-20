@@ -1,3 +1,8 @@
+# MMDevice needs to support device adapters that do not (yet) build in C++17.
+# It doesn't matter which standard we use here, but better to ensure it
+# compiles in C++14.
+AM_CXXFLAGS = -std=c++14
+
 noinst_LTLIBRARIES = libMMDevice.la
 
 noinst_HEADERS = \
@@ -5,12 +10,13 @@ noinst_HEADERS = \
 	DeviceBase.h \
 	DeviceThreads.h \
 	DeviceUtils.h \
-	ImageMetadata.h \
 	ImgBuffer.h \
+	CameraImageMetadata.h \
 	MMDevice.h \
 	MMDeviceConstants.h \
 	ModuleInterface.h \
-	Property.h
+	Property.h \
+	RegisteredDeviceCollection.h
 
 libMMDevice_la_SOURCES = \
 	$(noinst_HEADERS) \

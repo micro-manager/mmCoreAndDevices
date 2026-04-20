@@ -22,7 +22,7 @@
 
 class SequenceThread;
 
-class AmScope : public CCameraBase<AmScope>
+class AmScope : public CLegacyCameraBase<AmScope>
 { 
 public:
 	AmScope();
@@ -54,14 +54,10 @@ public:
    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    int ClearROI();
-   //int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(double interval);
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
    bool IsCapturing();
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   //double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
-   double GetPixelSizeUm() const {return pixelSizeXUm_;}
    int GetBinning() const;
    int SetBinning(int binSize);
    int IsExposureSequenceable(bool& seq) const {seq = false; return DEVICE_OK;}
@@ -105,7 +101,6 @@ private:
    long IMAGE_WIDTH;
    long IMAGE_HEIGHT;
    static const int MAX_BIT_DEPTH = 16;
-   double nominalPixelSizeUm_;
 
    SequenceThread* thd_;
    int binning_;
@@ -134,7 +129,6 @@ private:
    bool isSequenceable_;
    long sequenceMaxLength_;
    bool sequenceRunning_;
-   bool stopOnOverflow_;
    long imageCounter_;
    MMThreadLock imgPixelsLock_;
    std::string triggerDevice_;

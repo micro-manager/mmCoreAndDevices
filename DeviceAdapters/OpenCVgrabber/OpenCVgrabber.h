@@ -80,6 +80,8 @@ public:
    int Shutdown();
   
    void GetName(char* name) const;      
+
+   bool Busy() { return false; }
    
    // MMCamera API
    // ------------
@@ -97,10 +99,6 @@ public:
    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    int ClearROI();
-   int PrepareSequenceAcqusition()
-   {
-         return DEVICE_OK;
-   }
    int StartSequenceAcquisition(double interval);
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
@@ -108,8 +106,6 @@ public:
    int ThreadRun();
    bool IsCapturing();
    void OnThreadExiting() throw(); 
-   double GetNominalPixelSizeUm() const {return nominalPixelSizeUm_;}
-   double GetPixelSizeUm() const {return nominalPixelSizeUm_ * GetBinning();}
    int GetBinning() const;
    int SetBinning(int bS);
    int IsExposureSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
@@ -142,9 +138,6 @@ private:
    void RGB3toRGB4(const char* srcPixels, char* destPixels, int width, int height);
 
    int ResizeImageBuffer();
-
-   static const double nominalPixelSizeUm_;
-
 
    // CvCapture* capture_;
    // IplImage* frame_; // do not modify, do not release!

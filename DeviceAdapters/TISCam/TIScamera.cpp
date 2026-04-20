@@ -57,6 +57,7 @@ The files VC100*.* shall be reachable from the path specifier.
   #include <Shlobj.h>
 #endif
 
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "TIScamera.h"
 #include <string>
@@ -155,7 +156,7 @@ As a general guideline Micro-Manager devices do not access hardware in the
 the constructor. We should do as little as possible in the constructor and
 perform most of the initialization in the Initialize() method.
 ==============================================================================*/
-CTIScamera::CTIScamera() : CCameraBase<CTIScamera> (),
+CTIScamera::CTIScamera() :
    initialized_(false),
 
    pSelectDevice(NULL),
@@ -188,8 +189,6 @@ currentExpMS_(12.34), //ms
    roiY_(0),
    roiXSize_(0),
    roiYSize_(0),
-
-   sequenceStartTime_(0),
 
    interval_ms_ (0),
    seqThread_(0),
@@ -1383,8 +1382,6 @@ int CTIScamera::StartSequenceAcquisition(long numImages, double interval_ms, boo
    GetCoreCallback()->InitializeImageBuffer(1, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
 
    // start thread
-   sequenceStartTime_ = GetCurrentMMTime();
-   imageCounter_ = 0;
    sequenceLength_ = numImages;
 
    seqThread_->SetLength(numImages);
@@ -1396,13 +1393,6 @@ int CTIScamera::StartSequenceAcquisition(long numImages, double interval_ms, boo
    LogMessage("Acquisition thread started");
 
    return DEVICE_OK;
-}
-
-
-
-int CTIScamera::RestartSequenceAcquisition()
-{
-   return StartSequenceAcquisition(sequenceLength_ - imageCounter_, interval_ms_, stopOnOverflow_);
 }
 
 
@@ -2155,45 +2145,20 @@ Waits for new image and inserts it into the circular buffer
 ==============================================================================*/
 int CTIScamera::PushImage()
 {
-   MM::MMTime timeStamp = this->GetCurrentMMTime();
    char label[MM::MaxStrLength];
    this->GetLabel(label);
  
    // Important:  metadata about the image are generated here:
-   Metadata md;
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((timeStamp - sequenceStartTime_).getMsec()));
-   md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_));
-   md.put(MM::g_Keyword_Binning, binSize_);
-   md.put(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
-   md.put(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
-
-   MetadataSingleTag mst(MM::g_Keyword_Elapsed_Time_ms, label, true);
-   mst.SetValue(CDeviceUtils::ConvertToString(timeStamp.getMsec()));
-   md.SetTag(mst);
-
-   MetadataSingleTag mstCount(MM::g_Keyword_Metadata_ImageNumber, label, true);
-   mstCount.SetValue(CDeviceUtils::ConvertToString(imageCounter_));      
-   md.SetTag(mstCount);
-
-   MetadataSingleTag mstB(MM::g_Keyword_Binning, label, true);
-   mstB.SetValue(CDeviceUtils::ConvertToString(binSize_));      
-   md.SetTag(mstB);
-
-
-   // Copy the metadata inserted by other processes:
-   std::vector<std::string> keys = GetTagKeys();
-   for (unsigned int i= 0; i < keys.size(); i++) {
-      md.put(keys[i], GetTagValue(keys[i].c_str()).c_str());
-   }
+   MM::CameraImageMetadata md;
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Binning, binSize_);
+   md.AddTag(MM::g_Keyword_Metadata_ROI_X, CDeviceUtils::ConvertToString( (long) roiX_)); 
+   md.AddTag(MM::g_Keyword_Metadata_ROI_Y, CDeviceUtils::ConvertToString( (long) roiY_)); 
 
    char buf[MM::MaxStrLength];
    GetProperty(MM::g_Keyword_Binning, buf);
-   md.put(MM::g_Keyword_Binning, buf);
+   md.AddTag(MM::g_Keyword_Binning, buf);
 
-   imageCounter_++;
-
-	
 //   MMThreadGuard g(imgPixelsLock_);
 
 //   DriverGuard dg(this);
@@ -2206,21 +2171,7 @@ int CTIScamera::PushImage()
    unsigned int h = GetImageHeight();
    unsigned int b = GetImageBytesPerPixel();
 
-   int ret = GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str());
-   if (!stopOnOverflow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow - just reset the buffer
-      GetCoreCallback()->ClearImageBuffer(this);
-      // don't process this same image again...
-      return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize().c_str(), false);
-   } else
-      return ret;
-
-
-
-
-
-
+   return GetCoreCallback()->InsertImage(this, pI, w, h, b, md.Serialize());
 }
 
 

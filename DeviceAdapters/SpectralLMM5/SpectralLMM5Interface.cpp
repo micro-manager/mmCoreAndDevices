@@ -64,7 +64,7 @@ int SpectralLMM5Interface::ExecuteCommand(MM::Device& device, MM::Core& core, un
       char tmp[3];
       tmp[2] = 0;
       for (unsigned long i=0; i<bufLen; i++) {
-         sprintf(tmp, "%.2x", buf[i]);
+         snprintf(tmp, sizeof(tmp), "%.2x", buf[i]);
          serialCommand += tmp;
       }
       ret = core.SetSerialCommand(&device, port_.c_str(), serialCommand.c_str(), "\r");

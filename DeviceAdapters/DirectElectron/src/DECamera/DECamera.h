@@ -31,7 +31,7 @@ using namespace DirectElectronPlugin;
 // CDECamera class
 // Simulation of the Camera device
 //////////////////////////////////////////////////////////////////////////////
-class CDECamera : public CCameraBase<CDECamera>  
+class CDECamera : public CLegacyCameraBase<CDECamera>
 {
 public:
    // Packet types
@@ -70,8 +70,6 @@ public:
    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize); 
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize); 
    int ClearROI();
-   virtual double GetNominalPixelSizeUm() const;
-   virtual double GetPixelSizeUm() const;
    int GetBinning() const;
    int SetBinning(int binSize);
 

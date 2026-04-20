@@ -209,7 +209,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * Constructor.
 */
 LumeneraCamera::LumeneraCamera() :
-	CCameraBase<LumeneraCamera>(),
 	components_(1),
 	bitDepth_(Imaging::IMAGE_BIT_DEPTH::EIGHT_BIT),
 	colorCamera_(true),
@@ -487,7 +486,7 @@ int LumeneraCamera::createProperties(CameraInterface::Camera* camera)
 	{
 		char cBuf[MM::MaxStrLength];
 		unsigned long modelId = std::stoul(prop->getValue());
-		sprintf(cBuf, "0x%04X", modelId);
+		snprintf(cBuf, sizeof(cBuf), "0x%04X", modelId);
 
 		RETURN_ON_ERROR(CreateProperty(MM::g_Keyword_CameraID, cBuf, MM::String, true));
 	}
@@ -1274,12 +1273,6 @@ int LumeneraCamera::StopSequenceAcquisition()
 
 		sequenceThread_->wait();
 	}
-	return DEVICE_OK;
-}
-
-int LumeneraCamera::PrepareSequenceAcqusition()
-{
-	// nothing to prepare
 	return DEVICE_OK;
 }
 

@@ -54,14 +54,14 @@
 // providing the overall environment (such as MMStudio or its analogue).
 //
 // How to add a new feature:
-// - Add a bool flag to struct mm::features::Flags (in the .h file), with its
+// - Add a bool flag to struct mmcore::internal::features::Flags (in the .h file), with its
 //   default value (usually false for a brand-new feature)
 // - Add the feature name and getter/setter lambdas in the map inside
 //   featureMap() (below)
 // - Document the feature in the Doxygen comment for CMMCore::enableFeature()
 //   (internal notes about the feature that are not useful to the user should
 //   be documented in featureMap())
-// - In Core code, query the feature state with: mm::features::flags().name
+// - In Core code, query the feature state with: mmcore::internal::features::flags().name
 //
 // Lifecycle of a feature:
 // - Features should generally be disabled by default when first added. When
@@ -76,12 +76,13 @@
 // - When the old behavior (i.e., feature disabled) is no longer needed, the
 //   feature should be permanently enabled: the getter should then always
 //   return true, the setter should throw an exception, and the corresponding
-//   flag in mm::features::Flags should be removed. However, the feature name
+//   flag in mmcore::internal::features::Flags should be removed. However, the feature name
 //   should never be removed.
 // - There may be cases where a feature is abandoned before becoming enabled by
 //   default. In this case, it should be permanently disabled.
 
-namespace mm {
+namespace mmcore {
+namespace internal {
 namespace features {
 
 namespace internal {
@@ -143,4 +144,5 @@ bool isFeatureEnabled(const std::string& name) {
 }
 
 } // namespace features
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

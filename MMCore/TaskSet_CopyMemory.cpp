@@ -27,6 +27,9 @@
 #include <cassert>
 #include <cstring>
 
+namespace mmcore {
+namespace internal {
+
 TaskSet_CopyMemory::ATask::ATask(std::shared_ptr<Semaphore> semDone, size_t taskIndex, size_t totalTaskCount)
     : Task(semDone, taskIndex, totalTaskCount)
 {
@@ -78,8 +81,8 @@ void TaskSet_CopyMemory::SetUp(void* dst, const void* src, size_t bytes)
         return;
     }
 
-    for (Task* task : tasks_)
-        static_cast<ATask*>(task)->SetUp(dst, src, bytes, usedTaskCount_);
+    for (auto& task : tasks_)
+        static_cast<ATask*>(task.get())->SetUp(dst, src, bytes, usedTaskCount_);
 }
 
 void TaskSet_CopyMemory::Execute()
@@ -104,3 +107,6 @@ void TaskSet_CopyMemory::MemCopy(void* dst, const void* src, size_t bytes)
     Execute();
     Wait();
 }
+
+} // namespace internal
+} // namespace mmcore

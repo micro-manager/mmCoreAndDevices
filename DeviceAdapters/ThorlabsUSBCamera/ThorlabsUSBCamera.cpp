@@ -24,6 +24,7 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
 #include "ThorlabsUSBCamera.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 #include "uc480.h"
 #include <cstdio>
@@ -94,7 +95,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 * perform most of the initialization in the Initialize() method.
 */
 ThorlabsUSBCam::ThorlabsUSBCam() :
-   CCameraBase<ThorlabsUSBCam> (),
    initialized_(false),
    bitDepth_(8),
    roiX_(0),
@@ -565,6 +565,8 @@ int ThorlabsUSBCam::StopSequenceAcquisition()
    int ret = is_StopLiveVideo(camHandle_, IS_DONT_WAIT);
    if (ret != IS_SUCCESS)
       LogMessage("Camera failed to stop live video.");
+   if (hEvent)
+      SetEvent(hEvent);
 
    if (!thd_->IsStopped()) {
       thd_->Stop();                                                       
@@ -609,34 +611,22 @@ int ThorlabsUSBCam::StartSequenceAcquisition(long numImages, double interval_ms,
 int ThorlabsUSBCam::InsertImage()
 {
    // Image metadata
-   Metadata md;
+   MM::CameraImageMetadata md;
    char label[MM::MaxStrLength];
    this->GetLabel(label);
-   md.put(MM::g_Keyword_Metadata_CameraLabel, label);
-   md.put(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
-   md.put(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_)); 
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString((GetCurrentMMTime() - sequenceStartTime_).getMsec()));
+   md.AddTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageCounter_)); 
 
    imageCounter_++;
 
    MMThreadGuard g(imgPixelsLock_);
 
-   int ret = GetCoreCallback()->InsertImage(this, img_.GetPixels(),
+   return GetCoreCallback()->InsertImage(this, img_.GetPixels(),
                                                   img_.Width(),
                                                   img_.Height(), 
                                                   img_.Depth(), 
-                                                  md.Serialize().c_str());
-
-   if (!stopOnOverFlow_ && ret == DEVICE_BUFFER_OVERFLOW)
-   {
-      // do not stop on overflow, reset the buffer and insert the same image again
-      GetCoreCallback()->ClearImageBuffer(this);
-      return GetCoreCallback()->InsertImage(this, img_.GetPixels(),
-                                                  img_.Width(),
-                                                  img_.Height(), 
-                                                  img_.Depth(), 
-                                                  md.Serialize().c_str());
-   } else
-      return ret;
+                                                  md.Serialize());
 }
 
 /*

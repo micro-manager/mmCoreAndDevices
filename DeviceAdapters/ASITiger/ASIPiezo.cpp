@@ -19,9 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp and others
-//
-
 
 #include "ASIPiezo.h"
 #include "ASITiger.h"
@@ -36,7 +33,6 @@
 #include <string>
 #include <vector>
 
-using namespace std;
 
 // Shared properties not implemented for piezo because as of mid-2017 any piezo
 //   occupies an entire card and so never would have another device sharing the same card.
@@ -47,9 +43,9 @@ using namespace std;
 //
 CPiezo::CPiezo(const char* name) :
    ASIPeripheralBase< ::CStageBase, CPiezo >(name),
+   axisLetter_(g_EmptyAxisLetterStr),  // value determined by extended name
    unitMult_(g_StageDefaultUnitMult),  // later will try to read actual setting
    stepSizeUm_(g_StageMinStepSize),    // we'll use 1 nm as our smallest possible step size, this is somewhat arbitrary and doesn't change during the program
-   axisLetter_(g_EmptyAxisLetterStr),  // value determined by extended name
    ring_buffer_supported_(false),
    ring_buffer_capacity_(0),
    ttl_trigger_supported_(false),
@@ -71,10 +67,9 @@ int CPiezo::Initialize()
    // read the unit multiplier
    // ASI's unit multiplier is how many units per mm, so divide by 1000 here to get units per micron
    // we store the micron-based unit multiplier for MM use, not the mm-based one ASI uses
-   ostringstream command;
-   command.str("");
+   std::ostringstream command;
    double tmp;
-   command << "UM " << axisLetter_ << "? ";
+   command << "UM " << axisLetter_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    unitMult_ = tmp/1000;
@@ -271,7 +266,7 @@ int CPiezo::Initialize()
    UpdateProperty(g_RunPiezoCalibrationPropertyName);
 
    // get build info so we can add optional properties
-   build_info_type build;
+   FirmwareBuild build;
    RETURN_ON_MM_ERROR( hub_->GetBuildInfo(addressChar_, build) );
 
    // add SPIM properties if supported
@@ -298,12 +293,15 @@ int CPiezo::Initialize()
       pAct = new CPropertyAction (this, &CPiezo::OnSAAmplitude);
       CreateProperty(g_SAAmplitudePropertyName, "0", MM::Float, false, pAct);
       UpdateProperty(g_SAAmplitudePropertyName);
+
       pAct = new CPropertyAction (this, &CPiezo::OnSAOffset);
       CreateProperty(g_SAOffsetPropertyName, "0", MM::Float, false, pAct);
       UpdateProperty(g_SAOffsetPropertyName);
+
       pAct = new CPropertyAction (this, &CPiezo::OnSAPeriod);
       CreateProperty(g_SAPeriodPropertyName, "0", MM::Integer, false, pAct);
       UpdateProperty(g_SAPeriodPropertyName);
+
       pAct = new CPropertyAction (this, &CPiezo::OnSAMode);
       CreateProperty(g_SAModePropertyName, g_SAMode_0, MM::String, false, pAct);
       AddAllowedValue(g_SAModePropertyName, g_SAMode_0);
@@ -311,16 +309,25 @@ int CPiezo::Initialize()
       AddAllowedValue(g_SAModePropertyName, g_SAMode_2);
       AddAllowedValue(g_SAModePropertyName, g_SAMode_3);
       UpdateProperty(g_SAModePropertyName);
+
       pAct = new CPropertyAction (this, &CPiezo::OnSAPattern);
       CreateProperty(g_SAPatternPropertyName, g_SAPattern_0, MM::String, false, pAct);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_0);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_1);
       AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_2);
-	  if (FirmwareVersionAtLeast(3.14))
-	   {	//sin pattern was implemeted much later atleast firmware 3/14 needed
-		   AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_3);
-	   }
+      if (FirmwareVersionAtLeast(3.14)) {
+          AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_3);
+      }
+      if (FirmwareVersionAtLeast(3.55)) {
+          AddAllowedValue(g_SAPatternPropertyName, g_SAPattern_4);
+      }
       UpdateProperty(g_SAPatternPropertyName);
+
+      // rise time is used by variable waveforms
+      if (FirmwareVersionAtLeast(3.55)) {
+          CreateSingleAxisRiseTimeProperty();
+      }
+
       // generates a set of additional advanced properties that are rarely used
       pAct = new CPropertyAction (this, &CPiezo::OnSAAdvanced);
       CreateProperty(g_AdvancedSAPropertiesPropertyName, g_NoState, MM::String, false, pAct);
@@ -333,7 +340,7 @@ int CPiezo::Initialize()
    if (FirmwareVersionAtLeast(2.81) && (build.vAxesProps[0] & BIT1))
    {
       // get the number of ring buffer positions from the BU X output
-      string rb_define = hub_->GetDefineString(build, "RING BUFFER");
+      std::string rb_define = hub_->GetDefineString(build, "RING BUFFER");
 
       ring_buffer_capacity_ = 0;
       if (rb_define.size() > 12)
@@ -429,7 +436,7 @@ int CPiezo::Initialize()
 
 int CPiezo::GetPositionUm(double& pos)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterPosition2(pos) );
@@ -439,14 +446,14 @@ int CPiezo::GetPositionUm(double& pos)
 
 int CPiezo::SetPositionUm(double pos)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "M " << axisLetter_ << "=" << pos*unitMult_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
 int CPiezo::GetPositionSteps(long& steps)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    double tmp;
@@ -457,14 +464,14 @@ int CPiezo::GetPositionSteps(long& steps)
 
 int CPiezo::SetPositionSteps(long steps)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "M " << axisLetter_ << "=" << steps*unitMult_*stepSizeUm_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
 int CPiezo::SetRelativePositionUm(double d)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "R " << axisLetter_ << "=" << d*unitMult_;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
@@ -472,14 +479,14 @@ int CPiezo::SetRelativePositionUm(double d)
 int CPiezo::GetLimits(double& min, double& max)
 {
    // ASI limits are always returned in terms of mm, independent of unit multiplier
-   ostringstream command; command.str("");
-   command << "SL " << axisLetter_ << "? ";
+   std::ostringstream command;
+   command << "SL " << axisLetter_ << "?";
    double tmp;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    min = tmp*1000;
    command.str("");
-   command << "SU " << axisLetter_ << "? ";
+   command << "SU " << axisLetter_ << "?";
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
    max = tmp*1000;
@@ -489,7 +496,7 @@ int CPiezo::GetLimits(double& min, double& max)
 int CPiezo::Stop()
 {
    // note this stops the card, \ stops all stages
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << addressChar_ << "halt";
    return hub_->QueryCommand(command.str());
 }
@@ -504,7 +511,7 @@ int CPiezo::Home()
    {
       SetProperty(g_SAModePropertyName, g_SAMode_0);
    }
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "! " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    return DEVICE_OK;
@@ -517,15 +524,15 @@ bool CPiezo::Busy()
 
 int CPiezo::SetOrigin()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    command << "H " << axisLetter_ << "=" << 0;
    return hub_->QueryCommandVerify(command.str(),":A");
 }
 
+// Disables TTL triggering; doesn't actually stop anything already happening on controller
 int CPiezo::StopStageSequence()
-// disables TTL triggering; doesn't actually stop anything already happening on controller
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return DEVICE_OK;
@@ -539,10 +546,10 @@ int CPiezo::StopStageSequence()
    return DEVICE_OK;
 }
 
+// Enables TTL triggering; doesn't actually start anything going on controller
 int CPiezo::StartStageSequence()
-// enables TTL triggering; doesn't actually start anything going on controller
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return DEVICE_OK;
@@ -564,7 +571,7 @@ int CPiezo::StartStageSequence()
 
 int CPiezo::SendStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return DEVICE_OK;
@@ -587,7 +594,7 @@ int CPiezo::SendStageSequence()
 
 int CPiezo::ClearStageSequence()
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (runningFastSequence_)
    {
       return DEVICE_OK;
@@ -616,17 +623,15 @@ int CPiezo::AddToStageSequence(double position)
    return DEVICE_OK;
 }
 
-
-////////////////
 // action handlers
 
-int CPiezo::OnSaveJoystickSettings()
 // redoes the joystick settings so they can be saved using SS Z
+int CPiezo::OnSaveJoystickSettings()
 {
    long tmp;
-   string tmpstr;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::string tmpstr;
+   std::ostringstream command;
+   std::ostringstream response;
    command << "J " << axisLetter_ << "?";
    response << ":A " << axisLetter_ << "=";
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
@@ -640,24 +645,24 @@ int CPiezo::OnSaveJoystickSettings()
 
 int CPiezo::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   ostringstream command; command.str("");
+   std::string tmpstr;
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       if (hub_->UpdatingSharedProperties())
          return DEVICE_OK;
       pProp->Get(tmpstr);
       command << addressChar_ << "SS ";
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'Y';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
-      else if (tmpstr.compare(g_SaveSettingsZJoystick) == 0)
+      else if (tmpstr == g_SaveSettingsZJoystick)
       {
          command << 'Z';
          // do save joystick settings first
@@ -673,21 +678,19 @@ int CPiezo::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmp;
+        pProp->Get(tmp);
+        refreshProps_ = (tmp == g_YesState);
+    }
+    return DEVICE_OK;
 }
 
 int CPiezo::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -710,8 +713,8 @@ int CPiezo::OnLowerLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnUpperLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -734,14 +737,15 @@ int CPiezo::OnUpperLim(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnPiezoMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
       command << "PM " << axisLetter_ << "?";
-      ostringstream response; response.str(""); response << axisLetter_ << "=";
+      std::ostringstream response;
+      response << axisLetter_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       bool success = 0;
@@ -756,16 +760,17 @@ int CPiezo::OnPiezoMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_AdeptMode_0) == 0)
+      if (tmpstr == g_AdeptMode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_AdeptMode_1) == 0)
+      else if (tmpstr == g_AdeptMode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_AdeptMode_2) == 0)
+      else if (tmpstr == g_AdeptMode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_AdeptMode_3) == 0)
+      else if (tmpstr == g_AdeptMode_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -777,8 +782,8 @@ int CPiezo::OnPiezoMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -796,10 +801,11 @@ int CPiezo::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_OffState) == 0)
+      if (tmpstr == g_OffState)
          command << "MC " << axisLetter_ << "-";
       else
          command << "MC " << axisLetter_ << "+";
@@ -808,12 +814,12 @@ int CPiezo::OnMotorControl(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPiezo::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CPiezo::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -839,12 +845,12 @@ int CPiezo::OnJoystickFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPiezo::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CPiezo::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -870,12 +876,12 @@ int CPiezo::OnJoystickSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPiezo::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CPiezo::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -892,14 +898,15 @@ int CPiezo::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
       double joystickFast = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickFastSpeedPropertyName, joystickFast) );
       double joystickSlow = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_JoystickSlowSpeedPropertyName, joystickSlow) );
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          command << addressChar_ << "JS X=-" << joystickFast << " Y=-" << joystickSlow;
       else
          command << addressChar_ << "JS X=" << joystickFast << " Y=" << joystickSlow;
@@ -910,8 +917,8 @@ int CPiezo::OnJoystickMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -934,20 +941,21 @@ int CPiezo::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       // don't complain if value is unsupported, just leave as-is
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_JSCode_0) == 0)
+      if (tmpstr == g_JSCode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_JSCode_1) == 0)
+      else if (tmpstr == g_JSCode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_JSCode_2) == 0)
+      else if (tmpstr == g_JSCode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_JSCode_3) == 0)
+      else if (tmpstr == g_JSCode_3)
          tmp = 3;
-      else if (tmpstr.compare(g_JSCode_22) == 0)
+      else if (tmpstr == g_JSCode_22)
          tmp = 22;
-      else if (tmpstr.compare(g_JSCode_23) == 0)
+      else if (tmpstr == g_JSCode_23)
          tmp = 23;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -957,12 +965,12 @@ int CPiezo::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPiezo::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CPiezo::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -988,12 +996,12 @@ int CPiezo::OnWheelFastSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPiezo::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CPiezo::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1009,7 +1017,7 @@ int CPiezo::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       pProp->Get(tmp);
       char wheelMirror[MM::MaxStrLength];
-      RETURN_ON_MM_ERROR ( GetProperty(g_JoystickMirrorPropertyName, wheelMirror) );
+      RETURN_ON_MM_ERROR ( GetProperty(g_WheelMirrorPropertyName, wheelMirror) );
       if (strcmp(wheelMirror, g_YesState) == 0)
          command << addressChar_ << "JS T=-" << tmp;
       else
@@ -1019,12 +1027,12 @@ int CPiezo::OnWheelSlowSpeed(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPiezo::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 // ASI controller mirrors by having negative speed, but here we have separate property for mirroring
 //   and for speed (which is strictly positive)... that makes this code a bit odd
 // note that this setting is per-card, not per-axis
+int CPiezo::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1041,14 +1049,15 @@ int CPiezo::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
       double wheelFast = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelFastSpeedPropertyName, wheelFast) );
       double wheelSlow = 0.0;
       RETURN_ON_MM_ERROR ( GetProperty(g_WheelSlowSpeedPropertyName, wheelSlow) );
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          command << addressChar_ << "JS F=-" << wheelFast << " T=-" << wheelSlow;
       else
          command << addressChar_ << "JS F=" << wheelFast << " T=" << wheelSlow;
@@ -1059,17 +1068,16 @@ int CPiezo::OnWheelMirror(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
    if (eAct == MM::BeforeGet)
    {
       // do nothing
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       // change the unit mult that converts controller coordinates to micro-manager coordinates
       // micro-manager defines positive towards sample, ASI controllers just opposite
-      if (tmpstr.compare(g_FocusPolarityMicroManagerDefault) == 0) {
+      if (tmpstr == g_FocusPolarityMicroManagerDefault) {
          unitMult_ = -1*abs(unitMult_);
       } else {
          unitMult_ = abs(unitMult_);
@@ -1080,14 +1088,15 @@ int CPiezo::OnAxisPolarity(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnMaintainMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
       command << "MA " << axisLetter_ << "?";
-      ostringstream response; response.str(""); response << ":A " << axisLetter_ << "=";
+      std::ostringstream response;
+      response << ":A " << axisLetter_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR ( hub_->ParseAnswerAfterEquals(tmp) );
       bool success = 0;
@@ -1100,13 +1109,13 @@ int CPiezo::OnMaintainMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_PiezoMaintain_0) == 0)
+      if (tmpstr == g_PiezoMaintain_0)
          tmp = 0;
-      else if (tmpstr.compare(g_PiezoMaintain_1) == 0)
+      else if (tmpstr == g_PiezoMaintain_1)
          tmp = 1;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1118,7 +1127,7 @@ int CPiezo::OnMaintainMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnMaintainOneOvershoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+    std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1140,7 +1149,7 @@ int CPiezo::OnMaintainOneOvershoot(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnMaintainOneMaxTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1162,7 +1171,7 @@ int CPiezo::OnMaintainOneMaxTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnAutoSleepDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1189,10 +1198,11 @@ int CPiezo::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       return DEVICE_OK; // do nothing
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
       {
          CPropertyAction* pAct;
 
@@ -1231,8 +1241,8 @@ int CPiezo::OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1256,8 +1266,8 @@ int CPiezo::OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1281,8 +1291,8 @@ int CPiezo::OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1306,8 +1316,8 @@ int CPiezo::OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPiezo::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    static bool justSet = false;
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1330,16 +1340,17 @@ int CPiezo::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
       justSet = false;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAMode_0) == 0)
+      if (tmpstr == g_SAMode_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAMode_1) == 0)
+      else if (tmpstr == g_SAMode_1)
          tmp = 1;
-      else if (tmpstr.compare(g_SAMode_2) == 0)
+      else if (tmpstr == g_SAMode_2)
          tmp = 2;
-      else if (tmpstr.compare(g_SAMode_3) == 0)
+      else if (tmpstr == g_SAMode_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1354,8 +1365,8 @@ int CPiezo::OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1373,22 +1384,26 @@ int CPiezo::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
          case 1: success = pProp->Set(g_SAPattern_1); break;
          case 2: success = pProp->Set(g_SAPattern_2); break;
 		 case 3: success = pProp->Set(g_SAPattern_3); break;
+         case 4: success = pProp->Set(g_SAPattern_4); break;
          default:success = 0;                      break;
       }
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAPattern_0) == 0)
+      if (tmpstr == g_SAPattern_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAPattern_1) == 0)
+      else if (tmpstr == g_SAPattern_1)
          tmp = 1;
-      else if (tmpstr.compare(g_SAPattern_2) == 0)
+      else if (tmpstr == g_SAPattern_2)
          tmp = 2;
-      else if (tmpstr.compare(g_SAPattern_3) == 0)
+      else if (tmpstr == g_SAPattern_3)
          tmp = 3;
+      else if (tmpstr == g_SAPattern_4)
+         tmp = 4;
 	  else
          return DEVICE_INVALID_PROPERTY_VALUE;
       // have to get current settings and then modify bits 0-2 from there
@@ -1406,11 +1421,11 @@ int CPiezo::OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPiezo::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 // get every single time
+int CPiezo::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1431,8 +1446,8 @@ int CPiezo::OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1454,11 +1469,11 @@ int CPiezo::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAClkSrc_0) == 0)
+      if (tmpstr == g_SAClkSrc_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAClkSrc_1) == 0)
+      else if (tmpstr == g_SAClkSrc_1)
          tmp = BIT7;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1479,8 +1494,8 @@ int CPiezo::OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1502,11 +1517,11 @@ int CPiezo::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SAClkPol_0) == 0)
+      if (tmpstr == g_SAClkPol_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SAClkPol_1) == 0)
+      else if (tmpstr == g_SAClkPol_1)
          tmp = BIT6;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1527,8 +1542,8 @@ int CPiezo::OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1550,11 +1565,11 @@ int CPiezo::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SATTLOut_0) == 0)
+      if (tmpstr == g_SATTLOut_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SATTLOut_1) == 0)
+      else if (tmpstr == g_SATTLOut_1)
          tmp = BIT5;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1575,8 +1590,8 @@ int CPiezo::OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1598,11 +1613,11 @@ int CPiezo::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SATTLPol_0) == 0)
+      if (tmpstr == g_SATTLPol_0)
          tmp = 0;
-      else if (tmpstr.compare(g_SATTLPol_1) == 0)
+      else if (tmpstr == g_SATTLPol_1)
          tmp = BIT4;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1623,21 +1638,22 @@ int CPiezo::OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSetHomeHere(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
-   else  if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else  if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          // old code used the controller's "+" ability but adapter needs to know the home position
          // so now implement in less efficient way that keeps OnHomePosition value up to date
          // one unfortunate side effect of this approach is that due to precision considerations
          //    the home position is limited to increments of 0.1um (probably sufficient)
          double homePos;
-         ostringstream tmp; tmp.str("");
+         std::ostringstream tmp;
          RETURN_ON_MM_ERROR ( GetPositionUm(homePos) );
          tmp << homePos/1000;  // divide by 1000 b/c home position read out in mm
          RETURN_ON_MM_ERROR ( SetProperty(g_HomePositionPropertyName, tmp.str().c_str()) );
@@ -1649,8 +1665,8 @@ int CPiezo::OnSetHomeHere(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnHomePosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1673,14 +1689,15 @@ int CPiezo::OnHomePosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnRunPiezoCalibration(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
-   else  if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else  if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          command << addressChar_ << "PZC";
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
@@ -1692,7 +1709,7 @@ int CPiezo::OnRunPiezoCalibration(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnSPIMNumSlices(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1712,11 +1729,11 @@ int CPiezo::OnSPIMNumSlices(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int CPiezo::OnSPIMState(MM::PropertyBase* pProp, MM::ActionType eAct)
 // somewhat similar to same function for MicroMirror, but changed codes that are sent/compared like g_SPIMStateCode_Idle for g_PZSPIMStateCode_Idle
 // see other marked differences
+int CPiezo::OnSPIMState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_)
@@ -1738,11 +1755,12 @@ int CPiezo::OnSPIMState(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       char c;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SPIMStateIdle) == 0)
+      if (tmpstr == g_SPIMStateIdle)
       {
          // check status and stop if it's not idle already
          command << addressChar_ << "SN X?";
@@ -1762,7 +1780,7 @@ int CPiezo::OnSPIMState(MM::PropertyBase* pProp, MM::ActionType eAct)
             RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A"));
          }
       }
-      else if (tmpstr.compare(g_SPIMStateArmed) == 0)
+      else if (tmpstr == g_SPIMStateArmed)
       {
          // can arm directly for piezo even if it is already running
          command.str("");
@@ -1777,9 +1795,9 @@ int CPiezo::OnSPIMState(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp;
    if (eAct == MM::BeforeGet)
    {
@@ -1804,15 +1822,15 @@ int CPiezo::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!success)
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
-   else if (eAct == MM::AfterSet) {
-
-      string tmpstr;
+   else if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_RB_OnePoint_1) == 0)
+      if (tmpstr == g_RB_OnePoint_1)
          tmp = 1;
-      else if (tmpstr.compare(g_RB_PlayOnce_2) == 0)
+      else if (tmpstr == g_RB_PlayOnce_2)
          tmp = 2;
-      else if (tmpstr.compare(g_RB_PlayRepeat_3) == 0)
+      else if (tmpstr == g_RB_PlayRepeat_3)
          tmp = 3;
       else
          return DEVICE_INVALID_PROPERTY_VALUE;
@@ -1824,14 +1842,15 @@ int CPiezo::OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
-   else  if (eAct == MM::AfterSet) {
-      string tmpstr;
+   else  if (eAct == MM::AfterSet)
+   {
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          command << addressChar_ << "RM";
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
@@ -1843,9 +1862,9 @@ int CPiezo::OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
-   string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
+   std::ostringstream command;
+   std::ostringstream response;
+   std::string pseudoAxisChar = FirmwareVersionAtLeast(2.89) ? "F" : "X";
    long tmp = 0;
    static bool justSet;
    if (eAct == MM::BeforeGet)
@@ -1879,7 +1898,7 @@ int CPiezo::OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1901,7 +1920,6 @@ int CPiezo::OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPiezo::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
    if (eAct == MM::BeforeGet)
    {
       if (ttl_trigger_enabled_)
@@ -1910,9 +1928,9 @@ int CPiezo::OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
          pProp->Set(g_NoState);
    }
    else if (eAct == MM::AfterSet) {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
-      ttl_trigger_enabled_ = (ttl_trigger_supported_ && (tmpstr.compare(g_YesState) == 0));
+      ttl_trigger_enabled_ = ttl_trigger_supported_ && (tmpstr == g_YesState);
       return OnUseSequence(pProp, MM::BeforeGet);  // refresh value
    }
    return DEVICE_OK;
@@ -1929,14 +1947,14 @@ int CPiezo::OnFastSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
-      string tmpstr;
+      std::string tmpstr;
       pProp->Get(tmpstr);
       // only let user do fast sequence if regular one is enabled
       if (!ttl_trigger_enabled_) {
          pProp->Set(g_NoState);
          return DEVICE_OK;
       }
-      if (tmpstr.compare(g_ArmedState) == 0)
+      if (tmpstr == g_ArmedState)
       {
          runningFastSequence_ = false;
          RETURN_ON_MM_ERROR ( SendStageSequence() );
@@ -1952,10 +1970,10 @@ int CPiezo::OnFastSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-   int CPiezo::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
+int CPiezo::OnVector(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   ostringstream command; command.str("");
-   ostringstream response; response.str("");
+   std::ostringstream command;
+   std::ostringstream response;
    double tmp = 0;
    if (eAct == MM::BeforeGet)
    {
@@ -1974,4 +1992,34 @@ int CPiezo::OnFastSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    }
    return DEVICE_OK;
+}
+
+void CPiezo::CreateSingleAxisRiseTimeProperty() {
+    const char* const propertyName = "SingleAxisRiseTime(ms)";
+
+    CreateFloatProperty(
+        propertyName, 0.0, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            double tmp = 0.0;
+            if (eAct == MM::BeforeGet) {
+                if (!refreshProps_ && initialized_) {
+                    return DEVICE_OK;
+                }
+                const std::string query = "OS " + axisLetter_ + "?";
+                const std::string response = ":A " + axisLetter_ + "=";
+                RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(query, response));
+                RETURN_ON_MM_ERROR(hub_->ParseAnswerAfterEquals(tmp));
+                if (!pProp->Set(tmp)) {
+                    return DEVICE_INVALID_PROPERTY_VALUE;
+                }
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(tmp);
+                const std::string command = "OS " + axisLetter_ + "=";
+                RETURN_ON_MM_ERROR(hub_->QueryCommandVerify(command + std::to_string(tmp), ":A"));
+            }
+            return DEVICE_OK;
+        })
+    );
+
+    UpdateProperty(propertyName);
 }

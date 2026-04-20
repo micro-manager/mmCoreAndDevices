@@ -23,12 +23,10 @@
 #include <iterator>
 #include <vector>
 
-namespace mm
-{
-namespace logging
-{
-namespace internal
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
+namespace internal {
 
 
 template <typename TMetadata>
@@ -127,4 +125,5 @@ public:
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

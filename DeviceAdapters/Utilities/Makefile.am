@@ -14,8 +14,10 @@ libmmgr_dal_Utilities_la_SOURCES = \
         MultiDAStateDevice.cpp \
         MultiShutter.cpp \
         MultiStage.cpp \
+        PropertyShutter.cpp \
         SerialDTRShutter.cpp \
         SingleAxisStage.cpp \
+        StageStateDevice.cpp \
         StateDeviceShutter.cpp \
         Utilities.cpp \
         Utilities.h

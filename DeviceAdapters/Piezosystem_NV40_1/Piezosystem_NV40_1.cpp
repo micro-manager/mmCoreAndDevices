@@ -348,7 +348,7 @@ int Stage::GetCommandValue(const char* c,double& d){
 	LogMessage ("Get command value d");
 
 	char str[50]="";
-	sprintf(str,"%s",c);	
+	snprintf(str,sizeof(str),"%s",c);
 	const char* cmd = str; 
 	//LogMessage (cmd);
     int ret;
@@ -378,7 +378,7 @@ int Stage::GetCommandValue(const char* c,double& d){
 int Stage::SetCommandValue(const char* c,double fkt){
 	LogMessage ("Set command value d");
 	char str[50]="";
-	sprintf(str,"%s,%.3lf",c,fkt);	
+	snprintf(str,sizeof(str),"%s,%.3lf",c,fkt);
 	const char* cmd = str; 
 	LogMessage (cmd);
     int ret;

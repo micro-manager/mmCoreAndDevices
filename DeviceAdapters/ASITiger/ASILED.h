@@ -19,11 +19,9 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 05/2014
 //
-// BASED ON:      ASIStage.h and others
-//
 
-#ifndef _ASILED_H_
-#define _ASILED_H_
+#ifndef ASILED_H
+#define ASILED_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -32,22 +30,19 @@
 class CLED : public ASIPeripheralBase<CShutterBase, CLED>
 {
 public:
-   CLED(const char* name);
-   ~CLED() { }
-  
+    explicit CLED(const char* name);
+    ~CLED() = default;
+
    // Device API
-   // ----------
    int Initialize();
    bool Busy() { return false; }
 
    // Shutter API
-   // -----------
    int SetOpen(bool open = true);
    int GetOpen(bool& open);
    int Fire(double /*deltaT*/) { return DEVICE_UNSUPPORTED_COMMAND;  }
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnIntensity            (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -63,4 +58,4 @@ private:
    int UpdateOpenIntensity();
 };
 
-#endif //_ASILED_H_
+#endif // ASILED_H

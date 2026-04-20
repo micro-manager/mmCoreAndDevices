@@ -32,7 +32,6 @@
 
 #include "Utilities.h"
 
-#include <boost/lexical_cast.hpp>
 #include <algorithm>
 
 extern const char* g_DeviceNameMultiStage;
@@ -62,8 +61,7 @@ MultiStage::MultiStage() :
       true);
    for (unsigned i = 0; i < 8; ++i)
    {
-      AddAllowedValue("NumberOfPhysicalStages",
-         boost::lexical_cast<std::string>(i + 1).c_str());
+      AddAllowedValue("NumberOfPhysicalStages", std::to_string(i + 1).c_str());
    }
 
    CreateFloatProperty("SimulatedStepSizeUm", simulatedStepSizeUm_, false,
@@ -115,7 +113,7 @@ int MultiStage::Initialize()
 
    for (unsigned i = 0; i < nrPhysicalStages_; ++i)
    {
-      const std::string displayIndex = boost::lexical_cast<std::string>(i + 1);
+      const std::string displayIndex = std::to_string(i + 1);
 
       const std::string propPhysStage("PhysicalStage-" + displayIndex);
       CreateStringProperty(propPhysStage.c_str(), usedStages_[i].c_str(), false,

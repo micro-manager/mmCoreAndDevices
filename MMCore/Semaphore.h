@@ -27,6 +27,9 @@
 #include <cstddef>
 #include <mutex>
 
+namespace mmcore {
+namespace internal {
+
 class Semaphore final
 {
 public:
@@ -41,3 +44,6 @@ private:
     std::mutex mx_{};
     std::condition_variable cv_{};
 };
+
+} // namespace internal
+} // namespace mmcore

@@ -119,6 +119,7 @@ public:
 // Checking device functions
 	int IsStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
 	bool IsContinuousFocusDrive() const {return DEVICE_OK;}
+	int UsesOnStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 	bool SupportsDeviceDetection(void);
 	MM::DeviceDetectionStatus DetectDevice(void);
 

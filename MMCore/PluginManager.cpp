@@ -20,23 +20,17 @@
 //
 // AUTHOR:        Nenad Amodaj, nenad@amodaj.com, 08/10/2005
 
-#ifdef _WIN32
-   #define WIN32_LEAN_AND_MEAN
-   #include <Windows.h>
-   #include <io.h>
-#else
-   #include <sys/types.h>
-   #include <dirent.h>
-#endif // _WIN32
-
-#include "../MMDevice/ModuleInterface.h"
 #include "CoreUtils.h"
 #include "Devices/DeviceInstance.h"
 #include "Devices/HubInstance.h"
 #include "Error.h"
 #include "LibraryInfo/LibraryPaths.h"
 #include "LoadableModules/LoadedDeviceAdapter.h"
+#include "LoadableModules/LoadedDeviceAdapterImplMock.h"
+#include "LoadableModules/LoadedDeviceAdapterImplRegular.h"
 #include "PluginManager.h"
+
+#include "ModuleInterface.h"
 
 #include <algorithm>
 #include <cstring>
@@ -45,6 +39,15 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#ifdef _WIN32
+   #define WIN32_LEAN_AND_MEAN
+   #include <Windows.h>
+   #include <io.h>
+#else
+   #include <sys/types.h>
+   #include <dirent.h>
+#endif // _WIN32
 
 
 #ifdef _WIN32
@@ -58,6 +61,9 @@ const char* const LIB_NAME_SUFFIX = ".so.0";
 #else
 const char* const LIB_NAME_SUFFIX = "";
 #endif
+
+namespace mmcore {
+namespace internal {
 
 ///////////////////////////////////////////////////////////////////////////////
 // CPluginManager class
@@ -138,8 +144,17 @@ CPluginManager::GetDeviceAdapter(const std::string& moduleName)
    filename += LIB_NAME_SUFFIX;
    filename = FindInSearchPath(filename);
 
-   std::shared_ptr<LoadedDeviceAdapter> module =
-      std::make_shared<LoadedDeviceAdapter>(moduleName, filename);
+   auto module = [&] {
+      try {
+         auto impl = std::make_unique<LoadedDeviceAdapterImplRegular>(filename);
+         return std::make_shared<LoadedDeviceAdapter>(moduleName, std::move(impl));
+      }
+      catch (const CMMError& e) {
+         throw CMMError("Failed to load device adapter " + ToQuotedString(moduleName) +
+            " from " + ToQuotedString(filename), e);
+      }
+   }();
+
    moduleMap_[moduleName] = module;
    return module;
 }
@@ -153,6 +168,25 @@ CPluginManager::GetDeviceAdapter(const char* moduleName)
    }
    return GetDeviceAdapter(std::string(moduleName));
 }
+
+void
+CPluginManager::LoadMockAdapter(const std::string& name, MockDeviceAdapter* impl)
+{
+   if (name.empty())
+   {
+      throw CMMError("Empty device adapter module name");
+   }
+
+   auto it = moduleMap_.find(name);
+   if (it != moduleMap_.end())
+   {
+      throw CMMError("Device adapter with name " + ToQuotedString(name) + " is already loaded");
+   }
+
+   moduleMap_[name] = std::make_shared<LoadedDeviceAdapter>(
+      name, std::make_unique<LoadedDeviceAdapterImplMock>(impl));
+}
+
 
 /** 
  * Unload a module.
@@ -178,7 +212,7 @@ CPluginManager::UnloadPluginLibrary(const char* moduleName)
 
 // TODO Use std::filesystem instead of this.
 // This stop-gap implementation makes the assumption that the argument is in
-// the format that could be returned from MMCorePrivate::GetPathOfThisModule()
+// the format that could be returned from mmcore::internal::GetPathOfThisModule()
 // (e.g. no trailing slashes; real filename present).
 static std::string
 GetDirName(const std::string& path)
@@ -210,7 +244,7 @@ CPluginManager::GetDefaultSearchPaths()
    {
       try
       {
-         std::string coreModulePath = MMCorePrivate::GetPathOfThisModule();
+         std::string coreModulePath = GetPathOfThisModule();
          std::string coreModuleDir = GetDirName(coreModulePath);
          paths.push_back(coreModuleDir);
       }
@@ -303,3 +337,6 @@ CPluginManager::GetAvailableDeviceAdapters()
 
    return modules;
 }
+
+} // namespace internal
+} // namespace mmcore

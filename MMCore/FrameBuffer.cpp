@@ -21,28 +21,25 @@
 #include <cmath>
 #include <cstring>
 
-namespace mm {
+namespace mmcore {
+namespace internal {
 
 ImgBuffer::ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
-   pixels_(0), width_(xSize), height_(ySize), pixDepth_(pixDepth)
+   pixels_(new unsigned char[xSize * ySize * pixDepth]()),
+   width_(xSize), height_(ySize), pixDepth_(pixDepth)
 {
-   pixels_ = new unsigned char[xSize * ySize * pixDepth];
-   memset(pixels_, 0, xSize * ySize * pixDepth);
 }
 
-ImgBuffer::~ImgBuffer()
-{
-   delete[] pixels_;
-}
+ImgBuffer::~ImgBuffer() = default;
 
 const unsigned char* ImgBuffer::GetPixels() const
 {
-   return pixels_;
+   return pixels_.get();
 }
 
 void ImgBuffer::SetPixels(const void* pix)
 {
-   memcpy((void*)pixels_, pix, width_ * height_ * pixDepth_);
+   memcpy((void*)pixels_.get(), pix, width_ * height_ * pixDepth_);
 }
 
 void ImgBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
@@ -50,8 +47,7 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
    // re-allocate internal buffer if it is not big enough
    if (width_ * height_ * pixDepth_ < xSize * ySize * pixDepth)
    {
-      delete[] pixels_;
-      pixels_ = new unsigned char [xSize * ySize * pixDepth];
+      pixels_.reset(new unsigned char[xSize * ySize * pixDepth]);
    }
 
    width_ = xSize;
@@ -64,14 +60,13 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize)
    // re-allocate internal buffer if it is not big enough
    if (width_ * height_ < xSize * ySize)
    {
-      delete[] pixels_;
-      pixels_ = new unsigned char[xSize * ySize * pixDepth_];
+      pixels_.reset(new unsigned char[xSize * ySize * pixDepth_]);
    }
 
    width_ = xSize;
    height_ = ySize;
 
-   memset(pixels_, 0, width_ * height_ * pixDepth_);
+   memset(pixels_.get(), 0, width_ * height_ * pixDepth_);
 }
 
 void ImgBuffer::SetMetadata(const Metadata& md)
@@ -102,28 +97,15 @@ FrameBuffer::FrameBuffer()
    depth_ = 0;
 }
 
-FrameBuffer::~FrameBuffer()
-{
-   Clear();
-}
-
 void FrameBuffer::Clear()
 {
-   for (std::vector<ImgBuffer*>::iterator it = channels_.begin(), end = channels_.end();
-         it != end; ++it)
-   {
-      delete *it;
-   }
-   channels_.clear();
+   buffer_.reset();
 }
 
-void FrameBuffer::Preallocate(unsigned channels)
+void FrameBuffer::Preallocate()
 {
-   for (unsigned i=0; i<channels; i++)
-   {
-      ImgBuffer* img = FindImage(i);
-      if (!img)
-         InsertNewImage(i);
+   if (!buffer_) {
+      buffer_ = std::make_unique<ImgBuffer>(width_, height_, depth_);
    }
 }
 
@@ -135,48 +117,12 @@ void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned byteDepth)
    depth_ = byteDepth;
 }
 
-bool FrameBuffer::SetPixels(unsigned channel, const unsigned char* pixels)
-{
-   ImgBuffer* img = FindImage(channel);
-
-   if (img)
-   {
-      // image already exists
-      img->SetPixels(pixels);
-   }
-   else
-   {
-      // create a new buffer
-      ImgBuffer* img2 = InsertNewImage(channel);
-      img2->SetPixels(pixels);
-   }
-
-   return true;
-}
-
-const unsigned char* FrameBuffer::GetPixels(unsigned channel) const
-{
-   ImgBuffer* img = FindImage(channel);
-   if (img)
-      return img->GetPixels();
-   else
-      return 0;
-}
-
 ImgBuffer* FrameBuffer::FindImage(unsigned channel) const
 {
-   if (channel >= channels_.size())
-      return 0;
-   return channels_[channel];
+   if (channel > 0)
+      return nullptr;
+   return buffer_.get();
 }
 
-ImgBuffer* FrameBuffer::InsertNewImage(unsigned channel)
-{
-   if (channel >= channels_.size())
-      channels_.resize(channel + 1, 0);
-   ImgBuffer* img = new ImgBuffer(width_, height_, depth_);
-   channels_[channel] = img;
-   return img;
-}
-
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

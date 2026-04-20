@@ -427,15 +427,15 @@ int Stage::Initialize()
 	SetPropertyLimits(g_Voltage, min_V_, max_V_);
 	
 	char n[20];
-	ret = GetActuatorName(n);		
+	ret = GetActuatorName(n, sizeof(n));
 	if (ret != DEVICE_OK)
-      return ret;	
-	ac_name_=n;	
+      return ret;
+	ac_name_=n;
 	CreateProperty(g_Actuator,ac_name_, MM::String, true);
 
 	char s[20];
 	GetRgver(rgver_);
-	sprintf(s,"%i",rgver_);	
+	snprintf(s, sizeof(s), "%i",rgver_);
 	CreateProperty(g_Rgver, s, MM::Integer, true);
 	pAct = new CPropertyAction (this, &Stage::OnTime);
 	CreateProperty(g_Rohm, "0", MM::Integer, true, pAct);
@@ -693,7 +693,7 @@ int Stage::GetCommandValue(const char* c,double& d){
 	LogMessage ("Get command value d");
 
 	char str[50]="";
-	sprintf(str,"%s",c);	
+	snprintf(str, sizeof(str), "%s",c);
 	const char* cmd = str; 
 	//LogMessage (cmd);
     int ret;
@@ -723,7 +723,7 @@ int Stage::GetCommandValue(const char* c,double& d){
 int Stage::GetCommandValue(const char* c,int& i){
 	LogMessage ("Get command value i",true);
 	char cmd[50]="";
-	sprintf(cmd,"%s",c);	
+	snprintf(cmd, sizeof(cmd), "%s",c);	
     int ret;
 	std::string result;
 	std::string type;
@@ -751,7 +751,7 @@ int Stage::GetCommandValue(const char* c,int& i){
 int Stage::SetCommandValue(const char* c,double fkt){
 	LogMessage ("Set command value d");
 	char str[50]="";
-	sprintf(str,"%s,%lf",c,fkt);	
+	snprintf(str, sizeof(str), "%s,%lf",c,fkt);	
 	const char* cmd = str; 
 	LogMessage (cmd);
     int ret;
@@ -766,7 +766,7 @@ int Stage::SetCommandValue(const char* c,double fkt){
 int Stage::SetCommandValue(const char* c,int fkt){
 	LogMessage ("Set command value i");
 	char str[50]="";
-	sprintf(str,"%s,%d",c,fkt);	
+	snprintf(str, sizeof(str), "%s,%d",c,fkt);	
 	const char* cmd = str; 
 	LogMessage (cmd);
     int ret;
@@ -779,18 +779,18 @@ int Stage::SetCommandValue(const char* c,int fkt){
 }
 int Stage::GetLimitsValues(){
 	LogMessage ("GetLimmitsValues");
-	int ret;	
+	int ret;
 	LogMessage ("Set Service Mode");
 	//Change to Service Mode
 	ret = SendSerialCommand(port_.c_str(), cmdsmon, g_Mesg_Send_term);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
       return ret;
-	
+
 	//Send Command
 	//min_um_
 	char s[20];
 	std::string result;
-	sprintf(s,"rdac,197");	
+	snprintf(s, sizeof(s), "rdac,197");	
 	const char* cmd = s; 
 	ret = SendCommand(cmd, result);	
 	LogMessage (cmd,true);
@@ -799,28 +799,28 @@ int Stage::GetLimitsValues(){
 	splitString((char*)result.c_str()," ,\n",dest);
 	min_um_=atof(dest[2]);
 
-	//max_um_	
-	sprintf(s,"rdac,198");	
-	cmd = s; 	
-	ret = SendCommand(cmd, result);	
+	//max_um_
+	snprintf(s, sizeof(s), "rdac,198");
+	cmd = s;
+	ret = SendCommand(cmd, result);
 	LogMessage (cmd,true);
 	LogMessage (result,true);
 	splitString((char*)result.c_str()," ,\n",dest);
 	max_um_=atof(dest[2]);
 
-	//min_V_	
-	sprintf(s,"rdac,199");	
-	cmd = s; 
-	ret = SendCommand(cmd, result);	
+	//min_V_
+	snprintf(s, sizeof(s), "rdac,199");
+	cmd = s;
+	ret = SendCommand(cmd, result);
 	LogMessage (cmd,true);
 	LogMessage (result,true);
 	splitString((char*)result.c_str()," ,\n",dest);
 	min_V_=atof(dest[2]);
 
-	//max_V_	
-	sprintf(s,"rdac,200");	
+	//max_V_
+	snprintf(s, sizeof(s), "rdac,200");
 	cmd = s;
-	ret = SendCommand(cmd, result);	
+	ret = SendCommand(cmd, result);
 	LogMessage (cmd,true);
 	LogMessage (result,true);
 	splitString((char*)result.c_str()," ,\n",dest);
@@ -883,7 +883,7 @@ int Stage::GetAxis(int& id){
 	LogMessage ("GetAxis");
 	std::string result;
 	char s[20];
-	sprintf(s,"rdac,5");	
+	snprintf(s, sizeof(s), "rdac,5");	
 	const char* cmd = s; 
 	SendServiceCommand(cmd,result);
 	LogMessage (result);
@@ -892,16 +892,16 @@ int Stage::GetAxis(int& id){
 	id = atoi(dest[2]);
 	return DEVICE_OK;
 }
-int Stage::GetActuatorName(char* id){
+int Stage::GetActuatorName(char* id, size_t idSize){
 	LogMessage ("GetActuatorName");
 	std::string result;
-	char s[20]="acdescr";	
+	char s[20]="acdescr";
 	const char* cmd = s;
 	SendServiceCommand(cmd,result);
 	LogMessage(result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(id,"%s", dest[1]);	
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(id, idSize, "%s", dest[1]);
 	LogMessage(id);
 	return DEVICE_OK;
 }
@@ -1543,10 +1543,10 @@ int Stage::SetPidDefault(){
 		return ret;
 	}
 	std::string result;
-	ret = GetSerialAnswer(port_.c_str(), g_Mesg_Receive_term, result);  
+	ret = GetSerialAnswer(port_.c_str(), g_Mesg_Receive_term, result);
 	if (ret != DEVICE_OK){
 		char msg[50]="PID Error ";
-		sprintf(msg,"PID Error %d",ret);
+		snprintf(msg, sizeof(msg), "PID Error %d",ret);
 		LogMessage (msg);
 		return ret;
 	}
@@ -2623,15 +2623,15 @@ int Shutter::Initialize()
 	AddAllowedValue(g_ShutterState, g_Close);
 
 	char n[20];
-	ret = GetActuatorName(n);		
+	ret = GetActuatorName(n, sizeof(n));
 	if (ret != DEVICE_OK)
-      return ret;	
-	ac_name_=n;	
+      return ret;
+	ac_name_=n;
 	CreateProperty(g_Actuator,ac_name_, MM::String, true);
 
 	char s[20];
 	GetRgver(rgver_);
-	sprintf(s,"%i",rgver_);	
+	snprintf(s, sizeof(s), "%i",rgver_);
 	CreateProperty(g_Rgver, s, MM::Integer, true);
 	pAct = new CPropertyAction (this, &Shutter::OnTime);
 	CreateProperty(g_Rohm, "0", MM::Integer, true, pAct);
@@ -2834,22 +2834,22 @@ int Shutter::GetVersion(std::string& version)
    }   
    return returnStatus;
 }
-int Shutter::GetActuatorName(char* id){
+int Shutter::GetActuatorName(char* id, size_t idSize){
 	LogMessage ("GetActuatorName");
 	std::string result;
-	char s[20]="acdescr";	
-	const char* cmd = s;	
+	char s[20]="acdescr";
+	const char* cmd = s;
 	int ret = SendSerialCommand(port_.c_str(), cmdsmon, g_Mesg_Send_term);
-	if (ret != DEVICE_OK) 
-      return ret;		
-	ret = SendCommand(cmd, result);		
+	if (ret != DEVICE_OK)
+      return ret;
+	ret = SendCommand(cmd, result);
 	ret = SendSerialCommand(port_.c_str(), cmdsmoff, g_Mesg_Send_term);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
       return ret;
 	LogMessage(result);
 	char* dest[30];
-	splitString((char*)result.c_str()," ,\n",dest);	
-	sprintf(id,"%s", dest[1]);	
+	splitString((char*)result.c_str()," ,\n",dest);
+	snprintf(id, idSize, "%s", dest[1]);
 	LogMessage(id);
 	return DEVICE_OK;
 }
@@ -3051,7 +3051,7 @@ int Shutter::SendCommand(const char* cmd,std::string &result){
 }
 int Shutter::GetCommandValue(const char* c,double& d){
 	char str[50]="";
-	sprintf(str,"%s",c);	
+	snprintf(str, sizeof(str), "%s",c);
 	const char* cmd = str; 	
     int ret;
 	std::string result;
@@ -3077,9 +3077,9 @@ int Shutter::GetCommandValue(const char* c,double& d){
 	}		
 	return DEVICE_OK;
 }
-int Shutter::GetCommandValue(const char* c,int& i){	
+int Shutter::GetCommandValue(const char* c,int& i){
 	char cmd[50]="";
-	sprintf(cmd,"%s",c);	
+	snprintf(cmd, sizeof(cmd), "%s",c);	
     int ret;
 	std::string result;
 	std::string type;
@@ -3104,7 +3104,7 @@ int Shutter::GetCommandValue(const char* c,int& i){
 }
 int Shutter::SetCommandValue(const char* c,double fkt){
 	char str[50]="";
-	sprintf(str,"%s,%lf",c,fkt);	
+	snprintf(str, sizeof(str), "%s,%lf",c,fkt);
 	const char* cmd = str; 	
     int ret;
     ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
@@ -3114,9 +3114,9 @@ int Shutter::SetCommandValue(const char* c,double fkt){
 	//Normally no answer	
 	return DEVICE_OK;
 }
-int Shutter::SetCommandValue(const char* c,int fkt){	
+int Shutter::SetCommandValue(const char* c,int fkt){
 	char str[50]="";
-	sprintf(str,"%s,%d",c,fkt);	
+	snprintf(str, sizeof(str), "%s,%d",c,fkt);
 	const char* cmd = str; 	
     int ret;
     ret = SendSerialCommand(port_.c_str(), cmd, g_Mesg_Send_term);
@@ -3126,40 +3126,40 @@ int Shutter::SetCommandValue(const char* c,int fkt){
 	//Normally no answer	
 	return DEVICE_OK;
 }
-int Shutter::GetLimitsValues(){	
+int Shutter::GetLimitsValues(){
 	int ret = SendSerialCommand(port_.c_str(), cmdsmon, g_Mesg_Send_term);
-	if (ret != DEVICE_OK) 
+	if (ret != DEVICE_OK)
       return ret;
-	
+
 	//Send Command
 	//min_um_
 	char s[20];
 	std::string result;
-	sprintf(s,"rdac,197");	
+	snprintf(s, sizeof(s), "rdac,197");	
 	const char* cmd = s; 
 	ret = SendCommand(cmd, result);	
 	char* dest[20];
 	splitString((char*)result.c_str()," ,\n",dest);
 	min_um_=atof(dest[2]);
 
-	//max_um_	
-	sprintf(s,"rdac,198");	
-	cmd = s; 	
-	ret = SendCommand(cmd, result);	
+	//max_um_
+	snprintf(s, sizeof(s), "rdac,198");
+	cmd = s;
+	ret = SendCommand(cmd, result);
 	splitString((char*)result.c_str()," ,\n",dest);
 	max_um_=atof(dest[2]);
 
-	//min_V_	
-	sprintf(s,"rdac,199");	
-	cmd = s; 
-	ret = SendCommand(cmd, result);	
+	//min_V_
+	snprintf(s, sizeof(s), "rdac,199");
+	cmd = s;
+	ret = SendCommand(cmd, result);
 	splitString((char*)result.c_str()," ,\n",dest);
 	min_V_=atof(dest[2]);
 
-	//max_V_	
-	sprintf(s,"rdac,200");	
+	//max_V_
+	snprintf(s, sizeof(s), "rdac,200");
 	cmd = s;
-	ret = SendCommand(cmd, result);	
+	ret = SendCommand(cmd, result);
 	splitString((char*)result.c_str()," ,\n",dest);
 	max_V_=atof(dest[2]);
 

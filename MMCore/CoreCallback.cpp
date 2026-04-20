@@ -25,12 +25,14 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 
-#include "../MMDevice/DeviceThreads.h"
-#include "../MMDevice/DeviceUtils.h"
-#include "../MMDevice/ImgBuffer.h"
 #include "CircularBuffer.h"
 #include "CoreCallback.h"
 #include "DeviceManager.h"
+#include "Notification.h"
+#include "SynchronizedConfiguration.h"
+
+#include "DeviceUtils.h"
+#include "ImgBuffer.h"
 
 #include <cassert>
 #include <chrono>
@@ -38,20 +40,20 @@
 #include <vector>
 #include <algorithm>
 
+namespace notif = mmcore::internal::notification;
+
+namespace mmcore {
+namespace internal {
+
 
 CoreCallback::CoreCallback(CMMCore* c) :
-   core_(c),
-   pValueChangeLock_(NULL)
+   core_(c)
 {
    assert(core_);
-   pValueChangeLock_ = new MMThreadLock();
 }
 
 
-CoreCallback::~CoreCallback()
-{
-   delete pValueChangeLock_;
-}
+CoreCallback::~CoreCallback() = default;
 
 
 int
@@ -123,21 +125,6 @@ CoreCallback::GetImageProcessor(const MM::Device*)
 }
 
 
-MM::State*
-CoreCallback::GetStateDevice(const MM::Device*, const char* label)
-{
-   try
-   {
-      return core_->deviceManager_->GetDeviceOfType<StateInstance>(label)->
-         GetRawPtr();
-   }
-   catch (const CMMError&)
-   {
-      return 0;
-   }
-}
-
-
 MM::SignalIO*
 CoreCallback::GetSignalIODevice(const MM::Device*, const char* label)
 {
@@ -149,19 +136,6 @@ CoreCallback::GetSignalIODevice(const MM::Device*, const char* label)
    {
       return 0;
    }
-}
-
-
-MM::AutoFocus*
-CoreCallback::GetAutoFocus(const MM::Device*)
-{
-   std::shared_ptr<AutoFocusInstance> autofocus =
-      core_->currentAutofocusDevice_.lock();
-   if (autofocus)
-   {
-      return autofocus->GetRawPtr();
-   }
-   return 0;
 }
 
 
@@ -223,7 +197,7 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
             core_->deviceManager_->GetDevice(caller));
 
    std::string label = camera->GetLabel();
-   newMD.put(MM::g_Keyword_Metadata_CameraLabel, label);
+   newMD.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
    std::string serializedMD;
    try
@@ -242,28 +216,33 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
    return newMD;
 }
 
-int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const char* serializedMetadata, const bool doProcess)
+int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf,
+   unsigned width, unsigned height, unsigned bytesPerPixel,
+   const char* serializedMetadata)
 {
-   Metadata md;
-   md.Restore(serializedMetadata);
-   return InsertImage(caller, buf, width, height, byteDepth, &md, doProcess);
+   return InsertImage(caller, buf, width, height, bytesPerPixel, 1, serializedMetadata);
 }
 
-int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, const Metadata* pMd, bool doProcess)
+int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf,
+   unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
+   const char* serializedMetadata)
 {
+   Metadata origMd;
+   if (serializedMetadata)
+   {
+      origMd.Restore(serializedMetadata);
+   }
+
    try 
    {
-      Metadata md = AddCameraMetadata(caller, pMd);
+      Metadata md = AddCameraMetadata(caller, &origMd);
 
-      if(doProcess)
-      {
          MM::ImageProcessor* ip = GetImageProcessor(caller);
          if( NULL != ip)
          {
-            ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
+            ip->Process(const_cast<unsigned char*>(buf), width, height, bytesPerPixel);
          }
-      }
-      if (core_->cbuf_->InsertImage(buf, width, height, byteDepth, &md))
+      if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, nComponents, &md))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;
@@ -272,96 +251,20 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    {
       return DEVICE_INCOMPATIBLE_IMAGE;
    }
-}
-
-int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const char* serializedMetadata, const bool doProcess)
-{
-   Metadata md;
-   md.Restore(serializedMetadata);
-   return InsertImage(caller, buf, width, height, byteDepth, nComponents, &md, doProcess);
-}
-
-int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf, unsigned width, unsigned height, unsigned byteDepth, unsigned nComponents, const Metadata* pMd, bool doProcess)
-{
-   try 
-   {
-      Metadata md = AddCameraMetadata(caller, pMd);
-
-      if(doProcess)
-      {
-         MM::ImageProcessor* ip = GetImageProcessor(caller);
-         if( NULL != ip)
-         {
-            ip->Process(const_cast<unsigned char*>(buf), width, height, byteDepth);
-         }
-      }
-      if (core_->cbuf_->InsertImage(buf, width, height, byteDepth, nComponents, &md))
-         return DEVICE_OK;
-      else
-         return DEVICE_BUFFER_OVERFLOW;
-   }
-   catch (CMMError& /*e*/)
-   {
-      return DEVICE_INCOMPATIBLE_IMAGE;
-   }
-}
-
-int CoreCallback::InsertImage(const MM::Device* caller, const ImgBuffer & imgBuf)
-{
-   Metadata md = imgBuf.GetMetadata();
-   unsigned char* p = const_cast<unsigned char*>(imgBuf.GetPixels());
-   MM::ImageProcessor* ip = GetImageProcessor(caller);
-   if( NULL != ip)
-   {
-      ip->Process(p, imgBuf.Width(), imgBuf.Height(), imgBuf.Depth());
-   }
-
-   return InsertImage(caller, imgBuf.GetPixels(), imgBuf.Width(), 
-      imgBuf.Height(), imgBuf.Depth(), &md);
-}
-
-void CoreCallback::ClearImageBuffer(const MM::Device* /*caller*/)
-{
-   core_->cbuf_->Clear();
 }
 
 bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
       unsigned int w, unsigned int h, unsigned int pixDepth)
 {
+   // Multi-channel images were never implemented so 'channels' should be 1,
+   // but some cameras confuse it with color components and pass 4.
+   (void)channels;
+
    // Support for multi-slice images has not been implemented
    if (slices != 1)
       return false;
 
-   return core_->cbuf_->Initialize(channels, w, h, pixDepth);
-}
-
-int CoreCallback::InsertMultiChannel(const MM::Device* caller,
-                              const unsigned char* buf,
-                              unsigned numChannels,
-                              unsigned width,
-                              unsigned height,
-                              unsigned byteDepth,
-                              Metadata* pMd)
-{
-   try
-   {
-      Metadata md = AddCameraMetadata(caller, pMd);
-
-      MM::ImageProcessor* ip = GetImageProcessor(caller);
-      if( NULL != ip)
-      {
-         ip->Process( const_cast<unsigned char*>(buf), width, height, byteDepth);
-      }
-      if (core_->cbuf_->InsertMultiChannel(buf, numChannels, width, height, byteDepth, &md))
-         return DEVICE_OK;
-      else
-         return DEVICE_BUFFER_OVERFLOW;
-   }
-   catch (CMMError& /*e*/)
-   {
-      return DEVICE_INCOMPATIBLE_IMAGE;
-   }
-
+   return core_->cbuf_->Initialize(w, h, pixDepth);
 }
 
 int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
@@ -389,13 +292,14 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
       {
          // We need to lock the shutter's module for thread safety, but there's
          // a case where deadlock would result.
+         int sret = DEVICE_ERR;
          if (camera->GetAdapterModule() == shutter->GetAdapterModule())
          {
             // This is a nasty hack to allow the case where the shutter and
             // camera live in the same module. It is not safe, but this is how
             // _all_ cases used to be implemented, and I can't immediately
             // think of a fully safe fix that is reasonably simple.
-            shutter->SetOpen(false);
+            sret = shutter->SetOpen(false);
          }
          else if (currentCamera && currentCamera->GetAdapterModule() ==
                shutter->GetAdapterModule())
@@ -407,14 +311,14 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
             // This is an even nastier hack in that it ignores the possibility
             // of StopSequenceAcquisition() being called on a camera other than
             // currentCamera, but such cases are rare.
-            shutter->SetOpen(false);
+            sret = shutter->SetOpen(false);
          }
          else
          {
             // If the shutter is in a different device adapter, it is safe to
             // lock that adapter.
-            mm::DeviceModuleLockGuard g(shutter);
-            shutter->SetOpen(false);
+            DeviceModuleLockGuard g(shutter);
+            sret = shutter->SetOpen(false);
 
             // We could wait for the shutter to close here, but the
             // implementation has always returned without waiting. The camera
@@ -422,12 +326,19 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
             // stopSequenceAcquisition() does not wait for the shutter before
             // returning.
          }
+         if (sret == DEVICE_OK)
+            core_->postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), false});
       }
    }
+
+   core_->postNotification(
+      notif::SequenceAcquisitionStopped{camera->GetLabel()});
+
    return DEVICE_OK;
 }
 
-int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
+int CoreCallback::PrepareForAcq(const MM::Device* caller)
 {
    if (core_->autoShutter_)
    {
@@ -435,13 +346,22 @@ int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
          core_->currentShutterDevice_.lock();
       if (shutter)
       {
+         int sret;
          {
-            mm::DeviceModuleLockGuard g(shutter);
-            shutter->SetOpen(true);
+            DeviceModuleLockGuard g(shutter);
+            sret = shutter->SetOpen(true);
          }
+         if (sret == DEVICE_OK)
+            core_->postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), true});
          core_->waitForDevice(shutter);
       }
    }
+
+   char label[MM::MaxStrLength];
+   caller->GetLabel(label);
+   core_->postNotification(notif::SequenceAcquisitionStarted{label});
+
    return DEVICE_OK;
 }
 
@@ -450,8 +370,7 @@ int CoreCallback::PrepareForAcq(const MM::Device* /*caller*/)
  */
 int CoreCallback::OnPropertiesChanged(const MM::Device* /* caller */)
 {
-   if (core_->externalCallback_)
-      core_->externalCallback_->onPropertiesChanged();
+   core_->postNotification(notif::PropertiesChanged{});
 
    // TODO It is inconsistent that we do not update the system state cache in
    // this case. However, doing so would be time-consuming (if not unsafe).
@@ -464,132 +383,69 @@ int CoreCallback::OnPropertiesChanged(const MM::Device* /* caller */)
  */
 int CoreCallback::OnPropertyChanged(const MM::Device* device, const char* propName, const char* value)
 {
-   if (core_->externalCallback_) 
-   {
-      MMThreadGuard g(*pValueChangeLock_);
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      bool readOnly;
-      device->GetPropertyReadOnly(propName, readOnly);
-      const PropertySetting* ps = new PropertySetting(label, propName, value, readOnly);
-      {
-         MMThreadGuard scg(core_->stateCacheLock_);
-         core_->stateCache_.addSetting(*ps);
-      }
-      core_->externalCallback_->onPropertyChanged(label, propName, value);
+   std::lock_guard<std::mutex> g(onPropertyChangedLock_);
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   bool readOnly;
+   device->GetPropertyReadOnly(propName, readOnly);
+   const PropertySetting ps(label, propName, value, readOnly);
+   core_->stateCache_->addSetting(ps);
+   core_->postNotification(
+      notif::PropertyChanged{label, propName, value});
 
-      // Find all configs that contain this property and callback to indicate 
-      // that the config group changed
-      // TODO: Assess whether performance is better by maintaining a map tying
-      // property to configurations
-      std::vector<std::string> configGroups = 
-         core_->getAvailableConfigGroups ();
-      for (std::vector<std::string>::iterator it = configGroups.begin(); 
-            it != configGroups.end(); ++it) 
-      {
-         std::vector<std::string> configs = 
-            core_->getAvailableConfigs((*it).c_str());
-         bool found = false;
-         for (std::vector<std::string>::iterator itc = configs.begin();
-               itc != configs.end() && !found; itc++) 
-         {
-            Configuration config = 
-               core_->getConfigData((*it).c_str(), (*itc).c_str());
-            // only callback when there is more than 1 property in a group
-            // This is needed, since the UI treats groups with one 
-            // property differently, whereas the core does not....
-            if (config.size() > 1 && config.isPropertyIncluded(label, propName)) {
-               found = true;
-               // If we are part of this configuration, notify that it 
-               // was changed. Get the new config from cache rather 
-               // than by querying the hardware
-               std::string currentConfig = 
-                  core_->getCurrentConfigFromCache( (*it).c_str() );
-               OnConfigGroupChanged((*it).c_str(), currentConfig.c_str());
-            }
-         }
-      }
-          
-
-      // Check if pixel size was potentially affected.  If so, update from cache
-      std::vector<std::string> pixelSizeConfigs = core_->getAvailablePixelSizeConfigs();
-      bool found = false;
-      for (std::vector<std::string>::iterator itpsc = pixelSizeConfigs.begin();
-            itpsc != pixelSizeConfigs.end() && !found; itpsc++) 
-      {
-         Configuration pixelSizeConfig = core_->getPixelSizeConfigData( (*itpsc).c_str());
-         if (pixelSizeConfig.isPropertyIncluded(label, propName)) {
-            found = true;
-            double pixSizeUm;
-            try {
-               // update pixel size from cache
-               pixSizeUm = core_->getPixelSizeUm(true);
-               OnPixelSizeAffineChanged(core_->getPixelSizeAffine(true));
-            }
-            catch (const CMMError&) {
-               pixSizeUm = 0.0;
-            }
-            OnPixelSizeChanged(pixSizeUm);
+   // Find all configs that contain this property and notify that the
+   // config group changed.
+   // TODO: Assess whether performance is better by maintaining a map tying
+   // property to configurations
+   for (const auto& group : core_->getAvailableConfigGroups()) {
+      for (const auto& config : core_->getAvailableConfigs(group.c_str())) {
+         Configuration configData =
+            core_->getConfigData(group.c_str(), config.c_str());
+         if (configData.isPropertyIncluded(label, propName)) {
+            std::string currentConfig =
+               core_->getCurrentConfigFromCache(group.c_str());
+            core_->postNotification(
+               notif::ConfigGroupChanged{group, currentConfig});
+            break;
          }
       }
    }
 
-   return DEVICE_OK;
-}
-
-/**
- * Callback indicating that a configuration group has changed
- */
-int CoreCallback::OnConfigGroupChanged(const char* groupName, const char* newConfigName)
-{
-   if (core_->externalCallback_) {
-      core_->externalCallback_->onConfigGroupChanged(groupName, newConfigName);
+   // Check if pixel size was potentially affected. If so, update from cache.
+   for (const auto& psConfig : core_->getAvailablePixelSizeConfigs()) {
+      Configuration pixelSizeConfig =
+         core_->getPixelSizeConfigData(psConfig.c_str());
+      if (pixelSizeConfig.isPropertyIncluded(label, propName)) {
+         double pixSizeUm;
+         try {
+            pixSizeUm = core_->getPixelSizeUm(true);
+            std::vector<double> affine = core_->getPixelSizeAffine(true);
+            if (affine.size() == 6) {
+               core_->postNotification(notif::PixelSizeAffineChanged{
+                  affine[0], affine[1], affine[2],
+                  affine[3], affine[4], affine[5]});
+            }
+         }
+         catch (const CMMError&) {
+            pixSizeUm = 0.0;
+         }
+         core_->postNotification(notif::PixelSizeChanged{pixSizeUm});
+         break;
+      }
    }
 
    return DEVICE_OK;
 }
 
-/**
- * Callback indicating that Pixel Size has changed
- */
-int CoreCallback::OnPixelSizeChanged(double newPixelSizeUm)
-{
-   if (core_->externalCallback_) {
-      core_->externalCallback_->onPixelSizeChanged(newPixelSizeUm);
-   }
-
-   return DEVICE_OK;
-}
-
-/**
- * Callback indicating that Affine transform relating camera pixels
- * to stage movement (i.e. the real world) has changed
- */
-int CoreCallback::OnPixelSizeAffineChanged(std::vector<double> newPixelSizeAffine)
-{
-   if (core_->externalCallback_ && newPixelSizeAffine.size() == 6) {
-      core_->externalCallback_->onPixelSizeAffineChanged(newPixelSizeAffine[0],
-            newPixelSizeAffine[1],
-            newPixelSizeAffine[2],
-            newPixelSizeAffine[3],
-            newPixelSizeAffine[4],
-            newPixelSizeAffine[5]);
-   }
-
-   return DEVICE_OK;
-}
 
 /**
  * Handler for Stage position update
  */
 int CoreCallback::OnStagePositionChanged(const MM::Device* device, double pos)
 {
-   if (core_->externalCallback_) {
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onStagePositionChanged(label, pos);
-   }
-
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::StagePositionChanged{label, pos});
    return DEVICE_OK;
 }
 
@@ -598,12 +454,9 @@ int CoreCallback::OnStagePositionChanged(const MM::Device* device, double pos)
  */
 int CoreCallback::OnXYStagePositionChanged(const MM::Device* device, double xPos, double yPos)
 {
-   if (core_->externalCallback_) {
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onXYStagePositionChanged(label, xPos, yPos);
-   }
-
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::XYStagePositionChanged{label, xPos, yPos});
    return DEVICE_OK;
 }
 
@@ -613,11 +466,9 @@ int CoreCallback::OnXYStagePositionChanged(const MM::Device* device, double xPos
  */
 int CoreCallback::OnExposureChanged(const MM::Device* device, double newExposure)
 {
-   if (core_->externalCallback_) {
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onExposureChanged(label, newExposure);
-   }
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::ExposureChanged{label, newExposure});
    return DEVICE_OK;
 }
 
@@ -627,12 +478,9 @@ int CoreCallback::OnExposureChanged(const MM::Device* device, double newExposure
  */
 int CoreCallback::OnSLMExposureChanged(const MM::Device* device, double newExposure)
 {
-   if (core_->externalCallback_) {
-      MMThreadGuard g(*pValueChangeLock_);
-      char label[MM::MaxStrLength];
-      device->GetLabel(label);
-      core_->externalCallback_->onSLMExposureChanged(label, newExposure);
-   }
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::SLMExposureChanged{label, newExposure});
    return DEVICE_OK;
 }
 
@@ -642,23 +490,34 @@ int CoreCallback::OnSLMExposureChanged(const MM::Device* device, double newExpos
  */
 int CoreCallback::OnMagnifierChanged(const MM::Device* /* device */)
 {
-   if (core_->externalCallback_) 
-   {
-      double pixSizeUm;
-      try 
-      {
-         // update pixel size from cache
-         pixSizeUm = core_->getPixelSizeUm(true);
-         OnPixelSizeAffineChanged(core_->getPixelSizeAffine(true));
+   double pixSizeUm;
+   try {
+      pixSizeUm = core_->getPixelSizeUm(true);
+      std::vector<double> affine = core_->getPixelSizeAffine(true);
+      if (affine.size() == 6) {
+         core_->postNotification(notif::PixelSizeAffineChanged{
+            affine[0], affine[1], affine[2],
+            affine[3], affine[4], affine[5]});
       }
-      catch (const CMMError&) {
-         pixSizeUm = 0.0;
-      }
-      OnPixelSizeChanged(pixSizeUm);
    }
+   catch (const CMMError&) {
+      pixSizeUm = 0.0;
+   }
+   core_->postNotification(notif::PixelSizeChanged{pixSizeUm});
    return DEVICE_OK;
 }
 
+/**
+ * Handler for Shutter State changes.
+ * 
+ */
+int CoreCallback::OnShutterOpenChanged(const MM::Device* device, bool state)
+{
+   char label[MM::MaxStrLength];
+   device->GetLabel(label);
+   core_->postNotification(notif::ShutterOpenChanged{label, state});
+   return DEVICE_OK;
+}
 
 
 int CoreCallback::SetSerialProperties(const char* portName,
@@ -798,27 +657,6 @@ int CoreCallback::GetSerialAnswer(const MM::Device*, const char* portName, unsig
    return DEVICE_OK;
 }
 
-const char* CoreCallback::GetImage()
-{
-   try
-   {
-      core_->snapImage();
-      return (const char*) core_->getImage();
-   }
-   catch (...)
-   {
-      return 0;
-   }
-}
-
-int CoreCallback::GetImageDimensions(int& width, int& height, int& depth)
-{
-   width = core_->getImageWidth();
-   height = core_->getImageHeight();
-   depth = core_->getBytesPerPixel();
-   return DEVICE_OK;
-}
-
 int CoreCallback::GetFocusPosition(double& pos)
 {
    std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
@@ -828,163 +666,6 @@ int CoreCallback::GetFocusPosition(double& pos)
    }
    pos = 0.0;
    return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-int CoreCallback::SetFocusPosition(double pos)
-{
-   std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
-   if (focus)
-   {
-      int ret = focus->SetPositionUm(pos);
-      if (ret != DEVICE_OK)
-         return ret;
-      core_->waitForDevice(focus);
-      return DEVICE_OK;
-   }
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-
-int CoreCallback::MoveFocus(double velocity)
-{
-   std::shared_ptr<StageInstance> focus = core_->currentFocusDevice_.lock();
-   if (focus)
-   {
-      mm::DeviceModuleLockGuard g(focus);
-      int ret = focus->Move(velocity);
-      if (ret != DEVICE_OK)
-         return ret;
-      return DEVICE_OK;
-   }
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-
-int CoreCallback::GetXYPosition(double& x, double& y)
-{
-   std::shared_ptr<XYStageInstance> xyStage =
-      core_->currentXYStageDevice_.lock();
-   if (xyStage)
-   {
-      return xyStage->GetPositionUm(x, y);
-   }
-   x = 0.0;
-   y = 0.0;
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-int CoreCallback::SetXYPosition(double x, double y)
-{
-   std::shared_ptr<XYStageInstance> xyStage =
-      core_->currentXYStageDevice_.lock();
-   if (xyStage)
-   {
-      int ret = xyStage->SetPositionUm(x, y);
-      if (ret != DEVICE_OK)
-         return ret;
-      core_->waitForDevice(xyStage);
-      return DEVICE_OK;
-   }
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-int CoreCallback::MoveXYStage(double vx, double vy)
-{
-   std::shared_ptr<XYStageInstance> xyStage =
-      core_->currentXYStageDevice_.lock();
-   if (xyStage)
-   {
-      mm::DeviceModuleLockGuard g(xyStage);
-      int ret = xyStage->Move(vx, vy);
-      if (ret != DEVICE_OK)
-         return ret;
-      return DEVICE_OK;
-   }
-   return DEVICE_CORE_FOCUS_STAGE_UNDEF;
-}
-
-int CoreCallback::SetExposure(double expMs)
-{
-   try 
-   {
-      core_->setExposure(expMs);
-   }
-   catch (...)
-   {
-      // TODO: log
-      return DEVICE_CORE_EXPOSURE_FAILED;
-   }
-
-   return DEVICE_OK;
-}
-
-int CoreCallback::GetExposure(double& expMs) 
-{
-   try 
-   {
-      expMs = core_->getExposure();
-   }
-   catch (...)
-   {
-      // TODO: log
-      return DEVICE_CORE_EXPOSURE_FAILED;
-   }
-
-   return DEVICE_OK;
-}
-
-int CoreCallback::SetConfig(const char* group, const char* name)
-{
-   try 
-   {
-      core_->setConfig(group, name);
-      core_->waitForConfig(group, name);
-   }
-   catch (...)
-   {
-      // TODO: log
-      return DEVICE_CORE_CONFIG_FAILED;
-   }
-
-   return DEVICE_OK;
-}
-
-int CoreCallback::GetCurrentConfig(const char* group, int bufLen, char* name)
-{
-   try 
-   {
-      std::string cfgName = core_->getCurrentConfig(group);
-      strncpy(name, cfgName.c_str(), bufLen);
-   }
-   catch (...)
-   {
-      // TODO: log
-      return DEVICE_CORE_CONFIG_FAILED;
-   }
-
-   return DEVICE_OK;
-}
-
-int CoreCallback::GetChannelConfig(char* channelConfigName, const unsigned int channelConfigIterator)
-{
-   if (0 == channelConfigName)
-      return DEVICE_CORE_CHANNEL_PRESETS_FAILED;
-   try 
-   {
-      channelConfigName[0] = 0;
-
-      std::vector<std::string> cfgs = core_->getAvailableConfigs(core_->getChannelGroup().c_str());
-      if( channelConfigIterator < cfgs.size())
-      {
-         strncpy( channelConfigName, cfgs.at(channelConfigIterator).c_str(), MM::MaxStrLength);
-      }
-   }
-   catch (...)
-   {
-      return DEVICE_CORE_CHANNEL_PRESETS_FAILED;
-   }
-
-   return DEVICE_OK;
 }
 
 int CoreCallback::GetDeviceProperty(const char* deviceName, const char* propName, char* value)
@@ -1017,42 +698,6 @@ int CoreCallback::SetDeviceProperty(const char* deviceName, const char* propName
    return DEVICE_OK;
 }
 
-void CoreCallback::NextPostedError(int& errorCode, char* pMessage, int maxlen, int& messageLength)
-{
-   MMThreadGuard g(*(core_->pPostedErrorsLock_));
-   errorCode = 0;
-   messageLength = 0;
-   if( 0 < core_->postedErrors_.size())
-   {
-      std::pair< int, std::string> nextError = core_->postedErrors_.front();
-      core_->postedErrors_.pop_front();
-      errorCode = nextError.first;
-      if( 0 != pMessage)
-      {
-         if( 0 < maxlen )
-         {
-            *pMessage = 0;
-            messageLength = std::min( maxlen, (int) nextError.second.length());
-            strncpy(pMessage, nextError.second.c_str(), messageLength);
-         }
-      }
-   }
-	return ;
-}
-
-void CoreCallback::PostError(const int errorCode, const char* pMessage)
-{
-   MMThreadGuard g(*(core_->pPostedErrorsLock_));
-   core_->postedErrors_.push_back(std::make_pair(errorCode, std::string(pMessage)));
-}
-
-void CoreCallback::ClearPostedErrors()
-{
-   MMThreadGuard g(*(core_->pPostedErrorsLock_));
-	core_->postedErrors_.clear();
-}
-
-
 static long long SteadyMicroseconds()
 {
    using namespace std::chrono;
@@ -1077,3 +722,6 @@ MM::MMTime CoreCallback::GetCurrentMMTime()
 {
    return MM::MMTime::fromUs(SteadyMicroseconds());
 }
+
+} // namespace internal
+} // namespace mmcore

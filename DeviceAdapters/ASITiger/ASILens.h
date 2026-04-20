@@ -18,14 +18,11 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
-//				  Modified for Tunable lens by Vik (vik@asiimaging.com)	05/2017
-//					
-//
-// BASED ON:      ASIStage.h and others
+//                Modified for Tunable lens by Vik (vik@asiimaging.com)	05/2017
 //
 
-#ifndef _ASILens_H_
-#define _ASILens_H_
+#ifndef ASILENS_H
+#define ASILENS_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -34,16 +31,14 @@
 class CLens : public ASIPeripheralBase<CStageBase, CLens>
 {
 public:
-   CLens(const char* name);
-   ~CLens() { }
-  
+    explicit CLens(const char* name);
+    ~CLens() = default;
+
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // Lens API
-   // -----------
    int Stop();
    int Home();
 
@@ -71,7 +66,6 @@ public:
    int SendStageSequence();
 
    // action interface
-   // ----------------
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLowerLim             (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -104,23 +98,25 @@ public:
    int OnRBTrigger            (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnRBRunning            (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnUseSequence          (MM::PropertyBase* pProp, MM::ActionType eAct);
-   //Others
+   // others
    int OnVector				  (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTTLin				  (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnTTLout			      (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+    int OnSaveJoystickSettings();
+
+    // Properties
+    void CreateSingleAxisRiseTimeProperty();
+
+    std::string axisLetter_;
    double unitMult_;
    double stepSizeUm_;
-   string axisLetter_;
    bool ring_buffer_supported_;
    long ring_buffer_capacity_;
    bool ttl_trigger_supported_;
    bool ttl_trigger_enabled_;
    std::vector<double> sequence_;
-
-   // private helper functions
-   int OnSaveJoystickSettings();
 };
 
-#endif //_ASIPiezo_H_
+#endif // ASILENS_H

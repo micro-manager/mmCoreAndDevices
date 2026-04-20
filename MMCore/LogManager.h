@@ -6,8 +6,8 @@
 #include <mutex>
 #include <string>
 
-namespace mm
-{
+namespace mmcore {
+namespace internal {
 
 /**
  * Facade to the logging subsystem.
@@ -23,13 +23,16 @@ private:
 
    mutable std::mutex mutex_;
 
-   logging::LogLevel primaryLogLevel_;
+   LogLevel primaryLogLevel_;
+   LogLevel stderrLogLevel_;
 
    bool usingStdErr_;
    std::shared_ptr<logging::LogSink> stdErrSink_;
 
    std::string primaryFilename_;
    std::shared_ptr<logging::LogSink> primaryFileSink_;
+   std::size_t primaryMaxFileSize_;
+   int primaryMaxBackupFiles_;
 
    LogFileHandle nextSecondaryHandle_;
    struct LogFileInfo
@@ -60,10 +63,13 @@ public:
    std::string GetPrimaryLogFilename() const;
    bool IsUsingPrimaryLogFile() const;
 
-   void SetPrimaryLogLevel(logging::LogLevel level);
-   logging::LogLevel GetPrimaryLogLevel() const;
+   void SetPrimaryLogRotation(std::size_t maxFileSize, int maxBackupFiles);
 
-   LogFileHandle AddSecondaryLogFile(logging::LogLevel level,
+   void SetLogLevels(LogLevel level, bool setPrimary, bool setStderr);
+   LogLevel GetPrimaryLogLevel() const;
+   LogLevel GetStderrLogLevel() const;
+
+   LogFileHandle AddSecondaryLogFile(LogLevel level,
          const std::string& filename, bool truncate = true,
          logging::SinkMode mode = logging::SinkModeAsynchronous);
    void RemoveSecondaryLogFile(LogFileHandle handle);
@@ -73,4 +79,5 @@ public:
    logging::Logger NewLogger(const std::string& label);
 };
 
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

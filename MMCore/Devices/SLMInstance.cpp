@@ -22,6 +22,9 @@
 #include "SLMInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int SLMInstance::SetImage(unsigned char* pixels) { RequireInitialized(__func__); return GetImpl()->SetImage(pixels); }
 int SLMInstance::SetImage(unsigned int* pixels) { RequireInitialized(__func__); return GetImpl()->SetImage(pixels); }
 int SLMInstance::DisplayImage() { RequireInitialized(__func__); return GetImpl()->DisplayImage(); }
@@ -45,3 +48,6 @@ int SLMInstance::AddToSLMSequence(const unsigned char * pixels)
 int SLMInstance::AddToSLMSequence(const unsigned int * pixels)
 { RequireInitialized(__func__); return GetImpl()->AddToSLMSequence(pixels); }
 int SLMInstance::SendSLMSequence() { RequireInitialized(__func__); return GetImpl()->SendSLMSequence(); }
+
+} // namespace internal
+} // namespace mmcore

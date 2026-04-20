@@ -19,22 +19,14 @@
 // CVS:           $Id: Configuration.cpp 13763 2014-07-01 00:43:11Z mark $
 //
 #include "Configuration.h"
-#include "../MMDevice/MMDevice.h"
 #include "Error.h"
+
+#include "MMDevice.h"
 
 #include <cstring>
 #include <fstream>
 #include <sstream>
 #include <string>
-
-#ifdef _MSC_VER
-#pragma warning(disable: 4290) // 'C++ exception specification ignored'
-#endif
-
-#if defined(__GNUC__) && !defined(__clang__)
-// 'dynamic exception specifications are deprecated in C++11 [-Wdeprecated]'
-#pragma GCC diagnostic ignored "-Wdeprecated"
-#endif
 
 std::string PropertySetting::generateKey(const char* device, const char* prop)
 {
@@ -83,7 +75,7 @@ std::string Configuration::getVerbose() const
 /**
  * Returns the setting with specified index.
  */
-PropertySetting Configuration::getSetting(size_t index) const throw (CMMError)
+PropertySetting Configuration::getSetting(size_t index) const MMCORE_LEGACY_THROW(CMMError)
 {
    if (index >= settings_.size())
    {

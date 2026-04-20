@@ -19,35 +19,27 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.h and others
-//
 
-#ifndef _ASIClocked_H_
-#define _ASIClocked_H_
+#ifndef ASICLOCKED_H
+#define ASICLOCKED_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-using namespace std;
-
-class CClocked : public ASIPeripheralBase<CStateDeviceBase, CClocked>
-{
+class CClocked : public ASIPeripheralBase<CStateDeviceBase, CClocked> {
 public:
-   CClocked(const char* name);
-   ~CClocked() { }
+    explicit CClocked(const char* name);
+    ~CClocked() = default;
 
    // Generic device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // State device API
-   // -----------
    unsigned long GetNumberOfPositions() const { return numPositions_; }
 
    // action interface
-   // ----------------
    int OnState                (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnLabel                (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -55,42 +47,34 @@ public:
    int OnJoystickSelect       (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+    int OnSaveJoystickSettings();
+
    unsigned int numPositions_;
    unsigned int curPosition_;
 
-   // private helper functions
-   int OnSaveJoystickSettings();
-
-protected: // needs to be inherited
-   string axisLetter_;
+protected:
+   std::string axisLetter_;
 };
 
-class CFSlider : public CClocked
-{
+class CFSlider : public CClocked {
 public:
-   CFSlider(const char* name);
-
-   int Initialize();
-
-   // action interface
-   // ---------------
-
-};
-
-class CTurret : public CClocked
-{
-public:
-   CTurret(const char* name);
+    explicit CFSlider(const char* name);
 
    int Initialize();
 };
 
-class CPortSwitch : public CClocked
-{
+class CTurret : public CClocked {
 public:
-   CPortSwitch(const char* name);
+    explicit CTurret(const char* name);
 
    int Initialize();
 };
 
-#endif //_ASIClocked_H_
+class CPortSwitch : public CClocked {
+public:
+    explicit CPortSwitch(const char* name);
+
+   int Initialize();
+};
+
+#endif // ASICLOCKED_H

@@ -133,9 +133,9 @@ void DbgPrintf(LPTSTR fmt,...    )
 {
     va_list marker;
     char szBuf[MM::MaxStrLength];
- 
+
     va_start(marker, fmt);
-	vsprintf(szBuf, fmt, marker);
+	vsnprintf(szBuf, sizeof(szBuf), fmt, marker);
 	va_end(marker);
     
     OutputDebugString(szBuf);

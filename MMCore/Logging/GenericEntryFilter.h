@@ -17,12 +17,10 @@
 #pragma once
 
 
-namespace mm
-{
-namespace logging
-{
-namespace internal
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
+namespace internal {
 
 
 template <class TMetadata>
@@ -36,4 +34,5 @@ public:
 
 } // namespace internal
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

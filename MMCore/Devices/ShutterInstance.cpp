@@ -22,6 +22,12 @@
 #include "ShutterInstance.h"
 
 
+namespace mmcore {
+namespace internal {
+
 int ShutterInstance::SetOpen(bool open) { RequireInitialized(__func__); return GetImpl()->SetOpen(open); }
 int ShutterInstance::GetOpen(bool& open) { RequireInitialized(__func__); return GetImpl()->GetOpen(open); }
 int ShutterInstance::Fire(double deltaT) { RequireInitialized(__func__); return GetImpl()->Fire(deltaT); }
+
+} // namespace internal
+} // namespace mmcore

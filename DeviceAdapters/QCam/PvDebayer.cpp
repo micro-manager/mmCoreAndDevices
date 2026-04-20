@@ -24,6 +24,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "PvDebayer.h"
+#include "MMDeviceConstants.h"
+
 #include <math.h>
 #include <assert.h>
 using namespace std;

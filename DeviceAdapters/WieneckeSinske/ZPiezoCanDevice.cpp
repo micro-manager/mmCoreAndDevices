@@ -47,7 +47,6 @@
 // ZPiezoCANDevice
 //
 ZPiezoCANDevice::ZPiezoCANDevice (): 
-CStageBase<ZPiezoCANDevice>(),
 	initialized_ (false),
 	stepSize_um_(0.001),
 	can29_(),

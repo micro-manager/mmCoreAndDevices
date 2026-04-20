@@ -217,7 +217,7 @@ bool RAMPSHub::Busy() {
     status_ = "Busy";
     return true;
   }
-  if (!answer.compare("ok")) {
+  if (answer != "ok") {
     LogMessage(std::string("busy expected OK, didn't get it."));
     LogMessage(answer);
     return true;
@@ -374,6 +374,10 @@ int RAMPSHub::ReadResponse(std::string &returnString, float timeout)
     {
       LogMessage(std::string("answer get error!_"));
       return ret;
+    }
+    // Trim trailing CR (handles both LF and CRLF line endings)
+    if (!an.empty() && an.back() == '\r') {
+      an.pop_back();
     }
     returnString = an;
   }
@@ -539,7 +543,7 @@ int RAMPSHub::GetStatus()
     LogMessage(std::string("answer get error!_"));
     return ret;
   }
-  if (!an.compare("ok"))
+  if (an != "ok")
   {
     LogMessage(std::string("answer get error!_"));
     return ret;
@@ -607,7 +611,7 @@ int RAMPSHub::SetVelocity(double x, double y, double z) {
   if (ret != DEVICE_OK) return ret;
   ret = pHub->ReadResponse(result);
   if (ret != DEVICE_OK) return ret;
-  if (!result.compare("ok")) {
+  if (result != "ok") {
     LogMessage("Expected OK");
   }
 
@@ -626,7 +630,7 @@ int RAMPSHub::SetAcceleration(double x, double y, double z) {
   if (ret != DEVICE_OK) return ret;
   ret = pHub->ReadResponse(result);
   if (ret != DEVICE_OK) return ret;
-  if (!result.compare("ok") ) {
+  if (result != "ok") {
     LogMessage("Expected OK");
   }
 

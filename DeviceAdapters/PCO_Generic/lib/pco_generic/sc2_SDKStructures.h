@@ -1,19 +1,13 @@
 //-----------------------------------------------------------------//
-// Name        | sc2_structures.h            | Type: ( ) source    //
+// Name        | sc2_sdkstructures.h         | Type: ( ) source    //
 //-------------------------------------------|       (*) header    //
 // Project     | SC2                         |       ( ) others    //
 //-----------------------------------------------------------------//
-// Platform    | INTEL PC                                          //
-//-----------------------------------------------------------------//
-// Environment | Microsoft Visual C++ 6.0                          //
-//-----------------------------------------------------------------//
 // Purpose     | SC2 - Structure defines                           //
 //-----------------------------------------------------------------//
-// Author      |  FRE, PCO AG                                      //
+// Author      |  FRE, Excelitas PCO GmbH                          //
 //-----------------------------------------------------------------//
-// Revision    |  rev. 1.06 rel. 1.06                              //
-//-----------------------------------------------------------------//
-// Notes       | Rev 0.01 covers six! groups of structures and the //
+// Notes       | Covers following groups of structures and the     //
 //             | famous camera descriptor:                         //
 //             | 1. General control group.                         //
 //             | 2. Sensor control group.                          //
@@ -24,13 +18,6 @@
 //             | Each data entry in the structure will be defined  //
 //             | in the way as they are defined on the Firmware.   //
 //             |                                                   //
-//             | Rev 0.02: Added an API sruct which handles some   //
-//             | info about the device, allocated within PnP and   //
-//             | holds some flags and function ptrs.               //
-//             |                                                   //
-//             | Rev 0.03: Added ROI Granularity and               //
-//             | Delay, Exposure Step to the camera descriptor.    //
-//             |                                                   //
 //             | See pco.camera SDK manual for further information.//
 //-----------------------------------------------------------------//
 // Attention!! | Attention!! If these structures are released to   //
@@ -39,67 +26,11 @@
 //             | can be done by exploiting the dummy entries and   //
 //             | dummy fields.                                     //
 //-----------------------------------------------------------------//
-// (c) 2002 PCO AG * Donaupark 11 *                                //
+// (c) 2021 Excelitas PCO GmbH * Donaupark 11 *                    //
 // D-93309      Kelheim / Germany * Phone: +49 (0)9441 / 2005-0 *  //
-// Fax: +49 (0)9441 / 2005-20 * Email: info@pco.de                 //
+// Fax: +49 (0)9441 / 2005-20 * Email: pco@excelitas.com           //
 //-----------------------------------------------------------------//
 
-
-//-----------------------------------------------------------------//
-// Revision History:                                               //
-//-----------------------------------------------------------------//
-// Rev.:     | Date:      | Changed:                               //
-// --------- | ---------- | ---------------------------------------//
-//  0.01     | 15.05.2003 |  FRE/new file                          //
-//-----------------------------------------------------------------//
-//  0.02     | 28.05.2003 |  FRE/ upd. some elements, added APIMgm.//
-//-----------------------------------------------------------------//
-//  0.03     | 05.11.2003 |  FRE/ add. some elements               //
-//-----------------------------------------------------------------//
-//  0.14     | 09.01.2004 |  FRE/ add. hw-fwversion                //
-//-----------------------------------------------------------------//
-//  0.16     | 23.03.2004 |  Removed single entries for dwDelay    //
-//           |            |  and dwExposure, now they are part of  //
-//           |            |  the delay/exposure table, FRE         //
-//-----------------------------------------------------------------//
-//  1.00     | 04.05.2004 |  Released to market.                   //
-//           |            |                                        //
-//-----------------------------------------------------------------//
-//  1.01     | 04.06.2004 |  FRE/ add. FPS exposure mode.          //
-//           |            |                                        //
-//-----------------------------------------------------------------//
-//  1.02     | 04.06.2004 |  FRE/ add. changes due to explicit     //
-//           |            |            linking. added camlink.     //
-//-----------------------------------------------------------------//
-//  1.03     | 17.12.2004 |  FRE/ add. PCO_OpenCameraEx and struct //
-//           |            |  adapted, inserted CL_SER              //
-//           | 22.02.2005 |  FRE/ added dwImageSize @ bufferstruct //
-//-----------------------------------------------------------------//
-//  1.04     | 21.04.2005 |  Added Noisefilter, removed HW-Desc,   //
-//           |            |  FRE                                   //
-//           | 02.06.2005 |  MBL IF National Instruments inserted  //
-//-----------------------------------------------------------------//
-//  1.05     | 27.02.2006 |  Added PCO_GetCameraName, FRE          //
-//           |            |  Added PCO_xxxHotPixelxxx, FRE         //
-//-----------------------------------------------------------------//
-//  1.06     | 02.06.2006 |  Added PCO_GetCameraDescriptionEx, FRE //
-//           |            |  Added PCO_xxxModulationMode, FRE      //
-//           |            |  Added PCO_WaitforBuffer, FRE          //
-//-----------------------------------------------------------------//
-//  1.07     | 24.10.2006 |  Added Hasotech, FRE                   //
-//-----------------------------------------------------------------//
-//  1.08     | 14.10.2007 |  Removed Hasotech, FRE                 //
-//-----------------------------------------------------------------//
-//  1.09     | 05.12.2007 |  Added GigE, FRE                       //
-//           | 02.04.2007 |  Added USB, FRE                        //
-//           | 17.04.2008 |  Minor corrections, FRE                //
-//           | 28.05.2008 |  Reviewed structure alignment and      //
-//           |            |  some additional dummy words, FRE      //
-//-----------------------------------------------------------------//
-//  1.10     | 05.03.2009 |  FRE: Added Get/SetFrameRate           //
-//           |            |  Added HW IO functions and desc.       //
-//           | 08.11.2011 |  FRE: Added desc.flags comments        //
-//-----------------------------------------------------------------//
 
 // The wZZAlignDummies are only used in order to reflect the compiler output.
 // Default setting of the MS-VC-compiler is 8 byte alignment!!
@@ -130,26 +61,36 @@
 
 // SDK-Dll internal defines (different to interface type in sc2_defs.h!!!
 // In case you're going to enumerate interface types, please refer to sc2_defs.h.
-#define PCO_INTERFACE_FW     1         // Firewire interface
-#define PCO_INTERFACE_CL_MTX 2         // Cameralink Matrox Solios / Helios
-#define PCO_INTERFACE_CL_ME3 3         // Cameralink Silicon Software Me3
-#define PCO_INTERFACE_CL_NAT 4         // Cameralink National Instruments
-#define PCO_INTERFACE_GIGE   5         // Gigabit Ethernet
-#define PCO_INTERFACE_USB    6         // USB 2.0
-#define PCO_INTERFACE_CL_ME4 7         // Cameralink Silicon Software Me4
-#define PCO_INTERFACE_USB3   8         // USB 3.0
-#define PCO_INTERFACE_WLAN   9         // WLan (Only control path, not data path)
-#define PCO_INTERFACE_CLHS  11         // Cameralink HS 
+#define PCO_INTERFACE_FW      1         // Firewire interface
+#define PCO_INTERFACE_CL_MTX  2         // Cameralink Matrox Solios / Helios
+#define PCO_INTERFACE_GENICAM 3         // Genicam wrapper interface
+#define PCO_INTERFACE_CL_NAT  4         // Cameralink National Instruments
+#define PCO_INTERFACE_GIGE    5         // Gigabit Ethernet
+#define PCO_INTERFACE_USB     6         // USB 2.0
+#define PCO_INTERFACE_CL_ME4  7         // Cameralink Silicon Software Me4
+#define PCO_INTERFACE_USB3    8         // USB 3.0 and USB 3.1 Gen1
+#define PCO_INTERFACE_WLAN    9         // WLan (Only control path, not data path)
+#define PCO_INTERFACE_CLHS   11         // Cameralink HS 
+//#define PCO_INTERFACE_CLHS_SISO   12    // reserved for CLHS only SISO Me5 grabber 
+//#define PCO_INTERFACE_CLHS_KAYA   13    // reserved for CLHS only KAYA Komodo grabber
 
 #define PCO_LASTINTERFACE PCO_INTERFACE_CLHS
 
 #define PCO_INTERFACE_CL_SER 10
 #define PCO_INTERFACE_GENERIC 20
 
+//additional defines for PCO_OpenCameraEx() strOpenStruct->wInterface
+//additional information must be set in strOpenStruct->dwOpenFlags[0] and for IPV6 strOpenStruct->dwOpenFlags[1]
+#define PCO_INTERFACE_BY_ID           0x8001  //camera selected with id
+#define PCO_INTERFACE_BY_SERIAL       0x8002  //camera selected with serial
+#define PCO_INTERFACE_BY_IPV4         0x8003  //camera selected with IPV4 address
+#define PCO_INTERFACE_BY_IPV6         0x8004  //camera selected with IPV6 address
+
 #define PCO_OPENFLAG_GENERIC_IS_CAMLINK  0x0001 // In case a generic Camerlink interface is used (serial port)
-                                       // set this flag (not necessary in automatic scanning)
+// set this flag (not necessary in automatic scanning)
 #define PCO_OPENFLAG_HIDE_PROGRESS       0x0002 // Hides the progress dialog when automatic scanning runs
 
+#ifndef MATLAB
 typedef struct                         // Buffer list structure for  PCO_WaitforBuffer
 {
  SHORT sBufNr;
@@ -157,11 +98,12 @@ typedef struct                         // Buffer list structure for  PCO_Waitfor
  DWORD dwStatusDll;
  DWORD dwStatusDrv;                    // 12
 }PCO_Buflist;
+#endif
 
 typedef struct
 {
   WORD          wSize;                 // Sizeof this struct
-  WORD          wInterfaceType;        // 1: Firewire, 2: CamLink with Matrox, 3: CamLink with Silicon SW Me3
+  WORD          wInterfaceType;        // 1: Firewire, 2: CamLink with Matrox, 3: Genicam wrapper dll
                                        // 4: CamLink with NI, 5: GigE, 6: USB2.0, 7: CamLink with Silicon SW Me4,
                                        // 8: USB3.0, 8: WLan
   WORD          wCameraNumber;         // Start with 0 and increment till error 'No driver' is returned
@@ -240,7 +182,7 @@ typedef struct
   DWORD       dwCamHealthWarnings;     // Warnings in camera system
   DWORD       dwCamHealthErrors;       // Errors in camera system
   DWORD       dwCamHealthStatus;       // Status of camera system      // 1380
-  SHORT       sCCDTemperature;         // CCD temperature
+  SHORT       sCCDTemperature;         // CCD temperature in 0.1 degree Celsius
   SHORT       sCamTemperature;         // Camera temperature           // 1384
   SHORT       sPowerSupplyTemperature; // Power device temperature
   WORD        ZZwDummy[37];                                            // 1460
@@ -249,7 +191,7 @@ typedef struct
 typedef struct
 {
   WORD        wSize;                   // Sizeof this struct
-  WORD        wSensorTypeDESC;         // Sensor type
+  WORD        wSensorTypeDESC;         // Sensor type (Bit 0: true -> color sensor; false monochrome sensor)
   WORD        wSensorSubTypeDESC;      // Sensor subtype
   WORD        wMaxHorzResStdDESC;      // Maxmimum horz. resolution in std.mode
   WORD        wMaxVertResStdDESC;      // Maxmimum vert. resolution in std.mode // 10
@@ -268,7 +210,7 @@ typedef struct
   DWORD       ZZdwDummypr[20];                                                  // 128
   WORD        wConvFactDESC[4];        // Possible conversion factor in e/cnt   // 136
   SHORT       sCoolingSetpoints[10];   // Cooling setpoints in case there is no cooling range // 156
-  WORD        ZZdwDummycv[8];                                                   // 172
+  WORD        ZZwDummycv[8];                                                    // 172
   WORD        wSoftRoiHorStepsDESC;    // Minimum granularity of SoftROI in pixels
   WORD        wSoftRoiVertStepsDESC;   // Minimum granularity of SoftROI in pixels
   WORD        wIRDESC;                 // IR enhancment possibility
@@ -308,9 +250,12 @@ typedef struct
                                        //  |   2   |   3   |   row2
                                        //  |       |       |
                                        //  -----------------
-                                       // 
+                                       // Upper left is
+                                       // Red: 0x4321; Green (red line): 0x3412; Green (blue line): 0x2143; Blue 0x1234
+                                       // 0 for monochrome camera
   WORD        wPatternTypeDESC;        // Pattern type of color chip
-                                       // 1: Bayer pattern RGB
+                                       // 0: monochrome sensor
+                                       // 1: RGB Bayer pattern
   WORD        wDummy1;                 // former DSNU correction mode             // 240
   WORD        wDummy2;                 // 
   WORD        wNumCoolingSetpoints;    //
@@ -400,6 +345,81 @@ typedef struct
 typedef struct
 {
   WORD        wSize;                   // Sizeof this struct
+  WORD        wChannelNumberIntensifiedDESC; // 0: Master channel; 1x: Slave channels
+  WORD        wNumberOfChannelsIntensifiedDESC; // Number of active channels in this camera
+
+  WORD        wMinVoltageIntensifiedDESC; // Min voltage for MCP, usually ~700V (GaAs, ~600V)
+  WORD        wMaxVoltageIntensifiedDESC; // Max voltage for MCP, usually ~1100V (GaAs, ~900V)
+  WORD        wVoltageStepIntensifiedDESC; // Voltage step for MCP, usually 10V
+  WORD        wExtendedMinVoltageIntensifiedDESC; // Extended min voltage for MCP, 600V (GaAs, ~500V)
+
+  WORD        wMaxLoopCountIntensifiedDESC;  // Maximum loop count for multi exposure (16)
+  DWORD       dwMinPhosphorDecayIntensified_ns_DESC; // Minimum decay time in (nsec)
+  DWORD       dwMaxPhosphorDecayIntensified_ms_DESC; // Maximum decay time in (msec)        (24)
+
+  DWORD       dwFlagsIntensifiedDESC;        // Flags which gating modes are supported        (28)
+                                       // 0x0001: Gating mode 1 (switch off MCP after and till next exposure)
+                                       // 0x0002: Gating mode 2 (switch off MCP and on when a trigger signal is detected)
+  char        szIntensifierTypeDESC[24];     // Type of image intensifier;
+
+  // dwMCP_Rectangle??_DESC describes the position of the rectangle including the MCP circle area 
+  //   referenced to the sensor format which is greater. Note that the data in 1/100 pixel reso-
+  //   lution, thus you have to divide the values by 100 to get the pixel coordinate
+  // If data is not valid, all values are 0x80000000!
+
+  DWORD       dwMCP_RectangleXL_DESC;        // rectangle of the MCP circle area, x left
+  DWORD       dwMCP_RectangleXR_DESC;        // rectangle of the MCP circle area, x right 
+  DWORD       dwMCP_RectangleYT_DESC;        // rectangle of the MCP circle area, y top
+  DWORD       dwMCP_RectangleYB_DESC;        // rectangle of the MCP circle area, y bottom (68)
+
+  DWORD       ZZdwDummy[23];                                                          //(160)
+} PCO_Description_Intensified;
+
+typedef struct
+{
+  WORD        wSize;
+
+  WORD        wDarkOffsetDESC3;             // in counts (4)
+
+  DWORD       dwGeneralCapsDESC5;           // 
+  DWORD       dwGeneralCapsDESC6;           // 
+  DWORD       dwGeneralCapsDESC7;           // 
+  DWORD       dwGeneralCapsDESC8;           // (20)
+
+  WORD        wMinHorzResStdDESC3;          // Minimum horz. resolution in std.mode
+  WORD        wMinVertResStdDESC3;          // Minimum vert. resolution in std.mode
+  WORD        wMinHorzResExtDESC3;          // Minimum horz. resolution in ext.mode
+  WORD        wMinVertResExtDESC3;          // Minimum vert. resolution in ext.mode
+
+  WORD        wPixelsize_horzDESC3;         // in nanometer
+  WORD        wPixelsize_vertDESC3;         // in nanometer (32)
+
+  SHORT       sMinSensorTempWarningDESC3;   // lower bound Value in 1/10 degree Celsius which does set WARNING_SENSORTEMPERATURE Bit in Health Status
+  SHORT       sMaxSensorTempWarningDESC3;   // upper bound Value in 1/10 degree Celsius which does set WARNING_SENSORTEMPERATURE Bit in Health Status
+  SHORT       sMinCameraTempWarningDESC3;   // lower bound Value in 1/10 degree Celsius which does set WARNING_CAMERATEMPERATURE Bit in Health Status
+  SHORT       sMaxCameraTempWarningDESC3;   // upper bound Value in 1/10 degree Celsius which does set WARNING_CAMERATEMPERATURE Bit in Health Status
+  SHORT       sMinPowerTempWarningDESC3;    // lower bound Value in 1/10 degree Celsius which does set WARNING_POWERSUPPLYTEMPERATURE Bit in Health Status
+  SHORT       sMaxPowerTempWarningDESC3;    // upper bound Value in 1/10 degree Celsius which does set WARNING_POWERSUPPLYTEMPERATURE Bit in Health Status (44)
+
+  WORD        wMinPowerVoltageWarningDESC3; // lower bound Value in 1/10 Volt which does set WARNING_POWERSUPPLYVOLTAGERANGE Bit in Health Status
+  WORD        wMaxPowerVoltageWarningDESC3; // upper bound Value in 1/10 Volt which does set WARNING_POWERSUPPLYVOLTAGERANGE Bit in Health Status (48)
+
+  SHORT       sMinSensorTempErrorDESC3;     // lower bound Value in 1/10 degree Celsius which does set ERROR_SENSORTEMPERATURE Bit in Health Status
+  SHORT       sMaxSensorTempErrorDESC3;     // upper bound Value in 1/10 degree Celsius which does set ERROR_SENSORTEMPERATURE Bit in Health Status
+  SHORT       sMinCameraTempErrorDESC3;     // lower bound Value in 1/10 degree Celsius which does set ERROR_CAMERATEMPERATURE Bit in Health Status
+  SHORT       sMaxCameraTempErrorDESC3;     // upper bound Value in 1/10 degree Celsius which does set ERROR_CAMERATEMPERATURE Bit in Health Status
+  SHORT       sMinPowerTempErrorDESC3;      // lower bound Value in 1/10 degree Celsius which does set ERROR_POWERSUPPLYTEMPERATURE Bit in Health Status
+  SHORT       sMaxPowerTempErrorDESC3;      // upper bound Value in 1/10 degree Celsius which does set ERROR_POWERSUPPLYTEMPERATURE Bit in Health Status (60)
+
+  WORD        wMinPowerVoltageErrorDESC3;   // lower bound Value in 1/10 Volt which does set ERROR_POWERSUPPLYVOLTAGERANGE Bit in Health Status
+  WORD        wMaxPowerVoltageErrorDESC3;   // upper bound Value in 1/10 Volt which does set ERROR_POWERSUPPLYVOLTAGERANGE Bit in Health Status (64)
+
+  DWORD       dwReserved[32];               // (192)
+} PCO_Description3;
+
+typedef struct
+{
+  WORD        wSize;                   // Sizeof this struct
 } PCO_DescriptionEx;
 
 
@@ -409,9 +429,10 @@ typedef struct
 #define NUM_MAX_SIGNALS     20         // Maximum number of signals available
 #define NUM_SIGNALS 4
 #define NUM_SIGNAL_NAMES 4
+#define AUTO_SELECT_TIMING_SIGNAL_7 0xA000 // Used in PCO_SetHWIOSignalTiming to auto select exp. functionality
 typedef struct
 {
-  WORD  wSize;                         // Sizeof ‘this’ (for future enhancements)
+  WORD  wSize;                         // Sizeof this (for future enhancements)
   WORD  ZZwAlignDummy1;
   char  strSignalName[NUM_SIGNAL_NAMES][25];// Name of signal 104
                                        // Specifies NUM_SIGNAL_NAMES functionalities (1-4)
@@ -446,7 +467,7 @@ typedef struct
 
 typedef struct
 {
-  WORD              wSize;             // Sizeof ‘this’ (for future enhancements)
+  WORD              wSize;             
   WORD              wNumOfSignals;     // Parameter to fetch the num. of descr. from the camera
   PCO_Single_Signal_Desc strSingeSignalDesc[NUM_MAX_SIGNALS];// Array of singel signal descriptors // 4004
   DWORD             dwDummy[524];      // reserved for future use.    // 6100
@@ -459,7 +480,9 @@ typedef struct
   WORD        ZZwAlignDummy1;
   PCO_Description strDescription;      // previous described structure // 440
   PCO_Description2 strDescription2;    // second descriptor            // 736
-  DWORD       ZZdwDummy2[256];         //                              // 1760
+  PCO_Description_Intensified strDescriptionIntensified;// Intensified camera descriptor        // 896
+  PCO_Description3 strDescription3;    // third descriptor             // 1088
+  DWORD       ZZdwDummy2[168];         //                              // 1760
   WORD        wSensorformat;           // Sensor format std/ext
   WORD        wRoiX0;                  // Roi upper left x
   WORD        wRoiY0;                  // Roi upper left y
@@ -467,7 +490,7 @@ typedef struct
   WORD        wRoiY1;                  // Roi lower right y            // 1770
   WORD        wBinHorz;                // Horizontal binning
   WORD        wBinVert;                // Vertical binning
-  WORD        ZZwAlignDummy2;
+  WORD        wIntensifiedFlags;       // Additional Intensified flags for setup: 0x01 - Enable Extended Min Voltage for MCP
   DWORD       dwPixelRate;             // 32bit unsigend, Pixelrate in Hz: // 1780
                                        // depends on descriptor values
   WORD        wConvFact;               // Conversion factor:
@@ -481,7 +504,10 @@ typedef struct
   WORD        wFastReadoutMode;        // Fast readout mode for dimax
   WORD        wDSNUAdjustMode;         // DSNU Adjustment mode
   WORD        wCDIMode;                // Correlated double image mode // 1800
-  WORD        ZZwDummy[36];                                            // 1872
+  WORD        wIntensifiedVoltage;     // MCP Voltage: ~700...~1100V
+  WORD        wIntensifiedGatingMode;  // MCP gating mode 0: MCP always on; 1: MCP will be off after exp.; 2: MCP will be off till trigger
+  DWORD       dwIntensifiedPhosphorDecay_us; // MCP phosphor decay (additional exp. time till phosphor light vanishes)
+  WORD        ZZwDummy[32];                                            // 1872
   PCO_Signal_Description strSignalDesc;// Signal descriptor            // 7972
   DWORD       ZZdwDummy[PCO_SENSORDUMMY];                              // 8000
 } PCO_Sensor;
@@ -514,7 +540,7 @@ typedef struct
   DWORD  TriggerSystemJitter_ns;       // Max. possible trigger jitter -0/+ ... ns
   DWORD  TriggerDelay_ns;              // Resulting trigger delay = system delay
   DWORD  TriggerDelay_s;               // + delay of SetDelayExposureTime ... // 9
-  DWORD  ZZdwDummy[11];                // 20
+  DWORD  ZZdwDummy[11];                // 80
 } PCO_ImageTiming;
 
 
@@ -522,22 +548,22 @@ typedef struct
 typedef struct
 {
   WORD        wSize;                   // Sizeof this struct
-  WORD        wTimeBaseDelay;          // Timebase delay 0:ns, 1:µs, 2:ms
-  WORD        wTimeBaseExposure;       // Timebase expos 0:ns, 1:µs, 2:ms
+  WORD        wTimeBaseDelay;          // Timebase delay 0:ns, 1:us, 2:ms
+  WORD        wTimeBaseExposure;       // Timebase expos 0:ns, 1:us, 2:ms
   WORD        wCMOSParameter;          // Line Time mode: 0: off 1: on    // 8
   DWORD       dwCMOSDelayLines;        // See next line
-  DWORD       dwCMOSExposureLines;     // Delay and Exposure lines for lightsheet // 16
+  DWORD       dwCMOSExposureLines;     // Delay and Exposure lines for line scanning mode // 16
   DWORD       dwDelayTable[PCO_MAXDELEXPTABLE];// Delay table             // 80
-  DWORD       ZZdwDummy1[110];                                            // 524
+  DWORD       ZZdwDummy1[110];                                            // 520
   DWORD       dwCMOSLineTimeMin;       // Minimum line time in ns
-  DWORD       dwCMOSLineTimeMax;       // Maximum line time in ms         // 532
-  DWORD       dwCMOSLineTime;          // Current line time value         // 536
+  DWORD       dwCMOSLineTimeMax;       // Maximum line time in ms         // 528
+  DWORD       dwCMOSLineTime;          // Current line time value         // 532
   WORD        wCMOSTimeBase;           // Current time base for line time
-  WORD        wZZDummy4;
+  WORD        wIntensifiedLoopCount;   // Number of loops to use for mutli exposure
   DWORD       dwExposureTable[PCO_MAXDELEXPTABLE];// Exposure table       // 600
   DWORD       ZZdwDummy2[110];                                            // 1040
   DWORD       dwCMOSFlags;             // Flags indicating the option, whether it is possible to LS-Mode with slow/fast scan, etc.
-  DWORD       ZZdwDummy3;
+  DWORD       dwCMOSLineTimeMinStep;   // Minimum line time step in ns
   WORD        wTriggerMode;            // Trigger mode                    // 1050
                                        // 0: auto, 1: software trg, 2:extern 3: extern exp. ctrl
   WORD        wForceTrigger;           // Force trigger (Auto reset flag!)
@@ -551,7 +577,7 @@ typedef struct
   WORD        wModulationMode;         // Mode for modulation (0 = modulation off, 1 = modulation on) // 1070
   WORD        wCameraSynchMode;        // Camera synchronization mode (0 = off, 1 = master, 2 = slave)
   DWORD       dwPeriodicalTime;        // Periodical time (unit depending on timebase) for modulation // 1076
-  WORD        wTimeBasePeriodical;     // timebase for periodical time for modulation  0 -> ns, 1 -> µs, 2 -> ms
+  WORD        wTimeBasePeriodical;     // timebase for periodical time for modulation  0 -> ns, 1 -> us, 2 -> ms
   WORD        ZZwDummy3;
   DWORD       dwNumberOfExposures;     // Number of exposures during modulation // 1084
   LONG        lMonitorOffset;          // Monitor offset value in ns      // 1088
@@ -565,7 +591,7 @@ typedef struct
   WORD        ZZwDummy[PCO_TIMINGDUMMY];                                               // 2352
 } PCO_Timing;
 
-#define PCO_STORAGEDUMMY 39
+#define PCO_STORAGEDUMMY 38
 typedef struct
 {
   WORD        wSize;                   // Sizeof this struct
@@ -575,9 +601,21 @@ typedef struct
   WORD        ZZwAlignDummy4;
   DWORD       dwRamSegSize[PCO_RAMSEGCNT];// Size of ram segment 1-4 in pages // 28
   DWORD       ZZdwDummyrs[20];                                            // 108
-  WORD        wActSeg;                 // no. (0 .. 3) of active segment  // 110
+  WORD        wActSeg;                 // no. (1 .. 4) of active segment  // 110
+  WORD        wCompressionMode;        // wCompression mode for camera internal compression
   WORD        ZZwDummy[PCO_STORAGEDUMMY];                                 // 188
 } PCO_Storage;
+
+
+#define PCO_ACQ_CTRL_IS_EXTERN      0x00000001 // Acquire signal is set to external signal
+#define PCO_ACQ_CTRL_IS_ACTIVE      0x00000002 // Acquire signal is currently active (enabled)
+#define PCO_ACQ_CTRL_IS_NOT_ACTIVE  0x00000004 // Acquire signal is currently not active (disabled)
+
+#define PCO_SET_ACQ_CTRL_EXTERN     0x00000001 // Sets acquire signal to external signal
+#define PCO_SET_ACQ_CTRL_ACTIVE     0x00000002 // Sets acquire signal to active state (enabled)
+#define PCO_SET_ACQ_CTRL_NOT_ACTIVE 0x00000004 // Sets acquire signal to inactive state (disabled)
+#define PCO_SET_ACQ_CTRL_TRIGGER    0x00000008 // Sets acquire signal to active state and resets (causing an edge)
+                                               // This can be used to issue a sequence trigger by software
 
 #define PCO_RECORDINGDUMMY 22
 typedef struct
@@ -664,19 +702,21 @@ typedef struct
   WORD        ZZwDummy[38];                                                // 2244
 } PCO_Image;
 
-#define PCO_BUFFER_STATICS   0xFFFF0000  // Mask for all static flags
+#define PCO_BUFFER_STATICS       0xFFFF0000  // Mask for all static flags
 // Static flags:
-#define PCO_BUFFER_ALLOCATED 0x80000000  // A buffer is allocated
-#define PCO_BUFFER_EVENTDLL  0x40000000  // An event is allocated
-#define PCO_BUFFER_ISEXTERN  0x20000000  // The buffer was allocated externally
-#define PCO_BUFFER_EVAUTORES 0x10000000  // Set this flag to do an 'auto reset' of the
-                                         // event, in case you call WaitForBuffer
+#define PCO_BUFFER_ALLOCATED     0x80000000  // A buffer is allocated
+#define PCO_BUFFER_EVENTDLL      0x40000000  // An event is allocated
+#define PCO_BUFFER_ISEXTERN      0x20000000  // The buffer was allocated externally
+#define PCO_BUFFER_EVAUTORES     0x10000000  // Set this flag to do an 'auto reset' of the
+                                             // event, in case you call WaitForBuffer
 // Dynamic flags:
-#define PCO_BUFFER_EVENTSET  0x00008000  // The event of the buffer is set
+#define PCO_BUFFER_EVENTSET      0x00008000  // The event of the buffer is set
+#define PCO_BUFFER_RESETEV_DONE  0x00004000  // The auto reset of the event is done
 // Informations about buffer status flags:
 // 00000000 00000000 00000000 00000000
 // |||||||| |||||||| |||||||| ||||||||
-// ||||              |
+// ||||              ||
+// ||||              |------------------- Buffer event Reset was done in WaitForBuffer
 // ||||              -------------------- Buffer event is set to signaled
 // ||||
 // |||----------------------------------- Signaled Buffer event will be reset in WaitForBuffer
@@ -712,39 +752,55 @@ typedef struct
 #define APIMANAGEMENTFLAG_SOFTROI       0x0001 // Soft ROI is active
 #define APIMANAGEMENTFLAG_SOFTROI_RESET 0x0100 // Reset Soft ROI to default camera ROI
 #define APIMANAGEMENTFLAG_LINE_TIMING   0x0002 // Line timing is available
+#define APIMANAGEMENTFLAG_SOFT_FPS      0x0004 // Enable setting fps in an iterative mode
+
+#define APIMANAGEMENTFLAG_POWERCYCLE_LENSCTRL 0x0001 // In case a power on is detected this flag is set in Open (reserved for lens control)
 
 typedef struct
 {
   WORD          wSize;                 // Size of this struct
   WORD          wCameraNum;            // Current number of camera
-  HANDLE        hCamera;               // Handle of the device
-  WORD          wTakenFlag;            // Flags to show whether the device is taken or not. // 10
-  WORD          wAPIManagementFlags;   // Flags for internal use                            // 12
-  void          *pSC2IFFunc[20];                                                            // 92
-  PCO_APIBuffer strPCOBuf[PCO_BUFCNT]; // Bufferlist                                        // 892
-  PCO_APIBuffer ZZstrDummyBuf[28-PCO_BUFCNT];     // Bufferlist                                        // 2892
+  HANDLE        hCamera;               // Handle of the device                              // 8 (12 @64bit)
+  WORD          wTakenFlag;            // Flags to show whether the device is taken or not. // 10 (14 @64bit)
+  WORD          wAPIManagementFlags;   // Flags for internal use                            // 12 (16 @64bit)
+  void          *pSC2IFFunc[20];       // Interface function pointer range 1                // 92 (176 @64bit)
+  PCO_APIBuffer strPCOBuf[PCO_BUFCNT]; // Bufferlist (16 * 100 = 1600; 104 @64 = 1664)      // 1692 (1840 @64bit)
+  PCO_APIBuffer ZZstrDummyBuf[26 - PCO_BUFCNT];// Bufferlist (10 * 100 = 1000; 104 = 1040)  // 2692 (2880 @64bit)
+  void          *pSC2IFFunc2[25];      // Interface function pointer range 2                // 2792 (3088 @64bit)
+#if !defined _WIN64
+  DWORD dwZZdummyPtr32[23];
+#endif
+  DWORD         dwFrameTime4SoftFPS_ns;// Shortest frame time at full ROI ns part
+  DWORD         dwFrameTime4SoftFPS_s; // Shortest frame time at full ROI s part
   SHORT         sBufferCnt;            // Index for buffer allocation
   WORD          wCameraNumAtInterface; // Current number of camera at the interface
   WORD          wInterface;            // Interface type (used before connecting to camera)
                                        // different from PCO_CameraType (!)
-  WORD          wXRes;                 // X Resolution in Grabber (CamLink only)            // 2900
-  WORD          wYRes;                 // Y Resolution in Buffer (CamLink only)             // 2902
-  WORD          ZZwAlignDummy2;
-  DWORD         dwIF_param[5];         // Interface specific parameter                      // 2924
+  WORD          wXRes;                 // X Resolution in Grabber (CamLink only)            // 2900 (3096 @64bit)
+  WORD          wYRes;                 // Y Resolution in Buffer (CamLink only)             // 2902 (3098 @64bit)
+  WORD          wPowerCycleFlag;       // This will be set to 0xFFFF in order to forward an eventuall power on state
+  DWORD         dwIF_param[5];         // Interface specific parameter                      
                                        // 0 (FW:bandwidth or CL:baudrate ) 
                                        // 1 (FW:speed     or CL:clkfreq  ) 
                                        // 2 (FW:channel   or CL:ccline   ) 
                                        // 3 (FW:buffer    or CL:data     ) 
                                        // 4 (FW:iso_bytes or CL:transmit ) 
   WORD          wImageTransferMode;
-  WORD          wRoiSoftX0;            // Soft ROI settings
+  WORD          wRoiSoftX0;            // Soft ROI settings from PCO_SetROI call, when APIMANAGEMENTFLAG_SOFTROI flag is set
   WORD          wRoiSoftY0;
   WORD          wRoiSoftX1;
   WORD          wRoiSoftY1;
   WORD          wImageTransferParam[2];
   WORD          wImageTransferTxWidth;
   WORD          wImageTransferTxHeight;
-  WORD          ZZwDummy[17];                                                               // 2976
+  WORD          wInterfaceMajorVersion;
+  WORD          wInterfaceMinorVersion;
+  WORD          wInterfaceBuildVersion;
+  WORD          wInterfacePatchVersion;                                                     // 2948 (3144 @64bit)
+  WORD          wBytesPerPixel;         // Number of bytes per pixel (usually 2: WORD, can be 1: BYTE)
+  DWORD         dwLineTime4SoftFPS;     // Sensor line time for soft fps
+  DWORD         dwBuffersAdded;
+  WORD          ZZwDummy[8];                                                               // 2976 (3172 @64bit)
 } PCO_APIManagement;
 
 typedef struct
@@ -759,9 +815,133 @@ typedef struct
   PCO_Image         strImage;
   PCO_APIManagement strAPIManager;
   WORD              ZZwDummy[40];
-} PCO_Camera;                          // 17404
+} PCO_Camera;                          // 17404 (17600 @64Bit)
 
- 
+
+/////////////////////////////////////////////////////////////////////
+/////// End: PCO_Camera structure definitions ///////////////////////
+/////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////
+/////// User Interface and Lens Control defines and structures //////
+/////////////////////////////////////////////////////////////////////
+
+ typedef struct
+{
+  WORD        wSize;
+  WORD        wZZDummy1;
+  WORD        wInterfaceID;          // number/ID of interface/device = 0, 1 to number of interfaces - 1
+  WORD        wNumberOfInterfaces;   // total number of user interfaces/devices in the camera 
+  WORD        wInterfaceType;        // type of interface (UART, UART unidirectional, USART, SPI, I2C, ...)
+  BYTE        bBitsPerWord[4];       // any of 7, 8, 9, end of list with 0, remaining filled with 0 // 14
+  DWORD       dwFrequency[12];       // possible baudrates/frequencies from low to high, 0 = end of list //62
+  DWORD       dwInterfaceOptions;    // optional settings for interface (e.g. parity, unidirectional, ...)
+  WORD        wInterfaceEnabled;     // enable/disable/autodisable/powersave/.... interface 
+  DWORD       dwAllowedEquipment;    // flags for allowed accessories/equipment e.g. LensCtrlBirger (for CW) 
+  WORD        wHandshakeType;        // bit mask, see below
+  WORD        wTxBufferMaxSize;      // transmit buffer size, might be 0, in that case send function must wait until all bytes are sent!
+  WORD        wRxBufferMaxSize;      // receive buffer size, might be 0, in that case send function must wait until all bytes are received! 
+  WORD        wTxBufferFree;         // actual number of bytes which can be written to tx buffer, -1 for not applicable
+  WORD        wRxBufferAvail;        // actual number of bytes which can be read from rx buffer, -1 for not applicable // 82
+  WORD        wRFU[4];               // reserved for future use, camera will return 0, until they are defined. // 90
+  WORD        wZZDummy2[25];         // reserved for future use. // 140
+}PCO_UserInterfaceInfo;
+
+typedef struct
+{
+  WORD        wSize;
+  WORD        wZZDummy1;
+  WORD        wInterfaceID;          // number/ID of selected interface/device = 0, 1 to number of interfaces - 1
+  BYTE        bInterfaceEnable;      // 1 = enable / 0 = disable interface
+  BYTE        bClearBuffers;         // 0x00 = do nothing, 0x01 clear rx buffer, 0x02 clear tx buffer, 0x03 clear rx and tx buffer
+  DWORD       dwFrequency;           // selected frequency/bit rate // 12
+  BYTE        bBitsPerWord;          // any of 7, 8, 9
+  BYTE        bReserved;             // alignment filler, that following WORDs and DWORDs are aligned 
+  WORD        wHandshakeType;        // any value of bitmask defined below, interface specific
+  DWORD       dwInterfaceOptions;    // optional settings for interface (e.g. unidirectional, ...) // 20
+  WORD        wRFU[4];               // reserved for future use, set to 0! // 28
+  WORD        wZZDummy2[18];         // reserved for future use. // 64
+}PCO_UserInterfaceSettings;
+
+
+typedef struct
+{
+  WORD wSize;
+  WORD wHardwareVersion;               // Hardware version queried by 'hv'
+  WORD wBootloaderVersion;             // Bootloader version queried by 'bv'
+  WORD wSerialNumber;                  // Serial number queried by 'sn'
+
+  BYTE bLibraryIdentity[48];           // Full library identity string queried by 'lv'  //56
+  DWORD dwLENSType;                    // This identifies the type of the lens control (Birger = 15872)
+  DWORD dwStatusFlags;                 // LENSCONTROL_STATUS...
+  DWORD dwInitCounter;                 // Counts number of inits in order to reflect lens changes
+                                       // F numbers queried by 'da':
+  DWORD dwFNumberMinimum;              // Min aperture as f/ * 10
+  DWORD dwFNumberNumStops;             // Number of stops; Min aperture as f/ * 10
+  DWORD dwFNumberMaximum;              // Max aperture as f/ * 10
+                                       // Zoom range queried by 'dz':
+  DWORD dwZoomRangeMin;                // Min zoom position
+  DWORD dwZoomRangeMax;                // Max zoom position
+  DWORD dwZoomPos;                     // Not used, set to zero
+  DWORD dwLastZoomPos;                 // Last zoom position queried by 'gs'        //96
+  DWORD dwApertures[50];               // Possible aperture values in f/ * 10       //296
+  DWORD dwFocalLength;                 // Last focal length got from lens by 'lc';  //300
+
+  LONG  lFocusMin;                     // Focus range minimum; Usually 0
+  LONG  lFocusMax;                     // Focus range maximum; Usually 16383
+  LONG  lFocusCurr;                    // Focus position 0...16383
+  LONG  lFocusLastCurr;                // Last current focus position                //316
+  WORD  wAperturePos;                  // Current aperture position
+  WORD  wLastAperturePos;              // Last current aperture position
+  DWORD dwfLastAperturePos;            // Last aperture position as f/ * 10          //324
+}PCO_LensControlParameters;
+
+#define LENSCONTROL_LENSTYPE_NONE         0
+#define LENSCONTROL_TYPE_BIRGER           0x00B189E8 // Used for identification of LENS type
+
+#define LENSCONTROL_STATUS_LA_CMD_DONE    0x00000001 // Indicates command 'la' was sent to lens
+#define LENSCONTROL_STATUS_LENSPRESENT    0x00000002 // Indicates presence of a lens
+#define LENSCONTROL_STATUS_NOAPERTURE     0x00000004 // No aperture settings are possible
+#define LENSCONTROL_STATUS_MANUALFOCUS    0x00000008 // No focus settings are possible
+#define LENSCONTROL_STATUS_WAITINGFORLENS 0x00000010 // Birger is here, but no lens
+
+#define LENSCONTROL_IN_LENSVALUE_RELATIVE 0x00001000 // Set focus relative to current position
+
+#define LENSCONTROL_OUT_LENSHITSTOP       0x00100000 // Focus movement hit a stop position
+#define LENSCONTROL_OUT_LENSWASCHANGED    0x00200000 // Last focus or aperture movement caused a change 
+#define LENSCONTROL_OUT_ZOOMHASCHANGED    0x00400000 // Focal length of lens has changed
+
+
+typedef struct
+{
+  WORD        wSize;
+  PCO_UserInterfaceInfo *pstrUserInterfaceInfo;
+  PCO_UserInterfaceSettings* pstrUserInterfaceSettings;
+  PCO_LensControlParameters* pstrLensControlParameters;
+  HANDLE                     hCamera;          //18 (34 @64Bit)
+}PCO_LensControl;
+
+
+typedef struct  
+{
+  WORD wCommand;
+  WORD wResult;
+  WORD wType;  // 0: bytes, 1: words, 2: shorts, 3: dwords, 4: longs
+  // wType tells about the union array which must be used to get the values
+  union 
+  {
+    BYTE bArray[128];
+    WORD wArray[64];
+    SHORT sArray[64];
+    DWORD dwArray[32];
+    LONG lArray[32];
+  };                                               //134
+}PCO_Birger;
+
+/////////////////////////////////////////////////////////////////////
+/////// User Interface and Lens Control defines and structures //////
+/////////////////////////////////////////////////////////////////////
+
 #endif // SC2_STRUCTURES_H
 
 

@@ -68,6 +68,7 @@ public:
    {
       CDeviceUtils::CopyLimitedString( pszName, pDev_->serial.read().c_str() );
    }
+   virtual bool Busy() { return false; }
    virtual unsigned GetNumberOfComponents( void ) const;
    virtual int Initialize( void );
    virtual int Shutdown( void );
@@ -96,10 +97,6 @@ public:
       return SetProperty( MM::g_Keyword_Binning, CDeviceUtils::ConvertToString( binSize ) );
    }
 
-   virtual int PrepareSequenceAcqusition( void )
-   {
-      return DEVICE_OK;
-   }
    virtual int StartSequenceAcquisition( double interval )
    {
       return StartSequenceAcquisition( LONG_MAX, interval, false );

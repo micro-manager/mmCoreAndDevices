@@ -19,22 +19,19 @@
 //
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 04/2016
 //
-// BASED ON:      ASIStage.h and others
-//
 
-#ifndef _ASIPMT_H_
-#define _ASIPMT_H_
+#ifndef ASIPMT_H
+#define ASIPMT_H
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-
 class CPMT : public ASIPeripheralBase<CSignalIOBase, CPMT>
 {
 public:
-   CPMT(const char* name);
-   ~CPMT() { }
+    explicit CPMT(const char* name);
+    ~CPMT() = default;
 
    // Device API
    int Initialize();
@@ -63,11 +60,11 @@ public:
 private:
    int channel_; 
    char channelAxisChar_;
-   string axisLetter_;
+   std::string axisLetter_;
    int gain_;
    int avg_length_;
    int UpdateGain();
    int UpdateAvg();
  };
 
-#endif //_ASIPMT_H_
+#endif // ASIPMT_H

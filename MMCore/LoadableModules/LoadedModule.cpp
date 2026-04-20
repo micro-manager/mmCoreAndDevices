@@ -25,6 +25,8 @@
 #include "../CoreUtils.h"
 #include "../Error.h"
 
+namespace mmcore {
+namespace internal {
 
 LoadedModule::LoadedModule(const std::string& filename) :
    filename_(filename)
@@ -40,10 +42,7 @@ LoadedModule::LoadedModule(const std::string& filename) :
 }
 
 
-LoadedModule::~LoadedModule()
-{
-   delete pImpl_;
-}
+LoadedModule::~LoadedModule() = default;
 
 
 void
@@ -73,3 +72,6 @@ LoadedModule::GetFunction(const char* funcName)
             ToQuotedString(filename_), e);
    }
 }
+
+} // namespace internal
+} // namespace mmcore

@@ -83,6 +83,8 @@ public:
 
    void GetName(char* name) const;
 
+   bool Busy() { return false; }
+
    int SnapImage();
    const unsigned char* GetImageBuffer();
    const unsigned char* GetImageBuffer(unsigned channelNr);
@@ -96,7 +98,6 @@ public:
    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
    int ClearROI();
-   int PrepareSequenceAcqusition();
    int StartSequenceAcquisition(double interval);
    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
    int StopSequenceAcquisition();
@@ -121,7 +122,6 @@ public:
 private:
    int Logical2Physical(int logical);
    bool ImageSizesAreEqual();
-   unsigned char* imageBuffer_;
    int startCommunication();
    int startCounting(int number);
    int stopCounting();

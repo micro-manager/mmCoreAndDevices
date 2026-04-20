@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "../LogLevel.h"
 #include "GenericMetadata.h"
 
 #ifdef _WIN32
@@ -29,13 +30,11 @@
 #include <string>
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
-namespace internal
-{
+namespace internal {
 
 inline std::chrono::time_point<std::chrono::system_clock>
 Now()
@@ -56,17 +55,6 @@ GetTid() { return ::pthread_self(); }
 
 
 } // namespace internal
-
-
-enum LogLevel
-{
-   LogLevelTrace,
-   LogLevelDebug,
-   LogLevelInfo,
-   LogLevelWarning,
-   LogLevelError,
-   LogLevelFatal,
-};
 
 
 class EntryData
@@ -124,4 +112,5 @@ typedef internal::GenericMetadata<LoggerData, EntryData, StampData> Metadata;
 
 
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore

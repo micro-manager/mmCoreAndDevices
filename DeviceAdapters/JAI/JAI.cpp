@@ -1,10 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          JAI.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Adapter for JAI eBus compatible cameras
-//                
 // AUTHOR:        Nenad Amodaj, 2018
 // COPYRIGHT:     JAI
 //
@@ -20,7 +17,9 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 
-#include <ModuleInterface.h>
+#include "CameraImageMetadata.h"
+#include "ModuleInterface.h"
+
 #include "JAI.h"
 #include <PvInterface.h>
 #include <PvDevice.h>
@@ -37,6 +36,7 @@
 #ifdef __linux__
 #endif
 
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -284,6 +284,70 @@ int JAICamera::Initialize()
 	SetPropertyLimits(MM::g_Keyword_Exposure, expMinUs / 1000, expMaxUs / 1000);
 	assert(ret == DEVICE_OK);
 
+	// Individual RGB exposures (if supported)
+	PvGenEnum *expSel = genParams->GetEnum("ExposureTimeSelector");
+	if (expSel != nullptr)
+	{
+		int64_t ct{};
+		if (expSel->GetEntriesCount(ct).IsOK() && ct > 1)
+		{
+			// First, look for the "Common" selector; otherwise we don't know what to do.
+			for (int64_t i = 0; i < ct; i++)
+			{
+				const PvGenEnumEntry *entry = nullptr;
+				expSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					if (std::string(name.GetAscii()) == "Common")
+					{
+						commonExposureSelector_ = "Common";
+						break;
+					}
+				}
+			}
+
+			if (!commonExposureSelector_.empty())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnExposureIsIndividual);
+				ret = CreateProperty("ExposureIsIndividual", "Off", MM::String, false, pAct);
+				AddAllowedValue("ExposureIsIndividual", "Off");
+				AddAllowedValue("ExposureIsIndividual", "On");
+
+				// Create properties for all selectors except "Common"
+				for (int64_t i = 0; i < ct; i++)
+				{
+					const PvGenEnumEntry *entry = nullptr;
+					expSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+					if (entry != nullptr && entry->IsAvailable())
+					{
+						PvString name;
+						entry->GetName(name);
+						std::string selectorName = name.GetAscii();
+
+						if (selectorName == commonExposureSelector_)
+							continue;  // Skip the common selector
+
+						auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+							return OnSelectorExposure(selectorName, pProp, eAct);
+						});
+						const std::string propName = "Exposure_" + selectorName;
+						double eMs{};
+						GetSelectorExposure(selectorName, eMs);
+						double eMinMs{}, eMaxMs{};
+						GetSelectorExposureMinMax(selectorName, eMinMs, eMaxMs);
+						CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(eMs),
+							MM::Float, false, action);
+						SetPropertyLimits(propName.c_str(), eMinMs, eMaxMs);
+						individualExposureSelectors_.push_back(selectorName);
+					}
+				}
+			}
+		}
+	}
+
 	// BINNING
 	pAct = new CPropertyAction(this, &JAICamera::OnBinning);
 	ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);
@@ -348,6 +412,69 @@ int JAICamera::Initialize()
 	SetPropertyLimits(g_Gain, gainMin, gainMax);
 	assert(ret == DEVICE_OK);
 
+	// Individual gains (if supported)
+	PvGenEnum *gainSel = genParams->GetEnum("GainSelector");
+	if (gainSel != nullptr)
+	{
+		int64_t ct{};
+		if (gainSel->GetEntriesCount(ct).IsOK() && ct > 1)
+		{
+			// First, look for the "AnalogAll" selector; otherwise we don't know what to do
+			for (int64_t i = 0; i < ct; i++)
+			{
+				const PvGenEnumEntry *entry = nullptr;
+				gainSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					if (std::string(name.GetAscii()) == "AnalogAll")
+					{
+						commonGainSelector_ = "AnalogAll";
+						break;
+					}
+				}
+			}
+
+			if (!commonGainSelector_.empty())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnGainIsIndividual);
+				ret = CreateProperty("GainIsIndividual", "Off", MM::String, false, pAct);
+				AddAllowedValue("GainIsIndividual", "Off");
+				AddAllowedValue("GainIsIndividual", "On");
+
+				// Create properties for all selectors except "AnalogAll"
+				for (int64_t i = 0; i < ct; i++)
+				{
+					const PvGenEnumEntry *entry = nullptr;
+					gainSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+					if (entry != nullptr && entry->IsAvailable())
+					{
+						PvString name;
+						entry->GetName(name);
+						std::string selectorName = name.GetAscii();
+
+						if (selectorName == commonGainSelector_)
+							continue;  // Skip the common selector
+
+						auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+							return OnSelectorGain(selectorName, pProp, eAct);
+						});
+						const std::string propName = "Gain_" + selectorName;
+						double g{};
+						GetSelectorGain(selectorName, g);
+						double gMin{}, gMax{};
+						GetSelectorGainMinMax(selectorName, gMin, gMax);
+						CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(g),
+							MM::Float, false, action);
+						SetPropertyLimits(propName.c_str(), gMin, gMax);
+					}
+				}
+			}
+		}
+	}
+
 	// GAMMA
 	double gamma, gammaMin, gammaMax;
 	pvr = genParams->GetFloatValue("Gamma", gamma);
@@ -362,6 +489,58 @@ int JAICamera::Initialize()
 	ret = CreateProperty(g_Gamma, CDeviceUtils::ConvertToString(gamma), MM::Float, false, pAct);
 	SetPropertyLimits(g_Gamma, gammaMin, gammaMax);
 	assert(ret == DEVICE_OK);
+
+	// BLACK LEVEL (per selector, or single if no selector)
+	// Always suffix property name with selector name when selector exists
+	PvGenEnum *blackLevelSel = genParams->GetEnum("BlackLevelSelector");
+	if (blackLevelSel != nullptr)
+	{
+		int64_t ct{};
+		if (blackLevelSel->GetEntriesCount(ct).IsOK() && ct >= 1)
+		{
+			for (int64_t i = 0; i < ct; i++)
+			{
+				const PvGenEnumEntry *entry = nullptr;
+				blackLevelSel->GetEntryByIndex(static_cast<uint32_t>(i), &entry);
+
+				if (entry != nullptr && entry->IsAvailable())
+				{
+					PvString name;
+					entry->GetName(name);
+					std::string selectorName = name.GetAscii();
+
+					auto *action = new MM::ActionLambda([this, selectorName](MM::PropertyBase *pProp, MM::ActionType eAct) {
+						return OnSelectorBlackLevel(selectorName, pProp, eAct);
+					});
+					const std::string propName = "BlackLevel_" + selectorName;
+					double bl{};
+					GetSelectorBlackLevel(selectorName, bl);
+					double blMin{}, blMax{};
+					GetSelectorBlackLevelMinMax(selectorName, blMin, blMax);
+					CreateProperty(propName.c_str(), CDeviceUtils::ConvertToString(bl),
+						MM::Float, false, action);
+					SetPropertyLimits(propName.c_str(), blMin, blMax);
+				}
+			}
+		}
+	}
+	else
+	{
+		// No selector - check if BlackLevel feature exists directly
+		double bl{}, blMin{}, blMax{};
+		pvr = genParams->GetFloatValue("BlackLevel", bl);
+		if (pvr.IsOK())
+		{
+			pvr = genParams->GetFloatRange("BlackLevel", blMin, blMax);
+			if (pvr.IsOK())
+			{
+				pAct = new CPropertyAction(this, &JAICamera::OnBlackLevel);
+				CreateProperty("BlackLevel", CDeviceUtils::ConvertToString(bl),
+					MM::Float, false, pAct);
+				SetPropertyLimits("BlackLevel", blMin, blMax);
+			}
+		}
+	}
 
 	// TEST PATTERN
 	// list test pattern optiopns
@@ -389,22 +568,70 @@ int JAICamera::Initialize()
 	}
 
 	// PIXEL TYPE
-	pvr = genParams->SetEnumValue(g_pv_PixelFormat, g_pv_PixelFormat_BGR8);
+	// Query camera for available pixel formats
+	PvGenEnum* pixelFormatEnum = genParams->GetEnum(g_pv_PixelFormat);
+	int64_t numFormats = 0;
+	pixelFormatEnum->GetEntriesCount(numFormats);
+
+	bool hasBGR8 = false, hasBGR10p = false, hasBGR12p = false;
+	for (int64_t i = 0; i < numFormats; i++)
+	{
+		const PvGenEnumEntry* entry = nullptr;
+		pixelFormatEnum->GetEntryByIndex(i, &entry);
+		if (entry != nullptr && entry->IsAvailable())
+		{
+			PvString name;
+			entry->GetName(name);
+			if (strcmp(name.GetAscii(), g_pv_PixelFormat_BGR8) == 0)
+				hasBGR8 = true;
+			else if (strcmp(name.GetAscii(), g_pv_PixelFormat_BGR10) == 0)
+				hasBGR10p = true;
+			else if (strcmp(name.GetAscii(), g_pv_PixelFormat_BGR12) == 0)
+				hasBGR12p = true;
+		}
+	}
+
+	// Build list of available pixel types
+	vector<string> pixelTypeValues;
+	if (hasBGR8)
+		pixelTypeValues.push_back(g_PixelType_32bitRGB);
+	if (hasBGR10p)
+		pixelTypeValues.push_back(g_PixelType_64bitRGB_10bit);
+	if (hasBGR12p)
+		pixelTypeValues.push_back(g_PixelType_64bitRGB_12bit);
+
+	if (pixelTypeValues.empty())
+	{
+		LogMessage("No supported pixel formats available from camera");
+		return ERR_UNSUPPORTED_IMAGE_FORMAT;
+	}
+
+	// Set initial pixel format (prefer BGR8 if available)
+	const char* initialFormat = hasBGR8 ? g_pv_PixelFormat_BGR8 :
+		(hasBGR10p ? g_pv_PixelFormat_BGR10 : g_pv_PixelFormat_BGR12);
+	pvr = genParams->SetEnumValue(g_pv_PixelFormat, initialFormat);
 	if (!pvr.IsOK())
 		return processPvError(pvr);
 
-   pAct = new CPropertyAction (this, &JAICamera::OnPixelType);
-	pixelSize = 4; // 32bitRGB
-   ret = CreateStringProperty(MM::g_Keyword_PixelType, g_PixelType_32bitRGB, false, pAct);
-   assert(ret == DEVICE_OK);
+	// Set pixelSize and bitDepth based on initial format
+	if (hasBGR8) {
+		pixelSize = 4;
+		bitDepth = 8;
+	} else if (hasBGR10p) {
+		pixelSize = 8;
+		bitDepth = 10;
+	} else {
+		pixelSize = 8;
+		bitDepth = 12;
+	}
 
-   vector<string> pixelTypeValues;
-	pixelTypeValues.push_back(g_PixelType_32bitRGB);
-	pixelTypeValues.push_back(g_PixelType_64bitRGB);
+	pAct = new CPropertyAction (this, &JAICamera::OnPixelType);
+	ret = CreateStringProperty(MM::g_Keyword_PixelType, pixelTypeValues[0].c_str(), false, pAct);
+	assert(ret == DEVICE_OK);
 
-   ret = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
-   if (ret != DEVICE_OK)
-      return ret;
+	ret = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
+	if (ret != DEVICE_OK)
+		return ret;
 
 	// disable multi roi mode
 	pvr = genParams->SetEnumValue("MultiRoiMode", "Off");
@@ -486,22 +713,6 @@ unsigned JAICamera::GetNumberOfComponents() const
 	return 4;
 }
 
-unsigned JAICamera::GetNumberOfChannels() const
-{
-   return 1;
-}
-
-int JAICamera::GetChannelName(unsigned channel, char* name)
-{
-   // TODO: multichannel
-
-   if (channel != 0)
-      return ERR_INVALID_CHANNEL_INDEX;
-   
-   strncpy(name, "Channel-0", MM::MaxStrLength);
-   return DEVICE_OK;
-}
-
 /**
  * Snaps a single image, blocks at least until exposure is finished 
  */
@@ -525,24 +736,13 @@ int JAICamera::SnapImage()
 		return ERR_STREAM_OPEN_FAILED;
 
 	// create smart pointer to clean up stream when function exits
-	std::shared_ptr<PvStream> camStream(pvStream, [](PvStream *s) { PvStream::Free(s); }); // deleter 
+	std::shared_ptr<PvStream> camStream(pvStream, [](PvStream *s) { s->Close(); PvStream::Free(s); });
 
 	uint32_t payloadSize = camera->GetPayloadSize();
 
-	// setup camera buffers
-	const int numBufs = 1;
-	ClearPvBuffers();
-	for (int i = 0; i < numBufs; i++)
-	{
-		// Create new buffer object
-		PvBuffer *lBuffer = new PvBuffer;
-		pvBuffers.push_back(lBuffer);
-
-		// Have the new buffer object allocate payload memory
-		lBuffer->Alloc(payloadSize);
-
-		camStream->QueueBuffer(lBuffer);
-	}
+	PvBuffer lBuffer;
+	lBuffer.Alloc(payloadSize);
+	camStream->QueueBuffer(&lBuffer);
 
 	// Reset stream statistics
 	pvr = camStream->GetParameters()->ExecuteCommand("Reset");
@@ -584,12 +784,15 @@ int JAICamera::SnapImage()
 		img.Resize((unsigned)width, (unsigned)height, pixelSize);
 		uint8_t* pSrcImg = pvImg->GetDataPointer();
 		uint8_t* pDestImg = img.GetPixelsRW();
+		unsigned paddingX = pvImg->GetPaddingX();
 		if (pixelSize == 4)
-			convert_BGR8_RGBA32(pSrcImg, pDestImg, img.Width(), img.Height());
-		else if (pixelSize == 8)
-			convert_BGR12P_RGBA64(pSrcImg, pDestImg, img.Width(), img.Height());
+			convert_BGR8_BGRA32(pSrcImg, pDestImg, img.Width(), img.Height(), paddingX);
+		else if (pixelSize == 8 && bitDepth == 10)
+			convert_BGRp_BGRA64<10>(pSrcImg, pDestImg, img.Width(), img.Height(), paddingX);
+		else if (pixelSize == 8 && bitDepth == 12)
+			convert_BGRp_BGRA64<12>(pSrcImg, pDestImg, img.Width(), img.Height(), paddingX);
 		else
-			assert(!"Wrong pixel size");
+			assert(!"Wrong pixel size or bit depth");
 	}
 	else
 	{
@@ -607,9 +810,7 @@ int JAICamera::SnapImage()
 	{
 		return processPvError(pvr);
 	}
-	camStream->Close();
 
-	ClearPvBuffers();
 	return DEVICE_OK;
 }
 
@@ -749,26 +950,18 @@ int JAICamera::ClearROI()
 	return ResizeImageBuffer();
 }
 
-int JAICamera::PrepareSequenceAcqusition()
-{
-   if (IsCapturing())
-   {
-      return DEVICE_CAMERA_BUSY_ACQUIRING;
-   }
-
-   int ret = GetCoreCallback()->PrepareForAcq(this);
-   if (ret != DEVICE_OK)
-      return ret;
-
-   return DEVICE_OK;
-}
-
 int JAICamera::StartSequenceAcquisition(long numImages, double /*interval_ms*/, bool stopOnOvl)
 {
    if (IsCapturing())
    {
       return DEVICE_CAMERA_BUSY_ACQUIRING;
    }
+
+	int ret = GetCoreCallback()->PrepareForAcq(this);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 
    // the camera ignores interval, running at the rate dictated by the exposure
    stopOnOverflow = stopOnOvl;
@@ -782,6 +975,12 @@ int JAICamera::StartSequenceAcquisition(double /*interval_ms*/)
 {
    if (IsCapturing())
       return DEVICE_CAMERA_BUSY_ACQUIRING;
+
+	int ret = GetCoreCallback()->PrepareForAcq(this);
+	if (ret != DEVICE_OK)
+	{
+		return ret;
+	}
 
    // the camera ignores interval, running at the rate dictated by the exposure
    stopOnOverflow = false;
@@ -819,28 +1018,6 @@ int JAICamera::ResizeImageBuffer()
 	return DEVICE_OK;
 }
 
-int JAICamera::PushImage(unsigned char* imgBuf)
-{
-	int retCode = GetCoreCallback()->InsertImage(this,
-		imgBuf,
-		img.Width(),
-		img.Height(),
-		img.Depth());
-
-	if (!stopOnOverflow && retCode == DEVICE_BUFFER_OVERFLOW)
-	{
-		// do not stop on overflow - just reset the buffer
-		GetCoreCallback()->ClearImageBuffer(this);
-		retCode = GetCoreCallback()->InsertImage(this,
-			imgBuf,
-			img.Width(),
-			img.Height(),
-			img.Depth());
-	}
-
-	return DEVICE_OK;
-}
-
 int JAICamera::processPvError(const PvResult& pvr)
 {
 	ClearPvBuffers();
@@ -849,63 +1026,90 @@ int JAICamera::processPvError(const PvResult& pvr)
 }
 
 /**
- * Converts BGR 24-bit image to RGBA 32-bit image. Alpha channel is set to 0.
+ * Converts BGR 24-bit image to BGRA 32-bit image. Alpha channel is set to 0.
  *
- * @return void
- * @param src - source buffer, should be pixSize * 3 bytes
- * @param dest - destination buffer, should be pixSize * 4 bytes
- * @param pixSize - image buffer size in pixels
+ * @param src - source buffer (BGR, 3 bytes per pixel, with row padding)
+ * @param dest - destination buffer (BGRA, 4 bytes per pixel)
+ * @param w - image width in pixels
+ * @param h - image height in pixels
+ * @param paddingX - number of padding bytes at the end of each source row
  */
-void JAICamera::convert_BGR8_RGBA32(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
+void JAICamera::convert_BGR8_BGRA32(const uint8_t* __restrict src, uint8_t* __restrict dest,
+		unsigned w, unsigned h, unsigned paddingX)
 {
-	const int byteDepth = 4;
-	int srcCounter = 0;
-	unsigned sizeInPixels = w * h;
-	for (unsigned i = 0; i < sizeInPixels; i++)
+	constexpr unsigned srcBytesPerPx = 3;
+	constexpr unsigned destBytesPerPx = 4;
+	const unsigned srcBytesPerRow = w * srcBytesPerPx + paddingX;
+
+	for (unsigned row = 0; row < h; row++)
 	{
-		dest[i*byteDepth] = src[srcCounter++]; // R
-		dest[i*byteDepth + 1] = src[srcCounter++]; // G
-		dest[i*byteDepth + 2] = src[srcCounter++]; // B
-		dest[i*byteDepth + 3] = 0; // alpha
+		const uint8_t* rowSrc = src + row * srcBytesPerRow;
+		uint8_t* rowDest = dest + row * w * destBytesPerPx;
+
+		for (unsigned col = 0; col < w; col++)
+		{
+			rowDest[col * destBytesPerPx] = rowSrc[col * srcBytesPerPx]; // B
+			rowDest[col * destBytesPerPx + 1] = rowSrc[col * srcBytesPerPx + 1]; // G
+			rowDest[col * destBytesPerPx + 2] = rowSrc[col * srcBytesPerPx + 2]; // R
+			rowDest[col * destBytesPerPx + 3] = 0; // A
+		}
 	}
 }
 
 /**
- * Converts BGR 36-bit image to RGBA 64-bit image. Alpha channel is set to 0.
+ * Converts BGRxp (packed x-bit) image to BGRA 64-bit image. Alpha channel is set to 0.
  *
- * @return void
- * @param src - source buffer, should be pixSize * 3 bytes
- * @param dest - destination buffer, should be pixSize * 4 bytes
- * @param pixSize - image buffer size in pixels
+ * @tparam BitsPerComponent - bits per color component (10 or 12)
+ * @param src - source buffer (BGRxp, packed, with row padding)
+ * @param dest - destination buffer (BGRA, 8 bytes per pixel, 16-bit per component)
+ * @param w - image width in pixels
+ * @param h - image height in pixels
+ * @param paddingX - number of padding bytes at the end of each source row
  */
-void JAICamera::convert_BGR12P_RGBA64(const uint8_t * src, uint8_t * dest, unsigned w, unsigned h)
+template <unsigned BitsPerComponent>
+void JAICamera::convert_BGRp_BGRA64(const uint8_t* __restrict src, uint8_t* __restrict dest,
+		unsigned w, unsigned h, unsigned paddingX)
 {
-	const int byteDepth = 8;
-	unsigned sizeInPixels = w * h;
-	for (unsigned i = 0; i < sizeInPixels; i++)
+	static_assert(BitsPerComponent == 10 || BitsPerComponent == 12,
+		"Only 10 and 12 bits per component are supported");
+
+	constexpr unsigned bitsPerPixel = 3 * BitsPerComponent;
+	constexpr uint16_t componentMask = (1 << BitsPerComponent) - 1;
+	constexpr unsigned destBytesPerPx = 8;
+
+	const unsigned bitsPerRow = w * bitsPerPixel;
+	const unsigned bytesPerRow = (bitsPerRow + 7) / 8;
+	const unsigned paddedBytesPerRow = bytesPerRow + paddingX;
+
+	for (unsigned row = 0; row < h; row++)
 	{
-		int pixPtrR = i * 36 / 8;
-		int bitPtrR = i * 36 % 8;
-		uint16_t* buf = (uint16_t*)(src + pixPtrR);
-		uint16_t r = *buf << bitPtrR;
-		r = r >> 4;
-		*((uint16_t*)(dest + i*byteDepth)) = r; // R
+		const uint8_t* rowSrc = src + row * paddedBytesPerRow;
+		uint8_t* rowDest = dest + row * w * destBytesPerPx;
 
-		int pixPtrG = (i * 36 + 12) / 8;
-		int bitPtrG = (i * 36 + 12) % 8;
-		buf = (uint16_t*)(src + pixPtrG);
-		uint16_t g = *buf << bitPtrG;
-		g = g >> 4;
-		*((uint16_t*)(dest + i*byteDepth + 2)) = g; // G
+		for (unsigned col = 0; col < w; col++)
+		{
+			uint16_t buf;
 
-		int pixPtrB = (i * 36 + 24) / 8;
-		int bitPtrB = (i * 36 + 24) % 8;
-		buf = (uint16_t*)(src + pixPtrB);
-		uint16_t b = *buf << bitPtrB;
-		b = b >> 4;
-		*((uint16_t*)(dest + i*byteDepth + 4)) = b; // B
+			unsigned pixPtrB = col * bitsPerPixel / 8;
+			unsigned bitPtrB = col * bitsPerPixel % 8;
+			memcpy(&buf, rowSrc + pixPtrB, sizeof(uint16_t));
+			uint16_t b = (buf >> bitPtrB) & componentMask;
+			memcpy(rowDest + col * destBytesPerPx, &b, sizeof(uint16_t)); // B
 
-		*((uint16_t*)(dest + i*byteDepth + 6)) = 0; // alpha
+			unsigned pixPtrG = (col * bitsPerPixel + BitsPerComponent) / 8;
+			unsigned bitPtrG = (col * bitsPerPixel + BitsPerComponent) % 8;
+			memcpy(&buf, rowSrc + pixPtrG, sizeof(uint16_t));
+			uint16_t g = (buf >> bitPtrG) & componentMask;
+			memcpy(rowDest + col * destBytesPerPx + 2, &g, sizeof(uint16_t)); // G
+
+			unsigned pixPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) / 8;
+			unsigned bitPtrR = (col * bitsPerPixel + 2 * BitsPerComponent) % 8;
+			memcpy(&buf, rowSrc + pixPtrR, sizeof(uint16_t));
+			uint16_t r = (buf >> bitPtrR) & componentMask;
+			memcpy(rowDest + col * destBytesPerPx + 4, &r, sizeof(uint16_t)); // R
+
+			memset(rowDest + col * destBytesPerPx + 6, 0, sizeof(uint16_t)); // A
+		}
 	}
 }
 
@@ -931,20 +1135,20 @@ bool JAICamera::verifyPvFormat(const PvImage * pvImg)
 	}
 
 	uint32_t bpc = pvImg->GetBitsPerComponent(pt);
-	if (bpc != 8 && bpc != 12)
+	if (bpc != 8 && bpc != 10 && bpc != 12)
 	{
 		ostringstream os;
-		os << "Only 8-bits and 12-bits per color plane are supported: BPC=" << bpc;
+		os << "Only 8, 10, and 12 bits per color plane are supported: BPC=" << bpc;
 		LogMessage(os.str());
 		return false;
 	}
 
 	uint32_t pvPixSize = pvImg->GetPixelSize(pt);
 	uint32_t pvBpp = pvImg->GetBitsPerPixel();
-	if (pvPixSize != 24 && pvPixSize != 36)
+	if (pvPixSize != 24 && pvPixSize != 30 && pvPixSize != 36)
 	{
 		ostringstream os;
-		os << "Only 3-byte and 4-byte RGB camera pixels are supported: PixSize=" << pvPixSize << ", BPP=" << pvBpp;
+		os << "Only 24, 30, and 36 bit RGB camera pixels are supported: PixSize=" << pvPixSize << ", BPP=" << pvBpp;
 		LogMessage(os.str());
 		return false;
 	}
@@ -978,30 +1182,14 @@ void JAICamera::ClearPvBuffers()
 
 int JAICamera::InsertImage()
 {
-   int retCode = GetCoreCallback()->InsertImage(this,
+   MM::CameraImageMetadata md;
+   return GetCoreCallback()->InsertImage(this,
          img.GetPixels(),
          img.Width(),
          img.Height(),
-         img.Depth());
-
-   if (!stopOnOverflow)
-   {
-      if (retCode == DEVICE_BUFFER_OVERFLOW)
-      {
-         // do not stop on overflow - just reset the buffer
-         GetCoreCallback()->ClearImageBuffer(this);
-         retCode = GetCoreCallback()->InsertImage(this,
-            img.GetPixels(),
-            img.Width(),
-            img.Height(),
-            img.Depth());
-         return DEVICE_OK;
-      }
-      else
-         return retCode;
-   }
-
-   return retCode;
+         img.Depth(),
+         GetNumberOfComponents(),
+         md.Serialize());
 }
 
 /**
@@ -1142,9 +1330,24 @@ int AcqSequenceThread::svc (void)
 
 			// transfer pv image to camera buffer
 			uint8_t* pSrcImg = pvImg->GetDataPointer();
-			moduleInstance->img.Resize(width, height, 4); // RGBA format
+			moduleInstance->img.Resize(width, height, moduleInstance->pixelSize);
 			uint8_t* pDestImg = moduleInstance->img.GetPixelsRW();
-			JAICamera::convert_BGR8_RGBA32(pSrcImg, pDestImg, moduleInstance->img.Width(), moduleInstance->img.Height());
+			unsigned paddingX = pvImg->GetPaddingX();
+			if (moduleInstance->pixelSize == 4)
+			{
+				JAICamera::convert_BGR8_BGRA32(pSrcImg, pDestImg,
+					moduleInstance->img.Width(), moduleInstance->img.Height(), paddingX);
+			}
+			else if (moduleInstance->pixelSize == 8 && moduleInstance->bitDepth == 10)
+			{
+				JAICamera::convert_BGRp_BGRA64<10>(pSrcImg, pDestImg,
+					moduleInstance->img.Width(), moduleInstance->img.Height(), paddingX);
+			}
+			else if (moduleInstance->pixelSize == 8 && moduleInstance->bitDepth == 12)
+			{
+				JAICamera::convert_BGRp_BGRA64<12>(pSrcImg, pDestImg,
+					moduleInstance->img.Width(), moduleInstance->img.Height(), paddingX);
+			}
 
 			// push image to queue
 			moduleInstance->InsertImage();
@@ -1195,15 +1398,11 @@ int AcqSequenceThread::svc (void)
 		return processPvError(pvr, camStream);
 	}
 
-	if (pvr.IsFailure())
-	{
-		return processPvError(pvr, camStream);
-	}
-
 	camStream->Close();
 	moduleInstance->ClearPvBuffers();
+	int ret = moduleInstance->GetCoreCallback()->AcqFinished(moduleInstance, DEVICE_OK);
 	InterlockedExchange(&moduleInstance->acquiring, 0);
-   return 0;
+   return ret;
 }
 
 void AcqSequenceThread::Stop()

@@ -89,7 +89,6 @@ int CPLogic::Initialize()
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    std::ostringstream command;
-   command.str("");
    command << g_PLogicDeviceDescription << " HexAddr=" << addressString_;
    CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
 
@@ -239,6 +238,9 @@ int CPLogic::Initialize()
       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode58, 58);
       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode59, 59);
    }
+   if (FirmwareVersionAtLeast(3.51)) {
+       AddAllowedValue(g_SetCardPresetPropertyName, g_PresetCode60, 60);
+   }
    UpdateProperty(g_SetCardPresetPropertyName);
 
 
@@ -255,7 +257,6 @@ int CPLogic::Initialize()
    CreateProperty(g_RefreshPropValsPropertyName, g_NoState, MM::String, false, pAct);
    AddAllowedValue(g_RefreshPropValsPropertyName, g_NoState);
    AddAllowedValue(g_RefreshPropValsPropertyName, g_YesState);
-//   AddAllowedValue(g_RefreshPropValsPropertyName, g_OneTimeState);
 
    // save settings to controller if requested
    pAct = new CPropertyAction (this, &CPLogic::OnSaveCardSettings);
@@ -289,6 +290,9 @@ int CPLogic::Initialize()
    if (FirmwareVersionAtLeast(3.50)) {
       AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode16, 16);
       AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode17, 17);
+   }
+   if (FirmwareVersionAtLeast(3.51)) {
+      AddAllowedValue(g_EditCellTypePropertyName, g_CellTypeCode18, 18);
    }
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode0, 100);
    AddAllowedValue(g_EditCellTypePropertyName, g_IOTypeCode1, 101);
@@ -430,7 +434,7 @@ int CPLogic::SetOpen(bool open)
 {
    if (useAs4ChShutter_ || useAs7ChShutter_)
    {
-      std::ostringstream command; command.str("");
+      std::ostringstream command;
       shutterOpen_ = open;
       // sets cell 8 which is "software shutter open" indicator via preset 11 (sets high) or preset 10 (sets low)
       if (open) {
@@ -448,7 +452,6 @@ int CPLogic::GetOpen(bool& open)
    return DEVICE_OK;
 }
 
-////////////////
 // action handlers
 
 // Modify the "PLogic Mode Table" in the header if you change this function.
@@ -459,25 +462,25 @@ int CPLogic::OnPLogicMode(MM::PropertyBase* pProp, MM::ActionType eAct)
    } else if (eAct == MM::AfterSet) {
        std::string tmpstr;
        pProp->Get(tmpstr);
-       if (tmpstr.compare(g_PLogicModediSPIMShutter) == 0)
+       if (tmpstr == g_PLogicModediSPIMShutter)
        {
            useAsdiSPIMShutter_ = true;
            useAs4ChShutter_ = true;
            useAs7ChShutter_ = false;
        }
-       else if (tmpstr.compare(g_PLogicMode4ChShutter) == 0)
+       else if (tmpstr == g_PLogicMode4ChShutter)
        {
            useAsdiSPIMShutter_ = false;
            useAs4ChShutter_ = true;
            useAs7ChShutter_ = false;
        }
-       else if (tmpstr.compare(g_PLogicMode7ChShutter) == 0)
+       else if (tmpstr == g_PLogicMode7ChShutter)
        {
            useAsdiSPIMShutter_ = false;
            useAs4ChShutter_ = false;
            useAs7ChShutter_ = true;
        }
-       else if (tmpstr.compare(g_PLogicMode7ChTTLShutter) == 0)
+       else if (tmpstr == g_PLogicMode7ChTTLShutter)
        {
            useAsdiSPIMShutter_ = true;
            useAs4ChShutter_ = false;
@@ -506,7 +509,7 @@ int CPLogic::OnSetShutterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
          }
       }
    } else if (eAct == MM::AfterSet) {
-      std::ostringstream command; command.str("");
+      std::ostringstream command;
       long tmp;
       std::string tmpstr;
       RETURN_ON_MM_ERROR ( GetCurrentPropertyData(pProp->GetName().c_str(), tmp) );
@@ -523,7 +526,7 @@ int CPLogic::OnSetShutterChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPLogicOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -539,7 +542,7 @@ int CPLogic::OnPLogicOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPLogicOutputStateUpper(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -555,7 +558,7 @@ int CPLogic::OnPLogicOutputStateUpper(MM::PropertyBase* pProp, MM::ActionType eA
 int CPLogic::OnFrontpanelOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -571,7 +574,7 @@ int CPLogic::OnFrontpanelOutputState(MM::PropertyBase* pProp, MM::ActionType eAc
 int CPLogic::OnBackplaneOutputState(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    unsigned int val;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet || eAct == MM::AfterSet)
    {
       // always read
@@ -586,7 +589,7 @@ int CPLogic::OnBackplaneOutputState(MM::PropertyBase* pProp, MM::ActionType eAct
 
 int CPLogic::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    std::string tmpstr;
    if (eAct == MM::BeforeGet) {
@@ -617,7 +620,7 @@ int CPLogic::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnPointerPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    static bool justSet = false;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet)
    {
       if (!refreshProps_ && initialized_ && !justSet)
@@ -643,19 +646,19 @@ int CPLogic::OnPointerPosition(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    std::string tmpstr;
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::AfterSet) {
       command << addressChar_ << "SS ";
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_SaveSettingsOrig) == 0)
+      if (tmpstr == g_SaveSettingsOrig)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsDone) == 0)
+      if (tmpstr == g_SaveSettingsDone)
          return DEVICE_OK;
-      if (tmpstr.compare(g_SaveSettingsX) == 0)
+      if (tmpstr == g_SaveSettingsX)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsY) == 0)
+      else if (tmpstr == g_SaveSettingsY)
          command << 'X';
-      else if (tmpstr.compare(g_SaveSettingsZ) == 0)
+      else if (tmpstr == g_SaveSettingsZ)
          command << 'Z';
       RETURN_ON_MM_ERROR (hub_->QueryCommandVerify(command.str(), ":A", (long)200));  // note 200ms delay added
       pProp->Set(g_SaveSettingsDone);
@@ -665,20 +668,13 @@ int CPLogic::OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::string tmpstr;
-   if (eAct == MM::AfterSet) {
-      pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
-         refreshProps_ = true;
-//      else if (tmpstr.compare(g_OneTimeState))
-//      {
-//         SetProperty(g_RefreshPropValsPropertyName, g_YesState);
-//         SetProperty(g_RefreshPropValsPropertyName, g_NoState);
-//      }
-      else
-         refreshProps_ = false;
-   }
-   return DEVICE_OK;
+    if (eAct == MM::AfterSet)
+    {
+        std::string tmp;
+        pProp->Get(tmp);
+        refreshProps_ = (tmp == g_YesState);
+    }
+    return DEVICE_OK;
 }
 
 int CPLogic::RefreshEditCellPropertyValues()
@@ -712,7 +708,7 @@ int CPLogic::RefreshEditCellPropertyValues()
 int CPLogic::OnEditCellType(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    // NB: works for I/O addresses but will have incorrect strings
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if(currentPosition_ <= numCells_                                 // normal cells
          || (currentPosition_ >= PLOGIC_FRONTPANEL_START_ADDRESS && currentPosition_ <= PLOGIC_BACKPLANE_END_ADDRESS)) {   // or I/O addresses
       if (eAct == MM::BeforeGet) {
@@ -783,7 +779,7 @@ int CPLogic::OnEditCellUpdates(MM::PropertyBase* pProp, MM::ActionType eAct)
    std::string tmpstr;
    if (eAct == MM::AfterSet) {
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_YesState) == 0)
+      if (tmpstr == g_YesState)
          editCellUpdates_ = true;
       else
          editCellUpdates_ = false;
@@ -821,7 +817,7 @@ int CPLogic::OnAdvancedProperties(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet) {
       std::string tmpstr;
       pProp->Get(tmpstr);
-      if ((tmpstr.compare(g_YesState) == 0) && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
+      if (tmpstr == g_YesState && !advancedPropsEnabled_)  // after creating advanced properties once no need to repeat
       {
          CPropertyActionEx* pActEx;
          char propName[MM::MaxStrLength];
@@ -949,7 +945,7 @@ int CPLogic::RefreshAdvancedCellPropertyValues(long index)
 // don't bother updating things like if the user changes position from the property
 int CPLogic::SetPositionDirectly(unsigned int position)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (position == currentPosition_)
       return DEVICE_OK;
    command << "M " << axisLetter_ << "=" << position;
@@ -960,7 +956,7 @@ int CPLogic::SetPositionDirectly(unsigned int position)
 
 int CPLogic::RefreshCurrentPosition()
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    unsigned int tmp;
    command << "W " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(),":A") );
@@ -971,7 +967,7 @@ int CPLogic::RefreshCurrentPosition()
 
 int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    std::string tmpstr;
    if (eAct == MM::BeforeGet) {
@@ -1009,6 +1005,7 @@ int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index
          case 15:success = pProp->Set(g_CellTypeCode15); break;
          case 16:success = pProp->Set(g_CellTypeCode16); break;
          case 17:success = pProp->Set(g_CellTypeCode17); break;
+         case 18:success = pProp->Set(g_CellTypeCode18); break;
          default: break;
          }
       }
@@ -1028,7 +1025,7 @@ int CPLogic::OnCellType(MM::PropertyBase* pProp, MM::ActionType eAct, long index
 
 int CPLogic::OnCellConfig(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1050,7 +1047,7 @@ int CPLogic::OnCellConfig(MM::PropertyBase* pProp, MM::ActionType eAct, long ind
 
 int CPLogic::OnInput1(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1072,7 +1069,7 @@ int CPLogic::OnInput1(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput2(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1094,7 +1091,7 @@ int CPLogic::OnInput2(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput3(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1116,7 +1113,7 @@ int CPLogic::OnInput3(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnInput4(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1138,7 +1135,7 @@ int CPLogic::OnInput4(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnIOType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1169,7 +1166,7 @@ int CPLogic::OnIOType(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 
 int CPLogic::OnIOSourceAddress(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    if (eAct == MM::BeforeGet) {
       if (!refreshProps_ && initialized_)
@@ -1191,14 +1188,14 @@ int CPLogic::OnIOSourceAddress(MM::PropertyBase* pProp, MM::ActionType eAct, lon
 
 int CPLogic::OnClearAllCellStates(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    if (eAct == MM::BeforeGet) {
       pProp->Set(g_IdleState);
    }
    else  if (eAct == MM::AfterSet) {
       std::string tmpstr;
       pProp->Get(tmpstr);
-      if (tmpstr.compare(g_DoItState) == 0)
+      if (tmpstr == g_DoItState)
       {
          command << "! " << axisLetter_;
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
@@ -1210,7 +1207,7 @@ int CPLogic::OnClearAllCellStates(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CPLogic::OnSetCardPreset(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   std::ostringstream command; command.str("");
+   std::ostringstream command;
    long tmp;
    std::string tmpstr;
    if (eAct == MM::BeforeGet) {

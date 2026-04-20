@@ -102,7 +102,7 @@ int XLedDev::Initialize()
     // Led Device Name
     char sLedDevNameLabel[120];
     memset(sLedDevNameLabel, 0, 120);
-    sprintf(sLedDevNameLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevNameLabel).c_str(), MM::g_Keyword_Name);
+    snprintf(sLedDevNameLabel, sizeof(sLedDevNameLabel), "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevNameLabel).c_str(), MM::g_Keyword_Name);
     ret = CreateProperty(sLedDevNameLabel, XLed::Instance()->GetXLedStr(XLed::XL_WLedDevName + m_nLedDevNumber).c_str(), MM::String, true);
 
     if (nDebugLog > 0)
@@ -119,7 +119,7 @@ int XLedDev::Initialize()
     {
         char sLedDevDescLabel[120];
         memset(sLedDevDescLabel, 0, 120);
-        sprintf(sLedDevDescLabel, "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevDescLabel).c_str(), MM::g_Keyword_Description);
+        snprintf(sLedDevDescLabel, sizeof(sLedDevDescLabel), "%s%s", XLed::Instance()->GetXLedStr(XLed::XL_LedDevDescLabel).c_str(), MM::g_Keyword_Description);
         ret = CreateProperty(sLedDevDescLabel, XLed::Instance()->GetXLedStr(XLed::XL_WLedDevName + m_nLedDevNumber).c_str(), MM::String, true);
 
         if (nDebugLog > 0)
@@ -288,7 +288,7 @@ int XLedDev::Initialize()
     {
         lLedStatus = atol((const char*)sParm);
         memset(sParm, 0, XLed::XL_MaxPropSize);
-        sprintf(sParm, "%02lx", lLedStatus);
+        snprintf(sParm, sizeof(sParm), "%02lx", lLedStatus);
     }
 
     CPropertyAction* pAct = new CPropertyAction(this, &XLedDev::OnState);
@@ -306,7 +306,7 @@ int XLedDev::Initialize()
     char sStatus[400];
     memset(sStatus, 0, 400);
 
-    GetStatusDescription(lLedStatus, sStatus);
+    GetStatusDescription(lLedStatus, sStatus, sizeof(sStatus));
 
     ret = CreateProperty(XLed::Instance()->GetXLedStr(XLed::XL_LedStatusDescLabel).c_str(), (const char*)sStatus, MM::String, false);
     
@@ -404,7 +404,7 @@ int XLedDev::Initialize()
     {
         m_lIntensity = atol(sParm);
         double dIntensity = (double) m_lIntensity / 10.0;
-        sprintf(sIntensity, "%.1f", dIntensity);
+        snprintf(sIntensity, sizeof(sIntensity), "%.1f", dIntensity);
     }
     pAct = new CPropertyAction (this, &XLedDev::OnLedIntensity);
     ret = CreateProperty(XLed::Instance()->GetXLedStr(XLed::XL_LedIntensityLabel).c_str() , (const char*)sIntensity, MM::String, false, pAct);
@@ -463,7 +463,7 @@ int XLedDev::Initialize()
         m_lPulseMode = atol(sParm);
         if (m_lPulseMode < 0) m_lPulseMode = 0;
         if (m_lPulseMode > 3) m_lPulseMode = 3;
-        sprintf(sPulseMode, "%ld", m_lPulseMode);
+        snprintf(sPulseMode, sizeof(sPulseMode), "%ld", m_lPulseMode);
     }
     sResp = XLed::Instance()->GetParameter(XLed::XL_SigPulseMode);
     pAct = new CPropertyAction(this, &XLedDev::OnPulseMode);
@@ -496,7 +496,7 @@ int XLedDev::Initialize()
         m_lSignalDelayTime = atol(sParm);
         if (m_lSignalDelayTime < 0) m_lSignalDelayTime = 0;
         if (m_lSignalDelayTime > 1000) m_lSignalDelayTime = 1000;
-        sprintf(sSignalDelayTime, "%ld%s", m_lSignalDelayTime, sPWMUnit[m_lPWMUnit]);
+        snprintf(sSignalDelayTime, sizeof(sSignalDelayTime), "%ld%s", m_lSignalDelayTime, sPWMUnit[m_lPWMUnit]);
     }
 
     pAct = new CPropertyAction (this, &XLedDev::OnSignalDelayTime);
@@ -527,7 +527,7 @@ int XLedDev::Initialize()
         m_lSignalOnTime = atol(sParm);
         if (m_lSignalOnTime < 0) m_lSignalOnTime = 0;
         if (m_lSignalOnTime > 1000) m_lSignalOnTime = 1000;
-        sprintf(sSignalOnTime, "%ld%s", m_lSignalOnTime, sPWMUnit[m_lPWMUnit]);
+        snprintf(sSignalOnTime, sizeof(sSignalOnTime), "%ld%s", m_lSignalOnTime, sPWMUnit[m_lPWMUnit]);
     }
 
     pAct = new CPropertyAction (this, &XLedDev::OnSignalOnTime);
@@ -558,7 +558,7 @@ int XLedDev::Initialize()
         m_lSignalOffTime = atol(sParm);
         if (m_lSignalOffTime < 0) m_lSignalOffTime = 0;
         if (m_lSignalOffTime > 1000) m_lSignalOffTime = 1000;
-        sprintf(sSignalOnTime, "%ld%s", m_lSignalOffTime, sPWMUnit[m_lPWMUnit]);
+        snprintf(sSignalOnTime, sizeof(sSignalOnTime), "%ld%s", m_lSignalOffTime, sPWMUnit[m_lPWMUnit]);
     }
 
     pAct = new CPropertyAction (this, &XLedDev::OnSignalOffTime);
@@ -590,7 +590,7 @@ int XLedDev::Initialize()
         m_lTriggerDelay = atol(sParm);
         if (m_lTriggerDelay < 0) m_lTriggerDelay = 0;
         if (m_lTriggerDelay > 1000) m_lTriggerDelay = 1000;
-        sprintf(sTriggerDelayTime, "%ld%s", m_lTriggerDelay, sPWMUnit[m_lPWMUnit]);
+        snprintf(sTriggerDelayTime, sizeof(sTriggerDelayTime), "%ld%s", m_lTriggerDelay, sPWMUnit[m_lPWMUnit]);
     }
 
     pAct = new CPropertyAction (this, &XLedDev::OnTriggerDelayTime);
@@ -795,7 +795,7 @@ int XLedDev::GetLedParm(unsigned char* sCmd, unsigned char* sResp, char* sParm)
 //
 // Get Status Text Message
 //
-int XLedDev::GetStatusDescription(long lStatus, char* sStatus)
+int XLedDev::GetStatusDescription(long lStatus, char* sStatus, size_t sStatusSize)
 {
     const char* sStatusBitsOn[] =
     {
@@ -821,19 +821,19 @@ int XLedDev::GetStatusDescription(long lStatus, char* sStatus)
         "X"
     };
 
-    sprintf(sStatus, "%s", "[");
+    snprintf(sStatus, sStatusSize, "%s", "[");
     long lValue = 1;
     for (int nBit = 0; nBit < 8; nBit++, lValue *= 2)
     {
         long lBit = lStatus & lValue;
         if (lBit == lValue)
         {
-            sprintf(&sStatus[strlen(sStatus)], " %s,", sStatusBitsOn[nBit]);
+            snprintf(&sStatus[strlen(sStatus)], sStatusSize - strlen(sStatus), " %s,", sStatusBitsOn[nBit]);
         }
         else if (lBit == 0)
         {
             if (strlen(sStatusBitsOff[nBit]) > 1)
-                sprintf(&sStatus[strlen(sStatus)], " %s,", sStatusBitsOff[nBit]);
+                snprintf(&sStatus[strlen(sStatus)], sStatusSize - strlen(sStatus), " %s,", sStatusBitsOff[nBit]);
         }
     }
     sStatus[strlen(sStatus) - 1] = ']';
@@ -895,7 +895,7 @@ int XLedDev::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
     char sStatus[400];
     memset(sStatus, 0, 400);
 
-    GetStatusDescription(lStatus, sStatus);
+    GetStatusDescription(lStatus, sStatus, sizeof(sStatus));
 
     SetProperty(XLed::Instance()->GetXLedStr(XLed::XL_LedStatusDescLabel).c_str(), sStatus);
 
@@ -1228,7 +1228,7 @@ int XLedDev::OnLedIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (lIntensity > 1000) lIntensity = 1000;
 
         for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-        sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", lIntensity);
+        snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", lIntensity);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1260,7 +1260,7 @@ int XLedDev::OnLedIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
     dIntensity = (double) m_lIntensity / 10.0;
     char sIntensity[20];
     memset(sIntensity, 0, 20);
-    sprintf(sIntensity, "%.1f", dIntensity);
+    snprintf(sIntensity, sizeof(sIntensity), "%.1f", dIntensity);
 
     pProp->Set(sIntensity);
 
@@ -1315,7 +1315,7 @@ int XLedDev::OnPulseMode(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (lPulseMode > 3) lPulseMode = 3;
 
         for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-        sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", lPulseMode);
+        snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", lPulseMode);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1399,7 +1399,7 @@ int XLedDev::OnSignalDelayTime(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (lSignalDelayTime > 65535) lSignalDelayTime = 65535;
 
         for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-        sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", lSignalDelayTime);
+        snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", lSignalDelayTime);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1432,7 +1432,7 @@ int XLedDev::OnSignalDelayTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     m_lSignalDelayTime= atol(sParm);
     char sSignalDelayTime[20];
     memset(sSignalDelayTime, 0, 20);
-    sprintf(sSignalDelayTime, "%ld%s", m_lSignalDelayTime, sPWMUnit[m_lPWMUnit]);
+    snprintf(sSignalDelayTime, sizeof(sSignalDelayTime), "%ld%s", m_lSignalDelayTime, sPWMUnit[m_lPWMUnit]);
     pProp->Set(sSignalDelayTime);
 
     if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1487,7 +1487,7 @@ int XLedDev::OnSignalOnTime(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (lSignalOnTime > 65535) lSignalOnTime = 65535;
 
         for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-        sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%0ld", lSignalOnTime);
+        snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%0ld", lSignalOnTime);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1522,7 +1522,7 @@ int XLedDev::OnSignalOnTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     m_lSignalOnTime = atol(sParm);
     char sSignalOnTime[20];
     memset(sSignalOnTime, 0, 20);
-    sprintf(sSignalOnTime, "%ld%s", m_lSignalOnTime, sPWMUnit[m_lPWMUnit]);
+    snprintf(sSignalOnTime, sizeof(sSignalOnTime), "%ld%s", m_lSignalOnTime, sPWMUnit[m_lPWMUnit]);
     pProp->Set(sSignalOnTime);
 
     if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1577,7 +1577,7 @@ int XLedDev::OnSignalOffTime(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (lSignalOffTime > 65535) lSignalOffTime = 65535;
 
         for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-        sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", lSignalOffTime);
+        snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", lSignalOffTime);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1612,7 +1612,7 @@ int XLedDev::OnSignalOffTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     m_lSignalOffTime = atol(sParm);
     char sSignalOffTime[20];
     memset(sSignalOffTime, 0, 20);
-    sprintf(sSignalOffTime, "%ld%s", m_lSignalOffTime, sPWMUnit[m_lPWMUnit]);
+    snprintf(sSignalOffTime, sizeof(sSignalOffTime), "%ld%s", m_lSignalOffTime, sPWMUnit[m_lPWMUnit]);
     pProp->Set(sSignalOffTime);
 
     if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1667,7 +1667,7 @@ int XLedDev::OnTriggerDelayTime(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (lTriggerDelay > 65535) lTriggerDelay = 65535;
 
         for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-        sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%0ld", lTriggerDelay);
+        snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%0ld", lTriggerDelay);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);
@@ -1698,7 +1698,7 @@ int XLedDev::OnTriggerDelayTime(MM::PropertyBase* pProp, MM::ActionType eAct)
     const char* sPWMUnit[3] = { "0uS", "mS", "S" };
     m_lTriggerDelay = atol(sParm);
     char sTriggerDelay[20];
-    sprintf(sTriggerDelay, "%ld%s", m_lTriggerDelay, sPWMUnit[m_lPWMUnit]);
+    snprintf(sTriggerDelay, sizeof(sTriggerDelay), "%ld%s", m_lTriggerDelay, sPWMUnit[m_lPWMUnit]);
     pProp->Set(sTriggerDelay);
 
     if (XLed::Instance()->GetDebugLogFlag() > 1)
@@ -1761,7 +1761,7 @@ int XLedDev::OnPWMUnit(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (m_lPWMUnit > 2) m_lPWMUnit = 2;
 
         for (int nDev = 0; nDev < m_nLedDevNumber; nDev++) sCmdSet[3+nDev] = ',';
-        sprintf((char*)&sCmdSet[3+m_nLedDevNumber], "%ld", m_lPWMUnit);
+        snprintf((char*)&sCmdSet[3+m_nLedDevNumber], sizeof(sCmdSet) - 3 - m_nLedDevNumber, "%ld", m_lPWMUnit);
         sCmdSet[strlen((const char*)sCmdSet)] = XLed::XL_TxTerm;
 
         ret = XLedSerialIO(sCmdSet, sResp);

@@ -151,7 +151,7 @@ int XCiteExacte::Initialize()
       return status;
    }
    lampIntensity_ = (long) atoi(response.c_str());
-   sprintf(cBuff, "%03d", (int) lampIntensity_);
+   snprintf(cBuff, sizeof(cBuff), "%03d", (int) lampIntensity_);
    SetProperty("Lamp-Intensity", cBuff);
 
    // Shutter state
@@ -431,7 +431,7 @@ int XCiteExacte::SetOpen(bool open)
 		  {
 			 timeElapsed = (long) (GetCurrentMMTime()-timeShutterClosed_).getMsec();
 			 memset(cBuff, 0, 20);
-			 sprintf(cBuff, "[%.2f]", timeElapsed), 
+			 snprintf(cBuff, sizeof(cBuff), "[%.2f]", timeElapsed),
 			 LogMessage("XCite120PC: Waiting for shuttle dwell before the shutter is reopending..." + string(cBuff));
 		  } while ( timeElapsed < (double)shutterDwellTime_);
 	  }
@@ -443,7 +443,7 @@ int XCiteExacte::SetOpen(bool open)
       LogMessage("XCite120PC: Close Shutter");
 	  timeShutterClosed_ = this->GetCurrentMMTime();
 	  memset(cBuff, 0, 20);
-	  sprintf(cBuff, "[%.2f]", timeShutterClosed_.getMsec()), 
+	  snprintf(cBuff, sizeof(cBuff), "[%.2f]", timeShutterClosed_.getMsec()),
 	  LogMessage("XCite120PC: Shutter Closed Time..." + string(cBuff));
 
       ret = ExecuteCommand(cmdCloseShutter);
@@ -491,7 +491,7 @@ int XCiteExacte::OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(lampIntensity_);
       char cBuff[4];
-      sprintf(cBuff, "%03d", (int) lampIntensity_);
+      snprintf(cBuff, sizeof(cBuff), "%03d", (int) lampIntensity_);
       LogMessage("XCiteExacte: Set Intensity: " + string(cBuff));
       ExecuteCommand(cmdSetIntensityLevel, cBuff, 3);
    }
@@ -555,7 +555,7 @@ int XCiteExacte::OnShutterDwellTime(MM::PropertyBase* pProp, MM::ActionType eAct
       pProp->Get(shutterDwellTime_);
       char cBuffer[20];
 	  memset(cBuffer, 0, 20);
-      sprintf(cBuffer, "%ld", shutterDwellTime_);
+      snprintf(cBuffer, sizeof(cBuffer), "%ld", shutterDwellTime_);
       LogMessage("XCiteExacte: Shutter Dwell Time: " + string(cBuffer));
    }
    return DEVICE_OK;
@@ -678,11 +678,11 @@ int XCiteExacte::OnOutputPower(MM::PropertyBase* pProp, MM::ActionType eAct)
       //    power factor = 100, output power unit is W
       //    power factor > 100, output power unit is mW
       if ("100" == powerFactor_)
-         sprintf(cBuff, "%05d", (int) (outputPower_ * 100 * 100));
+         snprintf(cBuff, sizeof(cBuff), "%05d", (int) (outputPower_ * 100 * 100));
       else if ("1000" == powerFactor_)
-         sprintf(cBuff, "%05d", (int) ((outputPower_ / 1000) * 1000 * 100));
+         snprintf(cBuff, sizeof(cBuff), "%05d", (int) ((outputPower_ / 1000) * 1000 * 100));
       else
-         sprintf(cBuff, "%05d", (int) ((outputPower_ / 1000) * 10000 * 100));
+         snprintf(cBuff, sizeof(cBuff), "%05d", (int) ((outputPower_ / 1000) * 10000 * 100));
       LogMessage("XCiteExacte: Set Output Power: " + string(cBuff));
       ExecuteCommand(cmdSetOutputPower, cBuff, 5);
    }
@@ -725,11 +725,11 @@ int XCiteExacte::OnGetOnTime(MM::PropertyBase* pProp, MM::ActionType eAct)
 	  GetOpen(on);
 	  if (on)
 	  {
-		 sprintf(cBuff, "%d", (int) ((GetCurrentMMTime() - lastShutterTime_).getMsec() / 1000));
+		 snprintf(cBuff, sizeof(cBuff), "%d", (int) ((GetCurrentMMTime() - lastShutterTime_).getMsec() / 1000));
   	  }
 	  else
 	  {
-  	    sprintf(cBuff, "%d", 0);
+  	    snprintf(cBuff, sizeof(cBuff), "%d", 0);
 	  }
 	  pProp->Set(cBuff);
    }

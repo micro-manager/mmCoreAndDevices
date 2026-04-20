@@ -9,7 +9,7 @@ LT_INIT([disable-static])
 
 AC_PROG_CC([cc gcc clang])
 AC_PROG_CXX([c++ g++ clang++])
-AX_CXX_COMPILE_STDCXX([14], [noext])
+AX_CXX_COMPILE_STDCXX([17], [noext])
 
 MM_GMOCK([$srcdir/../../testing/googletest], [\$(top_srcdir)/../../testing/googletest])
 AM_CONDITIONAL([BUILD_CPP_TESTS], [test "x$have_gmock" = xyes])
@@ -441,26 +441,26 @@ AM_CONDITIONAL([BUILD_ALLIED_VISION_CAMERA], [test "x$use_vimba_x" = xyes])
 
 
 # Zaber Motion Library (hack: only support 3rdpartypublic copy currently)
-zml_version="3.4.4"
-zml_so_version="3.4"
+zml_version="7.14.0"
+zml_so_version="7.14"
 AC_MSG_CHECKING([for Zaber Motion Library in 3rdpartypublic])
 zml_header_to_check="${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/include/zaber/motion/library.h"
 AM_CONDITIONAL([BUILD_ZABER], [test -f $zml_header_to_check])
 if test -f "$zml_header_to_check"; then
    AC_MSG_RESULT([found])
    ZML_CPPFLAGS="-I${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/include"
-   ZML_LIBS="-lzml"
+   ZML_LIBS="-lzaber-motion"
    case $host in
       *linux*)
          # Linux builds by users should install ZML libs
-         zml_linux_libdir="${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/linux-amd64/lib"
+         zml_linux_libdir="${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/lib/linux_x64"
          ZML_LDFLAGS="-L${zml_linux_libdir} -Wl,-rpath,"'\$$ORIGIN'
-         ZML_LIBS_TO_COPY="${zml_linux_libdir}/libzml.so.${zml_so_version} ${zml_linux_libdir}/libzaber-motion-lib-linux-amd64.so.${zml_version}"
+         ZML_LIBS_TO_COPY="${zml_linux_libdir}/libzaber-motion.so.${zml_so_version} ${zml_linux_libdir}/libzaber-motion-core.so.${zml_version}"
          ;;
 
       *apple-darwin*)
          # macOS build for packaging does not ship ZML
-         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/darwin/lib"
+         ZML_LDFLAGS="-L${thirdpartypublic}/Zaber/zaber-motion-${zml_version}/lib/darwin_x64"
          ZML_LIBS_TO_COPY=""
          ;;
    esac
@@ -493,9 +493,6 @@ AC_C_INLINE
 # On the Mac we need some frameworks that can be in the way on Linux
 case $host in 
    *apple-darwin*)
-      AC_MSG_CHECKING(pvcam linker flags)
-      PVCAMFRAMEWORKS="-framework PVCAM"
-      AC_MSG_RESULT($PVCAMFRAMEWORKS)
       AC_MSG_CHECKING(diagnostic spot linker flags)
       SPOTFRAMEWORKS="-framework SpotCam"
       AC_MSG_RESULT($SPOTFRAMEWORKS)
@@ -506,13 +503,7 @@ case $host in
       QUICKTIMEFRAMEWORKS="-framework QuickTime -framework QTKit"
       AC_MSG_RESULT($QUICKTIMEFRAMEWORKS)
       ;;
-   *linux*)
-      AC_MSG_CHECKING(pvcam linker flags)
-      PVCAMFRAMEWORKS="-lpvcam"
-      ;;
 esac
-# PVCAMFRAMEWORKS left only for PrincetonInstruments adapter that relies on very old PVCAM version
-AC_SUBST(PVCAMFRAMEWORKS)
 AC_SUBST(SPOTFRAMEWORKS)
 AC_SUBST(SERIALFRAMEWORKS)
 AC_SUBST(QUICKTIMEFRAMEWORKS)
@@ -569,6 +560,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    CNCMicroscope/ArduinoNeoPixelShutter
    CNCMicroscope/RAMPSStage
    CSUW1
+   Cephla
    ChuoSeiki_MD5000
    ChuoSeiki_QT
    Cobolt
@@ -582,6 +574,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    DTOpenLayer
    DemoCamera
    Diskovery
+   EvidentIX85
    FakeCamera
    FocalPoint
    FreeSerialPort
@@ -623,6 +616,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    OVP_ECS2
    Omicron
    OpenCVgrabber
+   OpenUC2
    Oxxius
    OxxiusCombiner
    PI
@@ -641,6 +635,8 @@ m4_define([device_adapter_dirs], [m4_strip([
    Prior
    PriorLegacy
    QCam
+   ReflectionFocus
+   RappLasers
    Sapphire
    Scientifica
    ScionCam

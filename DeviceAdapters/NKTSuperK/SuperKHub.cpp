@@ -190,19 +190,19 @@ void SuperKHub::setNKTErrorText() {
 	for (int i=0; i<16; i++) {
 		int errNum = i + RegisterResultsOffset;
 		char newstr[255];
-		sprintf(newstr, "NKT SDK RegisterResults Error Code: %d", errNum - RegisterResultsOffset);
+		snprintf(newstr, sizeof(newstr), "NKT SDK RegisterResults Error Code: %d", errNum - RegisterResultsOffset);
 		SetErrorText(errNum, newstr);
 	}
 	for (int i=0; i<7; i++) {
 		int errNum = i + DeviceResultsOffset;
 		char newstr[255];
-		sprintf(newstr, "NKT SDK DeviceResults Error Code: %d", errNum - DeviceResultsOffset);
+		snprintf(newstr, sizeof(newstr), "NKT SDK DeviceResults Error Code: %d", errNum - DeviceResultsOffset);
 		SetErrorText(errNum, newstr);
 	}
 	for (int i=0; i<5; i++) {
 		int errNum = i + PortResultsOffset;
 		char newstr[255];
-		sprintf(newstr, "NKT SDK PortResults Error Code: %d", errNum - PortResultsOffset);
+		snprintf(newstr, sizeof(newstr), "NKT SDK PortResults Error Code: %d", errNum - PortResultsOffset);
 		SetErrorText(errNum, newstr);
 	}
 }

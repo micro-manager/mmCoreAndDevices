@@ -23,6 +23,7 @@
 //
 
 #include "Atik.h"
+#include "CameraImageMetadata.h"
 #include "ModuleInterface.h"
 
 using namespace std;
@@ -823,19 +824,6 @@ int Atik::SetBinning(int binF)
 	return SetProperty(MM::g_Keyword_Binning, CDeviceUtils::ConvertToString(binF));
 }
 
-int Atik::PrepareSequenceAcqusition()
-{
-	//log("");
-	if (IsCapturing())
-		return DEVICE_CAMERA_BUSY_ACQUIRING;
-
-	int ret = GetCoreCallback()->PrepareForAcq(this);
-	if (ret != DEVICE_OK)
-		return ret;
-
-	return DEVICE_OK;
-}
-
 /**
  * Required by the MM::Camera API
  * Please implement this yourself and do not rely on the base class implementation
@@ -844,7 +832,7 @@ int Atik::PrepareSequenceAcqusition()
 int Atik::StartSequenceAcquisition(double interval) {
 
 	//log("");
-	return CCameraBase<Atik>::StartSequenceAcquisition(interval);
+	return CLegacyCameraBase<Atik>::StartSequenceAcquisition(interval);
 }
 
 /**
@@ -853,7 +841,7 @@ int Atik::StartSequenceAcquisition(double interval) {
 int Atik::StopSequenceAcquisition()
 {
 	//log("");
-	return CCameraBase<Atik>::StopSequenceAcquisition();
+	return CLegacyCameraBase<Atik>::StopSequenceAcquisition();
 }
 
 /**
@@ -864,7 +852,7 @@ int Atik::StopSequenceAcquisition()
 int Atik::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
 	//log("");
-	return CCameraBase<Atik>::StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
+	return CLegacyCameraBase<Atik>::StartSequenceAcquisition(numImages, interval_ms, stopOnOverflow);
 }
 
 /*
@@ -878,9 +866,9 @@ int Atik::InsertImage()
 	this->GetLabel(label);
 
 	// Important:  metadata about the image are generated here:
-	Metadata md;
+	MM::CameraImageMetadata md;
 
-	md.put(MM::g_Keyword_Metadata_CameraLabel, "Atik SDK Camera");
+	md.AddTag(MM::g_Keyword_Metadata_CameraLabel, "Atik SDK Camera");
 
 	string serialised = md.Serialize();
 
@@ -889,23 +877,13 @@ int Atik::InsertImage()
 	auto h = GetImageHeight();
 	auto bpp = GetImageBytesPerPixel();
 
-	int ret = GetCoreCallback()->InsertImage(this, imgBuf, w, h, bpp, serialised.c_str());
-
-	if (!isStopOnOverflow() && ret == DEVICE_BUFFER_OVERFLOW)
-	{
-		GetCoreCallback()->ClearImageBuffer(this);
-		return GetCoreCallback()->InsertImage(this, imgBuf, w, h, bpp, serialised.c_str(), false);
-	}
-	else
-	{
-		return ret;
-	}
+	return GetCoreCallback()->InsertImage(this, imgBuf, w, h, bpp, serialised.c_str());
 }
 
 
 bool Atik::IsCapturing() {
 	log("");
-	return CCameraBase<Atik>::IsCapturing();
+	return CLegacyCameraBase<Atik>::IsCapturing();
 }
 
 

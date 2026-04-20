@@ -21,10 +21,9 @@
 #include <string>
 
 
-namespace mm
-{
-namespace logging
-{
+namespace mmcore {
+namespace internal {
+namespace logging {
 
 
 const char*
@@ -43,4 +42,5 @@ LoggerData::InternString(const std::string& s)
 
 
 } // namespace logging
-} // namespace mm
+} // namespace internal
+} // namespace mmcore
