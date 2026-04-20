@@ -73,7 +73,7 @@ namespace legacy
                 Fetch( &isShutterOpenStr, NULL, &currentSetpoint );
 
                 char valueToSave[ 32 ];
-                sprintf( valueToSave, "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
+                snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
                 const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
                 Logger::Instance()->LogMessage("CoboltShutter :" + saveCommand, true);
 
@@ -86,7 +86,7 @@ namespace legacy
                 Fetch( &isShutterOpenStr, &runmode, NULL );
 
                 char valueToSave[ 32 ];
-                sprintf( valueToSave, "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
+                snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", isShutterOpenStr.c_str(), runmode.c_str(), currentSetpoint.c_str() );
                 const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
 
                 return laserDriver_->SendCommand( saveCommand );
@@ -95,7 +95,7 @@ namespace legacy
             int PersistState( const bool isShutterOpen, const std::string& runmode, const std::string& currentSetpoint )
             {
                 char valueToSave[ 32 ];
-                sprintf( valueToSave, "MM[%s;%s;%s]", ( isShutterOpen ? "1" : "0" ), runmode.c_str(), currentSetpoint.c_str() );
+                snprintf( valueToSave, sizeof( valueToSave ), "MM[%s;%s;%s]", ( isShutterOpen ? "1" : "0" ), runmode.c_str(), currentSetpoint.c_str() );
                 const std::string saveCommand = _setPersistedDataCommand + " " + std::string( valueToSave );
                 
                 Logger::Instance()->LogMessage("CoboltShutter : Save state" + saveCommand, true);
