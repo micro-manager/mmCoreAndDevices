@@ -14,6 +14,7 @@ mmcore_test_sources = files(
     'CircularBuffer-Tests.cpp',
     'CoreCreateDestroy-Tests.cpp',
     'CoreProperties-Tests.cpp',
+    'DeviceTimeout-Tests.cpp',
     'EventCallback-Tests.cpp',
     'ImageMetadata-Tests.cpp',
     'ImageMetadataTags-Tests.cpp',

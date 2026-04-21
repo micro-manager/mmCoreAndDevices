@@ -108,7 +108,7 @@ namespace notif = mmcore::internal::notification;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 12, MMCore_versionMinor = 4, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 12, MMCore_versionMinor = 5, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1418,6 +1418,76 @@ long CMMCore::getTimeoutMs()
 }
 
 /**
+ * Sets a per-device override for the wait/busy timeout.
+ *
+ * When set, the override replaces the global timeout (see setTimeoutMs) for
+ * waitForDevice on this specific device. The override does not persist across
+ * device unload/reload.
+ *
+ * @param label      the device label (must name a loaded non-Core device)
+ * @param timeoutMs  the timeout in milliseconds (must be positive)
+ */
+void CMMCore::setDeviceTimeoutMs(const char* label, long timeoutMs) MMCORE_LEGACY_THROW(CMMError)
+{
+   CheckDeviceLabel(label);
+   if (IsCoreDeviceLabel(label))
+      throw CMMError("Cannot set per-device timeout on the Core device");
+   if (timeoutMs <= 0)
+      throw CMMError("Device timeout must be positive");
+   std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
+   pDevice->SetTimeoutMsOverride(timeoutMs);
+   LOG_DEBUG(coreLogger_) << "Set device timeout override for " << label << " to " << timeoutMs << " ms";
+}
+
+/**
+ * Clears the per-device wait/busy timeout override, falling back to the
+ * global timeout. No-op if no override is set.
+ *
+ * @param label   the device label (must name a loaded non-Core device)
+ */
+void CMMCore::unsetDeviceTimeout(const char* label) MMCORE_LEGACY_THROW(CMMError)
+{
+   CheckDeviceLabel(label);
+   if (IsCoreDeviceLabel(label))
+      throw CMMError("Cannot unset per-device timeout on the Core device");
+   std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
+   if (pDevice->GetTimeoutMsOverride().has_value())
+   {
+      pDevice->ClearTimeoutMsOverride();
+      LOG_DEBUG(coreLogger_) << "Cleared device timeout override for " << label;
+   }
+}
+
+/**
+ * Returns the effective wait/busy timeout for the specified device: the
+ * per-device override if set, otherwise the global timeout.
+ *
+ * @param label   the device label
+ */
+long CMMCore::getDeviceTimeoutMs(const char* label) MMCORE_LEGACY_THROW(CMMError)
+{
+   CheckDeviceLabel(label);
+   if (IsCoreDeviceLabel(label))
+      return timeoutMs_;
+   std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
+   return pDevice->GetTimeoutMsOverride().value_or(timeoutMs_);
+}
+
+/**
+ * Returns true iff the specified device has a per-device timeout override.
+ *
+ * @param label   the device label
+ */
+bool CMMCore::hasDeviceTimeout(const char* label) MMCORE_LEGACY_THROW(CMMError)
+{
+   CheckDeviceLabel(label);
+   if (IsCoreDeviceLabel(label))
+      return false;
+   std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
+   return pDevice->GetTimeoutMsOverride().has_value();
+}
+
+/**
  * Waits (blocks the calling thread) for specified time in milliseconds.
  * @param intervalMs the time to sleep in milliseconds
  */
@@ -1450,8 +1520,10 @@ void CMMCore::waitForDevice(std::shared_ptr<mmcore::internal::DeviceInstance> pD
 {
    LOG_DEBUG(coreLogger_) << "Waiting for device " << pDev->GetLabel() << "...";
 
+   const long effectiveTimeoutMs = pDev->GetTimeoutMsOverride().value_or(timeoutMs_);
+
    auto now = std::chrono::steady_clock::now();
-   auto timeout = std::chrono::duration<long long, std::milli>(timeoutMs_);
+   auto timeout = std::chrono::duration<long long, std::milli>(effectiveTimeoutMs);
    auto deadline = now + timeout;
 
    while (true)
@@ -1468,10 +1540,10 @@ void CMMCore::waitForDevice(std::shared_ptr<mmcore::internal::DeviceInstance> pD
       {
          std::string label = pDev->GetLabel();
          std::ostringstream mez;
-         mez << "wait timed out after " << timeoutMs_ << " ms. ";
+         mez << "wait timed out after " << effectiveTimeoutMs << " ms. ";
          logError(label.c_str(), mez.str().c_str());
          throw CMMError("Wait for device " + ToQuotedString(label) + " timed out after " +
-               ToString(timeoutMs_) + "ms",
+               ToString(effectiveTimeoutMs) + "ms",
                MMERR_DevicePollingTimeout);
       }
 
