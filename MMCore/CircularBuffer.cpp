@@ -31,11 +31,7 @@
 
 #include "DeviceUtils.h"
 
-#include <chrono>
-#include <cstdio>
-#include <ctime>
 #include <memory>
-#include <string>
 
 namespace mmcore {
 namespace internal {
@@ -74,8 +70,6 @@ int CircularBuffer::SetOverwriteData(bool overwrite) {
 bool CircularBuffer::Initialize(unsigned int w, unsigned int h, unsigned int pixDepth)
 {
    std::lock_guard<std::mutex> guard(bufferLock_);
-   imageNumbers_.clear();
-   startTime_ = std::chrono::steady_clock::now();
 
    bool ret = true;
    try
@@ -144,8 +138,6 @@ void CircularBuffer::ClearLocked()
    insertIndex_=0;
    saveIndex_=0;
    overflow_ = false;
-   startTime_ = std::chrono::steady_clock::now();
-   imageNumbers_.clear();
 }
 
 unsigned long CircularBuffer::GetSize() const
@@ -170,33 +162,6 @@ unsigned long CircularBuffer::GetRemainingImageCount() const
    return (unsigned long)(insertIndex_ - saveIndex_);
 }
 
-static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_clock> tp) {
-   using namespace std::chrono;
-   auto us = duration_cast<microseconds>(tp.time_since_epoch());
-   auto secs = duration_cast<seconds>(us);
-   auto whole = duration_cast<microseconds>(secs);
-   auto frac = static_cast<int>((us - whole).count());
-
-   // As of C++14/17, it is simpler (and probably faster) to use C functions for
-   // date-time formatting
-
-   std::time_t t(secs.count()); // time_t is seconds on platforms we support
-   std::tm *ptm;
-#ifdef _WIN32 // Windows localtime() is documented thread-safe
-   ptm = std::localtime(&t);
-#else // POSIX has localtime_r()
-   std::tm tmstruct;
-   ptm = localtime_r(&t, &tmstruct);
-#endif
-
-   // Format as "yyyy-mm-dd hh:mm:ss.uuuuuu" (26 chars)
-   const char *timeFmt = "%Y-%m-%d %H:%M:%S";
-   char buf[32];
-   std::size_t len = std::strftime(buf, sizeof(buf), timeFmt, ptm);
-   std::snprintf(buf + len, sizeof(buf) - len, ".%06d", frac);
-   return buf;
-}
-
 /**
 * Inserts a single image, possibly with multiple components, in the buffer.
 */
@@ -204,11 +169,12 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
    unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
    const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
 {
+    (void)nComponents;
     std::lock_guard<std::mutex> insertGuard(insertLock_);
 
     ImgBuffer* pImg;
     unsigned long singleChannelSize = (unsigned long)width * height * byteDepth;
- 
+
     {
        std::lock_guard<std::mutex> guard(bufferLock_);
 
@@ -228,66 +194,15 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
             return false;
          }
        }
+
+       // we assume that all buffers are pre-allocated
+       pImg = frameArray_[insertIndex_ % frameArray_.size()].FindImage(0);
+       if (!pImg)
+          return false;
     }
- 
-   Metadata md;
-   {
-      std::lock_guard<std::mutex> guard(bufferLock_);
-      // we assume that all buffers are pre-allocated
-      pImg = frameArray_[insertIndex_ % frameArray_.size()].FindImage(0);
-      if (!pImg)
-         return false;
- 
-      if (pMd)
-      {
-         md = *pMd;
-      }
 
-      std::string cameraName = md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
-      if (imageNumbers_.end() == imageNumbers_.find(cameraName))
-      {
-         imageNumbers_[cameraName] = 0;
-      }
-
-      // insert image number. 
-      md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber, CDeviceUtils::ConvertToString(imageNumbers_[cameraName]));
-      ++imageNumbers_[cameraName];
-   }
-
-   if (!md.HasTag(MM::g_Keyword_Elapsed_Time_ms))
-   {
-      // if time tag was not supplied by the camera insert current timestamp
-      using namespace std::chrono;
-      auto elapsed = steady_clock::now() - startTime_;
-      md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
-         std::to_string(duration_cast<milliseconds>(elapsed).count()));
-   }
-
-   // Note: It is not ideal to use local time. I think this tag is rarely
-   // used. Consider replacing with UTC (micro)seconds-since-epoch (with
-   // different tag key) after addressing current usage.
-   auto now = std::chrono::system_clock::now();
-   md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore, FormatLocalTime(now));
-
-   md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
-   md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
-   if (byteDepth == 1)
-      md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY8);
-   else if (byteDepth == 2)
-      md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY16);
-   else if (byteDepth == 4)
-   {
-      if (nComponents == 1)
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_GRAY32);
-      else
-         md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB32);
-   }
-   else if (byteDepth == 8)
-      md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_RGB64);
-   else
-      md.PutImageTag(MM::g_Keyword_PixelType, MM::g_Keyword_PixelType_Unknown);
-
-   pImg->SetMetadata(md);
+   if (pMd)
+      pImg->SetMetadata(*pMd);
    // TODO: In MMCore the ImgBuffer::GetPixels() returns const pointer.
    //       It would be better to have something like ImgBuffer::GetPixelsRW() in MMDevice.
    //       Or even better - pass tasksMemCopy_ to ImgBuffer constructor

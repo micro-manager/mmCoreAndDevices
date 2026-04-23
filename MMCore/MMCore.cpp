@@ -3046,6 +3046,7 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
 			}
 			cbuf_->Clear();
+			callback_->ResetImageInsertionState();
          cbuf_->SetOverwriteData(!stopOnOverflow);
          mmi::DeviceModuleLockGuard guard(camera);
 
@@ -3092,6 +3093,7 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
    }
    cbuf_->Clear();
+   callback_->ResetImageInsertionState();
    cbuf_->SetOverwriteData(!stopOnOverflow);
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
@@ -3139,6 +3141,7 @@ void CMMCore::initializeCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
       }
       cbuf_->Clear();
+      callback_->ResetImageInsertionState();
    }
    else
    {
@@ -3192,6 +3195,7 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGAC
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
       }
       cbuf_->Clear();
+      callback_->ResetImageInsertionState();
       cbuf_->SetOverwriteData(true);
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
       int nRet = camera->StartSequenceAcquisition(intervalMs);
@@ -3406,6 +3410,7 @@ void* CMMCore::popNextImageMD(Metadata& md) MMCORE_LEGACY_THROW(CMMError)
 void CMMCore::clearCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
 {
    cbuf_->Clear();
+   callback_->ResetImageInsertionState();
 }
 
 /**
@@ -3439,6 +3444,7 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
          mmi::DeviceModuleLockGuard guard(camera);
          if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+         callback_->ResetImageInsertionState();
 		}
 
       LOG_DEBUG(coreLogger_) << "Did set circular buffer size to " <<
@@ -4701,6 +4707,7 @@ void CMMCore::setROI(int x, int y, int xSize, int ySize) MMCORE_LEGACY_THROW(CMM
       // popNextImage() to handle this correctly, so we need to make sure we
       // discard such images.
       cbuf_->Clear();
+      callback_->ResetImageInsertionState();
    }
    else
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
@@ -4780,6 +4787,7 @@ void CMMCore::setROI(const char* label, int x, int y, int xSize, int ySize) MMCO
      // popNextImage() to handle this correctly, so we need to make sure we
      // discard such images.
      cbuf_->Clear();
+     callback_->ResetImageInsertionState();
   }
   else
      throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(), MMERR_CameraNotAvailable);
@@ -4839,6 +4847,7 @@ void CMMCore::clearROI() MMCORE_LEGACY_THROW(CMMError)
       // popNextImage() to handle this correctly, so we need to make sure we
       // discard such images.
       cbuf_->Clear();
+      callback_->ResetImageInsertionState();
    }
 }
 

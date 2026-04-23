@@ -30,7 +30,6 @@
 
 #include "MMDevice.h"
 
-#include <chrono>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -88,8 +87,6 @@ private:
    unsigned int height_;
    unsigned int pixDepth_;
    long imageCounter_;
-   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-   std::map<std::string, long> imageNumbers_;
 
    // Invariants:
    // 0 <= saveIndex_ <= insertIndex_

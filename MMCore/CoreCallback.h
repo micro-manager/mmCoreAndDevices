@@ -30,6 +30,11 @@
 
 #include "DeviceUtils.h"
 
+#include <chrono>
+#include <map>
+#include <mutex>
+#include <string>
+
 namespace mmcore {
 namespace internal {
 
@@ -115,6 +120,10 @@ public:
    void GetLoadedDeviceOfType(const MM::Device* caller, MM::DeviceType devType,
          char* deviceName, const unsigned int deviceIterator);
 
+   // Reset per-acquisition image-metadata state: per-camera ImageNumber
+   // counters and the ElapsedTime-ms reference point.
+   void ResetImageInsertionState();
+
 private:
    CMMCore* core_;
    // Serializes OnPropertyChanged calls to reduce (but not eliminate)
@@ -122,7 +131,16 @@ private:
    // lookups used to determine which notifications to post.
    std::mutex onPropertyChangedLock_;
 
+   // Guards imageNumbers_ and startTime_.
+   std::mutex imageInsertionStateMutex_;
+   std::map<std::string, long> imageNumbers_;
+   std::chrono::time_point<std::chrono::steady_clock> startTime_;
+
    Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
+   Metadata BuildSequenceImageMetadata(const MM::Device* caller,
+         unsigned width, unsigned height,
+         unsigned byteDepth, unsigned nComponents,
+         const Metadata* origMd);
    MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);
 };
 
