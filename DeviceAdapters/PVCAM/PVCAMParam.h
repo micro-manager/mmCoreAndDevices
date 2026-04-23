@@ -92,7 +92,6 @@ protected:
     uns16       mType  { TYPE_INT32 };
 };
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
 template<>
 class PvParam<smart_stream_type> : public PvParamBase
 {
@@ -240,7 +239,6 @@ protected:
     smart_stream_type mIncrement{ 0, NULL };
     smart_stream_type mDefault  { 0, NULL };
 };
-#endif
 
 /**
 * Template class for PVCAM parameters. This class makes the access to PVCAM parameters easier.

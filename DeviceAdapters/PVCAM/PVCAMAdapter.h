@@ -59,26 +59,21 @@
 //===================================================================== DEFINES
 
 
-// FRAME_INFO support (on Windows since PVCAM 2.9.5, on Linux since 3.0.4)
-#define PVCAM_FRAME_INFO_SUPPORTED
-// Callbacks ex3 support (on Windows since PVCAM 2.8.1, on Linux since 3.0.4)
-#define PVCAM_CALLBACKS_SUPPORTED
-// The new parameter support (on Windows since PVCAM 3.0.0, on Linux since 3.0.4)
-#define PVCAM_PARAM_EXPOSE_OUT_DEFINED
-// The SMART streaming support (on Windows since PVCAM 2.8.0, on Linux since 3.0.4)
-#define PVCAM_SMART_STREAMING_SUPPORTED
-// Metadata, Multi-ROI, Centroids and other features that were added to PVCAM 3.0.12
-#define PVCAM_METADATA_SUPPORTED
-// Software trigger support (since PVCAM 3.9.0)
-#define PVCAM_SW_TRIGGER_SUPPORTED
+// Current PVCAM SDK in 3rdpartypublic is 3.10.0 from January 31, 2023.
+// Oldest supported PVCAM runtime should be now 3.0.12 due to used
+// metadata functions in the adapter code.
+// Parameter IDs added in newer versions are used only when reported available.
 
-// PVCAM 3.1+ has some additional PL_COLOR_MODES defined which we use across the code
-// even if we don't compile against that PVCAM. To make it easier we define them ourselves.
-#ifndef PVCAM_METADATA_SUPPORTED
-#define COLOR_GRBG 3
-#define COLOR_GBRG 4
-#define COLOR_BGGR 5
-#endif
+
+// FRAME_INFO support - on Windows since PVCAM 2.9.5, on Linux since 3.0.4
+// Callbacks ex3 support - on Windows since PVCAM 2.8.1, on Linux since 3.0.4
+// SMART streaming support - on Windows since PVCAM 2.8.0, on Linux since 3.0.4
+// Metadata support (multi-ROI, Centroids, etc.) - since PVCAM 3.0.12
+
+// Software trigger support - since PVCAM 3.9.0
+// TODO: Uncomment/remove once pl_exp_trigger() is used in the adapter code
+//       and update min. PVCAM version to 3.9.0 in the above text.
+//#define PVCAM_SW_TRIGGER_SUPPORTED
 
 // PVCAM 3.9+ has some additional PL_EXPOSURE_MODES defined which we use across the code
 // even if we don't compile against that PVCAM. To make it easier we define them ourselves.
@@ -516,12 +511,10 @@ public: // Action handlers
     */
     int OnDiskStreamingCoreSkipRatio(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-#ifdef PVCAM_CALLBACKS_SUPPORTED
     /**
     * Switches between Callbacks or Polling acquisition type.
     */
     int OnAcquisitionMethod(MM::PropertyBase* pProp, MM::ActionType eAct);
-#endif
 
     /**
     * Post processing parameter handler. Post processing features and parameters are
@@ -536,7 +529,6 @@ public: // Action handlers
     */
     int OnResetPostProcProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
     /**
     * Enables or disables the S.M.A.R.T streaming feature.
     */
@@ -546,7 +538,6 @@ public: // Action handlers
     * values in milliseconds. Internally value is converted to microseconds if needed.
     */
     int OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eAct);
-#endif
 
     /**
     * Read-only: Shows the camera actual exposure time value in ns.
@@ -735,12 +726,10 @@ private:
     */
     int abortAcquisitionInternal();
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
     /**
     * Sends the S.M.A.R.T streaming configuration to the camera.
     */
     int sendSmartStreamingToCamera(const std::vector<double>& exposuresMs, int exposureRes);
-#endif
 
     /**
     * This function returns the correct exposure mode to be used in both
@@ -834,12 +823,10 @@ private:
 
 private: // Static
 
-#ifdef PVCAM_CALLBACKS_SUPPORTED
     /**
     * Static PVCAM callback handler.
     */
     static void PvcamCallbackEofEx3(FRAME_INFO* pNewFrameInfo, void* pContext);
-#endif
 
 private:
     const short     cameraId_;             // 0-based camera ID, used to allow multiple cameras connected
@@ -909,14 +896,12 @@ private:
     // the configuration the buffer may need to be further processed before its used by MMCore.
 
     // PVCAM helper structure for decoding an embedded-metadata-enabled frame buffer
-#ifdef PVCAM_METADATA_SUPPORTED
     md_frame*        metaFrameStruct_;
     std::map<uns16, md_ext_item_collection> metaFrameExtData_; // The key is roiNr
 
     // For metadata serialization, optimization to not allocate the same for each frame
     std::string      metaAllRoisStr_;
     char             metaRoiStr_[1000];
-#endif
     // A buffer used for creating a black-filled frame when Centroids or Multi-ROI
     // acquisition is running. Used in both single snap and live mode if needed.
     unsigned char*   metaBlackFilledBuf_;
@@ -936,9 +921,7 @@ private:
     Event            eofEvent_;
     MMThreadLock     acqLock_;
 
-#ifdef PVCAM_FRAME_INFO_SUPPORTED
     FRAME_INFO*     pFrameInfo_;           // PVCAM frame metadata
-#endif
     int             lastPvFrameNr_;        // The last FrameNr reported by PVCAM
 
     // All dependant parameters that should be updated after setting new value
@@ -952,10 +935,8 @@ private:
 
     // TODO: Convert remaining PvParam pointers to unique_ptr
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
     PvParam<smart_stream_type>* prmSmartStreamingValues_;
     PvParam<rs_bool>* prmSmartStreamingEnabled_;
-#endif
 
     PvEnumParam*      prmTriggerMode_; // Updated after pl_exp_setup_*()
     PvParam<uns16>*   prmExpResIndex_; // Can change: EXP_RES, EXPOSURE_TIME(+range)

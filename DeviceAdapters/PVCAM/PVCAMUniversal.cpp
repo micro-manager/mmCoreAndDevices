@@ -154,10 +154,8 @@ const char* g_Keyword_ScanDirectionReset   = "ScanDirectionReset"; // Yes/No
 const char* g_Keyword_ScanLineDelay        = "ScanLineDelay";
 const char* g_Keyword_ScanLineTime         = "ScanLineTime";
 const char* g_Keyword_ScanWidth            = "ScanWidth";
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
 const char* g_Keyword_SmartStreamingValues   = "SMARTStreamingValues[ms]";
 const char* g_Keyword_SmartStreamingEnable   = "SMARTStreamingEnabled";
-#endif
 const char* g_Keyword_MetadataEnabled  = "MetadataEnabled"; // Yes/No
 const char* g_Keyword_MetadataResetTimestamp  = "MetadataResetTimestamp"; // Yes/No
 const char* g_Keyword_CentroidsEnabled = "CentroidsEnabled"; // Yes/No
@@ -253,10 +251,8 @@ Universal::Universal(short cameraId, const char* deviceName)
     redScale_(1.0),
     greenScale_(1.0),
     blueScale_(1.0),
-#ifdef PVCAM_METADATA_SUPPORTED
     metaFrameStruct_(NULL),
     metaFrameExtData_(),
-#endif
     metaBlackFilledBuf_(NULL),
     metaBlackFilledBufSz_(0),
     singleFrameBufRaw_(NULL),
@@ -264,14 +260,10 @@ Universal::Universal(short cameraId, const char* deviceName)
     singleFrameBufFinal_(NULL),
     rgbImgBuf_(NULL),
     eofEvent_(false, false),
-#ifdef PVCAM_FRAME_INFO_SUPPORTED
     pFrameInfo_(NULL),
-#endif
     lastPvFrameNr_(0),
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
     prmSmartStreamingValues_(NULL),
     prmSmartStreamingEnabled_(NULL),
-#endif
     prmTriggerMode_(NULL),
     prmExpResIndex_(NULL),
     prmExpRes_(NULL),
@@ -334,12 +326,8 @@ Universal::Universal(short cameraId, const char* deviceName)
     pollingThd_ = new PollingThread(this);             // Pointer to the sequencing thread
 
     deviceLabel_[0] = '\0';
-
     camName_[0] = '\0';
-
-#ifdef PVCAM_METADATA_SUPPORTED
     metaRoiStr_[0] = '\0';
-#endif
 
     // The notification thread will have slightly smaller queue than the circular buffer.
     // This is to reduce the risk of frames being overwritten by PVCAM when the circular
@@ -372,10 +360,8 @@ Universal::~Universal()
     delete acqThd_;
     delete customDiskWriter_;
 
-#ifdef PVCAM_METADATA_SUPPORTED
     if (metaFrameStruct_)
         pl_md_release_frame_struct(metaFrameStruct_);
-#endif
 
     // Delete all buffers
     delete[] metaBlackFilledBuf_;
@@ -423,10 +409,8 @@ Universal::~Universal()
     delete prmClearingTime_;
     delete prmPreTriggerDelay_;
     delete prmPostTriggerDelay_;
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
     delete prmSmartStreamingEnabled_;
     delete prmSmartStreamingValues_;
-#endif
 
     // Delete universal parameters
     for ( unsigned i = 0; i < universalParams_.size(); i++ )
@@ -605,7 +589,6 @@ int Universal::Initialize()
     AddAllowedValue(g_Keyword_Color, g_Keyword_ON);
     AddAllowedValue(g_Keyword_Color, g_Keyword_OFF);
 
-#ifdef PVCAM_METADATA_SUPPORTED
     // Start with 80 chars for each of 512 centroids
     metaAllRoisStr_.reserve(80 * 512);
 
@@ -719,7 +702,6 @@ int Universal::Initialize()
         CreateProperty(g_Keyword_FanSpeedSetpoint, prmFanSpeedSetpoint_->ToString().c_str(), MM::String, false, pAct);
         SetAllowedValues(g_Keyword_FanSpeedSetpoint, prmFanSpeedSetpoint_->GetEnumStrings());
     }
-#endif
 
     /// TRIGGER MODE (EXPOSURE MODE)
     prmTriggerMode_ = new PvEnumParam( "PARAM_EXPOSURE_MODE", PARAM_EXPOSURE_MODE, this, true );
@@ -741,7 +723,6 @@ int Universal::Initialize()
     }
 
     /// EXPOSE OUT MODE
-#ifdef PVCAM_PARAM_EXPOSE_OUT_DEFINED
     prmExposeOutMode_ = new PvEnumParam( "PARAM_EXPOSE_OUT_MODE", PARAM_EXPOSE_OUT_MODE, this, true );
     if ( prmExposeOutMode_->IsAvailable() )
     {
@@ -750,11 +731,6 @@ int Universal::Initialize()
         CreateProperty(g_Keyword_ExposeOutMode, currentMode, MM::String, false, pAct);
         SetAllowedValues( g_Keyword_ExposeOutMode, prmExposeOutMode_->GetEnumStrings() );
     }
-#else
-    // If the flag is not defined the prmExposeOutMode_ stays NULL, the property is not created - event handlers are not called,
-    // the code that still uses the param should first check the variable for NULL, then try to call it. We need to flag this
-    // part of the code because the PARAM_EXPOSE_OUT_MODE is defined for WIN only and compilation on other platforms would fail.
-#endif
 
     /// CLEAR CYCLES
     // The Clear Cycles needs a bit different handling, the PVCAM allows range of 0-65535 but we want to limit it to 
@@ -819,12 +795,7 @@ int Universal::Initialize()
     nRet = CreateProperty(MM::g_Keyword_Exposure, "10.0", MM::Float, false, pAct);
     assert(nRet == DEVICE_OK);
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
     /// SMART STREAMING
-    /// SMART streaming is enabled/disabled in OnSmartStreamingEnable
-    /// SMART streaming values are updated in OnSmartStreamingValues
-    /// SMART streaming values are sent to camera in SendSmartStreamingToCamera
-
     prmSmartStreamingEnabled_ = new PvParam<rs_bool>( "PARAM_SMART_STREAM_MODE_ENABLED", PARAM_SMART_STREAM_MODE_ENABLED, this, true );
     prmSmartStreamingValues_ = new PvParam<smart_stream_type>( "PARAM_SMART_STREAM_EXP_PARAMS", PARAM_SMART_STREAM_EXP_PARAMS, this, true );
     if (prmSmartStreamingEnabled_->IsAvailable() && prmSmartStreamingValues_->IsAvailable())
@@ -852,21 +823,18 @@ int Universal::Initialize()
         nRet = CreateProperty(g_Keyword_SmartStreamingValues, "", MM::String, false, pAct);
         assert(nRet == DEVICE_OK);
     }
-#endif
 
     /// BINNING
     binningRestricted_ = false;
     binningLabels_.clear();
     binningValuesX_.clear();
     binningValuesY_.clear();
-#ifdef PVCAM_METADATA_SUPPORTED
     prmBinningSer_ = new PvEnumParam("PARAM_BINNING_SER", PARAM_BINNING_SER, this, true);
     prmBinningPar_ = new PvEnumParam("PARAM_BINNING_PAR", PARAM_BINNING_PAR, this, true);
     if (prmBinningSer_->IsAvailable() && prmBinningPar_->IsAvailable())
     {
         binningRestricted_ = true;
     }
-#endif
     if (binningRestricted_)
     {
         // If the camera reports supported binning modes the Binning property
@@ -1228,14 +1196,12 @@ int Universal::Initialize()
 
     /// FRAME RECOVERY
     /// Enable/Disable the feature that attempts to recover from lost callbacks
-#ifdef PVCAM_FRAME_INFO_SUPPORTED
     pAct = new CPropertyAction (this, &Universal::OnCircBufferFrameRecovery);
     nRet = CreateProperty(g_Keyword_CircBufFrameRecovery,
             circBufFrameRecoveryEnabled_ ? g_Keyword_ON : g_Keyword_OFF, MM::String, false, pAct);
     assert(nRet == DEVICE_OK);
     AddAllowedValue(g_Keyword_CircBufFrameRecovery, g_Keyword_ON);
     AddAllowedValue(g_Keyword_CircBufFrameRecovery, g_Keyword_OFF);
-#endif
 
     /// properties that allow to enable/disable/set various post processing features
     /// supported by Photometrics cameras. The parameter properties are read out from
@@ -1275,7 +1241,6 @@ int Universal::Initialize()
     // Check if we can use PVCAM callbacks. This is recommended way to get notified when the frame
     // readout is finished. Otherwise we will fall back to old polling method.
     acqCfgNew_.CallbacksEnabled = false;
-#ifdef PVCAM_CALLBACKS_SUPPORTED
     if ( pl_cam_register_callback_ex3( hPVCAM_, PL_CALLBACK_EOF, (void*)&Universal::PvcamCallbackEofEx3, this ) == PV_OK )
     {
         pAct = new CPropertyAction(this, &Universal::OnAcquisitionMethod);
@@ -1289,16 +1254,13 @@ int Universal::Initialize()
     {
         LogAdapterMessage( "pl_cam_register_callback_ex3 failed! Using polling for frame acquisition" );
     }
-#endif
 
     // FRAME_INFO SUPPORT
-#ifdef PVCAM_FRAME_INFO_SUPPORTED
     // Initialize the FRAME_INFO structure, this will contain the frame metadata provided by PVCAM
     if ( !pl_create_frame_info_struct( &pFrameInfo_ ) )
     {
         return LogPvcamError(__LINE__, "Failed to initialize the FRAME_INFO structure");
     }
-#endif
 
     // TRIGGER TABLE
     // We will create a property for every TrigTab and LastMuxed combination so we will end up with something similar
@@ -1563,7 +1525,7 @@ int Universal::Initialize()
 
     // Initialize the acquisition configuration
     unsigned int maxRois = 1;
-    if (prmRoiCount_ && prmRoiCount_->IsAvailable())
+    if (prmRoiCount_->IsAvailable())
         maxRois = prmRoiCount_->Max();
     acqCfgNew_.Rois.SetCapacity(maxRois);
     acqCfgNew_.Rois.Add(PvRoi(0, 0, camSerSize_, camParSize_));
@@ -1592,31 +1554,27 @@ int Universal::Shutdown()
     {
         rs_bool ret;
 
-#ifdef PVCAM_CALLBACKS_SUPPORTED
         if ( acqCfgCur_.CallbacksEnabled )
         {
             pl_cam_deregister_callback( hPVCAM_, PL_CALLBACK_EOF );
         }
-#endif
         ret = pl_cam_close(hPVCAM_);
         if (!ret)
             LogPvcamError(__LINE__, "pl_cam_close");
-        assert(ret);     
-        refCount_--;      
-        if (PVCAM_initialized_ && refCount_ <= 0)      
+        assert(ret);
+        refCount_--;
+        if (PVCAM_initialized_ && refCount_ <= 0)
         {
             refCount_ = 0;
             if (!pl_pvcam_uninit())
                 LogPvcamError(__LINE__, "pl_pvcam_uninit");
             PVCAM_initialized_ = false;
-        }      
-#ifdef PVCAM_FRAME_INFO_SUPPORTED
+        }
         if ( pFrameInfo_ )
         {
             pl_release_frame_info_struct( pFrameInfo_ );
             pFrameInfo_ = NULL;
         }
-#endif
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -1918,7 +1876,7 @@ int Universal::ClearROI()
 
 bool Universal::SupportsMultiROI()
 {
-    const bool supported = (prmRoiCount_ != 0 && prmRoiCount_->IsAvailable() && prmRoiCount_->Max() > 1);
+    const bool supported = (prmRoiCount_->IsAvailable() && prmRoiCount_->Max() > 1);
     return supported;
 }
 
@@ -3430,7 +3388,6 @@ int Universal::OnDiskStreamingCoreSkipRatio(MM::PropertyBase* pProp, MM::ActionT
     return DEVICE_OK;
 }
 
-#ifdef PVCAM_CALLBACKS_SUPPORTED
 int Universal::OnAcquisitionMethod(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnAcquisitionMethod", eAct);
@@ -3448,7 +3405,6 @@ int Universal::OnAcquisitionMethod(MM::PropertyBase* pProp, MM::ActionType eAct)
     }
     return DEVICE_OK;
 }
-#endif // PVCAM_CALLBACKS_SUPPORTED
 
 int Universal::OnPostProcProperties(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
@@ -3608,7 +3564,6 @@ int Universal::OnResetPostProcProperties(MM::PropertyBase* pProp, MM::ActionType
     return nRet;
 }
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
 int Universal::OnSmartStreamingEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnSmartStreamingEnable", eAct);
@@ -3735,7 +3690,6 @@ int Universal::OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eA
 
     return nRet;
 }
-#endif // PVCAM_SMART_STREAMING_SUPPORTED
 
 int Universal::OnTimingExposureTimeNs(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -3984,7 +3938,6 @@ int Universal::FrameAcquired()
     PvFrameInfo currFrameNfo;
     currFrameNfo.SetTimestampMsec(GetCurrentMMTime().getMsec());
 
-#ifdef PVCAM_FRAME_INFO_SUPPORTED
     g_pvcamLock.Lock();
     rsbRet = pl_exp_get_latest_frame_ex(hPVCAM_, &pCurrFramePtr, pFrameInfo_ );
     if (rsbRet != PV_OK)
@@ -4099,14 +4052,6 @@ int Universal::FrameAcquired()
             lastPvFrameNr_ = currFrameNr;
         }
     }
-#else
-    // FRAME_INFO is not supported so we cannot do much. Just retrieve the frame pointer.
-    g_pvcamLock.Lock();
-    rsbRet = pl_exp_get_latest_frame(hPVCAM_, &pCurrFramePtr ); 
-    if (rsbRet != PV_OK)
-        LogPvcamError(__LINE__, "pl_exp_get_latest_frame() failed");
-    g_pvcamLock.Unlock();
-#endif // PVCAM_FRAME_INFO_SUPPORTED
 
     if ( rsbRet != PV_OK )
     {
@@ -4197,7 +4142,6 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
         md.AddTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
         md.AddTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
 
-#ifdef PVCAM_FRAME_INFO_SUPPORTED
         md.AddTag<int32>( "PVCAM-CameraHandle",  frameNfo.PvHCam() );
         md.AddTag<int32>( "PVCAM-FrameNr",       frameNfo.PvFrameNr() );
         md.AddTag<int32>( "PVCAM-ReadoutTime",   frameNfo.PvReadoutTime() );
@@ -4208,7 +4152,6 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             md.AddTag<bool>( "PVCAM-FrameRecovered", frameNfo.IsRecovered() );
             md.AddTag<int32>( "PVCAM-FramesRecoveredTotal", imagesRecovered_ );
         }
-#endif
 
         const double startTimeMsec   = startTime_.getMsec();
         const double elapsedTimeMsec = frameNfo.TimeStampMsec() - startTimeMsec;
@@ -4229,7 +4172,6 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             return ret;
         }
 
-#ifdef PVCAM_METADATA_SUPPORTED
         // The post-processing done above also decodes the frame metadata if supported
         if (acqCfgCur_.FrameMetadataEnabled)
         {
@@ -4363,7 +4305,6 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             metaAllRoisStr_.append("]");
             md.AddTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
         }
-#endif
 
         ret = PushImageToMmCore( pOutBuf, &md );
         if (ret != DEVICE_OK)
@@ -4429,7 +4370,7 @@ int Universal::PollingThreadRun(void)
         PollingThreadExiting();
         pollingThd_->setStop(true);
 
-        START_METHOD("<<<Universal::ThreadRun");
+        START_METHOD("<<<Universal::PollingThreadRun");
         return ret;
 
     }
@@ -4477,7 +4418,7 @@ void Universal::PollingThreadExiting() throw ()
 
 int Universal::initializeStaticCameraParams()
 {
-    START_METHOD("Universal::initializeStaticCameraProperties");
+    START_METHOD("Universal::initializeStaticCameraParams");
     int nRet;
 
     // Read the static parameters to class variables. Some of them are also used elsewhere.
@@ -5100,7 +5041,7 @@ int Universal::resizeImageBufferContinuous()
         // set up a circular buffer for specified number of frames
         if (acqCfgCur_.CircBufSizeAuto)
         {
-            if (prmFrameBufSize_ && prmFrameBufSize_->IsAvailable())
+            if (prmFrameBufSize_->IsAvailable())
             {
                 // The PARAM_FRAME_BUFFER_SIZE becomes valid after setup_cont(). Only newer
                 // PVCAM (3.0.12+) supports this parameter.
@@ -5269,7 +5210,6 @@ int Universal::resizeImageBufferSingle()
 
 int Universal::resizeImageProcessingBuffers()
 {
-#ifdef PVCAM_METADATA_SUPPORTED
     // In case of metadata-enabled acquisition we may need temporary processing
     // buffer. This one should be allocated only if needed and freed otherwise.
     if (acqCfgCur_.FrameMetadataEnabled && acqCfgCur_.RoiCount > 1)
@@ -5343,7 +5283,6 @@ int Universal::resizeImageProcessingBuffers()
         }
         metaFrameStruct_ = NULL;
     }
-#endif
 
     // In case of RGB acquisition we need yet another buffer for demosaicing
     if (acqCfgCur_.ColorProcessingEnabled)
@@ -5558,7 +5497,6 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
     // wait for data or error
     unsigned char* pixBuffer = pInBuf;
 
-#ifdef PVCAM_METADATA_SUPPORTED
     metaFrameExtData_.clear();
     if (acqCfgCur_.FrameMetadataEnabled)
     {
@@ -5650,7 +5588,6 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
     {
         pixBuffer = pInBuf;
     }
-#endif // PVCAM_METADATA_SUPPORTED
 
     if (acqCfgCur_.ColorProcessingEnabled)
     {
@@ -5732,10 +5669,9 @@ int Universal::abortAcquisitionInternal()
     return nRet;
 }
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
 int Universal::sendSmartStreamingToCamera(const std::vector<double>& exposuresMs, int exposureRes)
 {
-    START_METHOD("Universal::SendSmartStreamingToCamera");
+    START_METHOD("Universal::sendSmartStreamingToCamera");
 
     int nRet = DEVICE_OK;
 
@@ -5765,13 +5701,12 @@ int Universal::sendSmartStreamingToCamera(const std::vector<double>& exposuresMs
 
     return nRet;
 }
-#endif
 
 int16 Universal::getPvcamExpMode() const
 {
     const int16 exposureMode = static_cast<int16>(prmTriggerMode_->Current());
     const int16 exposeOutMode =
-        (prmExposeOutMode_ && prmExposeOutMode_->IsAvailable())
+        (prmExposeOutMode_->IsAvailable())
         ? static_cast<int16>(prmExposeOutMode_->Current())
         : 0;
     return (exposureMode | exposeOutMode);
@@ -7128,7 +7063,6 @@ int Universal::applyAcqConfig(bool forceSetup)
 //============================================================== PRIVATE STATIC
 
 
-#ifdef PVCAM_CALLBACKS_SUPPORTED
 void Universal::PvcamCallbackEofEx3(FRAME_INFO* /*pFrameInfo*/, void* pContext)
 {
     // We don't need the FRAME_INFO because we will get it in FrameAcquired via get_latest_frame
@@ -7136,4 +7070,3 @@ void Universal::PvcamCallbackEofEx3(FRAME_INFO* /*pFrameInfo*/, void* pContext)
     pCam->FrameAcquired();
     // Do not call anything else here, handle it in the Universal class.
 }
-#endif // PVCAM_CALLBACKS_SUPPORTED
