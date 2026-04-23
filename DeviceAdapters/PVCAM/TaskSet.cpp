@@ -34,8 +34,6 @@ TaskSet::TaskSet(std::shared_ptr<ThreadPool> pool)
 
 TaskSet::~TaskSet()
 {
-    for (Task* task : tasks_)
-        delete task;
 }
 
 size_t TaskSet::GetUsedTaskCount() const
@@ -45,7 +43,11 @@ size_t TaskSet::GetUsedTaskCount() const
 
 void TaskSet::Execute()
 {
-   pool_->Execute(std::vector<Task*>(tasks_.begin(), tasks_.begin() + usedTaskCount_));
+    std::vector<Task*> rawTasks;
+    rawTasks.reserve(usedTaskCount_);
+    for (size_t i = 0; i < usedTaskCount_; ++i)
+        rawTasks.push_back(tasks_[i].get());
+    pool_->Execute(rawTasks);
 }
 
 void TaskSet::Wait()

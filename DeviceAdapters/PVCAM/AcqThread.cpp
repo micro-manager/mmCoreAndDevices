@@ -2,7 +2,8 @@
 
 #include "PVCAMAdapter.h"
 
-AcqThread::AcqThread(Universal* camera) : camera_(camera), requestStop_(false), resumeEvent_(true, false)
+AcqThread::AcqThread(Universal* camera)
+    : camera_(camera)
 {
 }
 
@@ -39,7 +40,7 @@ void AcqThread::Resume()
     resumeEvent_.Set();
 }
 
-int AcqThread::svc(void)
+int AcqThread::svc()
 {
     camera_->LogAdapterMessage("AcqThead loop started");
     int nRet = DEVICE_OK;

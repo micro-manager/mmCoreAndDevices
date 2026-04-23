@@ -862,14 +862,14 @@ private:
     std::map<int32, std::pair<uns32, uns32>> expTimeResLimits_{}; // [expTimeRes]={min,max}
 
     friend class    PollingThread;
-    PollingThread*  pollingThd_;           // Pointer to the sequencing thread
+    std::unique_ptr<PollingThread>      pollingThd_{}; // Pointer to the sequencing thread
     friend class    NotificationThread;
-    NotificationThread* notificationThd_;  // Frame notification thread
+    std::unique_ptr<NotificationThread> notificationThd_{}; // Frame notification thread
     friend class    AcqThread;
-    AcqThread*      acqThd_;               // Non-CB live thread
+    std::unique_ptr<AcqThread>          acqThd_{}; // Non-CB live thread
 
-    StreamWriter*   customDiskWriter_;     // Writer for custom disk streaming feature
-    bool            customDiskWriterActive_; // Cached value updated after writer->Start
+    std::unique_ptr<StreamWriter>       customDiskWriter_{}; // Writer for custom disk streaming feature
+    bool                                customDiskWriterActive_; // Cached value updated after writer->Start
 
     /// CAMERA PARAMETERS:
     uns16           camParSize_;           // CCD parallel size
@@ -895,33 +895,36 @@ private:
     // the configuration the buffer may need to be further processed before its used by MMCore.
 
     // PVCAM helper structure for decoding an embedded-metadata-enabled frame buffer
-    md_frame*        metaFrameStruct_;
-    std::map<uns16, md_ext_item_collection> metaFrameExtData_; // The key is roiNr
+    // Must remain C-pointer for pl_md_create_frame_struct_cont & pl_md_release_frame_struct
+    md_frame*                               metaFrameStruct_{ nullptr };
+    std::map<uns16, md_ext_item_collection> metaFrameExtData_{}; // The key is roiNr
 
     // For metadata serialization, optimization to not allocate the same for each frame
     std::string      metaAllRoisStr_;
     char             metaRoiStr_[1000];
     // A buffer used for creating a black-filled frame when Centroids or Multi-ROI
     // acquisition is running. Used in both single snap and live mode if needed.
-    unsigned char*   metaBlackFilledBuf_;
-    size_t           metaBlackFilledBufSz_;
+    std::unique_ptr<unsigned char[]>    metaBlackFilledBuf_{ nullptr };
+    size_t                              metaBlackFilledBufSz_{ 0 };
     // A buffer used in setup_seq() only (single snaps mode)
-    unsigned char*   singleFrameBufRaw_;
-    size_t           singleFrameBufRawSz_;
-    // A pointer to the final, post processed image buffer that will be returned
-    // in GetImageBuffer() and GetImageBufferAsRGB32(). This is a pointer only that
-    // points to either RAW, RGB or Black-Filled buffer.
-    unsigned char*   singleFrameBufFinal_;
+    std::unique_ptr<unsigned char[]>    singleFrameBufRaw_{ nullptr };
+    size_t                              singleFrameBufRawSz_{ 0 };
+    // A pointer to the final post-processed image buffer that will be returned
+    // in GetImageBuffer() and GetImageBufferAsRGB32().
+    // This is a plain C-pointer that points to either RAW (singleFrameBufRaw_),
+    // RGB (rgbImgBuf_->GetPixelsRW()) or Black-Filled (metaBlackFilledBuf_) buffer.
+    unsigned char*                      singleFrameBufFinal_{ nullptr };
     // Circular buffer, used in setup_cont() only (live mode)
-    PvCircularBuffer circBuf_;
+    PvCircularBuffer                    circBuf_{};
     // Color image buffer. Used in both single snap and live mode if needed.
-    ImgBuffer*       rgbImgBuf_;
+    std::unique_ptr<ImgBuffer>          rgbImgBuf_{ nullptr };
 
     Event            eofEvent_;
     MMThreadLock     acqLock_;
 
-    FRAME_INFO*     pFrameInfo_;           // PVCAM frame metadata
-    int             lastPvFrameNr_;        // The last FrameNr reported by PVCAM
+    // Must remain C-pointer for pl_create_frame_info_struct & pl_release_frame_info_struct
+    FRAME_INFO*     pFrameInfo_{ nullptr }; // PVCAM frame metadata
+    int             lastPvFrameNr_{ 0 }; // The last FrameNr reported by PVCAM
 
     // All dependant parameters that should be updated after setting new value
     // are listed in the comment after every parameter. For every listed parameter
@@ -1015,5 +1018,5 @@ private:
     SpdTabEntry camCurrentSpeed_;
 
     // 'Universal' parameters
-    std::vector<PvUniversalParam*> universalParams_;
+    std::vector<std::unique_ptr<PvUniversalParam>> universalParams_{};
 };

@@ -1,19 +1,18 @@
 #include "PVCAMParam.h"
 
-PvUniversalParam::PvUniversalParam( const std::string& aDebugName, uns32 aParamId, Universal* aCamera, bool aDbgPrint ) :
-    PvParamBase( aDebugName, aParamId, aCamera, aDbgPrint )
+PvUniversalParam::PvUniversalParam( const std::string& aDebugName,
+        uns32 aParamId, Universal* aCamera, bool aDbgPrint )
+    : PvParamBase( aDebugName, aParamId, aCamera, aDbgPrint )
 {
-    this->mId = aParamId;
-    this->mCamera = aCamera;
     initialize();
 }
 
-std::vector<std::string>& PvUniversalParam::GetEnumStrings()
+/*const */std::vector<std::string>& PvUniversalParam::GetEnumStrings()/* const*/
 {
     return mEnumStrings;
 }
 
-std::string PvUniversalParam::ToString()
+std::string PvUniversalParam::ToString() const
 {
     std::ostringstream os;
     switch (mType)
@@ -61,7 +60,7 @@ std::string PvUniversalParam::ToString()
     }
 }
 
-long PvUniversalParam::ToLong()
+long PvUniversalParam::ToLong() const
 {
     switch (mType)
     {
@@ -91,7 +90,7 @@ long PvUniversalParam::ToLong()
     }
 }
 
-double PvUniversalParam::ToDouble()
+double PvUniversalParam::ToDouble() const
 {
     switch (mType)
     {
@@ -243,7 +242,7 @@ int PvUniversalParam::Write()
     return plSetParam( mValue );
 }
 
-double PvUniversalParam::GetMax()
+double PvUniversalParam::GetMax() const
 {
     switch (mType)
     {
@@ -273,7 +272,7 @@ double PvUniversalParam::GetMax()
     }
 }
 
-double PvUniversalParam::GetMin()
+double PvUniversalParam::GetMin() const
 {
     switch (mType)
     {
@@ -316,7 +315,7 @@ int PvUniversalParam::initialize()
 
         uns32 count;
         int32 enumValue;
-        if (pl_get_param( mCamera->Handle(), mId, ATTR_COUNT, (void_ptr)&count) != PV_OK)
+        if (pl_get_param( mCamera->Handle(), mId, ATTR_COUNT, &count) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "PvUniversalParam::initialize() pl_get_param ATTR_COUNT");
             return DEVICE_ERR;

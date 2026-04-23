@@ -207,7 +207,7 @@ const char* g_Keyword_HostFrameSummingFormat    = "FrameSummingFormat";
 // - So far only parameters in double range can be used
 // Do not use these for static camera properties that never changes. It's more efficient to create
 // a simple read-only MM property without a handler (see examples in Initialize())
-ParamNameIdPair g_UniversalParams[] = {
+constexpr ParamNameIdPair g_UniversalParams[] = {
     {"PreampDelay",        "PARAM_PREAMP_DELAY",       PARAM_PREAMP_DELAY},       // UNS16
     {"PreampOffLimit",     "PARAM_PREAMP_OFF_CONTROL", PARAM_PREAMP_OFF_CONTROL}, // UNS32 // preamp is off during exposure if exposure time is less than this
     {"MaskLines",          "PARAM_PREMASK",            PARAM_PREMASK},            // UNS16
@@ -217,7 +217,7 @@ ParamNameIdPair g_UniversalParams[] = {
     {"ShutterOpenDelay",   "PARAM_SHTR_OPEN_DELAY",    PARAM_SHTR_OPEN_DELAY},    // UNS16 (milliseconds)
     {"ShutterCloseDelay",  "PARAM_SHTR_CLOSE_DELAY",   PARAM_SHTR_CLOSE_DELAY},   // UNS16 (milliseconds)
 };
-const int g_UniversalParamsCount = sizeof(g_UniversalParams)/sizeof(ParamNameIdPair);
+constexpr int g_UniversalParamsCount = sizeof(g_UniversalParams) / sizeof(ParamNameIdPair);
 
 
 //=============================================================================
@@ -240,10 +240,10 @@ Universal::Universal(short cameraId, const char* deviceName)
     callPrepareForAcq_(true),
     isAcquiring_(false),
     triggerTimeout_(10),
-    pollingThd_(NULL),
-    notificationThd_(NULL),
-    acqThd_(NULL),
-    customDiskWriter_(NULL),
+    pollingThd_(std::make_unique<PollingThread>(this)),
+    notificationThd_(std::make_unique<NotificationThread>(this)),
+    acqThd_(std::make_unique<AcqThread>(this)),
+    customDiskWriter_(std::make_unique<StreamWriter>(this)),
     customDiskWriterActive_(false),
     camParSize_(0),
     camSerSize_(0),
@@ -251,17 +251,7 @@ Universal::Universal(short cameraId, const char* deviceName)
     redScale_(1.0),
     greenScale_(1.0),
     blueScale_(1.0),
-    metaFrameStruct_(NULL),
-    metaFrameExtData_(),
-    metaBlackFilledBuf_(NULL),
-    metaBlackFilledBufSz_(0),
-    singleFrameBufRaw_(NULL),
-    singleFrameBufRawSz_(0),
-    singleFrameBufFinal_(NULL),
-    rgbImgBuf_(NULL),
-    eofEvent_(false, false),
-    pFrameInfo_(NULL),
-    lastPvFrameNr_(0)
+    eofEvent_(false, false)
 {
     InitializeDefaultErrorMessages();
 
@@ -280,8 +270,6 @@ Universal::Universal(short cameraId, const char* deviceName)
     SetErrorText(ERR_SW_TRIGGER_NOT_SUPPORTED, "Selected SW trigger mode is not supported by the adapter");
     SetErrorText(ERR_PIXEL_TYPE_NOT_SUPPORTED, "Micro-Manager does not support pixels with bit-depth over 16 bits");
 
-    pollingThd_ = new PollingThread(this);             // Pointer to the sequencing thread
-
     deviceLabel_[0] = '\0';
     camName_[0] = '\0';
     metaRoiStr_[0] = '\0';
@@ -290,13 +278,9 @@ Universal::Universal(short cameraId, const char* deviceName)
     // This is to reduce the risk of frames being overwritten by PVCAM when the circular
     // buffer starts to be full. With smaller queue we will simply start throwing old
     // frames away earlier because those old frames could soon get overwritten.
-    notificationThd_ = new NotificationThread(this);
     notificationThd_->activate();
 
-    acqThd_ = new AcqThread(this);
     acqThd_->Start(); // Starts the thread loop but waits for Resume()
-
-    customDiskWriter_ = new StreamWriter(this);
 }
 
 Universal::~Universal()
@@ -308,27 +292,14 @@ Universal::~Universal()
         if (initialized_)
             Shutdown();
     }
-    if (!pollingThd_->getStop()) {
-        pollingThd_->setStop(true);
+    if (!pollingThd_->GetStop())
+    {
+        pollingThd_->SetStop(true);
         pollingThd_->wait();
     }
-    delete pollingThd_;
-    delete notificationThd_;
-    delete acqThd_;
-    delete customDiskWriter_;
 
     if (metaFrameStruct_)
         pl_md_release_frame_struct(metaFrameStruct_);
-
-    // Delete all buffers
-    delete[] metaBlackFilledBuf_;
-    delete[] singleFrameBufRaw_;
-    delete rgbImgBuf_;
-
-    // Delete universal parameters
-    for ( unsigned i = 0; i < universalParams_.size(); i++ )
-        delete universalParams_[i];
-    universalParams_.clear();
 }
 
 
@@ -1525,7 +1496,7 @@ int Universal::Shutdown()
         if ( pFrameInfo_ )
         {
             pl_release_frame_info_struct( pFrameInfo_ );
-            pFrameInfo_ = NULL;
+            pFrameInfo_ = nullptr;
         }
         initialized_ = false;
     }
@@ -1600,7 +1571,7 @@ int Universal::SnapImage()
                 LogPvcamError(__LINE__, "pl_exp_stop_cont() failed");
             // Address the TODO above and this workaround won't be needed
             void* buf = circBuf_.Data();
-            if (buf != NULL)
+            if (buf)
             {
                 if (pl_exp_finish_seq(hPVCAM_, circBuf_.Data(), 0) != PV_OK)
                     LogPvcamError(__LINE__, "pl_exp_finish_seq() failed");
@@ -1633,7 +1604,8 @@ int Universal::SnapImage()
 
         if (nRet == DEVICE_OK)
         {
-            nRet = postProcessSingleFrame(&singleFrameBufFinal_, singleFrameBufRaw_, singleFrameBufRawSz_);
+            nRet = postProcessSingleFrame(&singleFrameBufFinal_,
+                    singleFrameBufRaw_.get(), singleFrameBufRawSz_);
         }
         else
         {
@@ -1658,7 +1630,7 @@ const unsigned char* Universal::GetImageBuffer()
     if(!snappingSingleFrame_)
     {
         LogAdapterMessage(__LINE__, "Warning: GetImageBuffer called before SnapImage()");
-        return NULL;
+        return nullptr;
     }
 
     snappingSingleFrame_ = false;
@@ -1673,7 +1645,7 @@ const unsigned int* Universal::GetImageBufferAsRGB32()
     if(!snappingSingleFrame_)
     {
         LogAdapterMessage(__LINE__, "Warning: GetImageBufferAsRGB32 called before SnapImage()");
-        return NULL;
+        return nullptr;
     }
 
     snappingSingleFrame_ = false;
@@ -2044,7 +2016,7 @@ int Universal::StopSequenceAcquisition()
 int Universal::OnUniversalProperty(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
     START_ONPROPERTY("Universal::OnUniversalProperty", eAct);
-    PvUniversalParam* param = universalParams_[index];
+    PvUniversalParam* param = universalParams_[index].get();
     if (eAct == MM::AfterSet)
     {
         // Before sending any value to the camera we must disable the streaming.
@@ -3886,7 +3858,7 @@ int Universal::FrameAcquired()
         return DEVICE_OK;
 
     rs_bool     rsbRet = FALSE;
-    void*       pCurrFramePtr = NULL;
+    void*       pCurrFramePtr = nullptr;
     PvFrameInfo currFrameNfo;
     currFrameNfo.SetTimestampMsec(GetCurrentMMTime().getMsec());
 
@@ -4115,7 +4087,7 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
         const double actualInterval = elapsedTimeMsec / imagesInserted_;
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval)); 
 
-        unsigned char* pOutBuf = NULL;
+        unsigned char* pOutBuf = nullptr;
         ret = postProcessSingleFrame(&pOutBuf, (unsigned char*)entry.FrameData(), entry.FrameDataSize());
         if (ret != DEVICE_OK)
         {
@@ -4289,7 +4261,7 @@ int Universal::PollingThreadRun(void)
 
     int  ret = DEVICE_ERR;
     char dbgBuf[128]; // Debug log buffer
-    pollingThd_->setStop(false); // make sure this thread's status is updated properly.
+    pollingThd_->SetStop(false); // make sure this thread's status is updated properly.
 
     try
     {
@@ -4311,16 +4283,17 @@ int Universal::PollingThreadRun(void)
                 break;
             }
         }
-        while (DEVICE_OK == ret && !pollingThd_->getStop() && imagesInserted_ < imagesToAcquire_);
+        while (DEVICE_OK == ret && !pollingThd_->GetStop() && imagesInserted_ < imagesToAcquire_);
 
-        snprintf( dbgBuf, sizeof(dbgBuf), "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u, imagesInserted_: %lu, imagesToAcquire_: %lu", \
-            pollingThd_->getStop(), ret, imagesInserted_, imagesToAcquire_);
+        snprintf( dbgBuf, sizeof(dbgBuf),
+                "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u, imagesInserted_: %lu, imagesToAcquire_: %lu",
+                pollingThd_->GetStop(), ret, imagesInserted_, imagesToAcquire_);
         LogAdapterMessage( __LINE__, dbgBuf );
 
         if (imagesInserted_ >= imagesToAcquire_)
             imagesInserted_ = 0;
         PollingThreadExiting();
-        pollingThd_->setStop(true);
+        pollingThd_->SetStop(true);
 
         START_METHOD("<<<Universal::PollingThreadRun");
         return ret;
@@ -4333,7 +4306,7 @@ int Universal::PollingThreadRun(void)
         if (core != nullptr) {
            core->AcqFinished(this, 0);
         }
-        pollingThd_->setStop(true);
+        pollingThd_->SetStop(true);
         return ret;
     }
 
@@ -4469,30 +4442,37 @@ int Universal::initializeUniversalParams()
     // Iterate through all the parameters we have allowed to be used as Universal
     for ( int i = 0; i < g_UniversalParamsCount; i++ ) 
     {
-        PvUniversalParam* p = new PvUniversalParam( g_UniversalParams[i].debugName, g_UniversalParams[i].id, this, true);
+        auto p = std::make_unique<PvUniversalParam>(
+                g_UniversalParams[i].debugName, g_UniversalParams[i].id, this, true);
         if (p->IsAvailable())
         {
             if (p->IsEnum())
             {
-                CPropertyActionEx *pAct = new CPropertyActionEx(this, &Universal::OnUniversalProperty, propertyIndex);
-                nRet = CreateProperty( g_UniversalParams[i].name, p->ToString().c_str(), MM::String, p->IsReadOnly(), pAct);
+                CPropertyActionEx *pAct = new CPropertyActionEx(
+                        this, &Universal::OnUniversalProperty, propertyIndex);
+                nRet = CreateProperty(
+                        g_UniversalParams[i].name, p->ToString().c_str(),
+                        MM::String, p->IsReadOnly(), pAct);
                 if ( !p->IsReadOnly() )
                     SetAllowedValues( g_UniversalParams[i].name, p->GetEnumStrings() );
             }
             else
             {
-                CPropertyActionEx *pAct = new CPropertyActionEx(this, &Universal::OnUniversalProperty, propertyIndex);
-                nRet = CreateProperty( g_UniversalParams[i].name, p->ToString().c_str(), MM::Integer, p->IsReadOnly(), pAct);
+                CPropertyActionEx *pAct = new CPropertyActionEx(
+                        this, &Universal::OnUniversalProperty, propertyIndex);
+                nRet = CreateProperty(
+                        g_UniversalParams[i].name, p->ToString().c_str(),
+                        MM::Integer, p->IsReadOnly(), pAct);
                 if ( !p->IsReadOnly() )
                 {
                     double min = p->GetMin();
                     double max = p->GetMax();
-                    if ( (max-min) > 10 )
+                    if ( (max - min) > 10 )
                     {
                         // The property will show up as slider with defined range
                         SetPropertyLimits(g_UniversalParams[i].name, min, max);
                     }
-                    else if ( (max-min) < 1000000 )
+                    else if ( (max - min) < 1000000 )
                     {
                         // The property will show up as combo box with predefined values
                         std::vector<std::string> values;
@@ -4511,12 +4491,8 @@ int Universal::initializeUniversalParams()
                     }
                 }
             }
-            universalParams_.push_back(p);
+            universalParams_.push_back(std::move(p));
             propertyIndex++;
-        }
-        else
-        {
-            delete p;
         }
     }
 
@@ -4671,7 +4647,7 @@ int Universal::initializeSpeedTable()
     {
         // The port in an enum parameter, pl_set_param takes a value not an index
         int32 portValue = 0;
-        if (pl_get_enum_param(hPVCAM_, PARAM_READOUT_PORT, portIndex, &portValue, NULL, 0) != PV_OK)
+        if (pl_get_enum_param(hPVCAM_, PARAM_READOUT_PORT, portIndex, &portValue, nullptr, 0) != PV_OK)
             return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_READOUT_PORT");
 
         if (pl_set_param(hPVCAM_, PARAM_READOUT_PORT, &portValue) != PV_OK)
@@ -4760,21 +4736,19 @@ int Universal::initializeSpeedTable()
                     {
                         return LogPvcamError(__LINE__, "pl_enum_str_length PARAM_COLOR_MODE");
                     }
-                    char* enumStrBuf = new char[enumStrLen + 1];
+                    auto enumStrBuf = std::make_unique<char[]>(enumStrLen + 1);
                     enumStrBuf[enumStrLen] = '\0';
                     int32 enumVal = 0;
-                    if (pl_get_enum_param(hPVCAM_, PARAM_COLOR_MODE, colorIndex, &enumVal, enumStrBuf, enumStrLen) != PV_OK)
+                    if (pl_get_enum_param(hPVCAM_, PARAM_COLOR_MODE, colorIndex, &enumVal, enumStrBuf.get(), enumStrLen) != PV_OK)
                     {
-                        delete[] enumStrBuf;
                         return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_COLOR_MODE");
                     }
                     if (enumVal == colorCur)
                     {
                         bFound = true;
                         spdEntry.colorMask = enumVal;
-                        spdEntry.colorMaskStr.assign(enumStrBuf);
+                        spdEntry.colorMaskStr.assign(enumStrBuf.get());
                     }
-                    delete[] enumStrBuf;
                 }
                 if (!bFound)
                     return LogAdapterError(DEVICE_INTERNAL_INCONSISTENCY, __LINE__,
@@ -4909,7 +4883,7 @@ int Universal::initializeSpeedTable()
 int Universal::initializePostSetupParams()
 {
     int nRet = DEVICE_OK;
-    CPropertyAction* pAct = NULL;
+    CPropertyAction* pAct = nullptr;
 
     // ACTUAL READOUT TIME - Reported by camera if supported
     prmReadoutTime_ = std::make_unique<PvParam<uns32>>(
@@ -5116,8 +5090,7 @@ int Universal::resizeImageBufferSingle()
         // that is sent to PVCAM in start_seq(). We always need this buffer.
         if (singleFrameBufRawSz_ != frameSize)
         {
-            delete singleFrameBufRaw_;
-            singleFrameBufRaw_ = NULL;
+            singleFrameBufRaw_.reset();
             singleFrameBufRawSz_ = 0;
 
             // TODO: Temporary hack to avoid heap corruption when unaligned size is returned
@@ -5125,11 +5098,11 @@ int Universal::resizeImageBufferSingle()
             if (frameSize % align != 0)
             {
                 const unsigned int alignedSize = ((frameSize / align) + 1) * align;
-                singleFrameBufRaw_ = new unsigned char[alignedSize]; // May throw bad_alloc
+                singleFrameBufRaw_ = std::make_unique<unsigned char[]>(alignedSize);
             }
             else
             {
-                singleFrameBufRaw_ = new unsigned char[frameSize]; // May throw bad_alloc
+                singleFrameBufRaw_ = std::make_unique<unsigned char[]>(frameSize);
             }
             singleFrameBufRawSz_ = frameSize;
         }
@@ -5181,20 +5154,18 @@ int Universal::resizeImageProcessingBuffers()
             * acqCfgCur_.Rois.ImpliedRoi().ImageRgnHeight();
         if (metaBlackFilledBufSz_ != imgDataSz)
         {
-            delete[] metaBlackFilledBuf_;
-            metaBlackFilledBuf_ = NULL;
+            metaBlackFilledBuf_.reset();
             metaBlackFilledBufSz_ = 0;
-            metaBlackFilledBuf_ = new unsigned char[imgDataSz]; // May throw bad_alloc
+            metaBlackFilledBuf_ = std::make_unique<unsigned char[]>(imgDataSz);
             metaBlackFilledBufSz_ = imgDataSz;
             // Make sure to black-fill the buffer so it does not contain any
             // residual memory garbage.
-            memset(metaBlackFilledBuf_, 0, metaBlackFilledBufSz_);
+            memset(metaBlackFilledBuf_.get(), 0, metaBlackFilledBufSz_);
         }
     }
     else if (metaBlackFilledBuf_)
     {
-        delete[] metaBlackFilledBuf_; // Delete the buffer if we don't need it
-        metaBlackFilledBuf_ = NULL;
+        metaBlackFilledBuf_.reset(); // Delete the buffer if we don't need it
         metaBlackFilledBufSz_ = 0;
     }
 
@@ -5237,7 +5208,7 @@ int Universal::resizeImageProcessingBuffers()
             LogPvcamError( __LINE__, "pl_md_release_frame_struct() failed" );
             return DEVICE_ERR;
         }
-        metaFrameStruct_ = NULL;
+        metaFrameStruct_ = nullptr;
     }
 
     // In case of RGB acquisition we need yet another buffer for demosaicing
@@ -5249,20 +5220,18 @@ int Universal::resizeImageProcessingBuffers()
             // Reallocate the RGB image buffer only if really needed
             if (rgbImgBuf_->Width() != roi.ImageRgnWidth() || rgbImgBuf_->Height() != roi.ImageRgnHeight())
             {
-                delete rgbImgBuf_;
-                rgbImgBuf_ = NULL;
-                rgbImgBuf_ = new ImgBuffer(roi.ImageRgnWidth(), roi.ImageRgnHeight(), 4); // May throw bad_alloc
+                rgbImgBuf_.reset();
+                rgbImgBuf_ = std::make_unique<ImgBuffer>(roi.ImageRgnWidth(), roi.ImageRgnHeight(), 4);
             }
         }
         else
         {
-            rgbImgBuf_ = new ImgBuffer(roi.ImageRgnWidth(), roi.ImageRgnHeight(), 4); // May throw bad_alloc
+            rgbImgBuf_ = std::make_unique<ImgBuffer>(roi.ImageRgnWidth(), roi.ImageRgnHeight(), 4);
         }
     }
     else if (rgbImgBuf_)
     {
-        delete rgbImgBuf_; // Delete the RGB buffer if we don't need it
-        rgbImgBuf_ = NULL;
+        rgbImgBuf_.reset(); // Delete the RGB buffer if we don't need it
     }
 
     return DEVICE_OK;
@@ -5273,7 +5242,7 @@ int Universal::acquireFrameSeq()
     int nRet = DEVICE_OK;
 
     g_pvcamLock.Lock();
-    if (pl_exp_start_seq(hPVCAM_, singleFrameBufRaw_) != PV_OK)
+    if (pl_exp_start_seq(hPVCAM_, singleFrameBufRaw_.get()) != PV_OK)
         nRet = LogPvcamError(__LINE__, "pl_exp_start_seq() FAILED");
     g_pvcamLock.Unlock();
 
@@ -5403,7 +5372,7 @@ int Universal::waitForFrameConPolling(const MM::MMTime& timeout)
             pvErr = pl_error_code();
         g_pvcamLock.Unlock();
         timeElapsed = GetCurrentMMTime() - startTime;
-        bStop = pollingThd_->getStop();
+        bStop = pollingThd_->GetStop();
     }
     while (pvRet && (pvStatus == EXPOSURE_IN_PROGRESS || pvStatus == READOUT_NOT_ACTIVE) && timeElapsed < timeout && !bStop);
 
@@ -5416,7 +5385,7 @@ int Universal::waitForFrameConPolling(const MM::MMTime& timeout)
             pvErr = pl_error_code();
         g_pvcamLock.Unlock();
         timeElapsed = GetCurrentMMTime()  - startTime;
-        bStop = pollingThd_->getStop();
+        bStop = pollingThd_->GetStop();
     }
 
     if (bStop)
@@ -5450,7 +5419,6 @@ int Universal::waitForFrameConPolling(const MM::MMTime& timeout)
 
 int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pInBuf, size_t inBufSz)
 {
-    // wait for data or error
     unsigned char* pixBuffer = pInBuf;
 
     metaFrameExtData_.clear();
@@ -5516,22 +5484,22 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
             // However, that applies to Locate mode only.
             if (acqCfgCur_.CentroidsEnabled && acqCfgCur_.CentroidsMode == PL_CENTROIDS_MODE_LOCATE)
             {
-                // With centroids we also need to shift the ROis to their sensor
+                // With centroids we also need to shift the ROIs to their sensor
                 // positions (because with centroids we use full frame for display, not
                 // the implied ROI that can change with every frame)
                 offX = metaFrameStruct_->impliedRoi.s1 - roi.SensorRgnX();
                 offY = metaFrameStruct_->impliedRoi.p1 - roi.SensorRgnY();
 
-                memset(metaBlackFilledBuf_, 0, metaBlackFilledBufSz_);
+                memset(metaBlackFilledBuf_.get(), 0, metaBlackFilledBufSz_);
             }
-            if (pl_md_frame_recompose(metaBlackFilledBuf_, offX, offY, recW, recH, metaFrameStruct_) != PV_OK)
+            if (pl_md_frame_recompose(metaBlackFilledBuf_.get(), offX, offY, recW, recH, metaFrameStruct_) != PV_OK)
             {
                 LogPvcamError(__LINE__, "Unable to recompose the metadata-enabled frame");
                 return ERR_BUFFER_PROCESSING_FAILED;
             }
             else
             {
-                pixBuffer = metaBlackFilledBuf_;
+                pixBuffer = metaBlackFilledBuf_.get();
             }
         }
         else
@@ -5607,7 +5575,7 @@ int Universal::abortAcquisitionInternal()
             }
             else
             {
-                pollingThd_->setStop(true);
+                pollingThd_->SetStop(true);
                 pollingThd_->wait();
             }
         }

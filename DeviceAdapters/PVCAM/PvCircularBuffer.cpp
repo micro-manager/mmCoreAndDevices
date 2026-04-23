@@ -2,20 +2,12 @@
 
 #include <cstddef> // ptrdiff_t
 
-PvCircularBuffer::PvCircularBuffer() :
-    pBuffer_(NULL),
-    size_(0),
-    frameSize_(0),
-    frameCount_(0),
-    latestFrameIdx_(-1),
-    pFrameInfoArray_(NULL)
+PvCircularBuffer::PvCircularBuffer()
 {
 }
 
 PvCircularBuffer::~PvCircularBuffer()
 {
-    delete[] pBuffer_;
-    delete[] pFrameInfoArray_;
 }
 
 int PvCircularBuffer::Capacity() const
@@ -31,7 +23,7 @@ size_t PvCircularBuffer::FrameSize() const
 
 void* PvCircularBuffer::Data() const
 {
-    return pBuffer_;
+    return pBuffer_.get();
 }
 
 size_t PvCircularBuffer::Size() const
@@ -49,7 +41,7 @@ void* PvCircularBuffer::FrameData(int index) const
     // No bounds checking. Most of the functions in this class are called very
     // often - with every frame which could be thousands of times per second so
     // we try to avoid unnecessary branching.
-    return pBuffer_ + index * frameSize_;
+    return &pBuffer_[index * frameSize_];
 }
 
 const PvFrameInfo& PvCircularBuffer::FrameInfo(int index) const
@@ -70,14 +62,14 @@ void PvCircularBuffer::Resize(size_t frameSize, int count)
         frameCount_ = count;
         frameSize_  = frameSize;
         size_       = count * static_cast<size_t>(frameSize);
-        delete[] pBuffer_;
+        pBuffer_.reset();
         // HACK! There still seems to be some heap corruption issues in PVCAM, in
-        // debug builds I am getting heap corruption error on delete[] here.
+        // debug builds I am getting heap corruption error on reset() here.
         // Adding just 16 bytes to the entire buffer seems to help.
-        pBuffer_ = new unsigned char[size_ + 16];
+        pBuffer_ = std::make_unique<unsigned char[]>(size_ + 16);
 
-        delete[] pFrameInfoArray_;
-        pFrameInfoArray_ = new PvFrameInfo[frameCount_];
+        pFrameInfoArray_.reset();
+        pFrameInfoArray_ = std::make_unique<PvFrameInfo[]>(frameCount_);
     }
 
     Reset();
@@ -87,7 +79,7 @@ void PvCircularBuffer::ReportFrameArrived(const PvFrameInfo& frameNfo, void* pFr
 {
     // Calculate the index of the received frame in our circular buffer
     const int curFrameIdx = static_cast<const int>
-        ((ptrdiff_t(pFrameData) - ptrdiff_t(pBuffer_)) / frameSize_);
+        ((ptrdiff_t(pFrameData) - ptrdiff_t(pBuffer_.get())) / frameSize_);
 
     // Store a copy of the frameNfo to our array
     pFrameInfoArray_[curFrameIdx] = frameNfo;
