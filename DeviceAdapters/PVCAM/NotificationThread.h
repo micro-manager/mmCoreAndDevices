@@ -1,5 +1,4 @@
-#ifndef _NOTIFICATIONTHREAD_H_
-#define _NOTIFICATIONTHREAD_H_
+#pragma once
 
 // MMDevice
 #include "DeviceThreads.h"
@@ -104,5 +103,3 @@ private:
     bool                      overflowed_{ false };
     bool                      requestStop_{ false };
 };
-
-#endif // _NOTIFICATIONTHREAD_H_

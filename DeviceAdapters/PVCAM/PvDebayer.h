@@ -22,8 +22,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !defined(_DEBAYER_)
-#define _DEBAYER_
+#pragma once
 
 // MMDevice
 #include "ImgBuffer.h"
@@ -111,5 +110,3 @@ private:
     int algoIndex_;
     RGBscales rgbScales_;
 };
-
-#endif // !defined(_DEBAYER_)

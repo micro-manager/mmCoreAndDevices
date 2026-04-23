@@ -1,5 +1,4 @@
-#ifndef _NOTIFICATIONENTRY_H_
-#define _NOTIFICATIONENTRY_H_
+#pragma once
 
 #include "PvFrameInfo.h"
 
@@ -39,5 +38,3 @@ private:
     const void*  pFrameData_;  ///< Pointer to the frame in circular buffer
     unsigned int frameDataSz_; ///< Size of the data in bytes
 };
-
-#endif // _NOTIFICATIONENTRY_H_

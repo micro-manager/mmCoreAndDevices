@@ -1,5 +1,4 @@
-#ifndef _PVCAM_PARAM_H_
-#define _PVCAM_PARAM_H_
+#pragma once
 
 // MMDevice
 #include "DeviceBase.h"
@@ -753,5 +752,3 @@ private:
     int plGetParam(int16 aAttr, PvUniversalParamValue& aValueOut);
     int plSetParam(PvUniversalParamValue& aValueOut);
 };
-
-#endif // _PVCAM_PARAM_H_

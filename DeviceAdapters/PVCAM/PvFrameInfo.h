@@ -1,5 +1,4 @@
-#ifndef _PVFRAMEINFO_H_
-#define _PVFRAMEINFO_H_
+#pragma once
 
 #include "PVCAMIncludes.h"
 
@@ -47,5 +46,3 @@ private:
     double    timestampMsec_; // MM Timestamp
     bool      isRecovered_;   // Recovered from missed callback
 };
-
-#endif // _PVFRAMEINFO_H_

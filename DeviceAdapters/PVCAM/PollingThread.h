@@ -1,5 +1,4 @@
-#ifndef _POLLINGTHREAD_H_
-#define _POLLINGTHREAD_H_
+#pragma once
 
 // MMDevice
 #include "DeviceThreads.h"
@@ -25,5 +24,3 @@ private:
     bool stop_;
     Universal* camera_;
 };
-
-#endif // _POLLINGTHREAD_H_

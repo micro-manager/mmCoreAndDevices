@@ -1,5 +1,4 @@
-#ifndef _PVROICOLLECTION_H_
-#define _PVROICOLLECTION_H_
+#pragma once
 
 #include "PVCAMIncludes.h"
 #include "PvRoi.h"
@@ -151,5 +150,3 @@ private:
 
     rgn_type*          m_rgnTypeArray; ///< Prepared PVCAM region array.
 };
-
-#endif // _PVROICOLLECTION_H_

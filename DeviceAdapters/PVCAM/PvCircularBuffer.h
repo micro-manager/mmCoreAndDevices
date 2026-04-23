@@ -1,5 +1,4 @@
-#ifndef _PVCIRCULARBUFFER_H_
-#define _PVCIRCULARBUFFER_H_
+#pragma once
 
 #include "PVCAMIncludes.h"
 #include "PvFrameInfo.h"
@@ -89,6 +88,3 @@ private:
 
     PvFrameInfo*   pFrameInfoArray_;
 };
-
-
-#endif // _PVCIRCULARBUFFER_H_

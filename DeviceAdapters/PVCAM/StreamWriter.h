@@ -1,5 +1,4 @@
-#ifndef _STREAMWRITER_H_
-#define _STREAMWRITER_H_
+#pragma once
 
 #include <memory>
 #include <mutex>
@@ -133,5 +132,3 @@ private:
     std::string stackSummary_{};
     size_t lastFrameNr_{ 0 };
 };
-
-#endif // _STREAMWRITER_H_

@@ -1,5 +1,4 @@
-#ifndef _ACQTHREAD_H_
-#define _ACQTHREAD_H_
+#pragma once
 
 // MMDevice
 #include "DeviceThreads.h"
@@ -56,5 +55,3 @@ private:
     bool       requestStop_;
     Event      resumeEvent_;
 };
-
-#endif // _ACQTHREAD_H_

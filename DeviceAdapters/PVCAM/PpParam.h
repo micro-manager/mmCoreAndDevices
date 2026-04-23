@@ -1,5 +1,4 @@
-#ifndef _PPPARAM_H_
-#define _PPPARAM_H_
+#pragma once
 
 #include <string>
 
@@ -33,5 +32,3 @@ protected:
     unsigned int mPropId{ (unsigned int)-1 };
     unsigned int mCurValue{ 0 };
 };
-
-#endif

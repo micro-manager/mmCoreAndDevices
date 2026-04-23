@@ -24,8 +24,7 @@
 //
 // CVS:           $Id: PVCAM.h 8240 2011-12-04 01:05:17Z nico $
 
-#ifndef _PVCAMADAPTER_H_
-#define _PVCAMADAPTER_H_
+#pragma once
 
 
 //=============================================================================
@@ -1017,5 +1016,3 @@ private:
     // 'Universal' parameters
     std::vector<PvUniversalParam*> universalParams_;
 };
-
-#endif //_PVCAMADAPTER_H_

@@ -1,5 +1,4 @@
-#ifndef _PVROI_H_
-#define _PVROI_H_
+#pragma once
 
 #include "PVCAMIncludes.h"
 
@@ -151,5 +150,3 @@ private:
     uns16 m_binX;
     uns16 m_binY;
 };
-
-#endif // _PVROI_H_
