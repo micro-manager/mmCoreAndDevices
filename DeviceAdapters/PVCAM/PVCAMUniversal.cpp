@@ -261,50 +261,7 @@ Universal::Universal(short cameraId, const char* deviceName)
     rgbImgBuf_(NULL),
     eofEvent_(false, false),
     pFrameInfo_(NULL),
-    lastPvFrameNr_(0),
-    prmSmartStreamingValues_(NULL),
-    prmSmartStreamingEnabled_(NULL),
-    prmTriggerMode_(NULL),
-    prmExpResIndex_(NULL),
-    prmExpRes_(NULL),
-    prmExposureTime_(NULL),
-    prmExposeOutMode_(NULL),
-    prmClearCycles_(NULL),
-    prmClearMode_(NULL),
-    prmReadoutPort_(NULL),
-    prmSpdTabIndex_(NULL),
-    prmGainIndex_(NULL),
-    prmGainMultFactor_(NULL),
-    prmColorMode_(NULL),
-    prmFrameBufSize_(NULL),
-    prmTemp_(NULL),
-    prmTempSetpoint_(NULL),
-    prmBinningSer_(NULL),
-    prmBinningPar_(NULL),
-    prmRoiCount_(NULL),
-    prmMetadataEnabled_(NULL),
-    prmMetadataResetTimestamp_(NULL),
-    prmCentroidsEnabled_(NULL),
-    prmCentroidsRadius_(NULL),
-    prmCentroidsCount_(NULL),
-    prmCentroidsMode_(NULL),
-    prmCentroidsBgCount_(NULL),
-    prmCentroidsThreshold_(NULL),
-    prmFanSpeedSetpoint_(NULL),
-    prmTrigTabSignal_(NULL),
-    prmLastMuxedSignal_(NULL),
-    prmPMode_(NULL),
-    prmAdcOffset_(NULL),
-    prmScanMode_(NULL),
-    prmScanDirection_(NULL),
-    prmScanDirectionReset_(NULL),
-    prmScanLineDelay_(NULL),
-    prmScanWidth_(NULL),
-    prmScanLineTime_(NULL),
-    prmReadoutTime_(NULL),
-    prmClearingTime_(NULL),
-    prmPreTriggerDelay_(NULL),
-    prmPostTriggerDelay_(NULL)
+    lastPvFrameNr_(0)
 {
     InitializeDefaultErrorMessages();
 
@@ -367,50 +324,6 @@ Universal::~Universal()
     delete[] metaBlackFilledBuf_;
     delete[] singleFrameBufRaw_;
     delete rgbImgBuf_;
-    // Delete all PVCAM parameter wrappers
-    delete prmTemp_;
-    delete prmTempSetpoint_;
-    delete prmGainIndex_;
-    delete prmGainMultFactor_;
-    delete prmBinningSer_;
-    delete prmBinningPar_;
-    delete prmExpResIndex_;
-    delete prmExpRes_;
-    delete prmExposureTime_;
-    delete prmTriggerMode_;
-    delete prmExposeOutMode_;
-    delete prmClearCycles_;
-    delete prmClearMode_;
-    delete prmSpdTabIndex_;
-    delete prmReadoutPort_;
-    delete prmColorMode_;
-    delete prmFrameBufSize_;
-    delete prmRoiCount_;
-    delete prmMetadataEnabled_;
-    delete prmMetadataResetTimestamp_;
-    delete prmCentroidsEnabled_;
-    delete prmCentroidsRadius_;
-    delete prmCentroidsCount_;
-    delete prmCentroidsMode_;
-    delete prmCentroidsBgCount_;
-    delete prmCentroidsThreshold_;
-    delete prmFanSpeedSetpoint_;
-    delete prmTrigTabSignal_;
-    delete prmLastMuxedSignal_;
-    delete prmPMode_;
-    delete prmAdcOffset_;
-    delete prmScanMode_;
-    delete prmScanDirection_;
-    delete prmScanDirectionReset_;
-    delete prmScanLineDelay_;
-    delete prmScanWidth_;
-    delete prmScanLineTime_;
-    delete prmReadoutTime_;
-    delete prmClearingTime_;
-    delete prmPreTriggerDelay_;
-    delete prmPostTriggerDelay_;
-    delete prmSmartStreamingEnabled_;
-    delete prmSmartStreamingValues_;
 
     // Delete universal parameters
     for ( unsigned i = 0; i < universalParams_.size(); i++ )
@@ -518,7 +431,8 @@ int Universal::Initialize()
 
     /// COLOR MODE
     bool isColorCcd = false;
-    prmColorMode_ = new PvEnumParam( g_Keyword_ColorMode, PARAM_COLOR_MODE, this, true );
+    prmColorMode_ = std::make_unique<PvEnumParam>(
+            g_Keyword_ColorMode, PARAM_COLOR_MODE, this, true );
     if ( prmColorMode_->IsAvailable() )
     {
         if ( prmColorMode_->Current() != COLOR_NONE )
@@ -584,14 +498,17 @@ int Universal::Initialize()
     metaAllRoisStr_.reserve(80 * 512);
 
     /// PARAM_FRAME_BUFFER_SIZE, no UI property but we use it later in the code
-    prmFrameBufSize_ = new PvParam<ulong64>( "PARAM_FRAME_BUFFER_SIZE", PARAM_FRAME_BUFFER_SIZE, this, true );
+    prmFrameBufSize_ = std::make_unique<PvParam<ulong64>>(
+            "PARAM_FRAME_BUFFER_SIZE", PARAM_FRAME_BUFFER_SIZE, this, true );
 
     /// MULTI-ROI SUPPORT CHECK
-    prmRoiCount_ = new PvParam<uns16>("PARAM_ROI_COUNT", PARAM_ROI_COUNT, this, true);
+    prmRoiCount_ = std::make_unique<PvParam<uns16>>(
+            "PARAM_ROI_COUNT", PARAM_ROI_COUNT, this, true);
 
     /// EMBEDDED FRAME METADATA FEATURE
     acqCfgNew_.FrameMetadataEnabled = false; // Disabled by default
-    prmMetadataEnabled_ =  new PvParam<rs_bool>("PARAM_METADATA_ENABLED", PARAM_METADATA_ENABLED, this, true);
+    prmMetadataEnabled_ = std::make_unique<PvParam<rs_bool>>(
+            "PARAM_METADATA_ENABLED", PARAM_METADATA_ENABLED, this, true);
     if ( prmMetadataEnabled_->IsAvailable() )
     {
         nRet = prmMetadataEnabled_->SetAndApply(acqCfgNew_.FrameMetadataEnabled ? TRUE : FALSE);
@@ -607,7 +524,8 @@ int Universal::Initialize()
 
     /// EMBEDDED FRAME METADATA RESET TIMESTAMP FEATURE
     acqCfgNew_.FrameMetadataResetTimestamp = false;
-    prmMetadataResetTimestamp_ =  new PvParam<rs_bool>("PARAM_METADATA_RESET_TIMESTAMP", PARAM_METADATA_RESET_TIMESTAMP, this, true);
+    prmMetadataResetTimestamp_ = std::make_unique<PvParam<rs_bool>>(
+            "PARAM_METADATA_RESET_TIMESTAMP", PARAM_METADATA_RESET_TIMESTAMP, this, true);
     if (prmMetadataResetTimestamp_->IsAvailable())
     {
         // The parameter is write-only and resets the timestamp by writing 'TRUE' to it.
@@ -625,7 +543,8 @@ int Universal::Initialize()
 
     /// CENTROIDS FEATURE
     acqCfgNew_.CentroidsEnabled = false; // Disabled by default
-    prmCentroidsEnabled_ = new PvParam<rs_bool>("PARAM_CENTROIDS_ENABLED", PARAM_CENTROIDS_ENABLED, this, true);
+    prmCentroidsEnabled_ = std::make_unique<PvParam<rs_bool>>(
+            "PARAM_CENTROIDS_ENABLED", PARAM_CENTROIDS_ENABLED, this, true);
     if (prmCentroidsEnabled_->IsAvailable())
     {
         nRet = prmCentroidsEnabled_->SetAndApply(acqCfgNew_.CentroidsEnabled ? TRUE : FALSE);
@@ -638,7 +557,8 @@ int Universal::Initialize()
         AddAllowedValue(g_Keyword_CentroidsEnabled, g_Keyword_Yes);
     }
 
-    prmCentroidsRadius_ = new PvParam<uns16>("PARAM_CENTROIDS_RADIUS", PARAM_CENTROIDS_RADIUS, this, true);
+    prmCentroidsRadius_ = std::make_unique<PvParam<uns16>>(
+            "PARAM_CENTROIDS_RADIUS", PARAM_CENTROIDS_RADIUS, this, true);
     if (prmCentroidsRadius_->IsAvailable())
     {
         acqCfgNew_.CentroidsRadius = prmCentroidsRadius_->Current();
@@ -647,7 +567,8 @@ int Universal::Initialize()
         SetPropertyLimits(g_Keyword_CentroidsRadius,
             prmCentroidsRadius_->Min(), prmCentroidsRadius_->Max());
     }
-    prmCentroidsCount_ = new PvParam<uns16>("PARAM_CENTROIDS_COUNT", PARAM_CENTROIDS_COUNT, this, true);
+    prmCentroidsCount_ = std::make_unique<PvParam<uns16>>(
+            "PARAM_CENTROIDS_COUNT", PARAM_CENTROIDS_COUNT, this, true);
     if (prmCentroidsCount_->IsAvailable())
     {
         acqCfgNew_.CentroidsCount = prmCentroidsCount_->Current();
@@ -656,7 +577,8 @@ int Universal::Initialize()
         SetPropertyLimits(g_Keyword_CentroidsCount,
             prmCentroidsCount_->Min(), prmCentroidsCount_->Max());
     }
-    prmCentroidsMode_ = new PvEnumParam("PARAM_CENTROIDS_MODE", PARAM_CENTROIDS_MODE, this, true);
+    prmCentroidsMode_ = std::make_unique<PvEnumParam>(
+            "PARAM_CENTROIDS_MODE", PARAM_CENTROIDS_MODE, this, true);
     if (prmCentroidsMode_->IsAvailable())
     {
         acqCfgNew_.CentroidsMode = prmCentroidsMode_->Current();
@@ -665,7 +587,8 @@ int Universal::Initialize()
         CreateStringProperty(g_Keyword_CentroidsMode, str.c_str(), false, pAct);
         SetAllowedValues(g_Keyword_CentroidsMode, prmCentroidsMode_->GetEnumStrings());
     }
-    prmCentroidsBgCount_ = new PvEnumParam("PARAM_CENTROIDS_BG_COUNT", PARAM_CENTROIDS_BG_COUNT, this, true);
+    prmCentroidsBgCount_ = std::make_unique<PvEnumParam>(
+            "PARAM_CENTROIDS_BG_COUNT", PARAM_CENTROIDS_BG_COUNT, this, true);
     if (prmCentroidsBgCount_->IsAvailable())
     {
         acqCfgNew_.CentroidsBgCount = prmCentroidsBgCount_->Current();
@@ -674,7 +597,8 @@ int Universal::Initialize()
         CreateStringProperty(g_Keyword_CentroidsBgCount, str.c_str(), false, pAct);
         SetAllowedValues(g_Keyword_CentroidsBgCount, prmCentroidsBgCount_->GetEnumStrings());
     }
-    prmCentroidsThreshold_ = new PvParam<uns32>("PARAM_CENTROIDS_THRESHOLD", PARAM_CENTROIDS_THRESHOLD, this, true);
+    prmCentroidsThreshold_ = std::make_unique<PvParam<uns32>>(
+            "PARAM_CENTROIDS_THRESHOLD", PARAM_CENTROIDS_THRESHOLD, this, true);
     if (prmCentroidsThreshold_->IsAvailable())
     {
         acqCfgNew_.CentroidsThreshold = prmCentroidsThreshold_->Current();
@@ -685,7 +609,8 @@ int Universal::Initialize()
     }
 
     /// FAN SPEED SETPOINT
-    prmFanSpeedSetpoint_ = new PvEnumParam( "PARAM_FAN_SPEED_SETPOINT", PARAM_FAN_SPEED_SETPOINT, this, true );
+    prmFanSpeedSetpoint_ = std::make_unique<PvEnumParam>(
+            "PARAM_FAN_SPEED_SETPOINT", PARAM_FAN_SPEED_SETPOINT, this, true );
     if ( prmFanSpeedSetpoint_->IsAvailable() )
     {
         acqCfgNew_.FanSpeedSetpoint = prmFanSpeedSetpoint_->Current();
@@ -695,7 +620,8 @@ int Universal::Initialize()
     }
 
     /// TRIGGER MODE (EXPOSURE MODE)
-    prmTriggerMode_ = new PvEnumParam( "PARAM_EXPOSURE_MODE", PARAM_EXPOSURE_MODE, this, true );
+    prmTriggerMode_ = std::make_unique<PvEnumParam>(
+            "PARAM_EXPOSURE_MODE", PARAM_EXPOSURE_MODE, this, true );
     if ( prmTriggerMode_->IsAvailable() )
     {
         pAct = new CPropertyAction (this, &Universal::OnTriggerMode);
@@ -714,7 +640,8 @@ int Universal::Initialize()
     }
 
     /// EXPOSE OUT MODE
-    prmExposeOutMode_ = new PvEnumParam( "PARAM_EXPOSE_OUT_MODE", PARAM_EXPOSE_OUT_MODE, this, true );
+    prmExposeOutMode_ = std::make_unique<PvEnumParam>(
+            "PARAM_EXPOSE_OUT_MODE", PARAM_EXPOSE_OUT_MODE, this, true );
     if ( prmExposeOutMode_->IsAvailable() )
     {
         pAct = new CPropertyAction (this, &Universal::OnExposeOutMode);
@@ -727,7 +654,8 @@ int Universal::Initialize()
     // The Clear Cycles needs a bit different handling, the PVCAM allows range of 0-65535 but we want to limit it to 
     // 0-16 in the UI because users can easily hang the camera just by clicking on the property scrollbar - which
     // increases the value by a huge amount.
-    prmClearCycles_ = new PvParam<uns16>("PARAM_CLEAR_CYCLES", PARAM_CLEAR_CYCLES, this, true);
+    prmClearCycles_ = std::make_unique<PvParam<uns16>>(
+            "PARAM_CLEAR_CYCLES", PARAM_CLEAR_CYCLES, this, true);
     if (prmClearCycles_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnClearCycles);
@@ -743,7 +671,8 @@ int Universal::Initialize()
     }
 
     /// CLEAR MODE
-    prmClearMode_ = new PvEnumParam("PARAM_CLEAR_MODE", PARAM_CLEAR_MODE, this, true);
+    prmClearMode_ = std::make_unique<PvEnumParam>(
+            "PARAM_CLEAR_MODE", PARAM_CLEAR_MODE, this, true);
     if (prmClearMode_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnClearMode);
@@ -761,24 +690,29 @@ int Universal::Initialize()
     /// CAMERA TEMPERATURE
     /// The actual value is read out from the camera in OnTemperature(). Please note
     /// we cannot read the temperature when continuous sequence is running.
-    prmTemp_ = new PvParam<int16>( "PARAM_TEMP", PARAM_TEMP, this, true );
+    prmTemp_ = std::make_unique<PvParam<int16>>( "PARAM_TEMP", PARAM_TEMP, this, true );
     if ( prmTemp_->IsAvailable() )
     {
         pAct = new CPropertyAction (this, &Universal::OnTemperature);
         nRet = CreateProperty(MM::g_Keyword_CCDTemperature,
-            CDeviceUtils::ConvertToString((double)prmTemp_->Current()/100.0), MM::Float, true, pAct);
+                CDeviceUtils::ConvertToString(prmTemp_->Current() / 100.0),
+                MM::Float, true, pAct);
         assert(nRet == DEVICE_OK);
     }
 
     /// CAMERA TEMPERATURE SET POINT
     /// The desired value of the CCD chip
-    prmTempSetpoint_ = new PvParam<int16>( "PARAM_TEMP_SETPOINT", PARAM_TEMP_SETPOINT, this, true );
+    prmTempSetpoint_ = std::make_unique<PvParam<int16>>(
+            "PARAM_TEMP_SETPOINT", PARAM_TEMP_SETPOINT, this, true );
     if ( prmTempSetpoint_->IsAvailable() )
     {
         pAct = new CPropertyAction (this, &Universal::OnTemperatureSetPoint);
         nRet = CreateProperty(MM::g_Keyword_CCDTemperatureSetPoint,
-            CDeviceUtils::ConvertToString((double)prmTempSetpoint_->Current()/100.0), MM::Float, false, pAct);
-        SetPropertyLimits(MM::g_Keyword_CCDTemperatureSetPoint, prmTempSetpoint_->Min()/100.0,prmTempSetpoint_->Max()/100.0);
+                CDeviceUtils::ConvertToString(prmTempSetpoint_->Current() / 100.0),
+                MM::Float, false, pAct);
+        SetPropertyLimits(MM::g_Keyword_CCDTemperatureSetPoint,
+                prmTempSetpoint_->Min() / 100.0,
+                prmTempSetpoint_->Max() / 100.0);
     }
 
     /// EXPOSURE TIME
@@ -787,8 +721,10 @@ int Universal::Initialize()
     assert(nRet == DEVICE_OK);
 
     /// SMART STREAMING
-    prmSmartStreamingEnabled_ = new PvParam<rs_bool>( "PARAM_SMART_STREAM_MODE_ENABLED", PARAM_SMART_STREAM_MODE_ENABLED, this, true );
-    prmSmartStreamingValues_ = new PvParam<smart_stream_type>( "PARAM_SMART_STREAM_EXP_PARAMS", PARAM_SMART_STREAM_EXP_PARAMS, this, true );
+    prmSmartStreamingEnabled_ = std::make_unique<PvParam<rs_bool>>(
+            "PARAM_SMART_STREAM_MODE_ENABLED", PARAM_SMART_STREAM_MODE_ENABLED, this, true );
+    prmSmartStreamingValues_ = std::make_unique<PvParam<smart_stream_type>>(
+            "PARAM_SMART_STREAM_EXP_PARAMS", PARAM_SMART_STREAM_EXP_PARAMS, this, true );
     if (prmSmartStreamingEnabled_->IsAvailable() && prmSmartStreamingValues_->IsAvailable())
     {
         LogAdapterMessage("This camera supports SMART streaming");
@@ -808,7 +744,8 @@ int Universal::Initialize()
             }
 
         }
-        //not handling else for the first if because prmSmartStreamingEnabled->Set always returns DEVICE_OK, might be added later
+        // not handling else for the first if because prmSmartStreamingEnabled_->Set
+        // always returns DEVICE_OK, might be added later
 
         pAct = new CPropertyAction (this, &Universal::OnSmartStreamingValues);
         nRet = CreateProperty(g_Keyword_SmartStreamingValues, "", MM::String, false, pAct);
@@ -820,8 +757,10 @@ int Universal::Initialize()
     binningLabels_.clear();
     binningValuesX_.clear();
     binningValuesY_.clear();
-    prmBinningSer_ = new PvEnumParam("PARAM_BINNING_SER", PARAM_BINNING_SER, this, true);
-    prmBinningPar_ = new PvEnumParam("PARAM_BINNING_PAR", PARAM_BINNING_PAR, this, true);
+    prmBinningSer_ = std::make_unique<PvEnumParam>(
+            "PARAM_BINNING_SER", PARAM_BINNING_SER, this, true);
+    prmBinningPar_ = std::make_unique<PvEnumParam>(
+            "PARAM_BINNING_PAR", PARAM_BINNING_PAR, this, true);
     if (prmBinningSer_->IsAvailable() && prmBinningPar_->IsAvailable())
     {
         binningRestricted_ = true;
@@ -916,7 +855,8 @@ int Universal::Initialize()
     /// Changing the speed causes change in Gain range, Pixel time and current Bit depth
 
     /// READOUT PORT
-    prmReadoutPort_ = new PvEnumParam("PARAM_READOUT_PORT", PARAM_READOUT_PORT, this, true);
+    prmReadoutPort_ = std::make_unique<PvEnumParam>(
+            "PARAM_READOUT_PORT", PARAM_READOUT_PORT, this, true);
     if (prmReadoutPort_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnReadoutPort);
@@ -931,7 +871,8 @@ int Universal::Initialize()
 
     /// SPEED
     /// Note that this can change depending on output port
-    prmSpdTabIndex_ = new PvParam<int16>("PARAM_SPDTAB_INDEX", PARAM_SPDTAB_INDEX, this, true);
+    prmSpdTabIndex_ = std::make_unique<PvParam<int16>>(
+            "PARAM_SPDTAB_INDEX", PARAM_SPDTAB_INDEX, this, true);
     if (prmSpdTabIndex_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnReadoutRate);
@@ -957,7 +898,8 @@ int Universal::Initialize()
 
     /// GAIN
     /// Note that this can change depending on output port, and readout rate.
-    prmGainIndex_ = new PvParam<int16>("PARAM_GAIN_INDEX", PARAM_GAIN_INDEX, this, true);
+    prmGainIndex_ = std::make_unique<PvParam<int16>>(
+            "PARAM_GAIN_INDEX", PARAM_GAIN_INDEX, this, true);
     if (prmGainIndex_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnGain);
@@ -982,7 +924,8 @@ int Universal::Initialize()
 
     /// BIT DEPTH
     /// Note that this can change depending on output port, speed and gain
-    prmBitDepth_ = std::make_unique<PvParam<int16>>("PARAM_BIT_DEPTH", PARAM_BIT_DEPTH, this, true);
+    prmBitDepth_ = std::make_unique<PvParam<int16>>(
+            "PARAM_BIT_DEPTH", PARAM_BIT_DEPTH, this, true);
 #ifdef DEBUG_INTERNAL_IMAGE_PROPS
     if (prmBitDepth_->IsAvailable())
     {
@@ -994,7 +937,8 @@ int Universal::Initialize()
 #endif
 
     /// Other parameters that can change together with port, speed, gain and bit depth
-    prmImageFormat_ = std::make_unique<PvEnumParam>("PARAM_IMAGE_FORMAT", PARAM_IMAGE_FORMAT, this, true);
+    prmImageFormat_ = std::make_unique<PvEnumParam>(
+            "PARAM_IMAGE_FORMAT", PARAM_IMAGE_FORMAT, this, true);
     if (prmImageFormat_->IsAvailable())
     {
         const int32 cur = prmImageFormat_->Current();
@@ -1009,7 +953,8 @@ int Universal::Initialize()
 #endif
         acqCfgNew_.ImageFormat = cur;
     }
-    prmImageCompression_ = std::make_unique<PvEnumParam>("PARAM_IMAGE_COMPRESSION", PARAM_IMAGE_COMPRESSION, this, true);
+    prmImageCompression_ = std::make_unique<PvEnumParam>(
+            "PARAM_IMAGE_COMPRESSION", PARAM_IMAGE_COMPRESSION, this, true);
     if (prmImageCompression_->IsAvailable())
     {
         const int32 cur = prmImageCompression_->Current();
@@ -1024,7 +969,8 @@ int Universal::Initialize()
 #endif
         acqCfgNew_.ImageCompression = cur;
     }
-    prmBitDepthHost_ = std::make_unique<PvParam<int16>>("PARAM_BIT_DEPTH_HOST", PARAM_BIT_DEPTH_HOST, this, true);
+    prmBitDepthHost_ = std::make_unique<PvParam<int16>>(
+            "PARAM_BIT_DEPTH_HOST", PARAM_BIT_DEPTH_HOST, this, true);
     if (prmBitDepthHost_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnBitDepthHost);
@@ -1032,7 +978,8 @@ int Universal::Initialize()
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    prmImageFormatHost_ = std::make_unique<PvEnumParam>("PARAM_IMAGE_FORMAT_HOST", PARAM_IMAGE_FORMAT_HOST, this, true);
+    prmImageFormatHost_ = std::make_unique<PvEnumParam>(
+            "PARAM_IMAGE_FORMAT_HOST", PARAM_IMAGE_FORMAT_HOST, this, true);
     if (prmImageFormatHost_->IsAvailable())
     {
         const int32 cur = prmImageFormatHost_->Current();
@@ -1042,7 +989,8 @@ int Universal::Initialize()
         if (nRet != DEVICE_OK)
             return nRet;
     }
-    prmImageCompressionHost_ = std::make_unique<PvEnumParam>("PARAM_IMAGE_COMPRESSION_HOST", PARAM_IMAGE_COMPRESSION_HOST, this, true);
+    prmImageCompressionHost_ = std::make_unique<PvEnumParam>(
+            "PARAM_IMAGE_COMPRESSION_HOST", PARAM_IMAGE_COMPRESSION_HOST, this, true);
 #ifdef DEBUG_INTERNAL_IMAGE_PROPS
     if (prmImageCompressionHost_->IsAvailable())
     {
@@ -1066,10 +1014,13 @@ int Universal::Initialize()
     // The PARAM_EXP_RES_INDEX is used to get and set the current exposure resolution (usec, msec, sec, ...)
     // The PARAM_EXP_RES is only used to enumerate the supported exposure resolutions and their string names
     // The PARAM_EXP_RES was read-only in older PVCAMs
-    prmExpResIndex_ = new PvParam<uns16>("PARAM_EXP_RES_INDEX", PARAM_EXP_RES_INDEX, this, true);
-    prmExpRes_ = new PvEnumParam("PARAM_EXP_RES", PARAM_EXP_RES, this, true);
+    prmExpResIndex_ = std::make_unique<PvParam<uns16>>(
+            "PARAM_EXP_RES_INDEX", PARAM_EXP_RES_INDEX, this, true);
+    prmExpRes_ = std::make_unique<PvEnumParam>(
+            "PARAM_EXP_RES", PARAM_EXP_RES, this, true);
     // The PARAM_EXPOSURE_TIME also returns the camera actual exposure time, if supported
-    prmExposureTime_ = new PvParam<ulong64>("PARAM_EXPOSURE_TIME", PARAM_EXPOSURE_TIME, this, true);
+    prmExposureTime_ = std::make_unique<PvParam<ulong64>>(
+            "PARAM_EXPOSURE_TIME", PARAM_EXPOSURE_TIME, this, true);
     if (prmExposureTime_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnTimingExposureTimeNs);
@@ -1139,7 +1090,8 @@ int Universal::Initialize()
     /// MULTIPLIER GAIN
     // The HQ2 has 'visual gain', which shows up as EM Gain.  
     // Detect whether this is an interline chip and do not expose EM Gain if it is.
-    prmGainMultFactor_ = new PvParam<uns16>("PARAM_GAIN_MULT_FACTOR", PARAM_GAIN_MULT_FACTOR, this, true);
+    prmGainMultFactor_ = std::make_unique<PvParam<uns16>>(
+            "PARAM_GAIN_MULT_FACTOR", PARAM_GAIN_MULT_FACTOR, this, true);
     if (prmGainMultFactor_->IsAvailable())
     {
         // Some older cameras erroneously report PARAM_GAIN_MULT_FACTOR but are not EM.
@@ -1260,8 +1212,10 @@ int Universal::Initialize()
     //  Trigger-Expose Out-AnyOtherFutureProperty
     //  Trigger-Read Out-Mux
     //  Trigger-Read Out-AnyOtherFutureProperty
-    prmTrigTabSignal_ = new PvEnumParam( "PARAM_TRIGTAB_SIGNAL", PARAM_TRIGTAB_SIGNAL, this, true );
-    prmLastMuxedSignal_ = new PvParam<uns8>( "PARAM_LAST_MUXED_SIGNAL", PARAM_LAST_MUXED_SIGNAL, this, true );
+    prmTrigTabSignal_ = std::make_unique<PvEnumParam>(
+            "PARAM_TRIGTAB_SIGNAL", PARAM_TRIGTAB_SIGNAL, this, true );
+    prmLastMuxedSignal_ = std::make_unique<PvParam<uns8>>(
+            "PARAM_LAST_MUXED_SIGNAL", PARAM_LAST_MUXED_SIGNAL, this, true );
     if (prmTrigTabSignal_->IsAvailable())
     {
         const std::vector<std::string>& trigTabStrs = prmTrigTabSignal_->GetEnumStrings();
@@ -1304,7 +1258,7 @@ int Universal::Initialize()
     }
 
     // PMODE (FRAME TRANSFER)
-    prmPMode_ = new PvEnumParam( "PARAM_PMODE", PARAM_PMODE, this, true );
+    prmPMode_ = std::make_unique<PvEnumParam>( "PARAM_PMODE", PARAM_PMODE, this, true );
     if (prmPMode_->IsAvailable())
     {
         const std::vector<std::string>& pmodeStrs = prmPMode_->GetEnumStrings();
@@ -1325,7 +1279,8 @@ int Universal::Initialize()
     }
 
     // ADC Offset parameter
-    prmAdcOffset_ = new PvParam<int16>("PARAM_ADC_OFFSET", PARAM_ADC_OFFSET, this, true);
+    prmAdcOffset_ = std::make_unique<PvParam<int16>>(
+            "PARAM_ADC_OFFSET", PARAM_ADC_OFFSET, this, true);
     if (prmAdcOffset_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnAdcOffset);
@@ -1334,7 +1289,8 @@ int Universal::Initialize()
         acqCfgNew_.AdcOffset = prmAdcOffset_->Current();
     }
 
-    prmScanMode_ = new PvEnumParam("PARAM_SCAN_MODE", PARAM_SCAN_MODE, this, true);
+    prmScanMode_ = std::make_unique<PvEnumParam>(
+            "PARAM_SCAN_MODE", PARAM_SCAN_MODE, this, true);
     if (prmScanMode_->IsAvailable())
     {
         nRet = prmScanMode_->Reset(); // Reset to default because camera preserves previous settings.
@@ -1357,7 +1313,8 @@ int Universal::Initialize()
 
         acqCfgNew_.ScanMode = cur;
     }
-    prmScanDirection_ = new PvEnumParam("PARAM_SCAN_DIRECTION", PARAM_SCAN_DIRECTION, this, true);
+    prmScanDirection_ = std::make_unique<PvEnumParam>(
+            "PARAM_SCAN_DIRECTION", PARAM_SCAN_DIRECTION, this, true);
     if (prmScanDirection_->IsAvailable())
     {
         nRet = prmScanDirection_->Reset(); // Reset to default because camera preserves previous settings.
@@ -1380,7 +1337,8 @@ int Universal::Initialize()
 
         acqCfgNew_.ScanDirection = cur;
     }
-    prmScanDirectionReset_ = new PvParam<rs_bool>( "PARAM_SCAN_DIRECTION_RESET", PARAM_SCAN_DIRECTION_RESET, this, true );
+    prmScanDirectionReset_ = std::make_unique<PvParam<rs_bool>>(
+            "PARAM_SCAN_DIRECTION_RESET", PARAM_SCAN_DIRECTION_RESET, this, true );
     if (prmScanDirectionReset_->IsAvailable())
     {
 #if 0
@@ -1404,7 +1362,8 @@ int Universal::Initialize()
 
         acqCfgNew_.ScanDirectionReset = (cur == TRUE) ? true : false;
     }
-    prmScanLineDelay_ = new PvParam<uns16>( "PARAM_SCAN_LINE_DELAY", PARAM_SCAN_LINE_DELAY, this, true );
+    prmScanLineDelay_ = std::make_unique<PvParam<uns16>>(
+            "PARAM_SCAN_LINE_DELAY", PARAM_SCAN_LINE_DELAY, this, true );
     if (prmScanLineDelay_->IsAvailable())
     {
         if (!prmScanLineDelay_->IsReadOnly())
@@ -1419,7 +1378,8 @@ int Universal::Initialize()
 
         acqCfgNew_.ScanLineDelay = prmScanLineDelay_->Current();
     }
-    prmScanLineTime_ = new PvParam<long64>( "PARAM_SCAN_LINE_TIME", PARAM_SCAN_LINE_TIME, this, true );
+    prmScanLineTime_ = std::make_unique<PvParam<long64>>(
+            "PARAM_SCAN_LINE_TIME", PARAM_SCAN_LINE_TIME, this, true );
     if (prmScanLineTime_->IsAvailable())
     {
         pAct = new CPropertyAction(this, &Universal::OnScanLineTime);
@@ -1428,7 +1388,8 @@ int Universal::Initialize()
 
         //acqCfgNew_.ScanLineTime = prmScanLineTime_->Current();
     }
-    prmScanWidth_ = new PvParam<uns16>( "PARAM_SCAN_WIDTH", PARAM_SCAN_WIDTH, this, true );
+    prmScanWidth_ = std::make_unique<PvParam<uns16>>(
+            "PARAM_SCAN_WIDTH", PARAM_SCAN_WIDTH, this, true );
     if (prmScanWidth_->IsAvailable())
     {
         if (!prmScanWidth_->IsReadOnly())
@@ -1445,8 +1406,8 @@ int Universal::Initialize()
     }
 
     // Host-side post-processing - frame summing
-    prmHostFrameSummingEnabled_ = std::make_unique<PvParam<rs_bool>>("PARAM_HOST_FRAME_SUMMING_ENABLED",
-            PARAM_HOST_FRAME_SUMMING_ENABLED, this, true);
+    prmHostFrameSummingEnabled_ = std::make_unique<PvParam<rs_bool>>(
+            "PARAM_HOST_FRAME_SUMMING_ENABLED", PARAM_HOST_FRAME_SUMMING_ENABLED, this, true);
     if (prmHostFrameSummingEnabled_->IsAvailable())
     {
         const rs_bool cur = prmHostFrameSummingEnabled_->Current();
@@ -1463,8 +1424,8 @@ int Universal::Initialize()
         }
         acqCfgNew_.HostFrameSummingEnabled = cur;
     }
-    prmHostFrameSummingCount_ = std::make_unique<PvParam<uns32>>("PARAM_HOST_FRAME_SUMMING_COUNT",
-            PARAM_HOST_FRAME_SUMMING_COUNT, this, true);
+    prmHostFrameSummingCount_ = std::make_unique<PvParam<uns32>>(
+            "PARAM_HOST_FRAME_SUMMING_COUNT", PARAM_HOST_FRAME_SUMMING_COUNT, this, true);
     if (prmHostFrameSummingCount_->IsAvailable())
     {
         // The PVCAM type of this parameter is uns32, aka unsigned int.
@@ -1484,8 +1445,8 @@ int Universal::Initialize()
             SetPropertyLimits(g_Keyword_HostFrameSummingCount, min, max);
         acqCfgNew_.HostFrameSummingCount = cur;
     }
-    prmHostFrameSummingFormat_ = std::make_unique<PvEnumParam>("PARAM_HOST_FRAME_SUMMING_FORMAT",
-            PARAM_HOST_FRAME_SUMMING_FORMAT, this, true);
+    prmHostFrameSummingFormat_ = std::make_unique<PvEnumParam>(
+            "PARAM_HOST_FRAME_SUMMING_FORMAT", PARAM_HOST_FRAME_SUMMING_FORMAT, this, true);
     if (prmHostFrameSummingFormat_->IsAvailable())
     {
         const int32 cur = prmHostFrameSummingFormat_->Current();
@@ -2490,7 +2451,7 @@ int Universal::OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             prmTemp_->Update();
         }
-        pProp->Set((double)prmTemp_->Current() / 100.0);
+        pProp->Set(prmTemp_->Current() / 100.0);
     }
 
     return DEVICE_OK;
@@ -2514,7 +2475,7 @@ int Universal::OnTemperatureSetPoint(MM::PropertyBase* pProp, MM::ActionType eAc
     }
     else if (eAct == MM::BeforeGet)
     {
-        pProp->Set((double)prmTempSetpoint_->Current()/100.0);
+        pProp->Set(prmTempSetpoint_->Current() / 100.0);
     }
 
     return DEVICE_OK;
@@ -2708,7 +2669,7 @@ int Universal::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
         prmTriggerMode_->Set( valStr );
         // We don't call Write() here because the PARAM_EXPOSURE_MODE cannot be set,
         // it can only be read and used in pl_setup_cont so we use the
-        // prmTriggerMode just as a cache to store our value
+        // prmTriggerMode_ just as a cache to store our value
     }
     else if (eAct == MM::BeforeGet)
     {
@@ -2755,7 +2716,7 @@ int Universal::OnExposeOutMode(MM::PropertyBase* pProp, MM::ActionType eAct)
         prmExposeOutMode_->Set( valStr );
         // We don't call Write() here because the PARAM_EXPOSE_OUT_MODE cannot be set,
         // it can only be retrieved and used in pl_setup_cont so we use the
-        // prmExposeOutMode just as a cache to store our value
+        // prmExposeOutMode_ just as a cache to store our value
     }
     else if (eAct == MM::BeforeGet)
     {
@@ -4951,7 +4912,8 @@ int Universal::initializePostSetupParams()
     CPropertyAction* pAct = NULL;
 
     // ACTUAL READOUT TIME - Reported by camera if supported
-    prmReadoutTime_ = new PvParam<uns32>( "PARAM_READOUT_TIME", PARAM_READOUT_TIME, this, true );
+    prmReadoutTime_ = std::make_unique<PvParam<uns32>>(
+            "PARAM_READOUT_TIME", PARAM_READOUT_TIME, this, true );
     if ( prmReadoutTime_->IsAvailable() )
     {
         pAct = new CPropertyAction (this, &Universal::OnTimingReadoutTimeNs);
@@ -4960,7 +4922,8 @@ int Universal::initializePostSetupParams()
             return nRet;
     }
     // ACTUAL CLEARING TIME - Reported by camera if supported
-    prmClearingTime_ = new PvParam<long64>( "PARAM_CLEARING_TIME", PARAM_CLEARING_TIME, this, true );
+    prmClearingTime_ = std::make_unique<PvParam<long64>>(
+            "PARAM_CLEARING_TIME", PARAM_CLEARING_TIME, this, true );
     if ( prmClearingTime_->IsAvailable() )
     {
         pAct = new CPropertyAction (this, &Universal::OnTimingClearingTimeNs);
@@ -4969,7 +4932,8 @@ int Universal::initializePostSetupParams()
             return nRet;
     }
     // ACTUAL POST TRIGGER DELAY - Reported by camera if supported
-    prmPostTriggerDelay_ = new PvParam<long64>( "PARAM_POST_TRIGGER_TIME", PARAM_POST_TRIGGER_DELAY, this, true );
+    prmPostTriggerDelay_ = std::make_unique<PvParam<long64>>(
+            "PARAM_POST_TRIGGER_TIME", PARAM_POST_TRIGGER_DELAY, this, true );
     if ( prmPostTriggerDelay_->IsAvailable() )
     {
         pAct = new CPropertyAction (this, &Universal::OnTimingPostTriggerDelayNs);
@@ -4978,7 +4942,8 @@ int Universal::initializePostSetupParams()
             return nRet;
     }
     // ACTUAL PRE TRIGGER DELAY - Reported by camera if supported
-    prmPreTriggerDelay_ = new PvParam<long64>( "PARAM_PRE_TRIGGER_TIME", PARAM_PRE_TRIGGER_DELAY, this, true );
+    prmPreTriggerDelay_ = std::make_unique<PvParam<long64>>(
+            "PARAM_PRE_TRIGGER_TIME", PARAM_PRE_TRIGGER_DELAY, this, true );
     if ( prmPreTriggerDelay_->IsAvailable() )
     {
         pAct = new CPropertyAction (this, &Universal::OnTimingPreTriggerDelayNs);
@@ -5047,7 +5012,7 @@ int Universal::resizeImageBufferContinuous()
                 circBufFrameCount_ = static_cast<int>(CIRC_BUF_SIZE_MAX_AUTO / frameSize);
                 circBufFrameCount_ = (std::min)(circBufFrameCount_, CIRC_BUF_FRAME_CNT_MAX);
 
-                if (prmReadoutTime_ && prmReadoutTime_->IsAvailable())
+                if (prmReadoutTime_->IsAvailable())
                 {
                     // Based on experiments it seems that ideal circular buffer size is
                     // around the same as FPS, e.g. with 100 FPS we should have 100 frames.
@@ -6111,7 +6076,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     // TODO: Write custom comparer for AcqConfig class and use (cfgNew != cfgOld)
     bool configChanged = false;
 
-    // Dependant parameters to be updated at the end but still before acq. setup.
+    // Dependent parameters to be updated at the end but still before acq. setup.
     // This helps to eliminate multiple updates of the same parameter.
     std::set<PvParamBase*> paramsToUpdate;
 
@@ -6302,7 +6267,7 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
             return nRet; // Error logged in SetAndApply()
         }
-        paramsToUpdate.emplace(prmFanSpeedSetpoint_);
+        paramsToUpdate.emplace(prmFanSpeedSetpoint_.get());
     }
 
     // Clear cycles
@@ -6397,7 +6362,7 @@ int Universal::applyAcqConfig(bool forceSetup)
             return nRet; // Error logged in SetAndApply()
         }
         // Delta LS camera changes the temperature setpoint on PMODE change
-        paramsToUpdate.emplace(prmTempSetpoint_);
+        paramsToUpdate.emplace(prmTempSetpoint_.get());
     }
 
     bool portChanged = false; // Port change triggers speed change
@@ -6505,12 +6470,12 @@ int Universal::applyAcqConfig(bool forceSetup)
 
         // This dependency cannot be handled directly because new and current
         // AcqConfig::AdcOffset must be updated sooner, see above and below
-        //paramsToUpdate.emplace(prmAdcOffset_);
-        paramsToUpdate.emplace(prmColorMode_);
+        //paramsToUpdate.emplace(prmAdcOffset_.get());
+        paramsToUpdate.emplace(prmColorMode_.get());
         paramsToUpdate.emplace(prmImageFormat_.get());
         // This dependency cannot be handled directly because allowed GUI items
         // must be updated, see above and below
-        //paramsToUpdate.emplace(prmImageCompression_);
+        //paramsToUpdate.emplace(prmImageCompression_.get());
 
         speedChanged = true;
         // Speed may cause bit depth change, so buffer reallocation is recommended
@@ -6544,10 +6509,10 @@ int Universal::applyAcqConfig(bool forceSetup)
 
         paramsToUpdate.emplace(prmBitDepth_.get());
         // PARAM_SCAN_MODE must update all its dependencies, see above and below
-        //paramsToUpdate.emplace(prmScanMode_);
+        //paramsToUpdate.emplace(prmScanMode_.get());
         // PARAM_GAIN_MULT_FACTOR can change on HQ2 camera
-        paramsToUpdate.emplace(prmGainMultFactor_);
-        paramsToUpdate.emplace(prmTempSetpoint_);
+        paramsToUpdate.emplace(prmGainMultFactor_.get());
+        paramsToUpdate.emplace(prmTempSetpoint_.get());
 
         // Gain may cause bit depth change, so buffer reallocation is recommended
         gainChanged = true;
@@ -6682,8 +6647,8 @@ int Universal::applyAcqConfig(bool forceSetup)
             acqCfgNew_.ScanLineDelay = prmScanLineDelay_->Current();
         }
 
-        paramsToUpdate.emplace(prmScanDirection_);
-        paramsToUpdate.emplace(prmScanDirectionReset_);
+        paramsToUpdate.emplace(prmScanDirection_.get());
+        paramsToUpdate.emplace(prmScanDirectionReset_.get());
     }
     if (acqCfgNew_.ScanDirection != acqCfgCur_.ScanDirection)
     {
@@ -6728,7 +6693,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         acqCfgCur_.ScanWidth = prmScanWidth_->Current();
 
         // Change in ScanLineDelay may change the total ScanLineTime
-        paramsToUpdate.emplace(prmScanLineTime_);
+        paramsToUpdate.emplace(prmScanLineTime_.get());
     }
     if (acqCfgNew_.ScanWidth != acqCfgCur_.ScanWidth)
     {
@@ -6753,7 +6718,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         acqCfgCur_.ScanLineDelay = prmScanLineDelay_->Current();
 
         // Change in ScanWidth may change the total ScanLineTime
-        paramsToUpdate.emplace(prmScanLineTime_);
+        paramsToUpdate.emplace(prmScanLineTime_.get());
     }
 
     if (acqCfgNew_.CircBufEnabled != acqCfgCur_.CircBufEnabled)
@@ -6981,7 +6946,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         setupRequired = true;
     }
 
-    // Refresh dependant parameters, reset their cache and update values
+    // Refresh dependent parameters, reset their cache and update values
     for (PvParamBase* param : paramsToUpdate)
     {
         if (param->IsAvailable())

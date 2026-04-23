@@ -932,74 +932,75 @@ private:
     // like availability or read-write to/from read-only.
     // The dependencies should be treated recursively.
 
-    // TODO: Convert remaining PvParam pointers to unique_ptr
+    std::unique_ptr<PvParam<smart_stream_type>> prmSmartStreamingValues_{};
+    std::unique_ptr<PvParam<rs_bool>>           prmSmartStreamingEnabled_{};
 
-    PvParam<smart_stream_type>* prmSmartStreamingValues_;
-    PvParam<rs_bool>* prmSmartStreamingEnabled_;
+    std::unique_ptr<PvEnumParam>      prmTriggerMode_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns16>>   prmExpResIndex_{}; // Can change: EXP_RES, EXPOSURE_TIME(+range)
+    std::unique_ptr<PvEnumParam>      prmExpRes_{}; // Can change: EXP_RES_INDEX, EXPOSURE_TIME(+range)
+    std::unique_ptr<PvParam<ulong64>> prmExposureTime_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmExposeOutMode_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmTriggerMode_; // Updated after pl_exp_setup_*()
-    PvParam<uns16>*   prmExpResIndex_; // Can change: EXP_RES, EXPOSURE_TIME(+range)
-    PvEnumParam*      prmExpRes_; // Can change: EXP_RES_INDEX, EXPOSURE_TIME(+range)
-    PvParam<ulong64>* prmExposureTime_; // Updated after pl_exp_setup_*()
-    PvEnumParam*      prmExposeOutMode_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns16>>   prmClearCycles_{};
+    std::unique_ptr<PvEnumParam>      prmClearMode_{};
 
-    PvParam<uns16>*   prmClearCycles_;
-    PvEnumParam*      prmClearMode_;
+    std::unique_ptr<PvEnumParam>      prmReadoutPort_{}; // Can change: SPDTAB_INDEX(+range)
+    std::unique_ptr<PvParam<int16>>   prmSpdTabIndex_{}; // Can change: PIX_TIME, SPDTAB_NAME,
+                                                         //     GAIN_INDEX(+range), ADC_OFFSET,
+                                                         //     COLOR_MODE, IMAGE_FORMAT,
+                                                         //     IMAGE_COMPRESSION(+range), PP_INDEX
+    std::unique_ptr<PvParam<int16>>   prmGainIndex_{}; // Can change: BIT_DEPTH, GAIN_NAME, SCAN_MODE,
+                                                       //     GAIN_MULT_FACTOR, TEMP_SETPOINT
+    std::unique_ptr<PvParam<uns16>>   prmGainMultFactor_{};
+    std::unique_ptr<PvParam<int16>>   prmBitDepth_{};
+    std::unique_ptr<PvEnumParam>      prmImageFormat_{};
+    std::unique_ptr<PvEnumParam>      prmImageCompression_{};
+    std::unique_ptr<PvParam<int16>>   prmBitDepthHost_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmImageFormatHost_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmImageCompressionHost_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmReadoutPort_; // Can change: SPDTAB_INDEX(+range)
-    PvParam<int16>*   prmSpdTabIndex_; // Can change: PIX_TIME, SPDTAB_NAME, GAIN_INDEX(+range), ADC_OFFSET,
-                                       //     COLOR_MODE, IMAGE_FORMAT, IMAGE_COMPRESSION(+range), PP_INDEX
-    PvParam<int16>*   prmGainIndex_; // Can change: BIT_DEPTH, GAIN_NAME, SCAN_MODE, GAIN_MULT_FACTOR, TEMP_SETPOINT
-    PvParam<uns16>*   prmGainMultFactor_;
-    std::unique_ptr<PvParam<int16>>   prmBitDepth_;
-    std::unique_ptr<PvEnumParam>      prmImageFormat_;
-    std::unique_ptr<PvEnumParam>      prmImageCompression_;
-    std::unique_ptr<PvParam<int16>>   prmBitDepthHost_; // Updated after pl_exp_setup_*()
-    std::unique_ptr<PvEnumParam>      prmImageFormatHost_; // Updated after pl_exp_setup_*()
-    std::unique_ptr<PvEnumParam>      prmImageCompressionHost_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmColorMode_{};
+    std::unique_ptr<PvParam<ulong64>> prmFrameBufSize_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmColorMode_;
-    PvParam<ulong64>* prmFrameBufSize_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<int16>>   prmTemp_{};
+    std::unique_ptr<PvParam<int16>>   prmTempSetpoint_{};
 
-    PvParam<int16>*   prmTemp_;
-    PvParam<int16>*   prmTempSetpoint_;
+    std::unique_ptr<PvEnumParam>      prmBinningSer_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmBinningPar_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmBinningSer_; // Updated after pl_exp_setup_*()
-    PvEnumParam*      prmBinningPar_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns16>>   prmRoiCount_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<rs_bool>> prmMetadataEnabled_{};
+    std::unique_ptr<PvParam<rs_bool>> prmMetadataResetTimestamp_{};
+    std::unique_ptr<PvParam<rs_bool>> prmCentroidsEnabled_{};
+    std::unique_ptr<PvParam<uns16>>   prmCentroidsRadius_{};
+    std::unique_ptr<PvParam<uns16>>   prmCentroidsCount_{};
+    std::unique_ptr<PvEnumParam>      prmCentroidsMode_{};
+    std::unique_ptr<PvEnumParam>      prmCentroidsBgCount_{};
+    std::unique_ptr<PvParam<uns32>>   prmCentroidsThreshold_{};
 
-    PvParam<uns16>*   prmRoiCount_; // Updated after pl_exp_setup_*()
-    PvParam<rs_bool>* prmMetadataEnabled_;
-    PvParam<rs_bool>* prmMetadataResetTimestamp_;
-    PvParam<rs_bool>* prmCentroidsEnabled_;
-    PvParam<uns16>*   prmCentroidsRadius_;
-    PvParam<uns16>*   prmCentroidsCount_;
-    PvEnumParam*      prmCentroidsMode_;
-    PvEnumParam*      prmCentroidsBgCount_;
-    PvParam<uns32>*   prmCentroidsThreshold_;
+    std::unique_ptr<PvEnumParam>      prmFanSpeedSetpoint_{}; // Can change: TEMP_SETPOINT
 
-    PvEnumParam*      prmFanSpeedSetpoint_; // Can change: TEMP_SETPOINT
+    std::unique_ptr<PvEnumParam>      prmTrigTabSignal_{}; // Can change: LAST_MUXED_SIGNAL(+range)
+    std::unique_ptr<PvParam<uns8>>    prmLastMuxedSignal_{};
 
-    PvEnumParam*      prmTrigTabSignal_; // Can change: LAST_MUXED_SIGNAL(+range)
-    PvParam<uns8>*    prmLastMuxedSignal_;
+    std::unique_ptr<PvEnumParam>      prmPMode_{}; // Can change: TEMP_SETPOINT
+    std::unique_ptr<PvParam<int16>>   prmAdcOffset_{};
 
-    PvEnumParam*      prmPMode_; // Can change: TEMP_SETPOINT
-    PvParam<int16>*   prmAdcOffset_;
+    std::unique_ptr<PvEnumParam>      prmScanMode_{}; // Can change: SCAN_LINE_DELAY(all)/SCAN_WIDTH(all), SCAN_DIRECTION, SCAN_DIRECTION_RESET
+    std::unique_ptr<PvEnumParam>      prmScanDirection_{};
+    std::unique_ptr<PvParam<rs_bool>> prmScanDirectionReset_{};
+    std::unique_ptr<PvParam<uns16>>   prmScanLineDelay_{}; // Can change: SCAN_WIDTH, SCAN_LINE_TIME and updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns16>>   prmScanWidth_{}; // Can change: SCAN_LINE_DELAY, SCAN_LINE_TIME and updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<long64>>  prmScanLineTime_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmScanMode_; // Can change: SCAN_LINE_DELAY(all)/SCAN_WIDTH(all), SCAN_DIRECTION, SCAN_DIRECTION_RESET
-    PvEnumParam*      prmScanDirection_;
-    PvParam<rs_bool>* prmScanDirectionReset_;
-    PvParam<uns16>*   prmScanLineDelay_; // Can change: SCAN_WIDTH, SCAN_LINE_TIME and updated after pl_exp_setup_*()
-    PvParam<uns16>*   prmScanWidth_; // Can change: SCAN_LINE_DELAY, SCAN_LINE_TIME and updated after pl_exp_setup_*()
-    PvParam<long64>*  prmScanLineTime_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns32>>   prmReadoutTime_{}; // Available/updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<long64>>  prmClearingTime_{}; // Available/updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<long64>>  prmPostTriggerDelay_{}; // Available/updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<long64>>  prmPreTriggerDelay_{}; // Available/updated after pl_exp_setup_*()
 
-    PvParam<uns32>*   prmReadoutTime_; // Available/updated after pl_exp_setup_*()
-    PvParam<long64>*  prmClearingTime_; // Available/updated after pl_exp_setup_*()
-    PvParam<long64>*  prmPostTriggerDelay_; // Available/updated after pl_exp_setup_*()
-    PvParam<long64>*  prmPreTriggerDelay_; // Available/updated after pl_exp_setup_*()
-
-    std::unique_ptr<PvParam<rs_bool>> prmHostFrameSummingEnabled_;
-    std::unique_ptr<PvParam<uns32>>   prmHostFrameSummingCount_;
-    std::unique_ptr<PvEnumParam>      prmHostFrameSummingFormat_;
+    std::unique_ptr<PvParam<rs_bool>> prmHostFrameSummingEnabled_{};
+    std::unique_ptr<PvParam<uns32>>   prmHostFrameSummingCount_{};
+    std::unique_ptr<PvEnumParam>      prmHostFrameSummingFormat_{};
 
     // List of post processing features
     std::vector<PpParam> PostProc_; // PP_PARAM can change: BIT_DEPTH, IMAGE_FORMAT
