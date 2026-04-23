@@ -3187,7 +3187,7 @@ int Universal::OnAlgorithmCfaMask(MM::PropertyBase* pProp, MM::ActionType eAct)
         }
         else
         {
-            acqCfgNew_.DebayerAlgMask = COLOR_RGGB;
+            acqCfgNew_.DebayerAlgMask = CFA_RGGB;
         }
         nRet = applyAcqConfig();
     }
