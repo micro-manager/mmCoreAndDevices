@@ -419,6 +419,29 @@ TEST_CASE("clearCircularBuffer resets remaining count", "[CircularBuffer]") {
    CHECK(c.getRemainingImageCount() == 0);
 }
 
+TEST_CASE("Overflow is sticky until buffer is cleared", "[CircularBuffer]") {
+   StubCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setCircularBufferMemoryFootprint(1);
+   c.initializeCircularBuffer();
+
+   long total = c.getBufferTotalCapacity();
+   REQUIRE(total == 4);
+   for (long i = 0; i < total; ++i)
+      REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   REQUIRE(cam.InsertTestImage() == DEVICE_BUFFER_OVERFLOW);
+
+   // Popping one image frees a slot, but insert should still fail until clear.
+   REQUIRE(c.popNextImage() != nullptr);
+   CHECK(cam.InsertTestImage() == DEVICE_BUFFER_OVERFLOW);
+
+   c.clearCircularBuffer();
+   CHECK(cam.InsertTestImage() == DEVICE_OK);
+}
+
 TEST_CASE("clearCircularBuffer resets overflow flag", "[CircularBuffer]") {
    StubCamera cam;
    MockAdapterWithDevices adapter{{"cam", &cam}};

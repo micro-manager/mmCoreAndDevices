@@ -211,11 +211,14 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
  
     {
        std::lock_guard<std::mutex> guard(bufferLock_);
- 
+
+       if (overflow_)
+          return false;
+
        // check image dimensions
        if (width != width_ || height != height_ || byteDepth != pixDepth_)
           throw CMMError("Incompatible image dimensions in the circular buffer", MMERR_CircularBufferIncompatibleImage);
- 
+
        bool overflowed = (insertIndex_ - saveIndex_) >= static_cast<long>(frameArray_.size());
        if (overflowed) {
          if (overwriteData_) {
