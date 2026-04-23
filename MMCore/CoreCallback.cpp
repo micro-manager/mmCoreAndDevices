@@ -28,6 +28,7 @@
 #include "CircularBuffer.h"
 #include "CoreCallback.h"
 #include "DeviceManager.h"
+#include "DeviceConformance/SeqAcqTestMonitor.h"
 #include "Notification.h"
 #include "SynchronizedConfiguration.h"
 
@@ -227,6 +228,11 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
    const char* serializedMetadata)
 {
+   if (auto* monitor = core_->seqAcqTestMonitor_.load(std::memory_order_acquire)) {
+      if (monitor->IsMonitoring(caller))
+         return monitor->OnInsertImage();
+   }
+
    Metadata origMd;
    if (serializedMetadata)
    {
@@ -267,8 +273,10 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
    return core_->cbuf_->Initialize(w, h, pixDepth);
 }
 
-int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
+int CoreCallback::AcqFinished(const MM::Device* caller, int statusCode)
 {
+   (void)statusCode;
+
    std::shared_ptr<DeviceInstance> camera;
    try
    {
@@ -279,6 +287,13 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
       LOG_ERROR(core_->coreLogger_) <<
          "AcqFinished() called from unregistered device";
       return DEVICE_ERR;
+   }
+
+   if (auto* monitor = core_->seqAcqTestMonitor_.load(std::memory_order_acquire)) {
+      if (monitor->IsMonitoring(caller)) {
+         monitor->OnAcqFinished();
+         return DEVICE_OK;
+      }
    }
 
    std::shared_ptr<DeviceInstance> currentCamera =
@@ -340,6 +355,12 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
 
 int CoreCallback::PrepareForAcq(const MM::Device* caller)
 {
+   if (auto* monitor = core_->seqAcqTestMonitor_.load(std::memory_order_acquire)) {
+      if (monitor->IsMonitoring(caller)) {
+         return monitor->OnPrepareForAcq();
+      }
+   }
+
    if (core_->autoShutter_)
    {
       std::shared_ptr<ShutterInstance> shutter =
