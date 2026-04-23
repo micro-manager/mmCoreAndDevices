@@ -447,15 +447,6 @@ int Universal::Initialize()
                 return LogPvcamError(__LINE__, "Second PVCAM init failed");
         }
         PVCAM_initialized_ = true;
-
-#ifdef PVCAM_ADAPTER_CUSTOM_BUILD
-        // If this is a custom build show a warning popup before initializing the adapter.
-        char msg[256];
-        snprintf(msg, sizeof(msg),
-            "You are using a Micro-Manager with custom PVCAM adapter build.\nAdapter version %u.%u.%u.",
-            PVCAM_ADAPTER_VERSION_MAJOR, PVCAM_ADAPTER_VERSION_MINOR, PVCAM_ADAPTER_VERSION_REVISION);
-        MessageBoxA(NULL, msg, "Warning", MB_OK | MB_ICONWARNING | MB_SETFOREGROUND);
-#endif
     }
     else
     {
