@@ -188,6 +188,9 @@
     <ClInclude Include="ImageMetadata.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SerializedMetadata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="MMCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>

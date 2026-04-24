@@ -29,6 +29,7 @@
 #include "CoreCallback.h"
 #include "DeviceManager.h"
 #include "Notification.h"
+#include "SerializedMetadata.h"
 #include "SynchronizedConfiguration.h"
 
 #include "DeviceUtils.h"
@@ -219,24 +220,18 @@ CoreCallback::Sleep(const MM::Device*, double intervalMs)
 
 
 /**
- * Get the metadata tags attached to device caller, and merge them with metadata
- * in pMd (if not null). Returns a metadata object.
+ * Append the metadata tags attached to device caller to md.
  */
-Metadata
-CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
+void
+CoreCallback::AddCameraMetadata(const MM::Device* caller,
+      SerializedMetadata& md)
 {
-   Metadata newMD;
-   if (pMd)
-   {
-      newMD = *pMd;
-   }
-
    std::shared_ptr<CameraInstance> camera =
       std::static_pointer_cast<CameraInstance>(
             core_->deviceManager_->GetDevice(caller));
 
    std::string label = camera->GetLabel();
-   newMD.PutImageTag(MM::g_Keyword_Metadata_CameraLabel, label);
+   md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
 
    std::string serializedMD;
    try
@@ -245,14 +240,10 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller, const Metadata* pMd)
    }
    catch (const CMMError&)
    {
-      return newMD;
+      return;
    }
 
-   Metadata devMD;
-   devMD.Restore(serializedMD.c_str());
-   newMD.Merge(devMD);
-
-   return newMD;
+   md.AppendSerialized(serializedMD.c_str());
 }
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf,
@@ -262,15 +253,17 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    return InsertImage(caller, buf, width, height, bytesPerPixel, 1, serializedMetadata);
 }
 
-Metadata CoreCallback::BuildSequenceImageMetadata(const MM::Device* caller,
+SerializedMetadata
+CoreCallback::BuildSequenceImageMetadata(const MM::Device* caller,
    unsigned width, unsigned height,
    unsigned byteDepth, unsigned nComponents,
-   const Metadata* origMd)
+   const char* origSerializedMd)
 {
-   Metadata md = AddCameraMetadata(caller, origMd);
+   SerializedMetadata md(origSerializedMd);
+   AddCameraMetadata(caller, md);
 
-   md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
-   md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
+   md.AddTag(MM::g_Keyword_Metadata_Width, width);
+   md.AddTag(MM::g_Keyword_Metadata_Height, height);
 
    const char* pixelType = MM::g_Keyword_PixelType_Unknown;
    if (byteDepth == 1)
@@ -282,12 +275,12 @@ Metadata CoreCallback::BuildSequenceImageMetadata(const MM::Device* caller,
                                      : MM::g_Keyword_PixelType_RGB32;
    else if (byteDepth == 8)
       pixelType = MM::g_Keyword_PixelType_RGB64;
-   md.PutImageTag(MM::g_Keyword_PixelType, pixelType);
+   md.AddTag(MM::g_Keyword_PixelType, pixelType);
 
    // Note: It is not ideal to use local time. I think this tag is rarely
    // used. Consider replacing with UTC (micro)seconds-since-epoch (with
    // different tag key) after addressing current usage.
-   md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore,
+   md.AddTag(MM::g_Keyword_Metadata_TimeInCore,
          FormatLocalTime(std::chrono::system_clock::now()));
 
    {
@@ -296,14 +289,14 @@ Metadata CoreCallback::BuildSequenceImageMetadata(const MM::Device* caller,
       {
          using namespace std::chrono;
          auto elapsed = steady_clock::now() - startTime_;
-         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+         md.AddTag(MM::g_Keyword_Elapsed_Time_ms,
             std::to_string(duration_cast<milliseconds>(elapsed).count()));
       }
 
-      const std::string cameraLabel =
-         md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
-      long& counter = imageNumbers_[cameraLabel];
-      md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber,
+      auto cameraLabel = md.GetTag(MM::g_Keyword_Metadata_CameraLabel);
+      assert(cameraLabel.has_value());
+      long& counter = imageNumbers_[std::string(*cameraLabel)];
+      md.AddTag(MM::g_Keyword_Metadata_ImageNumber,
          CDeviceUtils::ConvertToString(counter));
       ++counter;
    }
@@ -315,23 +308,18 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
    const char* serializedMetadata)
 {
-   Metadata origMd;
-   if (serializedMetadata)
-   {
-      origMd.Restore(serializedMetadata);
-   }
-
    try
    {
-      Metadata md = BuildSequenceImageMetadata(
-         caller, width, height, bytesPerPixel, nComponents, &origMd);
+      SerializedMetadata md = BuildSequenceImageMetadata(
+         caller, width, height, bytesPerPixel, nComponents, serializedMetadata);
 
       MM::ImageProcessor* ip = GetImageProcessor(caller);
       if (ip != nullptr)
       {
          ip->Process(const_cast<unsigned char*>(buf), width, height, bytesPerPixel);
       }
-      if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, nComponents, &md))
+      if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, nComponents,
+            md.View()))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;

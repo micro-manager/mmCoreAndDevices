@@ -126,8 +126,7 @@ bool CameraInstance::IsCapturing() { RequireInitialized(__func__); return GetImp
 std::string CameraInstance::GetTags()
 {
    RequireInitialized(__func__);
-   // TODO Probably makes sense to deserialize here.
-   // Also note the danger of limiting serialized metadata to MM::MaxStrLength
+   // TODO Note the danger of limiting serialized metadata to MM::MaxStrLength
    // (CCameraBase takes no precaution to limit string length; it is an
    // interface bug).
    DeviceStringBuffer serializedMetadataBuf(this, "GetTags");

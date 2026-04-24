@@ -151,6 +151,7 @@
     <ClInclude Include="ErrorCodes.h" />
     <ClInclude Include="FrameBuffer.h" />
     <ClInclude Include="ImageMetadata.h" />
+    <ClInclude Include="SerializedMetadata.h" />
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImpl.h" />

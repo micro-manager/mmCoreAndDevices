@@ -26,6 +26,7 @@ mmcore_test_sources = files(
     'Notification-Tests.cpp',
     'PixelSize-Tests.cpp',
     'SequenceAcquisition-Tests.cpp',
+    'SerializedMetadata-Tests.cpp',
     'StubDevices-Tests.cpp',
     'UnloadDevice-Tests.cpp',
 )

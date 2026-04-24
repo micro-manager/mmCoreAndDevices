@@ -3300,7 +3300,7 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
    const mmi::ImgBuffer* pBuf = cbuf_->GetTopImageBuffer(channel);
    if (pBuf != 0)
    {
-      md = pBuf->GetMetadata();
+      md.Restore(pBuf->GetSerializedMetadata().c_str());
       return const_cast<unsigned char*>(pBuf->GetPixels());
    }
    else
@@ -3341,7 +3341,7 @@ void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const MMCORE
    const mmi::ImgBuffer* pBuf = cbuf_->GetNthFromTopImageBuffer(n);
    if (pBuf != 0)
    {
-      md = pBuf->GetMetadata();
+      md.Restore(pBuf->GetSerializedMetadata().c_str());
       return const_cast<unsigned char*>(pBuf->GetPixels());
    }
    else
@@ -3386,7 +3386,7 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) MM
    const mmi::ImgBuffer* pBuf = cbuf_->GetNextImageBuffer(channel);
    if (pBuf != 0)
    {
-      md = pBuf->GetMetadata();
+      md.Restore(pBuf->GetSerializedMetadata().c_str());
       return const_cast<unsigned char*>(pBuf->GetPixels());
    }
    else

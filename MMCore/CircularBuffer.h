@@ -32,6 +32,7 @@
 
 #include <memory>
 #include <mutex>
+#include <string_view>
 #include <vector>
 
 namespace mmcore {
@@ -62,7 +63,7 @@ public:
 
    bool InsertImage(const unsigned char* pixArray,
       unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
-      const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError);
+      std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError);
    const unsigned char* GetTopImage() const;
    const unsigned char* GetNextImage();
    const ImgBuffer* GetTopImageBuffer(unsigned channel) const;

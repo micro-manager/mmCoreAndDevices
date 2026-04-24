@@ -18,9 +18,9 @@
 
 #pragma once
 
-#include "ImageMetadata.h"
-
 #include <memory>
+#include <string>
+#include <string_view>
 
 namespace mmcore {
 namespace internal {
@@ -31,7 +31,7 @@ class ImgBuffer
    unsigned int width_;
    unsigned int height_;
    unsigned int pixDepth_;
-   Metadata metadata_;
+   std::string serializedMetadata_;
 
 public:
    ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth);
@@ -46,8 +46,10 @@ public:
    void Resize(unsigned xSize, unsigned ySize, unsigned pixDepth);
    void Resize(unsigned xSize, unsigned ySize);
 
-   void SetMetadata(const Metadata& md);
-   const Metadata& GetMetadata() const {return metadata_;}
+   void SetSerializedMetadata(std::string_view serialized);
+   const std::string& GetSerializedMetadata() const {
+      return serializedMetadata_;
+   }
 
 private:
    ImgBuffer& operator=(const ImgBuffer&);

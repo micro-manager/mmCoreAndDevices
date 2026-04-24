@@ -69,13 +69,9 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize)
    memset(pixels_.get(), 0, width_ * height_ * pixDepth_);
 }
 
-void ImgBuffer::SetMetadata(const Metadata& md)
+void ImgBuffer::SetSerializedMetadata(std::string_view serialized)
 {
-   //metadata_ = md;
-   // Serialize/Restore instead of =operator used to avoid object new/delete
-   // issues across the DLL boundary (on Windows)
-   // TODO: this is inefficient and should be revised
-    metadata_.Restore(md.Serialize().c_str());
+   serializedMetadata_.assign(serialized);
 }
 
 
