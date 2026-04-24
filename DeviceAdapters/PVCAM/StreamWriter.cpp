@@ -330,7 +330,7 @@ void StreamWriter::StopInternal()
 
 int StreamWriter::GenerateNewSessionId(std::string& sessionId) const
 {
-    const std::time_t time = std::time(NULL);
+    const std::time_t time = std::time(nullptr);
 
     std::tm tm;
     // Thread-safe conversion to local time

@@ -234,12 +234,12 @@ public:
     }
 
 protected:
-    smart_stream_type mCurrent  { 0, NULL };
-    smart_stream_type mMax      { 0, NULL };
-    smart_stream_type mMin      { 0, NULL };
+    smart_stream_type mCurrent  { 0, nullptr };
+    smart_stream_type mMax      { 0, nullptr };
+    smart_stream_type mMin      { 0, nullptr };
     uns32             mCount    { 0 }; // ATTR_COUNT is always TYPE_UNS32
-    smart_stream_type mIncrement{ 0, NULL };
-    smart_stream_type mDefault  { 0, NULL };
+    smart_stream_type mIncrement{ 0, nullptr };
+    smart_stream_type mDefault  { 0, nullptr };
 };
 
 /**

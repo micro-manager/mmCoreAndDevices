@@ -33,7 +33,7 @@ Task::Task(std::shared_ptr<Semaphore> semaphore, size_t taskIndex, size_t totalT
     totalTaskCount_(totalTaskCount),
     usedTaskCount_(totalTaskCount)
 {
-    assert(semaphore != NULL);
+    assert(semaphore);
     assert(totalTaskCount > 0);
     assert(taskIndex < totalTaskCount);
 }

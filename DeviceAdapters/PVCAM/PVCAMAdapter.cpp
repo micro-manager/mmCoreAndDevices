@@ -54,8 +54,8 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
 {
-    if (deviceName == 0)
-        return NULL;
+    if (!deviceName)
+        return nullptr;
 
     if (strcmp(deviceName, g_DeviceUniversal_1) == 0)
         return new Universal(0, g_DeviceUniversal_1);
@@ -66,5 +66,5 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     else if (strcmp(deviceName, g_DeviceUniversal_4) == 0)
         return new Universal(3, g_DeviceUniversal_4);
 
-    return NULL;
+    return nullptr;
 }
