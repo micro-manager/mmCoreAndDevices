@@ -233,3 +233,122 @@ TEST_CASE("RemoveTag removes a previously added device tag") {
    c.getLastImageMD(md);
    CHECK(md.GetKeys().size() == 7);
 }
+
+TEST_CASE("ImageNumber is tracked per camera across interleaved inserts") {
+   StubCamera camA;
+   StubCamera camB;
+   MockAdapterWithDevices adapter{{"camA", &camA}, {"camB", &camB}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("camA");
+   c.initializeCircularBuffer();
+
+   REQUIRE(camA.InsertTestImage() == DEVICE_OK);
+   REQUIRE(camB.InsertTestImage() == DEVICE_OK);
+   REQUIRE(camA.InsertTestImage() == DEVICE_OK);
+   REQUIRE(camB.InsertTestImage() == DEVICE_OK);
+
+   struct Expected { const char* label; const char* number; };
+   const Expected expected[] = {
+      {"camA", "0"}, {"camB", "0"}, {"camA", "1"}, {"camB", "1"},
+   };
+   for (const auto& e : expected) {
+      Metadata md;
+      c.popNextImageMD(md);
+      CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue() ==
+            e.label);
+      CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
+            e.number);
+   }
+}
+
+TEST_CASE("ImageNumber resets after clearCircularBuffer") {
+   StubCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.initializeCircularBuffer();
+
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+
+   c.clearCircularBuffer();
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+
+   Metadata md;
+   c.popNextImageMD(md);
+   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() == "0");
+}
+
+TEST_CASE("ImageNumber resets after re-initializeCircularBuffer") {
+   StubCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.initializeCircularBuffer();
+
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+
+   c.initializeCircularBuffer();
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+
+   Metadata md;
+   c.popNextImageMD(md);
+   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() == "0");
+}
+
+TEST_CASE("ImageNumber is monotonic across overwrite-on-overflow wrap") {
+   StubCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setCircularBufferMemoryFootprint(1);
+   // stopOnOverflow=false enables overwrite mode
+   c.startSequenceAcquisition(100, 0.0, false);
+
+   long total = c.getBufferTotalCapacity();
+   REQUIRE(total == 4);
+   for (long i = 0; i < total + 1; ++i)
+      REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+
+   // The wrap-on-overflow path discards buffered images, so only the last
+   // insert remains. Under the old code, the mid-acquisition wrap also reset
+   // the per-camera ImageNumber counter, producing "0". Under the new code,
+   // the counter is independent of buffer state, so the retained image
+   // carries its original acquisition index.
+   REQUIRE(c.getRemainingImageCount() == 1);
+   Metadata md;
+   c.popNextImageMD(md);
+   CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
+         std::to_string(total));
+}
+
+TEST_CASE("ImageNumbers are contiguous under stop-on-overflow") {
+   StubCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setCircularBufferMemoryFootprint(1);
+   c.initializeCircularBuffer();
+
+   long total = c.getBufferTotalCapacity();
+   REQUIRE(total == 4);
+
+   for (long i = 0; i < total; ++i)
+      REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   REQUIRE(cam.InsertTestImage() == DEVICE_BUFFER_OVERFLOW);
+   REQUIRE(cam.InsertTestImage() == DEVICE_BUFFER_OVERFLOW);
+
+   for (long i = 0; i < total; ++i) {
+      Metadata md;
+      c.popNextImageMD(md);
+      CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
+            std::to_string(i));
+   }
+}

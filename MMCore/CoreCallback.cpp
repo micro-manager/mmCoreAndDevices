@@ -36,6 +36,8 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstdio>
+#include <ctime>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -47,9 +49,46 @@ namespace internal {
 
 
 CoreCallback::CoreCallback(CMMCore* c) :
-   core_(c)
+   core_(c),
+   startTime_(std::chrono::steady_clock::now())
 {
    assert(core_);
+}
+
+
+void CoreCallback::ResetImageInsertionState()
+{
+   std::lock_guard<std::mutex> guard(imageInsertionStateMutex_);
+   imageNumbers_.clear();
+   startTime_ = std::chrono::steady_clock::now();
+}
+
+
+static std::string FormatLocalTime(std::chrono::time_point<std::chrono::system_clock> tp) {
+   using namespace std::chrono;
+   auto us = duration_cast<microseconds>(tp.time_since_epoch());
+   auto secs = duration_cast<seconds>(us);
+   auto whole = duration_cast<microseconds>(secs);
+   auto frac = static_cast<int>((us - whole).count());
+
+   // As of C++14/17, it is simpler (and probably faster) to use C functions for
+   // date-time formatting
+
+   std::time_t t(secs.count()); // time_t is seconds on platforms we support
+   std::tm *ptm;
+#ifdef _WIN32 // Windows localtime() is documented thread-safe
+   ptm = std::localtime(&t);
+#else // POSIX has localtime_r()
+   std::tm tmstruct;
+   ptm = localtime_r(&t, &tmstruct);
+#endif
+
+   // Format as "yyyy-mm-dd hh:mm:ss.uuuuuu" (26 chars)
+   const char *timeFmt = "%Y-%m-%d %H:%M:%S";
+   char buf[32];
+   std::size_t len = std::strftime(buf, sizeof(buf), timeFmt, ptm);
+   std::snprintf(buf + len, sizeof(buf) - len, ".%06d", frac);
+   return buf;
 }
 
 
@@ -223,6 +262,55 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    return InsertImage(caller, buf, width, height, bytesPerPixel, 1, serializedMetadata);
 }
 
+Metadata CoreCallback::BuildSequenceImageMetadata(const MM::Device* caller,
+   unsigned width, unsigned height,
+   unsigned byteDepth, unsigned nComponents,
+   const Metadata* origMd)
+{
+   Metadata md = AddCameraMetadata(caller, origMd);
+
+   md.PutImageTag(MM::g_Keyword_Metadata_Width, width);
+   md.PutImageTag(MM::g_Keyword_Metadata_Height, height);
+
+   const char* pixelType = MM::g_Keyword_PixelType_Unknown;
+   if (byteDepth == 1)
+      pixelType = MM::g_Keyword_PixelType_GRAY8;
+   else if (byteDepth == 2)
+      pixelType = MM::g_Keyword_PixelType_GRAY16;
+   else if (byteDepth == 4)
+      pixelType = (nComponents == 1) ? MM::g_Keyword_PixelType_GRAY32
+                                     : MM::g_Keyword_PixelType_RGB32;
+   else if (byteDepth == 8)
+      pixelType = MM::g_Keyword_PixelType_RGB64;
+   md.PutImageTag(MM::g_Keyword_PixelType, pixelType);
+
+   // Note: It is not ideal to use local time. I think this tag is rarely
+   // used. Consider replacing with UTC (micro)seconds-since-epoch (with
+   // different tag key) after addressing current usage.
+   md.PutImageTag(MM::g_Keyword_Metadata_TimeInCore,
+         FormatLocalTime(std::chrono::system_clock::now()));
+
+   {
+      std::lock_guard<std::mutex> guard(imageInsertionStateMutex_);
+      if (!md.HasTag(MM::g_Keyword_Elapsed_Time_ms))
+      {
+         using namespace std::chrono;
+         auto elapsed = steady_clock::now() - startTime_;
+         md.PutImageTag(MM::g_Keyword_Elapsed_Time_ms,
+            std::to_string(duration_cast<milliseconds>(elapsed).count()));
+      }
+
+      const std::string cameraLabel =
+         md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue();
+      long& counter = imageNumbers_[cameraLabel];
+      md.PutImageTag(MM::g_Keyword_Metadata_ImageNumber,
+         CDeviceUtils::ConvertToString(counter));
+      ++counter;
+   }
+
+   return md;
+}
+
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf,
    unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
    const char* serializedMetadata)
@@ -233,15 +321,16 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
       origMd.Restore(serializedMetadata);
    }
 
-   try 
+   try
    {
-      Metadata md = AddCameraMetadata(caller, &origMd);
+      Metadata md = BuildSequenceImageMetadata(
+         caller, width, height, bytesPerPixel, nComponents, &origMd);
 
-         MM::ImageProcessor* ip = GetImageProcessor(caller);
-         if( NULL != ip)
-         {
-            ip->Process(const_cast<unsigned char*>(buf), width, height, bytesPerPixel);
-         }
+      MM::ImageProcessor* ip = GetImageProcessor(caller);
+      if (ip != nullptr)
+      {
+         ip->Process(const_cast<unsigned char*>(buf), width, height, bytesPerPixel);
+      }
       if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, nComponents, &md))
          return DEVICE_OK;
       else

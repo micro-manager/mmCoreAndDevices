@@ -730,7 +730,7 @@ private:
    std::unique_ptr<PixelSizeConfigGroup> pixelSizeGroup_;
    std::unique_ptr<mmcore::internal::CorePropertyCollection> properties_;
    std::unique_ptr<mmcore::internal::CircularBuffer> cbuf_;
-   std::unique_ptr<MM::Core> callback_;
+   std::unique_ptr<mmcore::internal::CoreCallback> callback_;
 
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
