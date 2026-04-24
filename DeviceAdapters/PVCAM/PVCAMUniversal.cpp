@@ -207,6 +207,8 @@ const char* g_Keyword_HostFrameSummingFormat    = "FrameSummingFormat";
 // - So far only parameters in double range can be used
 // Do not use these for static camera properties that never changes. It's more efficient to create
 // a simple read-only MM property without a handler (see examples in Initialize())
+struct ParamNameIdPair
+{   const char* name;      const char* debugName;      uns32 id;                };
 constexpr ParamNameIdPair g_UniversalParams[] = {
     {"PreampDelay",        "PARAM_PREAMP_DELAY",       PARAM_PREAMP_DELAY},       // UNS16
     {"PreampOffLimit",     "PARAM_PREAMP_OFF_CONTROL", PARAM_PREAMP_OFF_CONTROL}, // UNS32 // preamp is off during exposure if exposure time is less than this

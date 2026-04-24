@@ -92,7 +92,7 @@ private:
     bool waitNextNotification(NotificationEntry& e);
 
 private:
-    Universal* const          universal_;
+    Universal* const          camera_;
 
     std::condition_variable   frameReadyCondition_{};
     std::mutex                threadMutex_{};

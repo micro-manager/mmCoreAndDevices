@@ -10,7 +10,7 @@
 class PpParam
 {
 public:
-    PpParam(const std::string& name, short featIndex, short propIndex,
+    explicit PpParam(const std::string& name, short featIndex, short propIndex,
             bool isBoolean, unsigned int featId, unsigned int propId);
 
     const std::string& GetName() const;

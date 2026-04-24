@@ -3,7 +3,7 @@
 #include "PVCAMAdapter.h"
 
 NotificationThread::NotificationThread(Universal* pCamera)
-    : universal_(pCamera)
+    : camera_(pCamera)
 {
 }
 
@@ -59,7 +59,7 @@ int NotificationThread::svc()
         NotificationEntry n;
         if (waitNextNotification(n))
         {
-            universal_->ProcessNotification(n);
+            camera_->ProcessNotification(n);
         }
         else
         {   // Request stop flagged

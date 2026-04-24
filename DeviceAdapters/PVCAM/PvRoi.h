@@ -16,10 +16,12 @@ public:
     * @param sensorRgnWidth ROI width in sensor coordinate system
     * @param sensorRgnHeight ROI height in sensor coordinate system
     */
-    PvRoi(uns16 sensorRgnX, uns16 sensorRgnY, uns16 sensorRgnWidth, uns16 sensorRgnHeight) :
-        m_sensorRgnX(sensorRgnX), m_sensorRgnY(sensorRgnY),
-        m_sensorRgnWidth(sensorRgnWidth), m_sensorRgnHeight(sensorRgnHeight),
-        m_binX(1), m_binY(1)
+    explicit PvRoi(uns16 sensorRgnX, uns16 sensorRgnY,
+            uns16 sensorRgnWidth, uns16 sensorRgnHeight)
+        : m_sensorRgnX(sensorRgnX),
+        m_sensorRgnY(sensorRgnY),
+        m_sensorRgnWidth(sensorRgnWidth),
+        m_sensorRgnHeight(sensorRgnHeight)
     {
     }
     /**
@@ -31,10 +33,14 @@ public:
     * @param binX Serial / x-direction binning to be used
     * @param binY Parallel / y-direction binning to be used
     */
-    PvRoi(uns16 sensorRgnX, uns16 sensorRgnY, uns16 sensorRgnWidth, uns16 sensorRgnHeight, uns16 binX, uns16 binY) :
-        m_sensorRgnX(sensorRgnX), m_sensorRgnY(sensorRgnY),
-        m_sensorRgnWidth(sensorRgnWidth), m_sensorRgnHeight(sensorRgnHeight),
-        m_binX(binX), m_binY(binY)
+    explicit PvRoi(uns16 sensorRgnX, uns16 sensorRgnY,
+            uns16 sensorRgnWidth, uns16 sensorRgnHeight, uns16 binX, uns16 binY)
+        : m_sensorRgnX(sensorRgnX),
+        m_sensorRgnY(sensorRgnY),
+        m_sensorRgnWidth(sensorRgnWidth),
+        m_sensorRgnHeight(sensorRgnHeight),
+        m_binX(binX),
+        m_binY(binY)
     {
     }
 
@@ -73,7 +79,8 @@ public:
     * @param sensorRgnWidth ROI width in sensor coordinate system
     * @param sensorRgnHeight ROI height in sensor coordinate system
     */
-    void SetSensorRgn(uns16 sensorRgnX, uns16 sensorRgnY, uns16 sensorRgnWidth, uns16 sensorRgnHeight)
+    void SetSensorRgn(uns16 sensorRgnX, uns16 sensorRgnY,
+            uns16 sensorRgnWidth, uns16 sensorRgnHeight)
     {
         m_sensorRgnX = sensorRgnX;
         m_sensorRgnY = sensorRgnY;
@@ -101,9 +108,9 @@ public:
     */
     void AdjustCoords()
     {
-        m_sensorRgnX = (uns16)(m_sensorRgnX / m_binX) * m_binX;
-        m_sensorRgnWidth = (uns16)(m_sensorRgnWidth / m_binX) * m_binX;
-        m_sensorRgnY = (uns16)(m_sensorRgnY / m_binY) * m_binY;
+        m_sensorRgnX      = (uns16)(m_sensorRgnX      / m_binX) * m_binX;
+        m_sensorRgnWidth  = (uns16)(m_sensorRgnWidth  / m_binX) * m_binX;
+        m_sensorRgnY      = (uns16)(m_sensorRgnY      / m_binY) * m_binY;
         m_sensorRgnHeight = (uns16)(m_sensorRgnHeight / m_binY) * m_binY;
     }
 
@@ -121,9 +128,12 @@ public:
 
     bool Equals(const PvRoi& other) const
     {
-        if (m_sensorRgnX == other.m_sensorRgnX && m_sensorRgnY == other.m_sensorRgnY &&
-            m_sensorRgnWidth == other.m_sensorRgnWidth && m_sensorRgnHeight == other.m_sensorRgnHeight &&
-            m_binX == other.m_binX && m_binY == other.m_binY)
+        if (       m_sensorRgnX      == other.m_sensorRgnX
+                && m_sensorRgnY      == other.m_sensorRgnY
+                && m_sensorRgnWidth  == other.m_sensorRgnWidth
+                && m_sensorRgnHeight == other.m_sensorRgnHeight
+                && m_binX            == other.m_binX
+                && m_binY            == other.m_binY)
         {
             return true;
         }
@@ -132,9 +142,12 @@ public:
 
     bool IsValid(uns16 sensorWidth, uns16 sensorHeight) const
     {
-        if (m_sensorRgnWidth > sensorWidth || m_sensorRgnHeight > sensorHeight ||
-            m_sensorRgnX > sensorWidth || m_sensorRgnY > sensorHeight ||
-            m_sensorRgnX + m_sensorRgnWidth > sensorWidth || m_sensorRgnY + m_sensorRgnHeight > sensorHeight)
+        if (       m_sensorRgnWidth  > sensorWidth
+                || m_sensorRgnHeight > sensorHeight
+                || m_sensorRgnX > sensorWidth
+                || m_sensorRgnY > sensorHeight
+                || m_sensorRgnX + m_sensorRgnWidth  > sensorWidth
+                || m_sensorRgnY + m_sensorRgnHeight > sensorHeight)
         {
             return false;
         }
@@ -142,11 +155,10 @@ public:
     }
 
 private:
-    uns16 m_sensorRgnX;
-    uns16 m_sensorRgnY;
-    uns16 m_sensorRgnWidth;
-    uns16 m_sensorRgnHeight;
-
-    uns16 m_binX;
-    uns16 m_binY;
+    uns16 m_sensorRgnX{ 0 };
+    uns16 m_sensorRgnY{ 0 };
+    uns16 m_sensorRgnWidth{ 0 };
+    uns16 m_sensorRgnHeight{ 0 };
+    uns16 m_binX{ 1 };
+    uns16 m_binY{ 1 };
 };

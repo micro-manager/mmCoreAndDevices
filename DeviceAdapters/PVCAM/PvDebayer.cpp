@@ -33,22 +33,6 @@
 
 PvDebayer::PvDebayer()
 {
-    orders_.push_back("R-G-R-G");
-    orders_.push_back("B-G-B-G");
-    orders_.push_back("G-R-G-R");
-    orders_.push_back("G-B-G-B");
-
-    algorithms_.push_back("Replication");
-    algorithms_.push_back("Bilinear");
-    algorithms_.push_back("Smooth-Hue");
-    algorithms_.push_back("Adaptive-Smooth-Hue");
-
-    // Default settings
-    orderIndex_ = CFA_RGGB;
-    algoIndex_ = ALG_REPLICATION;
-    rgbScales_.r = 1.0;
-    rgbScales_.g = 1.0;
-    rgbScales_.b = 1.0;
 }
 
 PvDebayer::~PvDebayer()

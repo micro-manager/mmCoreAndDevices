@@ -1,15 +1,12 @@
 #include "NotificationEntry.h"
 
-#include <cstddef> // NULL
-
-NotificationEntry::NotificationEntry() :
-    pFrameData_(NULL),
-    frameDataSz_(0)
+NotificationEntry::NotificationEntry()
 {
 }
 
-NotificationEntry::NotificationEntry(const void* pData, unsigned int dataSz, const PvFrameInfo& metadata) :
-    pFrameData_(pData),
+NotificationEntry::NotificationEntry(
+        const void* pData, unsigned int dataSz, const PvFrameInfo& metadata)
+    : pFrameData_(pData),
     frameDataSz_(dataSz),
     frameMetaData_(metadata)
 {

@@ -112,16 +112,6 @@
 //=========================================================== TYPE DECLARATIONS
 
 /**
-* Structure used for Universal Parameters definition
-*/
-struct ParamNameIdPair
-{
-    const char* name;
-    const char* debugName;
-    uns32 id;
-};
-
-/**
 * Speed table row
 */
 struct SpdTabEntry
