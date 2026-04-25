@@ -220,35 +220,27 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
 
 const unsigned char* CircularBuffer::GetTopImage() const
 {
-   const FrameBuffer* img = GetNthFromTopImageBuffer(0, 0);
+   const FrameBuffer* img = GetNthFromTopImageBuffer(0);
    if (!img)
       return 0;
    return img->GetPixels();
 }
 
-const FrameBuffer* CircularBuffer::GetTopImageBuffer(unsigned channel) const
+const FrameBuffer* CircularBuffer::GetTopImageBuffer() const
 {
-   return GetNthFromTopImageBuffer(0, channel);
+   return GetNthFromTopImageBuffer(0);
 }
 
 const FrameBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
 {
-   return GetNthFromTopImageBuffer(static_cast<long>(n), 0);
-}
-
-const FrameBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
-      unsigned channel) const
-{
-   if (channel > 0)
-      return nullptr;
-
    std::lock_guard<std::mutex> guard(bufferLock_);
 
+   const long ln = static_cast<long>(n);
    long availableImages = insertIndex_ - saveIndex_;
-   if (n + 1 > availableImages)
+   if (ln + 1 > availableImages)
       return 0;
 
-   long targetIndex = insertIndex_ - n - 1L;
+   long targetIndex = insertIndex_ - ln - 1L;
    while (targetIndex < 0)
       targetIndex += (long) frameArray_.size();
    targetIndex %= frameArray_.size();
@@ -258,17 +250,14 @@ const FrameBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
 
 const unsigned char* CircularBuffer::GetNextImage()
 {
-   const FrameBuffer* img = GetNextImageBuffer(0);
+   const FrameBuffer* img = GetNextImageBuffer();
    if (!img)
       return 0;
    return img->GetPixels();
 }
 
-const FrameBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
+const FrameBuffer* CircularBuffer::GetNextImageBuffer()
 {
-   if (channel > 0)
-      return nullptr;
-
    std::lock_guard<std::mutex> guard(bufferLock_);
 
    long availableImages = insertIndex_ - saveIndex_;

@@ -66,10 +66,9 @@ public:
       std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError);
    const unsigned char* GetTopImage() const;
    const unsigned char* GetNextImage();
-   const FrameBuffer* GetTopImageBuffer(unsigned channel) const;
+   const FrameBuffer* GetTopImageBuffer() const;
    const FrameBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
-   const FrameBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
-   const FrameBuffer* GetNextImageBuffer(unsigned channel);
+   const FrameBuffer* GetNextImageBuffer();
    void Clear(); 
 
    bool Overflow() {std::lock_guard<std::mutex> guard(bufferLock_); return overflow_;}

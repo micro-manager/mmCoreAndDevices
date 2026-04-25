@@ -3297,7 +3297,7 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   const mmi::FrameBuffer* pBuf = cbuf_->GetTopImageBuffer(channel);
+   const mmi::FrameBuffer* pBuf = cbuf_->GetTopImageBuffer();
    if (pBuf != 0)
    {
       md.Restore(pBuf->GetSerializedMetadata().c_str());
@@ -3383,7 +3383,7 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) MM
    if (slice != 0)
       throw CMMError("Slice must be 0");
 
-   const mmi::FrameBuffer* pBuf = cbuf_->GetNextImageBuffer(channel);
+   const mmi::FrameBuffer* pBuf = cbuf_->GetNextImageBuffer();
    if (pBuf != 0)
    {
       md.Restore(pBuf->GetSerializedMetadata().c_str());
