@@ -3038,15 +3038,18 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
             ,MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-		try
-		{
-			if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
-			{
-				logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
-			}
-			cbuf_->Clear();
-			callback_->ResetImageInsertionState();
+      try
+      {
+         if (!cbuf_->Initialize(
+               static_cast<std::size_t>(camera->GetImageWidth()) *
+               camera->GetImageHeight() *
+               camera->GetImageBytesPerPixel()))
+         {
+            logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+            throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
+         }
+         cbuf_->Clear();
+         callback_->ResetImageInsertionState();
          cbuf_->SetOverwriteData(!stopOnOverflow);
          mmi::DeviceModuleLockGuard guard(camera);
 
@@ -3087,7 +3090,10 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
       throw CMMError(getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
                      MMERR_NotAllowedDuringSequenceAcquisition);
 
-   if (!cbuf_->Initialize(pCam->GetImageWidth(), pCam->GetImageHeight(), pCam->GetImageBytesPerPixel()))
+   if (!cbuf_->Initialize(
+         static_cast<std::size_t>(pCam->GetImageWidth()) *
+         pCam->GetImageHeight() *
+         pCam->GetImageBytesPerPixel()))
    {
       logError(getDeviceName(pCam).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
       throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
@@ -3135,7 +3141,10 @@ void CMMCore::initializeCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
    if (camera)
    {
       mmi::DeviceModuleLockGuard guard(camera);
-      if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+      if (!cbuf_->Initialize(
+            static_cast<std::size_t>(camera->GetImageWidth()) *
+            camera->GetImageHeight() *
+            camera->GetImageBytesPerPixel()))
       {
          logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
@@ -3189,7 +3198,10 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGAC
             ,MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-      if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+      if (!cbuf_->Initialize(
+            static_cast<std::size_t>(camera->GetImageWidth()) *
+            camera->GetImageHeight() *
+            camera->GetImageBytesPerPixel()))
       {
          logError(getDeviceName(camera).c_str(), getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
          throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
@@ -3442,7 +3454,10 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
       if (camera)
 		{
          mmi::DeviceModuleLockGuard guard(camera);
-         if (!cbuf_->Initialize(camera->GetImageWidth(), camera->GetImageHeight(), camera->GetImageBytesPerPixel()))
+         if (!cbuf_->Initialize(
+               static_cast<std::size_t>(camera->GetImageWidth()) *
+               camera->GetImageHeight() *
+               camera->GetImageBytesPerPixel()))
 				throw CMMError(getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(), MMERR_CircularBufferFailedToInitialize);
          callback_->ResetImageInsertionState();
 		}
