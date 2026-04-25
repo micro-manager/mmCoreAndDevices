@@ -5716,11 +5716,15 @@ int Universal::abortAcquisitionInternal()
             {
                 pollingThd_->setStop(true);
                 pollingThd_->wait();
+                // AcqFinished() is already called by PollingThreadExiting()
             }
         }
         else
         {
             acqThd_->Pause();
+            // Notify the core that acquisition has finished so that
+            // AutoShutter can close the shutter.
+            GetCoreCallback()->AcqFinished(this, nRet);
         }
 
         customDiskWriter_->Stop();
