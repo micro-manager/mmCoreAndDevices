@@ -24,9 +24,9 @@
 namespace mmcore {
 namespace internal {
 
-FrameBuffer::FrameBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
-   pixels_(new unsigned char[xSize * ySize * pixDepth]()),
-   width_(xSize), height_(ySize), pixDepth_(pixDepth)
+FrameBuffer::FrameBuffer(std::size_t size) :
+   size_(size),
+   pixels_(new unsigned char[size]())
 {
 }
 
@@ -37,20 +37,17 @@ const unsigned char* FrameBuffer::GetPixels() const
 
 void FrameBuffer::SetPixels(const void* pix)
 {
-   memcpy((void*)pixels_.get(), pix, width_ * height_ * pixDepth_);
+   memcpy(pixels_.get(), pix, size_);
 }
 
-void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
+void FrameBuffer::Resize(std::size_t size)
 {
    // re-allocate internal buffer if it is not big enough
-   if (width_ * height_ * pixDepth_ < xSize * ySize * pixDepth)
+   if (size_ < size)
    {
-      pixels_.reset(new unsigned char[xSize * ySize * pixDepth]);
+      pixels_.reset(new unsigned char[size]());
    }
-
-   width_ = xSize;
-   height_ = ySize;
-   pixDepth_ = pixDepth;
+   size_ = size;
 }
 
 void FrameBuffer::SetSerializedMetadata(std::string_view serialized)

@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -27,15 +28,13 @@ namespace internal {
 
 class FrameBuffer
 {
+   std::size_t size_ = 0;
    std::unique_ptr<unsigned char[]> pixels_;
-   unsigned int width_ = 0;
-   unsigned int height_ = 0;
-   unsigned int pixDepth_ = 0;
    std::string serializedMetadata_;
 
 public:
    FrameBuffer() = default;
-   FrameBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth);
+   FrameBuffer(std::size_t size);
 
    FrameBuffer(FrameBuffer&&) = default;
    FrameBuffer& operator=(FrameBuffer&&) = default;
@@ -45,7 +44,7 @@ public:
    void SetPixels(const void* pixArray);
    const unsigned char* GetPixels() const;
 
-   void Resize(unsigned xSize, unsigned ySize, unsigned pixDepth);
+   void Resize(std::size_t size);
 
    void SetSerializedMetadata(std::string_view serialized);
    const std::string& GetSerializedMetadata() const {

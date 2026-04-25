@@ -108,8 +108,9 @@ bool CircularBuffer::Initialize(unsigned int w, unsigned int h, unsigned int pix
 
       // allocate buffers  - could conceivably throw an out-of-memory exception
       frameArray_.resize(cbSize);
+      const auto frameSiz = std::size_t(w) * std::size_t(h) * pixDepth;
       for (unsigned long i=0; i<frameArray_.size(); i++)
-         frameArray_[i].Resize(w, h, pixDepth);
+         frameArray_[i].Resize(frameSiz);
    }
 
    catch( ... /* std::bad_alloc& ex */)
