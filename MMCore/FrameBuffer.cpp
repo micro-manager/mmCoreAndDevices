@@ -30,8 +30,6 @@ ImgBuffer::ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
 {
 }
 
-ImgBuffer::~ImgBuffer() = default;
-
 const unsigned char* ImgBuffer::GetPixels() const
 {
    return pixels_.get();
@@ -72,52 +70,6 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize)
 void ImgBuffer::SetSerializedMetadata(std::string_view serialized)
 {
    serializedMetadata_.assign(serialized);
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-// FrameBuffer class
-///////////////////////////////////////////////////////////////////////////////
-
-FrameBuffer::FrameBuffer(unsigned xSize, unsigned ySize, unsigned byteDepth)
-{
-   width_ = xSize;
-   height_ = ySize;
-   depth_ = byteDepth;
-}
-
-FrameBuffer::FrameBuffer()
-{
-   width_ = 0;
-   height_ = 0;
-   depth_ = 0;
-}
-
-void FrameBuffer::Clear()
-{
-   buffer_.reset();
-}
-
-void FrameBuffer::Preallocate()
-{
-   if (!buffer_) {
-      buffer_ = std::make_unique<ImgBuffer>(width_, height_, depth_);
-   }
-}
-
-void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned byteDepth)
-{
-   Clear();
-   width_ = xSize;
-   height_ = ySize;
-   depth_ = byteDepth;
-}
-
-ImgBuffer* FrameBuffer::FindImage(unsigned channel) const
-{
-   if (channel > 0)
-      return nullptr;
-   return buffer_.get();
 }
 
 } // namespace internal

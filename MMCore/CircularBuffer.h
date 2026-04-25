@@ -97,7 +97,7 @@ private:
 
    bool overflow_;
    bool overwriteData_;
-   std::vector<FrameBuffer> frameArray_;
+   std::vector<ImgBuffer> frameArray_;
 
    // Effectively const after construction.
    unsigned long memorySizeMB_;

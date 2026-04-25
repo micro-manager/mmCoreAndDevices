@@ -28,14 +28,19 @@ namespace internal {
 class ImgBuffer
 {
    std::unique_ptr<unsigned char[]> pixels_;
-   unsigned int width_;
-   unsigned int height_;
-   unsigned int pixDepth_;
+   unsigned int width_ = 0;
+   unsigned int height_ = 0;
+   unsigned int pixDepth_ = 0;
    std::string serializedMetadata_;
 
 public:
+   ImgBuffer() = default;
    ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth);
-   ~ImgBuffer();
+
+   ImgBuffer(ImgBuffer&&) = default;
+   ImgBuffer& operator=(ImgBuffer&&) = default;
+   ImgBuffer(const ImgBuffer&) = delete;
+   ImgBuffer& operator=(const ImgBuffer&) = delete;
 
    unsigned int Width() const {return width_;}
    unsigned int Height() const {return height_;}
@@ -50,33 +55,6 @@ public:
    const std::string& GetSerializedMetadata() const {
       return serializedMetadata_;
    }
-
-private:
-   ImgBuffer& operator=(const ImgBuffer&);
-};
-
-// The FrameBuffer class wraps ImgBuffer (which is part of the MMCore API) for
-// internal use. It was also previously part of a never-completed scheme to
-// support multi-channel frames.
-class FrameBuffer
-{
-   std::unique_ptr<ImgBuffer> buffer_; // May be empty
-   unsigned int width_;
-   unsigned int height_;
-   unsigned int depth_;
-
-public:
-   FrameBuffer(unsigned xSize, unsigned ySize, unsigned byteDepth);
-   FrameBuffer();
-
-   void Resize(unsigned xSize, unsigned ySize, unsigned pixDepth);
-   void Clear();
-   void Preallocate();
-
-   ImgBuffer* FindImage(unsigned channel) const;
-   unsigned Width() const {return width_;}
-   unsigned Height() const {return height_;}
-   unsigned Depth() const {return depth_;}
 };
 
 } // namespace internal

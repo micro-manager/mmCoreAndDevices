@@ -107,16 +107,10 @@ bool CircularBuffer::Initialize(unsigned int w, unsigned int h, unsigned int pix
 
       // TODO: verify if we have enough RAM to satisfy this request
 
-      for (unsigned long i=0; i<frameArray_.size(); i++)
-         frameArray_[i].Clear();
-
       // allocate buffers  - could conceivably throw an out-of-memory exception
       frameArray_.resize(cbSize);
       for (unsigned long i=0; i<frameArray_.size(); i++)
-      {
          frameArray_[i].Resize(w, h, pixDepth);
-         frameArray_[i].Preallocate();
-      }
    }
 
    catch( ... /* std::bad_alloc& ex */)
@@ -195,10 +189,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
          }
        }
 
-       // we assume that all buffers are pre-allocated
-       pImg = frameArray_[insertIndex_ % frameArray_.size()].FindImage(0);
-       if (!pImg)
-          return false;
+       pImg = &frameArray_[insertIndex_ % frameArray_.size()];
     }
 
    pImg->SetSerializedMetadata(serializedMetadata);
@@ -248,6 +239,9 @@ const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
 const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
       unsigned channel) const
 {
+   if (channel > 0)
+      return nullptr;
+
    std::lock_guard<std::mutex> guard(bufferLock_);
 
    long availableImages = insertIndex_ - saveIndex_;
@@ -259,7 +253,7 @@ const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
       targetIndex += (long) frameArray_.size();
    targetIndex %= frameArray_.size();
 
-   return frameArray_[targetIndex].FindImage(channel);
+   return &frameArray_[targetIndex];
 }
 
 const unsigned char* CircularBuffer::GetNextImage()
@@ -272,6 +266,9 @@ const unsigned char* CircularBuffer::GetNextImage()
 
 const ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
 {
+   if (channel > 0)
+      return nullptr;
+
    std::lock_guard<std::mutex> guard(bufferLock_);
 
    long availableImages = insertIndex_ - saveIndex_;
@@ -280,7 +277,7 @@ const ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
 
    long targetIndex = saveIndex_ % frameArray_.size();
    ++saveIndex_;
-   return frameArray_[targetIndex].FindImage(channel);
+   return &frameArray_[targetIndex];
 }
 
 } // namespace internal
