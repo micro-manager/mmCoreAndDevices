@@ -31,9 +31,11 @@
 
 #include "DeviceUtils.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <limits>
 #include <memory>
+#include <new>
 
 namespace mmcore {
 namespace internal {
@@ -70,49 +72,42 @@ bool CircularBuffer::Initialize(std::size_t frameSize)
 {
    std::lock_guard<std::mutex> guard(bufferLock_);
 
-   bool ret = true;
+   overflow_ = false;
+   insertIndex_ = 0;
+   saveIndex_ = 0;
+
    try
    {
       if (frameSize == 0)
+      {
+         frameSize_ = 0;
          return false;
+      }
 
-      if (frameSize == frameSize_ && frameArray_.size() > 0)
-         return true;
-
-      frameSize_ = frameSize;
-
-      insertIndex_ = 0;
-      saveIndex_ = 0;
-      overflow_ = false;
-
-      // calculate the size of the entire buffer array once all images get allocated
-      // the actual size at the time of the creation is going to be less, because
-      // images are not allocated until pixels become available
-      std::size_t cbSize = (memorySizeMB_ * bytesInMB) / frameSize_;
+      const std::size_t cbSize = std::min(maxCBSize,
+         (memorySizeMB_ * bytesInMB) / frameSize);
 
       if (cbSize == 0)
       {
+         frameSize_ = frameSize;
          frameArray_.resize(0);
          return false; // memory footprint too small
       }
 
-      if (cbSize > maxCBSize)
-         cbSize = maxCBSize;
+      if (frameSize == frameSize_ && frameArray_.size() == cbSize)
+         return true;
 
-      // TODO: verify if we have enough RAM to satisfy this request
-
-      // allocate buffers  - could conceivably throw an out-of-memory exception
+      frameSize_ = frameSize;
       frameArray_.resize(cbSize);
-      for (std::size_t i = 0; i < frameArray_.size(); i++)
-         frameArray_[i].Resize(frameSize_);
+      for (auto& frameBuf : frameArray_)
+         frameBuf.Resize(frameSize_);
+      return true;
    }
-
-   catch( ... /* std::bad_alloc& ex */)
+   catch (std::bad_alloc&)
    {
       frameArray_.resize(0);
-      ret = false;
+      return false;
    }
-   return ret;
 }
 
 void CircularBuffer::Clear()
