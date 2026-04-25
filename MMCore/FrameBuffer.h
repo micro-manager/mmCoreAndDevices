@@ -29,7 +29,6 @@ namespace internal {
 class FrameBuffer
 {
    std::size_t size_ = 0;
-   std::size_t allocatedSize_ = 0;
    std::unique_ptr<unsigned char[]> pixels_;
    std::string serializedMetadata_;
 
