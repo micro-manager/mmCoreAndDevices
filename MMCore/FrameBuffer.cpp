@@ -26,6 +26,7 @@ namespace internal {
 
 FrameBuffer::FrameBuffer(std::size_t size) :
    size_(size),
+   allocatedSize_(size),
    pixels_(new unsigned char[size]())
 {
 }
@@ -42,10 +43,10 @@ void FrameBuffer::SetPixels(const void* pix)
 
 void FrameBuffer::Resize(std::size_t size)
 {
-   // re-allocate internal buffer if it is not big enough
-   if (size_ < size)
+   if (size > allocatedSize_)
    {
       pixels_.reset(new unsigned char[size]());
+      allocatedSize_ = size;
    }
    size_ = size;
 }
