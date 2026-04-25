@@ -33,7 +33,6 @@
 #include "SynchronizedConfiguration.h"
 
 #include "DeviceUtils.h"
-#include "ImgBuffer.h"
 
 #include <cassert>
 #include <chrono>
