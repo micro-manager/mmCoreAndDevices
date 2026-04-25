@@ -317,8 +317,7 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
       {
          ip->Process(const_cast<unsigned char*>(buf), width, height, bytesPerPixel);
       }
-      if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, nComponents,
-            md.View()))
+      if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, md.View()))
          return DEVICE_OK;
       else
          return DEVICE_BUFFER_OVERFLOW;

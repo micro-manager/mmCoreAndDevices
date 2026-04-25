@@ -157,13 +157,12 @@ unsigned long CircularBuffer::GetRemainingImageCount() const
 }
 
 /**
-* Inserts a single image, possibly with multiple components, in the buffer.
+* Inserts a single image in the buffer.
 */
 bool CircularBuffer::InsertImage(const unsigned char* pixArray,
-   unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
+   unsigned int width, unsigned int height, unsigned int byteDepth,
    std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError)
 {
-    (void)nComponents;
     std::lock_guard<std::mutex> insertGuard(insertLock_);
 
     FrameBuffer* pImg;

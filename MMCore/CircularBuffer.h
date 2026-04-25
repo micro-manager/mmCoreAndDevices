@@ -62,7 +62,7 @@ public:
    unsigned int Depth() const {std::lock_guard<std::mutex> guard(bufferLock_); return pixDepth_;}
 
    bool InsertImage(const unsigned char* pixArray,
-      unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
+      unsigned int width, unsigned int height, unsigned int byteDepth,
       std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError);
    const unsigned char* GetTopImage() const;
    const unsigned char* GetNextImage();
