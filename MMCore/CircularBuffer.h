@@ -57,10 +57,6 @@ public:
    unsigned long GetFreeSize() const;
    unsigned long GetRemainingImageCount() const;
 
-   unsigned int Width() const {std::lock_guard<std::mutex> guard(bufferLock_); return width_;}
-   unsigned int Height() const {std::lock_guard<std::mutex> guard(bufferLock_); return height_;}
-   unsigned int Depth() const {std::lock_guard<std::mutex> guard(bufferLock_); return pixDepth_;}
-
    bool InsertImage(const unsigned char* pixArray,
       unsigned int width, unsigned int height, unsigned int byteDepth,
       std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError);

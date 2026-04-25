@@ -42,14 +42,10 @@ public:
    FrameBuffer(const FrameBuffer&) = delete;
    FrameBuffer& operator=(const FrameBuffer&) = delete;
 
-   unsigned int Width() const {return width_;}
-   unsigned int Height() const {return height_;}
-   unsigned int Depth() const {return pixDepth_;}
    void SetPixels(const void* pixArray);
    const unsigned char* GetPixels() const;
 
    void Resize(unsigned xSize, unsigned ySize, unsigned pixDepth);
-   void Resize(unsigned xSize, unsigned ySize);
 
    void SetSerializedMetadata(std::string_view serialized);
    const std::string& GetSerializedMetadata() const {

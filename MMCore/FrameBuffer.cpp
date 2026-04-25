@@ -53,20 +53,6 @@ void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
    pixDepth_ = pixDepth;
 }
 
-void FrameBuffer::Resize(unsigned xSize, unsigned ySize)
-{
-   // re-allocate internal buffer if it is not big enough
-   if (width_ * height_ < xSize * ySize)
-   {
-      pixels_.reset(new unsigned char[xSize * ySize * pixDepth_]);
-   }
-
-   width_ = xSize;
-   height_ = ySize;
-
-   memset(pixels_.get(), 0, width_ * height_ * pixDepth_);
-}
-
 void FrameBuffer::SetSerializedMetadata(std::string_view serialized)
 {
    serializedMetadata_.assign(serialized);
