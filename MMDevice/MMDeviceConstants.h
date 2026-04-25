@@ -155,11 +155,20 @@ namespace MM {
    const char* const g_Keyword_Closed_Position = "ClosedPosition";
    const char* const g_Keyword_HubID = "HubID";
 
-   const char* const g_Keyword_PixelType_GRAY8   = "GRAY8";
-   const char* const g_Keyword_PixelType_GRAY16  = "GRAY16";
-   const char* const g_Keyword_PixelType_GRAY32  = "GRAY32";
-   const char* const g_Keyword_PixelType_RGB32   = "RGB32";
-   const char* const g_Keyword_PixelType_RGB64   = "RGB64";
+   // PixelType values
+   // - GRAY8/16/32 follow ImageJ's ij.ImagePlus conventions.
+   // - RGB32 is equivalent to ImagePlus's COLOR_RGB (ARGB in big-endian int):
+   //   8 bits each in BGRA order (in little-endian native code).
+   // - RGB64 is BGRA with 16-bits/component.
+   // - The A (alpha) channel is not used and should contain zeroes.
+   // - PixelType is separate from bit depth: GRAY16 is used not only for
+   //   Mono16 but also for Mono14, Mono12, etc., lsb-aligned (that is, Mono14
+   //   has its 2 most significant bits zero-padded).
+   const char* const g_Keyword_PixelType_GRAY8   = "GRAY8";  // Mono8
+   const char* const g_Keyword_PixelType_GRAY16  = "GRAY16"; // Mono16
+   const char* const g_Keyword_PixelType_GRAY32  = "GRAY32"; // Mono32f
+   const char* const g_Keyword_PixelType_RGB32   = "RGB32";  // BGR8a32
+   const char* const g_Keyword_PixelType_RGB64   = "RGB64";  // BGR16a64
    const char* const g_Keyword_PixelType_Unknown = "Unknown";
 
    const char* const g_Keyword_Current_Volume   = "Volume_uL";
