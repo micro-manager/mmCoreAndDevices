@@ -71,7 +71,7 @@ public:
    const FrameBuffer* GetNextImageBuffer();
    void Clear(); 
 
-   bool Overflow() {std::lock_guard<std::mutex> guard(bufferLock_); return overflow_;}
+   bool Overflow() const {std::lock_guard<std::mutex> guard(bufferLock_); return overflow_;}
 
 private:
    void ClearLocked();
