@@ -166,7 +166,7 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
     (void)nComponents;
     std::lock_guard<std::mutex> insertGuard(insertLock_);
 
-    ImgBuffer* pImg;
+    FrameBuffer* pImg;
     unsigned long singleChannelSize = (unsigned long)width * height * byteDepth;
 
     {
@@ -194,9 +194,9 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
 
    pImg->SetSerializedMetadata(serializedMetadata);
 
-   // TODO: In MMCore the ImgBuffer::GetPixels() returns const pointer.
-   //       It would be better to have something like ImgBuffer::GetPixelsRW() in MMDevice.
-   //       Or even better - pass tasksMemCopy_ to ImgBuffer constructor
+   // TODO: In MMCore the FrameBuffer::GetPixels() returns const pointer.
+   //       It would be better to have something like FrameBuffer::GetPixelsRW() in MMDevice.
+   //       Or even better - pass tasksMemCopy_ to FrameBuffer constructor
    //       and utilize parallel copy also in single snap acquisitions.
    tasksMemCopy_->MemCopy((void*)pImg->GetPixels(),
          pixArray, singleChannelSize);
@@ -220,23 +220,23 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
 
 const unsigned char* CircularBuffer::GetTopImage() const
 {
-   const ImgBuffer* img = GetNthFromTopImageBuffer(0, 0);
+   const FrameBuffer* img = GetNthFromTopImageBuffer(0, 0);
    if (!img)
       return 0;
    return img->GetPixels();
 }
 
-const ImgBuffer* CircularBuffer::GetTopImageBuffer(unsigned channel) const
+const FrameBuffer* CircularBuffer::GetTopImageBuffer(unsigned channel) const
 {
    return GetNthFromTopImageBuffer(0, channel);
 }
 
-const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
+const FrameBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
 {
    return GetNthFromTopImageBuffer(static_cast<long>(n), 0);
 }
 
-const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
+const FrameBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
       unsigned channel) const
 {
    if (channel > 0)
@@ -258,13 +258,13 @@ const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
 
 const unsigned char* CircularBuffer::GetNextImage()
 {
-   const ImgBuffer* img = GetNextImageBuffer(0);
+   const FrameBuffer* img = GetNextImageBuffer(0);
    if (!img)
       return 0;
    return img->GetPixels();
 }
 
-const ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
+const FrameBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
 {
    if (channel > 0)
       return nullptr;

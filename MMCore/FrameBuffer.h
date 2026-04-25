@@ -25,7 +25,7 @@
 namespace mmcore {
 namespace internal {
 
-class ImgBuffer
+class FrameBuffer
 {
    std::unique_ptr<unsigned char[]> pixels_;
    unsigned int width_ = 0;
@@ -34,13 +34,13 @@ class ImgBuffer
    std::string serializedMetadata_;
 
 public:
-   ImgBuffer() = default;
-   ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth);
+   FrameBuffer() = default;
+   FrameBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth);
 
-   ImgBuffer(ImgBuffer&&) = default;
-   ImgBuffer& operator=(ImgBuffer&&) = default;
-   ImgBuffer(const ImgBuffer&) = delete;
-   ImgBuffer& operator=(const ImgBuffer&) = delete;
+   FrameBuffer(FrameBuffer&&) = default;
+   FrameBuffer& operator=(FrameBuffer&&) = default;
+   FrameBuffer(const FrameBuffer&) = delete;
+   FrameBuffer& operator=(const FrameBuffer&) = delete;
 
    unsigned int Width() const {return width_;}
    unsigned int Height() const {return height_;}

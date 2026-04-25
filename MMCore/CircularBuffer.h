@@ -66,10 +66,10 @@ public:
       std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError);
    const unsigned char* GetTopImage() const;
    const unsigned char* GetNextImage();
-   const ImgBuffer* GetTopImageBuffer(unsigned channel) const;
-   const ImgBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
-   const ImgBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
-   const ImgBuffer* GetNextImageBuffer(unsigned channel);
+   const FrameBuffer* GetTopImageBuffer(unsigned channel) const;
+   const FrameBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
+   const FrameBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
+   const FrameBuffer* GetNextImageBuffer(unsigned channel);
    void Clear(); 
 
    bool Overflow() {std::lock_guard<std::mutex> guard(bufferLock_); return overflow_;}
@@ -97,7 +97,7 @@ private:
 
    bool overflow_;
    bool overwriteData_;
-   std::vector<ImgBuffer> frameArray_;
+   std::vector<FrameBuffer> frameArray_;
 
    // Effectively const after construction.
    unsigned long memorySizeMB_;

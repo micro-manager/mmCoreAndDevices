@@ -24,23 +24,23 @@
 namespace mmcore {
 namespace internal {
 
-ImgBuffer::ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
+FrameBuffer::FrameBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
    pixels_(new unsigned char[xSize * ySize * pixDepth]()),
    width_(xSize), height_(ySize), pixDepth_(pixDepth)
 {
 }
 
-const unsigned char* ImgBuffer::GetPixels() const
+const unsigned char* FrameBuffer::GetPixels() const
 {
    return pixels_.get();
 }
 
-void ImgBuffer::SetPixels(const void* pix)
+void FrameBuffer::SetPixels(const void* pix)
 {
    memcpy((void*)pixels_.get(), pix, width_ * height_ * pixDepth_);
 }
 
-void ImgBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
+void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
 {
    // re-allocate internal buffer if it is not big enough
    if (width_ * height_ * pixDepth_ < xSize * ySize * pixDepth)
@@ -53,7 +53,7 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
    pixDepth_ = pixDepth;
 }
 
-void ImgBuffer::Resize(unsigned xSize, unsigned ySize)
+void FrameBuffer::Resize(unsigned xSize, unsigned ySize)
 {
    // re-allocate internal buffer if it is not big enough
    if (width_ * height_ < xSize * ySize)
@@ -67,7 +67,7 @@ void ImgBuffer::Resize(unsigned xSize, unsigned ySize)
    memset(pixels_.get(), 0, width_ * height_ * pixDepth_);
 }
 
-void ImgBuffer::SetSerializedMetadata(std::string_view serialized)
+void FrameBuffer::SetSerializedMetadata(std::string_view serialized)
 {
    serializedMetadata_.assign(serialized);
 }
