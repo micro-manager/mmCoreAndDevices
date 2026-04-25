@@ -167,7 +167,7 @@ unsigned long CircularBuffer::GetRemainingImageCount() const
 */
 bool CircularBuffer::InsertImage(const unsigned char* pixArray,
    unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
-   const Metadata* pMd) MMCORE_LEGACY_THROW(CMMError)
+   std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError)
 {
     (void)nComponents;
     std::lock_guard<std::mutex> insertGuard(insertLock_);
@@ -201,8 +201,8 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
           return false;
     }
 
-   if (pMd)
-      pImg->SetMetadata(*pMd);
+   pImg->SetSerializedMetadata(serializedMetadata);
+
    // TODO: In MMCore the ImgBuffer::GetPixels() returns const pointer.
    //       It would be better to have something like ImgBuffer::GetPixelsRW() in MMDevice.
    //       Or even better - pass tasksMemCopy_ to ImgBuffer constructor

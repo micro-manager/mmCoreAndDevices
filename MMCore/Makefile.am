@@ -106,6 +106,7 @@ libMMCore_la_SOURCES = \
 	NotificationQueue.h \
 	PluginManager.cpp \
 	PluginManager.h \
+	SerializedMetadata.h \
 	Semaphore.cpp \
 	Semaphore.h \
 	SynchronizedConfiguration.h \

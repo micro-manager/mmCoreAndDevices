@@ -39,6 +39,7 @@ namespace mmcore {
 namespace internal {
 
 class DeviceManager;
+class SerializedMetadata;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -136,11 +137,11 @@ private:
    std::map<std::string, long> imageNumbers_;
    std::chrono::time_point<std::chrono::steady_clock> startTime_;
 
-   Metadata AddCameraMetadata(const MM::Device* caller, const Metadata* pMd);
-   Metadata BuildSequenceImageMetadata(const MM::Device* caller,
+   void AddCameraMetadata(const MM::Device* caller, SerializedMetadata& md);
+   SerializedMetadata BuildSequenceImageMetadata(const MM::Device* caller,
          unsigned width, unsigned height,
          unsigned byteDepth, unsigned nComponents,
-         const Metadata* origMd);
+         const char* origSerializedMd);
    MM::ImageProcessor* GetImageProcessor(const MM::Device* caller);
 };
 
