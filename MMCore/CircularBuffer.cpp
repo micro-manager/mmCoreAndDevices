@@ -208,7 +208,7 @@ const unsigned char* CircularBuffer::GetTopImage() const
 {
    const FrameBuffer* img = GetNthFromTopImageBuffer(0);
    if (!img)
-      return 0;
+      return nullptr;
    return img->GetPixels();
 }
 
@@ -223,7 +223,7 @@ const FrameBuffer* CircularBuffer::GetNthFromTopImageBuffer(std::size_t n) const
 
    const std::size_t availableImages = insertIndex_ - saveIndex_;
    if (n >= availableImages)
-      return 0;
+      return nullptr;
 
    const std::size_t targetIndex = (insertIndex_ - n - 1) % frameArray_.size();
    return &frameArray_[targetIndex];
@@ -233,7 +233,7 @@ const unsigned char* CircularBuffer::GetNextImage()
 {
    const FrameBuffer* img = GetNextImageBuffer();
    if (!img)
-      return 0;
+      return nullptr;
    return img->GetPixels();
 }
 
@@ -242,7 +242,7 @@ const FrameBuffer* CircularBuffer::GetNextImageBuffer()
    std::lock_guard<std::mutex> guard(bufferLock_);
 
    if (insertIndex_ == saveIndex_)
-      return 0;
+      return nullptr;
 
    const std::size_t targetIndex = saveIndex_ % frameArray_.size();
    ++saveIndex_;
