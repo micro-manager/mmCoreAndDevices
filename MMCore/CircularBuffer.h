@@ -86,7 +86,6 @@ private:
    unsigned int width_;
    unsigned int height_;
    unsigned int pixDepth_;
-   long imageCounter_;
 
    // Invariants:
    // 0 <= saveIndex_ <= insertIndex_

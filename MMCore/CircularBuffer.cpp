@@ -48,7 +48,6 @@ CircularBuffer::CircularBuffer(unsigned int memorySizeMB) :
    width_(0), 
    height_(0), 
    pixDepth_(0), 
-   imageCounter_(0), 
    insertIndex_(0), 
    saveIndex_(0), 
    overflow_(false),
@@ -203,7 +202,6 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
    {
       std::lock_guard<std::mutex> guard(bufferLock_);
 
-      imageCounter_++;
       insertIndex_++;
       if ((insertIndex_ - (long)frameArray_.size()) > adjustThreshold && (saveIndex_- (long)frameArray_.size()) > adjustThreshold)
       {
