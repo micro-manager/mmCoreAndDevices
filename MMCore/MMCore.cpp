@@ -51,6 +51,7 @@
 #include "MMEventCallback.h"
 #include "NotificationQueue.h"
 #include "PluginManager.h"
+#include "SequenceAcquisition.h"
 #include "SynchronizedConfiguration.h"
 
 #include "DeviceUtils.h"
@@ -873,6 +874,18 @@ void CMMCore::removeAllDeviceRoles() {
    setSLMDevice("");
 }
 
+void CMMCore::stopAllSequenceAcquisitionsForUnload()
+{
+   for (auto& kv : acquisitions_) {
+      auto& cam = kv.second->Camera();
+      mmi::DeviceModuleLockGuard guard(cam);
+      if (cam->IsCapturing())
+         cam->StopSequenceAcquisition();
+   }
+   acquisitions_.clear();
+}
+
+
 /**
  * Unloads the device from the core and adjusts all configuration data.
  */
@@ -886,6 +899,8 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
    }
 
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
+
+   stopAllSequenceAcquisitionsForUnload();
 
    try {
       removeDeviceRole(pDevice);
@@ -909,6 +924,8 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
  */
 void CMMCore::unloadAllDevices() MMCORE_LEGACY_THROW(CMMError)
 {
+   stopAllSequenceAcquisitionsForUnload();
+
    try {
       removeAllDeviceRoles();
 
@@ -3060,13 +3077,17 @@ void CMMCore::startSequenceAcquisition(long numImages, double unused, bool stopO
          mmi::DeviceModuleLockGuard guard(camera);
 
          LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
+         acquisitions_[camera->GetLabel()] =
+            mmcore::internal::SequenceAcquisition::Create(camera);
 			// Forward `unused` to the device rather than substituting 0.0:
 			// a small number of camera adapters (Andor) did implement this
 			// parameter, and passing 0.0 unconditionally could regress them.
 			// The MM::Camera contract now says new adapters must ignore it.
 			int nRet = camera->StartSequenceAcquisition(numImages, unused, stopOnOverflow);
-			if (nRet != DEVICE_OK)
+			if (nRet != DEVICE_OK) {
+				acquisitions_.erase(camera->GetLabel());
 				throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
+			}
 		}
 		catch (std::bad_alloc& ex)
 		{
@@ -3121,13 +3142,17 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
    cbuf_->SetOverwriteData(!stopOnOverflow);
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
+   acquisitions_[pCam->GetLabel()] =
+      mmcore::internal::SequenceAcquisition::Create(pCam);
    // Forward `unused` to the device rather than substituting 0.0: a small
    // number of camera adapters (Andor) did implement this parameter, and
    // passing 0.0 unconditionally could regress them. The MM::Camera
    // contract now says new adapters must ignore it.
    int nRet = pCam->StartSequenceAcquisition(numImages, unused, stopOnOverflow);
-   if (nRet != DEVICE_OK)
+   if (nRet != DEVICE_OK) {
+      acquisitions_.erase(pCam->GetLabel());
       throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
+   }
 
    LOG_DEBUG(coreLogger_) <<
       "Did start sequence acquisition from camera " << label;
@@ -3198,6 +3223,11 @@ void CMMCore::stopSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(CMM
       logError(label, getDeviceErrorText(nRet, pCam).c_str());
       throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
    }
+   {
+      auto it = acquisitions_.find(pCam->GetLabel());
+      if (it != acquisitions_.end())
+         it->second->MarkStopRequested();
+   }
 
    LOG_DEBUG(coreLogger_) << "Did stop sequence acquisition from camera " << label;
    // onSequenceAcquisitionStopped will be called by CoreCallback::AcqFinished
@@ -3235,13 +3265,17 @@ void CMMCore::startContinuousSequenceAcquisition(double unused) MMCORE_LEGACY_TH
       callback_->ResetImageInsertionState();
       cbuf_->SetOverwriteData(true);
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
+      acquisitions_[camera->GetLabel()] =
+         mmcore::internal::SequenceAcquisition::Create(camera);
       // Forward `unused` to the device rather than substituting 0.0: a small
       // number of camera adapters (Andor) did implement this parameter, and
       // passing 0.0 unconditionally could regress them. The MM::Camera
       // contract now says new adapters must ignore it.
       int nRet = camera->StartSequenceAcquisition(unused);
-      if (nRet != DEVICE_OK)
+      if (nRet != DEVICE_OK) {
+         acquisitions_.erase(camera->GetLabel());
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
+      }
    }
    else
    {
@@ -3268,6 +3302,9 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
          logError(getDeviceName(camera).c_str(), getDeviceErrorText(nRet, camera).c_str());
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
       }
+      auto it = acquisitions_.find(camera->GetLabel());
+      if (it != acquisitions_.end())
+         it->second->MarkStopRequested();
    }
    else
    {
