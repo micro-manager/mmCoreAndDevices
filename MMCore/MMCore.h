@@ -95,6 +95,7 @@ namespace internal {
    class DeviceManager;
    class LogManager;
    class NotificationQueue;
+   class SequenceAcquisition;
 } // namespace internal
 } // namespace mmcore
 
@@ -732,6 +733,14 @@ private:
    std::unique_ptr<mmcore::internal::CircularBuffer> cbuf_;
    std::unique_ptr<mmcore::internal::CoreCallback> callback_;
 
+   // Active sequence acquisitions keyed by logical-camera label. At most
+   // one entry per camera, but multiple cameras may have concurrent
+   // acquisitions because the labelled start/stop API is per-camera (sort of).
+   // Mutated only from the user thread.
+   std::map<std::string,
+            std::shared_ptr<mmcore::internal::SequenceAcquisition>>
+       acquisitions_;
+
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
@@ -772,6 +781,15 @@ private:
    void removeDeviceRole(std::shared_ptr<mmcore::internal::DeviceInstance> pDev);
    void removeAllDeviceRoles();
    void loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
+
+   // Stop all in-flight sequence acquisitions and clear the acquisitions_
+   // map. Called before unloading any device: acquisitions_ holds strong
+   // references to CameraInstance, which would otherwise outlive the
+   // unload and leave a zombie wrapper around a shut-down adapter.
+   // Stops every acquisition (not just one for the unloaded camera)
+   // because Core (for now) does not know which logical cameras a given
+   // physical device participates in (e.g. via Multi Camera).
+   void stopAllSequenceAcquisitionsForUnload();
 
    void setCameraInternal(const std::string& label);
    void setShutterInternal(const std::string& label);
