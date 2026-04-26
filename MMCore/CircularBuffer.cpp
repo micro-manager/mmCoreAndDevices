@@ -31,26 +31,27 @@
 
 #include "DeviceUtils.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <limits>
 #include <memory>
+#include <new>
 
 namespace mmcore {
 namespace internal {
 
-const long long bytesInMB = 1 << 20;
-const long adjustThreshold = LONG_MAX / 2;
+constexpr std::size_t bytesInMB = 1 << 20;
+constexpr std::size_t adjustThreshold = std::numeric_limits<std::size_t>::max() / 2;
 
 // Maximum number of images allowed in the buffer. This arbitrary limit is code
 // smell, but kept for now until careful checks for integer overflow and
 // division by zero can be added.
-const unsigned long maxCBSize = 10000000;
+constexpr std::size_t maxCBSize = 10000000;
 
-CircularBuffer::CircularBuffer(unsigned int memorySizeMB) :
-   width_(0), 
-   height_(0), 
-   pixDepth_(0), 
-   imageCounter_(0), 
-   insertIndex_(0), 
-   saveIndex_(0), 
+CircularBuffer::CircularBuffer(std::size_t memorySizeMB) :
+   frameSize_(0),
+   insertIndex_(0),
+   saveIndex_(0),
    overflow_(false),
    overwriteData_(false),
    memorySizeMB_(memorySizeMB),
@@ -67,64 +68,46 @@ int CircularBuffer::SetOverwriteData(bool overwrite) {
    return DEVICE_OK;
 }
 
-bool CircularBuffer::Initialize(unsigned int w, unsigned int h, unsigned int pixDepth)
+bool CircularBuffer::Initialize(std::size_t frameSize)
 {
    std::lock_guard<std::mutex> guard(bufferLock_);
 
-   bool ret = true;
+   overflow_ = false;
+   insertIndex_ = 0;
+   saveIndex_ = 0;
+
    try
    {
-      if (w == 0 || h==0 || pixDepth == 0)
-         return false; // does not make sense
-
-      if (w == width_ && height_ == h && pixDepth_ == pixDepth)
-         if (frameArray_.size() > 0)
-            return true; // nothing to change
-
-      width_ = w;
-      height_ = h;
-      pixDepth_ = pixDepth;
-
-      insertIndex_ = 0;
-      saveIndex_ = 0;
-      overflow_ = false;
-
-      // calculate the size of the entire buffer array once all images get allocated
-      // the actual size at the time of the creation is going to be less, because
-      // images are not allocated until pixels become available
-      unsigned long frameSizeBytes = width_ * height_ * pixDepth_;
-      unsigned long cbSize = (unsigned long) ((memorySizeMB_ * bytesInMB) / frameSizeBytes);
-
-      if (cbSize == 0) 
+      if (frameSize == 0)
       {
+         frameSize_ = 0;
+         return false;
+      }
+
+      const std::size_t cbSize = std::min(maxCBSize,
+         (memorySizeMB_ * bytesInMB) / frameSize);
+
+      if (cbSize == 0)
+      {
+         frameSize_ = frameSize;
          frameArray_.resize(0);
          return false; // memory footprint too small
       }
 
-      // set a reasonable limit to circular buffer capacity 
-      if (cbSize > maxCBSize)
-         cbSize = maxCBSize; 
+      if (frameSize == frameSize_ && frameArray_.size() == cbSize)
+         return true;
 
-      // TODO: verify if we have enough RAM to satisfy this request
-
-      for (unsigned long i=0; i<frameArray_.size(); i++)
-         frameArray_[i].Clear();
-
-      // allocate buffers  - could conceivably throw an out-of-memory exception
+      frameSize_ = frameSize;
       frameArray_.resize(cbSize);
-      for (unsigned long i=0; i<frameArray_.size(); i++)
-      {
-         frameArray_[i].Resize(w, h, pixDepth);
-         frameArray_[i].Preallocate();
-      }
+      for (auto& frameBuf : frameArray_)
+         frameBuf.Resize(frameSize_);
+      return true;
    }
-
-   catch( ... /* std::bad_alloc& ex */)
+   catch (std::bad_alloc&)
    {
       frameArray_.resize(0);
-      ret = false;
+      return false;
    }
-   return ret;
 }
 
 void CircularBuffer::Clear()
@@ -140,40 +123,34 @@ void CircularBuffer::ClearLocked()
    overflow_ = false;
 }
 
-unsigned long CircularBuffer::GetSize() const
+std::size_t CircularBuffer::GetSize() const
 {
    std::lock_guard<std::mutex> guard(bufferLock_);
-   return (unsigned long)frameArray_.size();
+   return frameArray_.size();
 }
 
-unsigned long CircularBuffer::GetFreeSize() const
+std::size_t CircularBuffer::GetFreeSize() const
 {
    std::lock_guard<std::mutex> guard(bufferLock_);
-   long freeSize = (long)frameArray_.size() - (insertIndex_ - saveIndex_);
-   if (freeSize < 0)
-      return 0;
-   else
-      return (unsigned long)freeSize;
+   return frameArray_.size() - (insertIndex_ - saveIndex_);
 }
 
-unsigned long CircularBuffer::GetRemainingImageCount() const
+std::size_t CircularBuffer::GetRemainingImageCount() const
 {
    std::lock_guard<std::mutex> guard(bufferLock_);
-   return (unsigned long)(insertIndex_ - saveIndex_);
+   return insertIndex_ - saveIndex_;
 }
 
 /**
-* Inserts a single image, possibly with multiple components, in the buffer.
+* Inserts a single image in the buffer.
 */
 bool CircularBuffer::InsertImage(const unsigned char* pixArray,
-   unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
+   std::size_t frameSize,
    std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError)
 {
-    (void)nComponents;
     std::lock_guard<std::mutex> insertGuard(insertLock_);
 
-    ImgBuffer* pImg;
-    unsigned long singleChannelSize = (unsigned long)width * height * byteDepth;
+    FrameBuffer* pImg;
 
     {
        std::lock_guard<std::mutex> guard(bufferLock_);
@@ -181,11 +158,10 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
        if (overflow_)
           return false;
 
-       // check image dimensions
-       if (width != width_ || height != height_ || byteDepth != pixDepth_)
-          throw CMMError("Incompatible image dimensions in the circular buffer", MMERR_CircularBufferIncompatibleImage);
+       if (frameSize != frameSize_)
+          throw CMMError("Incompatible image size in the circular buffer", MMERR_CircularBufferIncompatibleImage);
 
-       bool overflowed = (insertIndex_ - saveIndex_) >= static_cast<long>(frameArray_.size());
+       bool overflowed = (insertIndex_ - saveIndex_) >= frameArray_.size();
        if (overflowed) {
          if (overwriteData_) {
             ClearLocked();
@@ -195,31 +171,27 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
          }
        }
 
-       // we assume that all buffers are pre-allocated
-       pImg = frameArray_[insertIndex_ % frameArray_.size()].FindImage(0);
-       if (!pImg)
-          return false;
+       pImg = &frameArray_[insertIndex_ % frameArray_.size()];
     }
 
    pImg->SetSerializedMetadata(serializedMetadata);
 
-   // TODO: In MMCore the ImgBuffer::GetPixels() returns const pointer.
-   //       It would be better to have something like ImgBuffer::GetPixelsRW() in MMDevice.
-   //       Or even better - pass tasksMemCopy_ to ImgBuffer constructor
+   // TODO: In MMCore the FrameBuffer::GetPixels() returns const pointer.
+   //       It would be better to have something like FrameBuffer::GetPixelsRW() in MMDevice.
+   //       Or even better - pass tasksMemCopy_ to FrameBuffer constructor
    //       and utilize parallel copy also in single snap acquisitions.
-   tasksMemCopy_->MemCopy((void*)pImg->GetPixels(),
-         pixArray, singleChannelSize);
+   tasksMemCopy_->MemCopy((void*)pImg->GetPixels(), pixArray, frameSize);
 
    {
       std::lock_guard<std::mutex> guard(bufferLock_);
 
-      imageCounter_++;
       insertIndex_++;
-      if ((insertIndex_ - (long)frameArray_.size()) > adjustThreshold && (saveIndex_- (long)frameArray_.size()) > adjustThreshold)
+      // Periodically rebase indices to keep them from growing without bound.
+      if (insertIndex_ > frameArray_.size() + adjustThreshold &&
+          saveIndex_  > frameArray_.size() + adjustThreshold)
       {
-         // adjust buffer indices to avoid overflowing integer size
          insertIndex_ -= adjustThreshold;
-         saveIndex_ -= adjustThreshold;
+         saveIndex_   -= adjustThreshold;
       }
    }
 
@@ -229,58 +201,47 @@ bool CircularBuffer::InsertImage(const unsigned char* pixArray,
 
 const unsigned char* CircularBuffer::GetTopImage() const
 {
-   const ImgBuffer* img = GetNthFromTopImageBuffer(0, 0);
+   const FrameBuffer* img = GetNthFromTopImageBuffer(0);
    if (!img)
-      return 0;
+      return nullptr;
    return img->GetPixels();
 }
 
-const ImgBuffer* CircularBuffer::GetTopImageBuffer(unsigned channel) const
+const FrameBuffer* CircularBuffer::GetTopImageBuffer() const
 {
-   return GetNthFromTopImageBuffer(0, channel);
+   return GetNthFromTopImageBuffer(0);
 }
 
-const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(unsigned long n) const
-{
-   return GetNthFromTopImageBuffer(static_cast<long>(n), 0);
-}
-
-const ImgBuffer* CircularBuffer::GetNthFromTopImageBuffer(long n,
-      unsigned channel) const
+const FrameBuffer* CircularBuffer::GetNthFromTopImageBuffer(std::size_t n) const
 {
    std::lock_guard<std::mutex> guard(bufferLock_);
 
-   long availableImages = insertIndex_ - saveIndex_;
-   if (n + 1 > availableImages)
-      return 0;
+   const std::size_t availableImages = insertIndex_ - saveIndex_;
+   if (n >= availableImages)
+      return nullptr;
 
-   long targetIndex = insertIndex_ - n - 1L;
-   while (targetIndex < 0)
-      targetIndex += (long) frameArray_.size();
-   targetIndex %= frameArray_.size();
-
-   return frameArray_[targetIndex].FindImage(channel);
+   const std::size_t targetIndex = (insertIndex_ - n - 1) % frameArray_.size();
+   return &frameArray_[targetIndex];
 }
 
 const unsigned char* CircularBuffer::GetNextImage()
 {
-   const ImgBuffer* img = GetNextImageBuffer(0);
+   const FrameBuffer* img = GetNextImageBuffer();
    if (!img)
-      return 0;
+      return nullptr;
    return img->GetPixels();
 }
 
-const ImgBuffer* CircularBuffer::GetNextImageBuffer(unsigned channel)
+const FrameBuffer* CircularBuffer::GetNextImageBuffer()
 {
    std::lock_guard<std::mutex> guard(bufferLock_);
 
-   long availableImages = insertIndex_ - saveIndex_;
-   if (availableImages < 1)
-      return 0;
+   if (insertIndex_ == saveIndex_)
+      return nullptr;
 
-   long targetIndex = saveIndex_ % frameArray_.size();
+   const std::size_t targetIndex = saveIndex_ % frameArray_.size();
    ++saveIndex_;
-   return frameArray_[targetIndex].FindImage(channel);
+   return &frameArray_[targetIndex];
 }
 
 } // namespace internal

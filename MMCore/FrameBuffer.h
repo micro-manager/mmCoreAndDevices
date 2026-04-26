@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -25,58 +26,30 @@
 namespace mmcore {
 namespace internal {
 
-class ImgBuffer
+class FrameBuffer
 {
+   std::size_t size_ = 0;
    std::unique_ptr<unsigned char[]> pixels_;
-   unsigned int width_;
-   unsigned int height_;
-   unsigned int pixDepth_;
    std::string serializedMetadata_;
 
 public:
-   ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth);
-   ~ImgBuffer();
+   FrameBuffer() = default;
+   FrameBuffer(std::size_t size);
 
-   unsigned int Width() const {return width_;}
-   unsigned int Height() const {return height_;}
-   unsigned int Depth() const {return pixDepth_;}
+   FrameBuffer(FrameBuffer&&) = default;
+   FrameBuffer& operator=(FrameBuffer&&) = default;
+   FrameBuffer(const FrameBuffer&) = delete;
+   FrameBuffer& operator=(const FrameBuffer&) = delete;
+
    void SetPixels(const void* pixArray);
    const unsigned char* GetPixels() const;
 
-   void Resize(unsigned xSize, unsigned ySize, unsigned pixDepth);
-   void Resize(unsigned xSize, unsigned ySize);
+   void Resize(std::size_t size);
 
    void SetSerializedMetadata(std::string_view serialized);
    const std::string& GetSerializedMetadata() const {
       return serializedMetadata_;
    }
-
-private:
-   ImgBuffer& operator=(const ImgBuffer&);
-};
-
-// The FrameBuffer class wraps ImgBuffer (which is part of the MMCore API) for
-// internal use. It was also previously part of a never-completed scheme to
-// support multi-channel frames.
-class FrameBuffer
-{
-   std::unique_ptr<ImgBuffer> buffer_; // May be empty
-   unsigned int width_;
-   unsigned int height_;
-   unsigned int depth_;
-
-public:
-   FrameBuffer(unsigned xSize, unsigned ySize, unsigned byteDepth);
-   FrameBuffer();
-
-   void Resize(unsigned xSize, unsigned ySize, unsigned pixDepth);
-   void Clear();
-   void Preallocate();
-
-   ImgBuffer* FindImage(unsigned channel) const;
-   unsigned Width() const {return width_;}
-   unsigned Height() const {return height_;}
-   unsigned Depth() const {return depth_;}
 };
 
 } // namespace internal

@@ -24,100 +24,36 @@
 namespace mmcore {
 namespace internal {
 
-ImgBuffer::ImgBuffer(unsigned xSize, unsigned ySize, unsigned pixDepth) :
-   pixels_(new unsigned char[xSize * ySize * pixDepth]()),
-   width_(xSize), height_(ySize), pixDepth_(pixDepth)
+FrameBuffer::FrameBuffer(std::size_t size) :
+   size_(size),
+   pixels_(new unsigned char[size]())
 {
 }
 
-ImgBuffer::~ImgBuffer() = default;
-
-const unsigned char* ImgBuffer::GetPixels() const
+const unsigned char* FrameBuffer::GetPixels() const
 {
    return pixels_.get();
 }
 
-void ImgBuffer::SetPixels(const void* pix)
+void FrameBuffer::SetPixels(const void* pix)
 {
-   memcpy((void*)pixels_.get(), pix, width_ * height_ * pixDepth_);
+   memcpy(pixels_.get(), pix, size_);
 }
 
-void ImgBuffer::Resize(unsigned xSize, unsigned ySize, unsigned pixDepth)
+void FrameBuffer::Resize(std::size_t size)
 {
-   // re-allocate internal buffer if it is not big enough
-   if (width_ * height_ * pixDepth_ < xSize * ySize * pixDepth)
+   if (size != size_)
    {
-      pixels_.reset(new unsigned char[xSize * ySize * pixDepth]);
+      // Deallocate before allocating, since these buffers can be large
+      pixels_.reset();
+      pixels_.reset(new unsigned char[size]());
+      size_ = size;
    }
-
-   width_ = xSize;
-   height_ = ySize;
-   pixDepth_ = pixDepth;
 }
 
-void ImgBuffer::Resize(unsigned xSize, unsigned ySize)
-{
-   // re-allocate internal buffer if it is not big enough
-   if (width_ * height_ < xSize * ySize)
-   {
-      pixels_.reset(new unsigned char[xSize * ySize * pixDepth_]);
-   }
-
-   width_ = xSize;
-   height_ = ySize;
-
-   memset(pixels_.get(), 0, width_ * height_ * pixDepth_);
-}
-
-void ImgBuffer::SetSerializedMetadata(std::string_view serialized)
+void FrameBuffer::SetSerializedMetadata(std::string_view serialized)
 {
    serializedMetadata_.assign(serialized);
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-// FrameBuffer class
-///////////////////////////////////////////////////////////////////////////////
-
-FrameBuffer::FrameBuffer(unsigned xSize, unsigned ySize, unsigned byteDepth)
-{
-   width_ = xSize;
-   height_ = ySize;
-   depth_ = byteDepth;
-}
-
-FrameBuffer::FrameBuffer()
-{
-   width_ = 0;
-   height_ = 0;
-   depth_ = 0;
-}
-
-void FrameBuffer::Clear()
-{
-   buffer_.reset();
-}
-
-void FrameBuffer::Preallocate()
-{
-   if (!buffer_) {
-      buffer_ = std::make_unique<ImgBuffer>(width_, height_, depth_);
-   }
-}
-
-void FrameBuffer::Resize(unsigned xSize, unsigned ySize, unsigned byteDepth)
-{
-   Clear();
-   width_ = xSize;
-   height_ = ySize;
-   depth_ = byteDepth;
-}
-
-ImgBuffer* FrameBuffer::FindImage(unsigned channel) const
-{
-   if (channel > 0)
-      return nullptr;
-   return buffer_.get();
 }
 
 } // namespace internal

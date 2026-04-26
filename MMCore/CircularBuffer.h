@@ -30,6 +30,7 @@
 
 #include "MMDevice.h"
 
+#include <cstddef>
 #include <memory>
 #include <mutex>
 #include <string_view>
@@ -45,34 +46,28 @@ class TaskSet_CopyMemory;
 class CircularBuffer
 {
 public:
-   CircularBuffer(unsigned int memorySizeMB);
+   CircularBuffer(std::size_t memorySizeMB);
    ~CircularBuffer();
 
    int SetOverwriteData(bool overwrite);
 
-   unsigned GetMemorySizeMB() const { return memorySizeMB_; }
+   std::size_t GetMemorySizeMB() const { return memorySizeMB_; }
 
-   bool Initialize(unsigned int xSize, unsigned int ySize, unsigned int pixDepth);
-   unsigned long GetSize() const;
-   unsigned long GetFreeSize() const;
-   unsigned long GetRemainingImageCount() const;
+   bool Initialize(std::size_t frameSize);
+   std::size_t GetSize() const;
+   std::size_t GetFreeSize() const;
+   std::size_t GetRemainingImageCount() const;
 
-   unsigned int Width() const {std::lock_guard<std::mutex> guard(bufferLock_); return width_;}
-   unsigned int Height() const {std::lock_guard<std::mutex> guard(bufferLock_); return height_;}
-   unsigned int Depth() const {std::lock_guard<std::mutex> guard(bufferLock_); return pixDepth_;}
-
-   bool InsertImage(const unsigned char* pixArray,
-      unsigned int width, unsigned int height, unsigned int byteDepth, unsigned int nComponents,
+   bool InsertImage(const unsigned char* pixArray, std::size_t frameSize,
       std::string_view serializedMetadata) MMCORE_LEGACY_THROW(CMMError);
    const unsigned char* GetTopImage() const;
    const unsigned char* GetNextImage();
-   const ImgBuffer* GetTopImageBuffer(unsigned channel) const;
-   const ImgBuffer* GetNthFromTopImageBuffer(unsigned long n) const;
-   const ImgBuffer* GetNthFromTopImageBuffer(long n, unsigned channel) const;
-   const ImgBuffer* GetNextImageBuffer(unsigned channel);
-   void Clear(); 
+   const FrameBuffer* GetTopImageBuffer() const;
+   const FrameBuffer* GetNthFromTopImageBuffer(std::size_t n) const;
+   const FrameBuffer* GetNextImageBuffer();
+   void Clear();
 
-   bool Overflow() {std::lock_guard<std::mutex> guard(bufferLock_); return overflow_;}
+   bool Overflow() const {std::lock_guard<std::mutex> guard(bufferLock_); return overflow_;}
 
 private:
    void ClearLocked();
@@ -84,23 +79,20 @@ private:
    // Guards all mutable state below except where noted.
    mutable std::mutex bufferLock_;
 
-   unsigned int width_;
-   unsigned int height_;
-   unsigned int pixDepth_;
-   long imageCounter_;
+   std::size_t frameSize_;
 
    // Invariants:
    // 0 <= saveIndex_ <= insertIndex_
    // insertIndex_ - saveIndex_ <= frameArray_.size()
-   long insertIndex_;
-   long saveIndex_;
+   std::size_t insertIndex_;
+   std::size_t saveIndex_;
 
    bool overflow_;
    bool overwriteData_;
    std::vector<FrameBuffer> frameArray_;
 
    // Effectively const after construction.
-   unsigned long memorySizeMB_;
+   std::size_t memorySizeMB_;
    std::shared_ptr<ThreadPool> threadPool_;
    std::shared_ptr<TaskSet_CopyMemory> tasksMemCopy_;
 };

@@ -33,7 +33,6 @@
 #include "SynchronizedConfiguration.h"
 
 #include "DeviceUtils.h"
-#include "ImgBuffer.h"
 
 #include <cassert>
 #include <chrono>
@@ -318,7 +317,8 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
       {
          ip->Process(const_cast<unsigned char*>(buf), width, height, bytesPerPixel);
       }
-      if (core_->cbuf_->InsertImage(buf, width, height, bytesPerPixel, nComponents,
+      if (core_->cbuf_->InsertImage(buf,
+            static_cast<std::size_t>(width) * height * bytesPerPixel,
             md.View()))
          return DEVICE_OK;
       else
@@ -341,7 +341,7 @@ bool CoreCallback::InitializeImageBuffer(unsigned channels, unsigned slices,
    if (slices != 1)
       return false;
 
-   return core_->cbuf_->Initialize(w, h, pixDepth);
+   return core_->cbuf_->Initialize(static_cast<std::size_t>(w) * h * pixDepth);
 }
 
 int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
