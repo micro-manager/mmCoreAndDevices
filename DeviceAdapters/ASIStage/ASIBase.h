@@ -50,19 +50,12 @@ public:
 
 	// Return the version data parsed from a std::string.
 	static Version ParseString(const std::string& version) {
-		// Example response: ":A Version: USB-9.2m \r\n"
-
-		// find the index of the dash
-		const size_t dashIndex = version.find("-");
-		if (dashIndex == std::string::npos) {
-			return Version(); // error => default data
-		}
-
-		// short version => "9.2m \r\n"
-		const std::string ver = version.substr(dashIndex + 1);
+		// version is already parsed from the raw format
+		// ":A Version: USB-9.2m \r\n" => "9.2m"
+		// examples: "9.2p" or "9.50"
 
 		// find the index of the dot
-		const size_t dotIndex = ver.find(".");
+		const size_t dotIndex = version.find(".");
 		if (dotIndex == std::string::npos) {
 			return Version(); // error => default data
 		}
@@ -71,9 +64,9 @@ public:
 		// minor version and revision will only ever be 1 character,
 		// at these specific locations after the dot in the response
 		try {
-			const unsigned int major = std::stoul(ver.substr(0, dotIndex));
-			const unsigned int minor = std::stoul(ver.substr(dotIndex + 1, 1));
-			const unsigned int revision = static_cast<unsigned int>(ver.at(dotIndex + 2));
+			const unsigned int major = std::stoul(version.substr(0, dotIndex));
+			const unsigned int minor = std::stoul(version.substr(dotIndex + 1, 1));
+			const unsigned int revision = static_cast<unsigned int>(version.at(dotIndex + 2));
 			return Version(major, minor, revision);
 		} catch (...) {
 			return Version(); // parsing error => default data
