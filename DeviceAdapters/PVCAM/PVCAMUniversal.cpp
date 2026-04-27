@@ -226,34 +226,14 @@ constexpr int g_UniversalParamsCount = sizeof(g_UniversalParams) / sizeof(ParamN
 //=================================================================== Universal
 
 Universal::Universal(short cameraId, const char* deviceName)
-    :
-    cameraId_(cameraId),
+    : cameraId_(cameraId),
     deviceName_(deviceName),
-    initialized_(false),
-    imagesToAcquire_(0), imagesInserted_(0), imagesAcquired_(0), imagesRecovered_(0),
-    hPVCAM_(0),
-    cameraModel_(PvCameraModel_Generic),
-    circBufFrameCount_(CIRC_BUF_FRAME_CNT_DEF), // Sizes larger than 3 caused image tearing in ICX-674. Reason unknown.
-    circBufFrameRecoveryEnabled_(false),
-    stopOnOverflow_(true),
-    snappingSingleFrame_(false),
-    singleFrameModeReady_(false),
-    sequenceModeReady_(false),
-    callPrepareForAcq_(true),
-    isAcquiring_(false),
-    triggerTimeout_(10),
+    // Sizes larger than 3 caused image tearing in ICX-674. Reason unknown.
+    circBufFrameCount_(CIRC_BUF_FRAME_CNT_DEF),
     pollingThd_(std::make_unique<PollingThread>(this)),
     notificationThd_(std::make_unique<NotificationThread>(this)),
     acqThd_(std::make_unique<AcqThread>(this)),
-    customDiskWriter_(std::make_unique<StreamWriter>(this)),
-    customDiskWriterActive_(false),
-    camParSize_(0),
-    camSerSize_(0),
-    binningRestricted_(false),
-    redScale_(1.0),
-    greenScale_(1.0),
-    blueScale_(1.0),
-    eofEvent_(false, false)
+    customDiskWriter_(std::make_unique<StreamWriter>(this))
 {
     InitializeDefaultErrorMessages();
 
@@ -271,10 +251,6 @@ Universal::Universal(short cameraId, const char* deviceName)
     SetErrorText(ERR_FILE_OPERATION_FAILED, "File operation has failed");
     SetErrorText(ERR_SW_TRIGGER_NOT_SUPPORTED, "Selected SW trigger mode is not supported by the adapter");
     SetErrorText(ERR_PIXEL_TYPE_NOT_SUPPORTED, "Micro-Manager does not support pixels with bit-depth over 16 bits");
-
-    deviceLabel_[0] = '\0';
-    camName_[0] = '\0';
-    metaRoiStr_[0] = '\0';
 
     // The notification thread will have slightly smaller queue than the circular buffer.
     // This is to reduce the risk of frames being overwritten by PVCAM when the circular
@@ -306,7 +282,7 @@ Universal::~Universal()
 
 
 //=============================================================================
-//==================================================================== MMDevice
+//================================================================== MM::Device
 
 
 int Universal::Initialize()
@@ -1533,7 +1509,7 @@ bool Universal::GetErrorText(int errorCode, char* text) const
 
 
 //=============================================================================
-//==================================================================== MMCamera
+//================================================================== MM::Camera
 
 
 int Universal::SnapImage()
@@ -1572,8 +1548,7 @@ int Universal::SnapImage()
             if (pl_exp_stop_cont(hPVCAM_, CCS_HALT) != PV_OK)
                 LogPvcamError(__LINE__, "pl_exp_stop_cont() failed");
             // Address the TODO above and this workaround won't be needed
-            void* buf = circBuf_.Data();
-            if (buf)
+            if (circBuf_.Data())
             {
                 if (pl_exp_finish_seq(hPVCAM_, circBuf_.Data(), 0) != PV_OK)
                     LogPvcamError(__LINE__, "pl_exp_finish_seq() failed");
