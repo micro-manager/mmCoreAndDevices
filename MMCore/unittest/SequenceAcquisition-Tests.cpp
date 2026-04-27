@@ -75,11 +75,15 @@ struct SyncCamera : CCameraBase<SyncCamera> {
       return DEVICE_OK;
    }
    int StopSequenceAcquisition() override {
-      capturing_ = false;
-      GetCoreCallback()->AcqFinished(this, 0);
+      Finish();
       return DEVICE_OK;
    }
    bool IsCapturing() override { return capturing_; }
+
+   // Simulates the camera deciding to finish on its own (finite-count
+   // completion or error path), as opposed to Core calling
+   // StopSequenceAcquisition.
+   void TriggerSelfFinish() { Finish(); }
 
    int InsertTestImage(const unsigned char* pixels = nullptr) {
       std::vector<unsigned char> defaultBuf;
@@ -94,6 +98,15 @@ struct SyncCamera : CCameraBase<SyncCamera> {
    }
 
 private:
+   // A real camera calls AcqFinished exactly once per acquisition; the
+   // capturing_ guard models that.
+   void Finish() {
+      if (capturing_) {
+         capturing_ = false;
+         GetCoreCallback()->AcqFinished(this, 0);
+      }
+   }
+
    std::vector<unsigned char> imgBuf_;
 };
 
@@ -558,4 +571,82 @@ TEST_CASE("stopSequenceAcquisition on finite acquisition stops it early",
    c.stopSequenceAcquisition();
    CHECK(c.isSequenceRunning() == false);
    CHECK(c.getRemainingImageCount() < 1000000);
+   c.stopSequenceAcquisition();
+}
+
+// --- Cleanup ---
+
+TEST_CASE("popNextImage after stopSequenceAcquisition returns inserted images",
+          "[SequenceAcquisition]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   const int numImages = 3;
+   c.startSequenceAcquisition(numImages, 0.0, true);
+   for (int i = 0; i < numImages; ++i)
+      REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   REQUIRE(c.getRemainingImageCount() == numImages);
+   c.stopSequenceAcquisition();
+   CHECK(c.getRemainingImageCount() == numImages);
+   for (int i = 0; i < numImages; ++i)
+      CHECK(c.popNextImage() != nullptr);
+   CHECK(c.getRemainingImageCount() == 0);
+}
+
+TEST_CASE("Camera self-finish closes shutter when autoShutter is on",
+          "[SequenceAcquisition]") {
+   SyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(shutter.open == true);
+   cam.TriggerSelfFinish();
+   CHECK(shutter.open == false);
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Camera self-finish does not touch shutter when autoShutter is off",
+          "[SequenceAcquisition]") {
+   SyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(false);
+   c.startSequenceAcquisition(10, 0.0, true);
+   shutter.open = true;
+   cam.TriggerSelfFinish();
+   CHECK(shutter.open == true);
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("startSequenceAcquisition after camera self-finish without "
+          "intervening stop succeeds",
+          "[SequenceAcquisition]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   cam.TriggerSelfFinish();
+   REQUIRE(c.isSequenceRunning() == false);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(c.isSequenceRunning() == true);
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   CHECK(c.getRemainingImageCount() == 1);
+   CHECK(c.popNextImage() != nullptr);
+   c.stopSequenceAcquisition();
 }

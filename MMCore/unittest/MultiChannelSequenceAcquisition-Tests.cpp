@@ -5,6 +5,7 @@
 #include "ImageMetadata.h"
 #include "MMDeviceConstants.h"
 #include "MockDeviceUtils.h"
+#include "StubDevices.h"
 
 #include <string>
 #include <utility>
@@ -76,11 +77,14 @@ struct SyncPhysicalCamera : CCameraBase<SyncPhysicalCamera> {
       return DEVICE_OK;
    }
    int StopSequenceAcquisition() override {
-      capturing = false;
-      GetCoreCallback()->AcqFinished(this, 0);
+      Finish();
       return DEVICE_OK;
    }
    bool IsCapturing() override { return capturing; }
+
+   // Simulates the physical camera deciding to finish on its own (finite-
+   // count completion or error path).
+   void TriggerSelfFinish() { Finish(); }
 
    int InsertTestImage() {
       std::vector<unsigned char> buf(
@@ -90,6 +94,15 @@ struct SyncPhysicalCamera : CCameraBase<SyncPhysicalCamera> {
    }
 
 private:
+   // A real camera calls AcqFinished exactly once per acquisition; the
+   // capturing guard models that.
+   void Finish() {
+      if (capturing) {
+         capturing = false;
+         GetCoreCallback()->AcqFinished(this, 0);
+      }
+   }
+
    std::vector<unsigned char> imgBuf_;
 };
 
@@ -298,8 +311,10 @@ struct MockIntrinsicMultiChannelCamera :
       return DEVICE_OK;
    }
    int StopSequenceAcquisition() override {
-      capturing_ = false;
-      GetCoreCallback()->AcqFinished(this, 0);
+      if (capturing_) {
+         capturing_ = false;
+         GetCoreCallback()->AcqFinished(this, 0);
+      }
       return DEVICE_OK;
    }
    bool IsCapturing() override { return capturing_; }
@@ -454,6 +469,65 @@ TEST_CASE("Composite circular buffer holds frames-times-channels",
    c.stopSequenceAcquisition();
 
    CHECK(c.getRemainingImageCount() == 6);
+}
+
+// --- Cleanup ---
+
+TEST_CASE("Composite: each physical's AcqFinished re-closes the auto-shutter",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncPhysicalCamera p0("p0");
+   SyncPhysicalCamera p1("p1");
+   MockCompositeCamera composite({&p0, &p1});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(shutter.open == true);
+
+   p0.TriggerSelfFinish();
+   CHECK(shutter.open == false);
+
+   // This might be a little over-constraining; the important thing is that the
+   // shutter gets closed at least once. But we can't easily write the correct
+   // test until we have the correct behavior (close shutter when the _last_
+   // phys cam finishes).
+   shutter.open = true;
+   p1.TriggerSelfFinish();
+   CHECK(shutter.open == false);
+
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Composite: startSequenceAcquisition after all physicals self-finish "
+          "without intervening stop succeeds",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncPhysicalCamera p0("p0");
+   SyncPhysicalCamera p1("p1");
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   p0.TriggerSelfFinish();
+   p1.TriggerSelfFinish();
+   REQUIRE(c.isSequenceRunning() == false);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(c.isSequenceRunning() == true);
+   REQUIRE(p0.InsertTestImage() == DEVICE_OK);
+   REQUIRE(p1.InsertTestImage() == DEVICE_OK);
+   CHECK(c.getRemainingImageCount() == 2);
+   c.stopSequenceAcquisition();
 }
 
 // === Intrinsic multi-channel camera (TwoPhoton-style) ===
