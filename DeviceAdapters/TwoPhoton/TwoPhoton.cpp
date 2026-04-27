@@ -1016,11 +1016,11 @@ int BitFlowCamera::LiveThread::svc()
 		  char buf[MM::MaxStrLength];
 		  snprintf(buf, MM::MaxStrLength, "%d", i);
 		  md.AddTag(MM::g_Keyword_CameraChannelIndex, buf);
-		  md.AddTag(labelStr + MM::g_Keyword_CameraChannelIndex, buf); // compat
+		  md.AddTag(labelStr + "-" + MM::g_Keyword_CameraChannelIndex, buf); // compat
 
 		  cam_->GetChannelName(i, buf);
 		  md.AddTag(MM::g_Keyword_CameraChannelName, buf);
-		  md.AddTag(labelStr + MM::g_Keyword_CameraChannelName, buf); // compat
+		  md.AddTag(labelStr + "-" + MM::g_Keyword_CameraChannelName, buf); // compat
 
 		  ret = cam_->GetCoreCallback()->InsertImage(cam_, cam_->GetImageBuffer(i),
 			  cam_->GetImageWidth(),
