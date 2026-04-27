@@ -3966,7 +3966,7 @@ int Universal::FrameAcquired()
     imagesAcquired_++; // A new frame has been successfully retrieved from the camera
 
     // The FrameAcquired() is also called for SnapImage() when using callbacks, so we have to
-    // check. In case of SnapImage the img_ already contains the data (since its passed
+    // check. In case of SnapImage the singleFrameBufRaw_ already contains the data (since its passed
     // to pl_start_seq() and no PushImage is done - the single image is retrieved with GetImageBuffer()
     if ( !snappingSingleFrame_ )
     {
@@ -5070,17 +5070,11 @@ int Universal::resizeImageBufferSingle()
             singleFrameBufRaw_.reset();
             singleFrameBufRawSz_ = 0;
 
-            // TODO: Temporary hack to avoid heap corruption when unaligned size is returned
-            const unsigned int align = 64;
-            if (frameSize % align != 0)
-            {
-                const unsigned int alignedSize = ((frameSize / align) + 1) * align;
-                singleFrameBufRaw_ = std::make_unique<unsigned char[]>(alignedSize);
-            }
-            else
-            {
-                singleFrameBufRaw_ = std::make_unique<unsigned char[]>(frameSize);
-            }
+            // HACK! The DMA engine in some older cameras could write a few more
+            // bytes after last frame if the frame size is not 'well' aligned,
+            // that could cause heap corruption issues in PVCAM.
+            // Adding just 16 bytes to the entire buffer seems to help.
+            singleFrameBufRaw_ = std::make_unique<unsigned char[]>((size_t)frameSize + 16);
             singleFrameBufRawSz_ = frameSize;
         }
 

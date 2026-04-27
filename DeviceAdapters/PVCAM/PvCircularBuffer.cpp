@@ -61,10 +61,11 @@ void PvCircularBuffer::Resize(size_t frameSize, int count)
     {
         frameCount_ = count;
         frameSize_  = frameSize;
-        size_       = count * static_cast<size_t>(frameSize);
+        size_       = count * frameSize;
         pBuffer_.reset();
-        // HACK! There still seems to be some heap corruption issues in PVCAM, in
-        // debug builds I am getting heap corruption error on reset() here.
+        // HACK! The DMA engine in some older cameras could write a few more
+        // bytes after last frame if the frame size is not 'well' aligned,
+        // that could cause heap corruption issues in PVCAM.
         // Adding just 16 bytes to the entire buffer seems to help.
         pBuffer_ = std::make_unique<unsigned char[]>(size_ + 16);
 
