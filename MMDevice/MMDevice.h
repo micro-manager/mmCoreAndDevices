@@ -461,15 +461,28 @@ namespace MM {
       virtual int GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths,
               unsigned* heights, unsigned* length) = 0;
       /**
-       * @brief Start continuous acquisition.
-       */
-      virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow) = 0;
-      /**
-       * @brief Start Sequence Acquisition with given interval.
+       * @brief Start sequence acquisition.
        *
-       * Most camera adapters will ignore this number.
+       * @param numImages       Number of images to acquire.
+       * @param unused          Has no effect. Implementations **must** ignore
+       *                        this parameter. Previously named `intervalMs` /
+       *                        `interval_ms`, this parameter was never
+       *                        reliably implemented. Cameras that need a
+       *                        configurable frame rate should expose it as a
+       *                        device property.
+       * @param stopOnOverflow  If true, stop acquiring when MMCore's sequence
+       *                        buffer is full; if false, overwrite old frames.
+       *                        This is handled by MMCore automatically, but
+       *                        when false, the camera is allowed to drop
+       *                        frames.
        */
-      virtual int StartSequenceAcquisition(double interval_ms) = 0;
+      virtual int StartSequenceAcquisition(long numImages, double unused, bool stopOnOverflow) = 0;
+      /**
+       * @brief Start continuous sequence acquisition.
+       *
+       * @param unused  Has no effect — see the three-argument overload.
+       */
+      virtual int StartSequenceAcquisition(double unused) = 0;
       /**
        * @brief Stop an ongoing sequence acquisition.
        */
