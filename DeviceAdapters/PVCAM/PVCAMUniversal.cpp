@@ -2087,7 +2087,7 @@ int Universal::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
         // When Binning is set via Property Browser it works fine. So if
         // we fail to set the binning we force update the GUI here.
         if (nRet != DEVICE_OK)
-            this->GetCoreCallback()->OnPropertiesChanged(this);
+            GetCoreCallback()->OnPropertiesChanged(this);
     }
     else if (eAct == MM::BeforeGet)
     {
@@ -4003,10 +4003,9 @@ int Universal::PushImageToMmCore(const unsigned char* pPixBuffer, MM::CameraImag
 {
     START_METHOD("Universal::PushImageToMmCore");
 
-    MM::Core* pCore = GetCoreCallback();
     // This method inserts a new image into the circular buffer (residing in MMCore)
-    return pCore->InsertImage(this, pPixBuffer, GetImageWidth(), GetImageHeight(),
-        GetImageBytesPerPixel(), pMd->Serialize());
+    return GetCoreCallback()->InsertImage(this, pPixBuffer, GetImageWidth(),
+            GetImageHeight(), GetImageBytesPerPixel(), pMd->Serialize());
 }
 
 int Universal::ProcessNotification( const NotificationEntry& entry )
@@ -4280,10 +4279,10 @@ int Universal::PollingThreadRun(void)
     catch(...)
     {
         LogAdapterMessage(g_Msg_EXCEPTION_IN_THREAD, false);
+        // TODO: Can it ever be null?
         auto *core = GetCoreCallback();
-        if (core != nullptr) {
-           core->AcqFinished(this, 0);
-        }
+        if (core)
+           core->AcqFinished(this, DEVICE_OK);
         pollingThd_->SetStop(true);
         return ret;
     }
@@ -4306,8 +4305,10 @@ void Universal::PollingThreadExiting() throw ()
         isAcquiring_       = false;
 
         LogAdapterMessage(g_Msg_SEQUENCE_ACQUISITION_THREAD_EXITING);
-        if (GetCoreCallback())
-            GetCoreCallback()->AcqFinished(this, DEVICE_OK);
+        // TODO: Can it ever be null?
+        auto *core = GetCoreCallback();
+        if (core)
+            core->AcqFinished(this, DEVICE_OK);
     }
     catch (...)
     {
@@ -4936,7 +4937,7 @@ int Universal::resizeImageBufferContinuous()
         if (nRet != DEVICE_OK)
         {
             SetBinning(1); // The error might have been caused by not supported BIN or ROI, so do a reset
-            this->GetCoreCallback()->OnPropertiesChanged(this); // Notify the MM UI to update the BIN and ROI
+            GetCoreCallback()->OnPropertiesChanged(this); // Notify the MM UI to update the BIN and ROI
             SetErrorText( nRet, "Failed to setup the acquisition" );
             return nRet;
         }
@@ -5056,7 +5057,7 @@ int Universal::resizeImageBufferSingle()
         if (nRet != DEVICE_OK)
         {
             SetBinning(1); // The error might have been caused by not supported BIN or ROI, so do a reset
-            this->GetCoreCallback()->OnPropertiesChanged(this); // Notify the MM UI to update the BIN and ROI
+            GetCoreCallback()->OnPropertiesChanged(this); // Notify the MM UI to update the BIN and ROI
             SetErrorText( nRet, "Failed to setup the acquisition" );
             return nRet;
         }
@@ -5091,7 +5092,7 @@ int Universal::resizeImageBufferSingle()
         // Reflect all changes that occurred in this function in the Device/Property window
         // LW: 2016-06-14 Removing this because it is causing hangs with Single Snap in Dual Camera setup
         //     Some UI properties may not be properly updated though. Review this code should issues arise.
-        //this->GetCoreCallback()->OnPropertiesChanged(this);
+        //GetCoreCallback()->OnPropertiesChanged(this);
     }
     catch (const std::bad_alloc& e)
     {
@@ -6946,7 +6947,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     // OnPropertiesChanged often causes an immediate call to StartSequenceAcquisition()
     // which in turn results in hang of Live mode. (happens in uM 2.0, not 1.4)
     if (configChanged || forceSetup)
-        nRet = this->GetCoreCallback()->OnPropertiesChanged(this);
+        nRet = GetCoreCallback()->OnPropertiesChanged(this);
 
     return nRet;
 }
