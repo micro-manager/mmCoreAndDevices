@@ -34,7 +34,6 @@
 // MMDevice
 #include "CameraImageMetadata.h"
 #include "DeviceBase.h"
-#include "DeviceThreads.h"
 #include "DeviceUtils.h"
 #include "ImgBuffer.h"
 
@@ -50,13 +49,12 @@
 // System
 #include <map>
 #include <memory> // smart pointers
+#include <mutex>
 #include <string>
 #include <utility> // std::pair
 
-
 //=============================================================================
 //===================================================================== DEFINES
-
 
 // Current PVCAM SDK in 3rdpartypublic is 3.10.0 from January 31, 2023.
 // Oldest supported PVCAM runtime should be now 3.0.12 due to used
@@ -915,7 +913,7 @@ private:
     std::unique_ptr<ImgBuffer>          rgbImgBuf_{ nullptr };
 
     Event            eofEvent_{ false, false };
-    MMThreadLock     acqLock_{};
+    std::mutex       acqLock_{};
 
     // Must remain C-pointer for pl_create_frame_info_struct & pl_release_frame_info_struct
     FRAME_INFO*     pFrameInfo_{ nullptr }; // PVCAM frame metadata
