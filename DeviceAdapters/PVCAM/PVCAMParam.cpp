@@ -149,7 +149,7 @@ int PvUniversalParam::Set(std::string aValue)
     case TYPE_UNS32:
     case TYPE_FLT64:
     case TYPE_INT64:
-        // Other supported types are value-types. We try to convert the string to a double value which is 
+        // Other supported types are value-types. We try to convert the string to a double value which is
         // the larges type supported in universal params, validate it and then set.
         ss >> dValue;
         if (ss.fail())

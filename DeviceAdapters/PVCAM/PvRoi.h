@@ -97,7 +97,7 @@ public:
     uns16 SensorRgnY2() const { return m_sensorRgnY + m_sensorRgnHeight - 1; }
     uns16 SensorRgnWidth() const { return m_sensorRgnWidth; }
     uns16 SensorRgnHeight() const { return m_sensorRgnHeight; }
-    
+
     uns16 ImageRgnX() const { return m_sensorRgnX / m_binX; }
     uns16 ImageRgnY() const { return m_sensorRgnY / m_binY; }
     uns16 ImageRgnWidth() const { return m_sensorRgnWidth / m_binX; }

@@ -134,7 +134,7 @@ public:
     }
 
     /**
-    * Sets the parameter value but does not apply the settings. Use Write() to 
+    * Sets the parameter value but does not apply the settings. Use Write() to
     * send the parameter to the camera.
     * TODO: Revisit the method name (might be confusing to have Set/Apply/Update methods)
     */
@@ -153,7 +153,7 @@ public:
             mCamera->LogAdapterMessage("Updating " + mDebugName + "...");
 
         // Must be set to max exposures number so we can retrieve current number of exposures
-        // from the camera in case new requested exposures count is greater than the previous  
+        // from the camera in case new requested exposures count is greater than the previous
         mCurrent.entries = SMART_STREAM_MAX_EXPOSURES;
         if (pl_get_param(mCamera->Handle(), mId, ATTR_CURRENT, &mCurrent) != PV_OK)
         {
@@ -278,7 +278,7 @@ public:
     }
 
     /**
-    * Sets the parameter value but does not apply the settings. Use Write() to 
+    * Sets the parameter value but does not apply the settings. Use Write() to
     * send the parameter to the camera.
     * TODO: Revisit the method name (might be confusing to have Set/Apply/Update methods)
     */

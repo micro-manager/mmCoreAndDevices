@@ -4,7 +4,7 @@
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   PVCAM camera module
-//                
+//
 // AUTHOR:        Nico Stuurman, Nenad Amodaj nenad@amodaj.com, 09/13/2005
 // COPYRIGHT:     University of California, San Francisco, 2006
 // LICENSE:       This file is distributed under the BSD license.

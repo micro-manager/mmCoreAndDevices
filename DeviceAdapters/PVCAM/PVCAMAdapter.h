@@ -4,7 +4,7 @@
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   PVCAM camera module
-//                
+//
 // AUTHOR:        Nico Stuurman, Nenad Amodaj nenad@amodaj.com, 09/13/2005
 // COPYRIGHT:     University of California, San Francisco, 2006
 //                100X Imaging Inc, 2008
@@ -182,7 +182,7 @@ public: // MM::Camera API
     virtual const unsigned* GetImageBufferAsRGB32() override;
     virtual unsigned GetImageWidth() const override;
     virtual unsigned GetImageHeight() const override;
-    virtual unsigned GetImageBytesPerPixel() const override; 
+    virtual unsigned GetImageBytesPerPixel() const override;
     virtual long GetImageBufferSize() const override;
     virtual unsigned GetBitDepth() const override;
     virtual int GetBinning() const override;
@@ -320,7 +320,7 @@ public: // Action handlers
     int OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Get or sets the current Scan Mode Direction.
-    */    
+    */
     int OnScanDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Get or sets the current Scan Direction Reset mode (on/off).
@@ -328,7 +328,7 @@ public: // Action handlers
     int OnScanDirectionReset(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Gets or sets the scan line delay.
-    */ 
+    */
     int OnScanLineDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Gets the current scan line time.

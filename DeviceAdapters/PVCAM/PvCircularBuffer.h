@@ -21,7 +21,7 @@ public:
 
     /**
     * Returns the maximum number of frames the buffer can hold before it overruns
-    * @return Number of frames 
+    * @return Number of frames
     */
     int Capacity() const;
     /**

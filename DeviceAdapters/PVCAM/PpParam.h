@@ -6,7 +6,7 @@
 * Class used by post processing, a list of these elements is built up one for each post processing function
 * so the call back function in CPropertyActionEx can get to information about that particular feature in
 * the call back function
-*/ 
+*/
 class PpParam
 {
 public:

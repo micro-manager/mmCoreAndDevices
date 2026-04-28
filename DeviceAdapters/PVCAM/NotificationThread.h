@@ -24,7 +24,7 @@ class Universal;
 * Operation
 *
 * When PVCAM finishes reading out a new frame and sends a callback to the
-* adapter we push the frame pointer and  corresponding frame metadata to the 
+* adapter we push the frame pointer and  corresponding frame metadata to the
 * NotificationQueue. The frame data is not copied, however the metadata is
 * copied.
 * The PVCAM callback thread is immediately released, allowing PVCAM to wait for
@@ -46,7 +46,7 @@ class Universal;
 * currently being copied by the MMCore to its own "Sequence Buffer".
 *
 * For example, if we have CircularBuffer size of 16 frames and max Queue size
-* of 10 frames there is a 4 frames gap. This 4 frames gap should give us 
+* of 10 frames there is a 4 frames gap. This 4 frames gap should give us
 * enough time to copy the oldest frame to MMCore (without a risk of being
 * overwritten by PVCAM) if the NotificationQueue is getting full.
 *
