@@ -41,7 +41,6 @@
 
 // Local
 #include "AcqThread.h"
-#include "NotificationThread.h"
 #include "PollingThread.h"
 #include "PVCAMParam.h"
 #include "StreamWriter.h"
@@ -232,7 +231,6 @@ Universal::Universal(short cameraId, const char* deviceName)
     // Sizes larger than 3 caused image tearing in ICX-674. Reason unknown.
     circBufFrameCount_(CIRC_BUF_FRAME_CNT_DEF),
     pollingThd_(std::make_unique<PollingThread>(this)),
-    notificationThd_(std::make_unique<NotificationThread>(this)),
     acqThd_(std::make_unique<AcqThread>(this)),
     customDiskWriter_(std::make_unique<StreamWriter>(this))
 {
@@ -252,12 +250,6 @@ Universal::Universal(short cameraId, const char* deviceName)
     SetErrorText(ERR_FILE_OPERATION_FAILED, "File operation has failed");
     SetErrorText(ERR_SW_TRIGGER_NOT_SUPPORTED, "Selected SW trigger mode is not supported by the adapter");
     SetErrorText(ERR_PIXEL_TYPE_NOT_SUPPORTED, "Micro-Manager does not support pixels with bit-depth over 16 bits");
-
-    // The notification thread will have slightly smaller queue than the circular buffer.
-    // This is to reduce the risk of frames being overwritten by PVCAM when the circular
-    // buffer starts to be full. With smaller queue we will simply start throwing old
-    // frames away earlier because those old frames could soon get overwritten.
-    notificationThd_->activate();
 
     acqThd_->Start(); // Starts the thread loop but waits for Resume()
 }
@@ -3869,16 +3861,8 @@ int Universal::FrameAcquired()
             if (currFrameNr > prevFrameNr + 1)
             {
                 const int missedCbCount = currFrameNr - prevFrameNr - 1;
-                // We cannot perform frame recovery if our notification queue is full.
-                // This means that the circular buffer has overrun because the application
-                // cannot process the frames fast enough. Increasing the CB may help.
-                if (missedCbCount >= notificationThd_->Capacity())
-                {
-                    // TODO: Should we somewhat return an error that our circular
-                    // buffer has overrun? For now the behavior is the same as with
-                    // previous code - we simply start skipping frames.
-                }
-                else if (circBufFrameRecoveryEnabled_)
+
+                if (circBufFrameRecoveryEnabled_)
                 {
                     // Get the last known frame index in the CB
                     const int lastFrIdx = circBuf_.LatestFrameIndex();
@@ -3936,11 +3920,9 @@ int Universal::FrameAcquired()
                             // its internal counters and indexes.
                             circBuf_.ReportFrameArrived(recFrNfo, pRecFrameData);
 
-                            // Prepare the notification and push the new frame + info to our queue,
-                            // the same way as the frame would arrive correctly with a callback.
-                            NotificationEntry recNotif(pRecFrameData,
-                                static_cast<unsigned int>(circBuf_.FrameSize()), recFrNfo);
-                            notificationThd_->PushNotification(recNotif);
+                            // Process the new frame the same way as the frame
+                            // would arrive correctly with a callback.
+                            ProcessFrame(pRecFrameData, circBuf_.FrameSize(), recFrNfo);
                             imagesAcquired_++;
                             imagesRecovered_++;
                         }
@@ -3965,28 +3947,19 @@ int Universal::FrameAcquired()
 
     imagesAcquired_++; // A new frame has been successfully retrieved from the camera
 
-    // The FrameAcquired() is also called for SnapImage() when using callbacks, so we have to
-    // check. In case of SnapImage the singleFrameBufRaw_ already contains the data (since its passed
-    // to pl_start_seq() and no PushImage is done - the single image is retrieved with GetImageBuffer()
+    // The FrameAcquired() is also called for SnapImage() when using callbacks,
+    // so we have to check. In case of SnapImage the singleFrameBufRaw_ already
+    // contains the data (since it's passed to pl_start_seq() and no PushImage()
+    // is done - the single image is retrieved with GetImageBuffer().
     if ( !snappingSingleFrame_ )
     {
+        size_t currFrameSize = singleFrameBufRawSz_;
         if (acqCfgCur_.CircBufEnabled)
         {
-            const NotificationEntry notif(pCurrFramePtr,
-                static_cast<unsigned int>(circBuf_.FrameSize()), currFrameNfo);
+            currFrameSize = circBuf_.FrameSize();
             circBuf_.ReportFrameArrived(currFrameNfo, pCurrFramePtr);
-            notificationThd_->PushNotification( notif );
         }
-        else
-        {
-            // If we run in non-circular buffer mode we pass the frame directly to
-            // uM core, since we use single frame pointer for all frames we cannot
-            // post it for processing to other thread but we need to wait for every
-            // frame to finish processing before we acquire another one.
-            const NotificationEntry notif(pCurrFramePtr,
-                static_cast<unsigned int>(singleFrameBufRawSz_), currFrameNfo);
-            ProcessNotification(notif);
-        }
+        ProcessFrame(pCurrFramePtr, currFrameSize, currFrameNfo);
     }
     else
     {
@@ -3998,16 +3971,7 @@ int Universal::FrameAcquired()
     return DEVICE_OK;
 }
 
-int Universal::PushImageToMmCore(const unsigned char* pPixBuffer, MM::CameraImageMetadata* pMd )
-{
-    START_METHOD("Universal::PushImageToMmCore");
-
-    // This method inserts a new image into the circular buffer (residing in MMCore)
-    return GetCoreCallback()->InsertImage(this, pPixBuffer, GetImageWidth(),
-            GetImageHeight(), GetImageBytesPerPixel(), pMd->Serialize());
-}
-
-int Universal::ProcessNotification( const NotificationEntry& entry )
+int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo& frameNfo)
 {
     // Ignore inserts if we already have all images inserted.
     // This may happen if the notification queue still contains some acquired frames
@@ -4019,11 +3983,9 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
     if (!isAcquiring_) // Cannot guard it with acqLock_
         return DEVICE_OK;
 
-    const PvFrameInfo& frameNfo = entry.FrameMetadata();
-
     int ret = DEVICE_OK;
 
-    ret = customDiskWriter_->WriteFrame(entry.FrameData(), frameNfo.PvFrameNr());
+    ret = customDiskWriter_->WriteFrame(pData, frameNfo.PvFrameNr());
     if (ret != DEVICE_OK)
     {
         StopSequenceAcquisition();
@@ -4064,7 +4026,7 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval));
 
         unsigned char* pOutBuf = nullptr;
-        ret = postProcessSingleFrame(&pOutBuf, (unsigned char*)entry.FrameData(), entry.FrameDataSize());
+        ret = postProcessSingleFrame(&pOutBuf, (unsigned char*)pData, dataSz);
         if (ret != DEVICE_OK)
         {
             StopSequenceAcquisition();
@@ -4206,7 +4168,9 @@ int Universal::ProcessNotification( const NotificationEntry& entry )
             md.AddTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
         }
 
-        ret = PushImageToMmCore( pOutBuf, &md );
+        // This method inserts a new image into the circular buffer (residing in MMCore)
+        ret = GetCoreCallback()->InsertImage(this, pOutBuf, GetImageWidth(),
+                GetImageHeight(), GetImageBytesPerPixel(), md.Serialize());
         if (ret != DEVICE_OK)
         {
             StopSequenceAcquisition();
@@ -4998,10 +4962,6 @@ int Universal::resizeImageBufferContinuous()
             return LogAdapterError(ERR_BUFFER_TOO_LARGE, __LINE__, "Buffer too large");
 
         circBuf_.Resize(frameSize, circBufFrameCount_);
-
-        // Set the queue size to slightly less than the CB size to avoid PVCAM overwriting
-        // the oldest frame. This way we start throwing old frames away a little earlier.
-        notificationThd_->SetQueueCapacity(static_cast<int>(circBufFrameCount_ * 0.7) + 1);
 
         nRet = customDiskWriter_->Setup(acqCfgCur_.DiskStreamingEnabled,
                 acqCfgCur_.DiskStreamingPath, getPvcamBitDepth(), frameSize);

@@ -40,10 +40,10 @@
 // Local
 #include "AcqConfig.h"
 #include "Event.h"
-#include "NotificationEntry.h"
 #include "PVCAMIncludes.h"
 #include "PvCircularBuffer.h"
 #include "PvDebayer.h"
+#include "PvFrameInfo.h"
 #include "PpParam.h"
 
 // System
@@ -146,7 +146,6 @@ enum PvCameraModel
 //======================================================== FORWARD DECLARATIONS
 
 class PollingThread;
-class NotificationThread;
 class AcqThread;
 class StreamWriter;
 template<class T> class PvParam;
@@ -628,14 +627,10 @@ protected:
     * the FrameAcquired for the next frame may not be called.
     */
     int FrameAcquired();
-    /*
-    * Pushes a final image with its metadata to the MMCore
-    */
-    int PushImageToMmCore(const unsigned char* pixBuffer, MM::CameraImageMetadata* pMd);
     /**
-    * Called from the Notification Thread. Prepares the frame for insertion to the MMCore.
+    * Called from FrameAcquired(), inserts the frame to the MMCore.
     */
-    int ProcessNotification(const NotificationEntry& entry);
+    int ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo& frameNfo);
 
     int  PollingThreadRun(void);
     void PollingThreadExiting() throw();
@@ -856,8 +851,6 @@ private:
 
     friend class    PollingThread;
     std::unique_ptr<PollingThread>      pollingThd_{}; // Pointer to the sequencing thread
-    friend class    NotificationThread;
-    std::unique_ptr<NotificationThread> notificationThd_{}; // Frame notification thread
     friend class    AcqThread;
     std::unique_ptr<AcqThread>          acqThd_{}; // Non-CB live thread
 
