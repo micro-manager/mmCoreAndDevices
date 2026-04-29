@@ -1140,6 +1140,12 @@ int EvidentHubWin::DoDeviceDetection()
         detectedDevicesByName_.push_back(g_LightPathDeviceName);
         QueryLightPath();
 
+        // DIA Shutter
+        model_.SetDevicePresent(DeviceType_DIAShutter, true);
+        availableDevices_.push_back(DeviceType_DIAShutter);
+        detectedDevicesByName_.push_back(g_DIAShutterDeviceName);
+        QueryDIAShutter();
+
         // Correction Collar
         model_.SetDevicePresent(DeviceType_CorrectionCollar, true);
         availableDevices_.push_back(DeviceType_CorrectionCollar);
@@ -1180,12 +1186,6 @@ int EvidentHubWin::DoDeviceDetection()
         availableDevices_.push_back(DeviceType_CondenserTurret);
         detectedDevicesByName_.push_back(g_CondenserTurretDeviceName);
         QueryCondenserTurret();
-
-        // DIA Shutter
-        model_.SetDevicePresent(DeviceType_DIAShutter, true);
-        availableDevices_.push_back(DeviceType_DIAShutter);
-        detectedDevicesByName_.push_back(g_DIAShutterDeviceName);
-        QueryDIAShutter();
     }
 
     // DICTA - DIC Prism and Retardation
