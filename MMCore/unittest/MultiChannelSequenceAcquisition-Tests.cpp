@@ -13,99 +13,6 @@
 
 namespace {
 
-// Grayscale stub camera modeled on SyncCamera in SequenceAcquisition-Tests.cpp.
-// Single-channel via the inherited default GetNumberOfChannels() == 1.
-// Tests drive InsertTestImage() manually after StartSequenceAcquisition.
-struct SyncPhysicalCamera : CCameraBase<SyncPhysicalCamera> {
-   std::string name;
-   unsigned width = 64;
-   unsigned height = 64;
-   unsigned bytesPerPixel = 1;
-   unsigned nComponents = 1;
-   unsigned bitDepth = 8;
-   int binning = 1;
-   double exposure = 10.0;
-   bool capturing = false;
-
-   explicit SyncPhysicalCamera(std::string n) : name(std::move(n)) {}
-
-   int Initialize() override { return DEVICE_OK; }
-   int Shutdown() override { return DEVICE_OK; }
-   bool Busy() override { return false; }
-   void GetName(char* buf) const override {
-      CDeviceUtils::CopyLimitedString(buf, name.c_str());
-   }
-
-   int SnapImage() override {
-      imgBuf_.assign(static_cast<size_t>(width) * height * bytesPerPixel, 0);
-      return DEVICE_OK;
-   }
-   const unsigned char* GetImageBuffer() override { return imgBuf_.data(); }
-   long GetImageBufferSize() const override {
-      return static_cast<long>(width) * height * bytesPerPixel;
-   }
-   unsigned GetImageWidth() const override { return width; }
-   unsigned GetImageHeight() const override { return height; }
-   unsigned GetImageBytesPerPixel() const override { return bytesPerPixel; }
-   unsigned GetNumberOfComponents() const override { return nComponents; }
-   unsigned GetBitDepth() const override { return bitDepth; }
-   int GetBinning() const override { return binning; }
-   int SetBinning(int b) override { binning = b; return DEVICE_OK; }
-   void SetExposure(double e) override { exposure = e; }
-   double GetExposure() const override { return exposure; }
-   int SetROI(unsigned, unsigned, unsigned, unsigned) override {
-      return DEVICE_OK;
-   }
-   int GetROI(unsigned& x, unsigned& y, unsigned& w, unsigned& h) override {
-      x = 0; y = 0; w = width; h = height;
-      return DEVICE_OK;
-   }
-   int ClearROI() override { return DEVICE_OK; }
-   int IsExposureSequenceable(bool& seq) const override {
-      seq = false;
-      return DEVICE_OK;
-   }
-
-   int StartSequenceAcquisition(long, double, bool) override {
-      capturing = true;
-      GetCoreCallback()->PrepareForAcq(this);
-      return DEVICE_OK;
-   }
-   int StartSequenceAcquisition(double) override {
-      capturing = true;
-      GetCoreCallback()->PrepareForAcq(this);
-      return DEVICE_OK;
-   }
-   int StopSequenceAcquisition() override {
-      Finish();
-      return DEVICE_OK;
-   }
-   bool IsCapturing() override { return capturing; }
-
-   // Simulates the physical camera deciding to finish on its own (finite-
-   // count completion or error path).
-   void TriggerSelfFinish() { Finish(); }
-
-   int InsertTestImage() {
-      std::vector<unsigned char> buf(
-         static_cast<size_t>(width) * height * bytesPerPixel, 0);
-      return GetCoreCallback()->InsertImage(this, buf.data(),
-         width, height, bytesPerPixel, nComponents, "{}");
-   }
-
-private:
-   // A real camera calls AcqFinished exactly once per acquisition; the
-   // capturing guard models that.
-   void Finish() {
-      if (capturing) {
-         capturing = false;
-         GetCoreCallback()->AcqFinished(this, 0);
-      }
-   }
-
-   std::vector<unsigned char> imgBuf_;
-};
-
 // Minimal mock of a composite multi-channel camera (in the style of the
 // Multi Camera (Utilities) adapter, where multiple physical cameras are
 // presented as channels of a single device — as opposed to an intrinsic
@@ -119,9 +26,9 @@ private:
 //   - IsCapturing() reflects whether any physical is capturing.
 struct MockCompositeCamera : CCameraBase<MockCompositeCamera> {
    std::string name = "MockCompositeCamera";
-   std::vector<SyncPhysicalCamera*> physicals;
+   std::vector<SyncCamera*> physicals;
 
-   explicit MockCompositeCamera(std::vector<SyncPhysicalCamera*> p)
+   explicit MockCompositeCamera(std::vector<SyncCamera*> p)
       : physicals(std::move(p)) {}
 
    int Initialize() override {
@@ -366,8 +273,8 @@ private:
 TEST_CASE("Sequence acquisition with 2-channel composite camera tags each "
           "frame with its physical's CameraChannelName/Index",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    MockAdapterWithDevices adapter{
       {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -412,8 +319,8 @@ TEST_CASE("Sequence acquisition with 2-channel composite camera tags each "
 TEST_CASE("isSequenceRunning is true while composite camera is acquiring "
           "and false after stop",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    MockAdapterWithDevices adapter{
       {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -433,8 +340,8 @@ TEST_CASE("isSequenceRunning is true while composite camera is acquiring "
 TEST_CASE("Composite camera Initialize attaches CameraChannelName/Index tags "
           "to physicals",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    MockAdapterWithDevices adapter{
       {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -462,8 +369,8 @@ TEST_CASE("Composite camera Initialize attaches CameraChannelName/Index tags "
 
 TEST_CASE("Composite circular buffer holds frames-times-channels",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    MockAdapterWithDevices adapter{
       {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -485,9 +392,9 @@ TEST_CASE("Composite circular buffer holds frames-times-channels",
 
 TEST_CASE("Core reports composite camera's channel count and names",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
-   SyncPhysicalCamera p2("p2");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
    MockCompositeCamera composite({&p0, &p1, &p2});
    MockAdapterWithDevices adapter{
       {"p0", &p0}, {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
@@ -506,8 +413,8 @@ TEST_CASE("Core reports composite camera's channel count and names",
 TEST_CASE("startContinuousSequenceAcquisition with composite camera "
           "tags frames and runs until stopped",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    MockAdapterWithDevices adapter{
       {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -538,8 +445,8 @@ TEST_CASE("startContinuousSequenceAcquisition with composite camera "
 TEST_CASE("Named-camera startSequenceAcquisition on composite camera "
           "drives the same path as the default overload",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    MockAdapterWithDevices adapter{
       {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -560,8 +467,8 @@ TEST_CASE("Named-camera startSequenceAcquisition on composite camera "
 
 TEST_CASE("Composite: each physical's AcqFinished re-closes the auto-shutter",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    StubShutter shutter;
    MockAdapterWithDevices adapter{
@@ -593,8 +500,8 @@ TEST_CASE("Composite: each physical's AcqFinished re-closes the auto-shutter",
 TEST_CASE("Composite: physical's AcqFinished does not touch shutter "
           "when autoShutter is off",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    StubShutter shutter;
    MockAdapterWithDevices adapter{
@@ -619,8 +526,8 @@ TEST_CASE("Composite: physical's AcqFinished does not touch shutter "
 TEST_CASE("Composite: startSequenceAcquisition after all physicals self-finish "
           "without intervening stop succeeds",
           "[MultiChannelSequenceAcquisition]") {
-   SyncPhysicalCamera p0("p0");
-   SyncPhysicalCamera p1("p1");
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
    MockCompositeCamera composite({&p0, &p1});
    MockAdapterWithDevices adapter{
       {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -876,8 +783,8 @@ TEST_CASE("popNextImageMD with channel != 0 throws after multi-channel "
           "acquisition",
           "[MultiChannelSequenceAcquisition]") {
    SECTION("composite camera") {
-      SyncPhysicalCamera p0("p0");
-      SyncPhysicalCamera p1("p1");
+      SyncCamera p0("p0");
+      SyncCamera p1("p1");
       MockCompositeCamera composite({&p0, &p1});
       MockAdapterWithDevices adapter{
          {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -914,8 +821,8 @@ TEST_CASE("getLastImageMD with channel != 0 throws after multi-channel "
           "acquisition",
           "[MultiChannelSequenceAcquisition]") {
    SECTION("composite camera") {
-      SyncPhysicalCamera p0("p0");
-      SyncPhysicalCamera p1("p1");
+      SyncCamera p0("p0");
+      SyncCamera p1("p1");
       MockCompositeCamera composite({&p0, &p1});
       MockAdapterWithDevices adapter{
          {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -954,8 +861,8 @@ TEST_CASE("popNextImage (default) returns one pointer per inserted frame "
           "after multi-channel acquisition",
           "[MultiChannelSequenceAcquisition]") {
    SECTION("composite camera") {
-      SyncPhysicalCamera p0("p0");
-      SyncPhysicalCamera p1("p1");
+      SyncCamera p0("p0");
+      SyncCamera p1("p1");
       MockCompositeCamera composite({&p0, &p1});
       MockAdapterWithDevices adapter{
          {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -1000,8 +907,8 @@ TEST_CASE("getLastImage returns a non-null pointer "
           "after multi-channel acquisition",
           "[MultiChannelSequenceAcquisition]") {
    SECTION("composite camera") {
-      SyncPhysicalCamera p0("p0");
-      SyncPhysicalCamera p1("p1");
+      SyncCamera p0("p0");
+      SyncCamera p1("p1");
       MockCompositeCamera composite({&p0, &p1});
       MockAdapterWithDevices adapter{
          {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -1038,8 +945,8 @@ TEST_CASE("Mid-frame buffer overflow with stopOnOverflow=true returns "
           "DEVICE_BUFFER_OVERFLOW from the next channel insert",
           "[MultiChannelSequenceAcquisition]") {
    SECTION("composite camera") {
-      SyncPhysicalCamera p0("p0");
-      SyncPhysicalCamera p1("p1");
+      SyncCamera p0("p0");
+      SyncCamera p1("p1");
       MockCompositeCamera composite({&p0, &p1});
       MockAdapterWithDevices adapter{
          {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
@@ -1087,8 +994,8 @@ TEST_CASE("Mid-frame buffer overflow with stopOnOverflow=false overwrites "
           "without error",
           "[MultiChannelSequenceAcquisition]") {
    SECTION("composite camera") {
-      SyncPhysicalCamera p0("p0");
-      SyncPhysicalCamera p1("p1");
+      SyncCamera p0("p0");
+      SyncCamera p1("p1");
       MockCompositeCamera composite({&p0, &p1});
       MockAdapterWithDevices adapter{
          {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
