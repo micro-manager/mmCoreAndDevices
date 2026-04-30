@@ -29,6 +29,7 @@
 #include "CoreCallback.h"
 #include "DeviceManager.h"
 #include "Notification.h"
+#include "SequenceAcquisition.h"
 #include "SerializedMetadata.h"
 #include "SynchronizedConfiguration.h"
 
@@ -219,7 +220,7 @@ CoreCallback::Sleep(const MM::Device*, double intervalMs)
 
 
 /**
- * Append the metadata tags attached to device caller to md.
+ * Append the camera-label metadata tag to md.
  */
 void
 CoreCallback::AddCameraMetadata(const MM::Device* caller,
@@ -231,18 +232,6 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller,
 
    std::string label = camera->GetLabel();
    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
-
-   std::string serializedMD;
-   try
-   {
-      serializedMD = camera->GetTags();
-   }
-   catch (const CMMError&)
-   {
-      return;
-   }
-
-   md.AppendSerialized(serializedMD.c_str());
 }
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf,
@@ -307,10 +296,67 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
    const char* serializedMetadata)
 {
+   auto sa = core_->findAcquisitionByCaller(caller);
+   if (!sa) {
+      LOG_ERROR(core_->coreLogger_) <<
+         "InsertImage() from device that is not a participant of any "
+         "active sequence acquisition; if this device is a physical "
+         "sub-camera of a multi-channel camera, the multi-channel camera "
+         "must override GetChannelCameraPtr()";
+      return DEVICE_ERR;
+   }
+   const auto pi = sa->LookupParticipant(caller);
+
    try
    {
       SerializedMetadata md = BuildSequenceImageMetadata(
          caller, width, height, bytesPerPixel, nComponents, serializedMetadata);
+
+      using Kind = SequenceAcquisition::ParticipantInfo::Kind;
+      const std::string prefix = sa->CameraLabel() + '-';
+      const std::string prefixedIndexKey =
+         prefix + MM::g_Keyword_CameraChannelIndex;
+      const std::string prefixedNameKey =
+         prefix + MM::g_Keyword_CameraChannelName;
+
+      if (pi.kind == Kind::CompositeChannel) {
+         md.AddTag(prefixedIndexKey, std::to_string(pi.index));
+         md.AddTag(prefixedNameKey, sa->Channel(pi.index).channelName);
+      } else if (pi.kind == Kind::IntrinsicPrimary) {
+         auto idxTag = md.GetTag(prefixedIndexKey.c_str());
+         if (!idxTag)
+            idxTag = md.GetTag(MM::g_Keyword_CameraChannelIndex);
+
+         if (!idxTag) {
+            if (sa->NumChannels() != 1) {
+               LOG_ERROR(core_->coreLogger_) <<
+                  "Intrinsic multi-channel camera image missing required "
+                  "CameraChannelIndex tag from " << sa->CameraLabel();
+               return DEVICE_INCOMPATIBLE_IMAGE;
+            }
+            // Plain single-channel camera, no opt-in: no stamping.
+         } else {
+            long parsedIdx = -1;
+            try {
+               parsedIdx = std::stol(std::string(*idxTag));
+            } catch (...) {
+               LOG_ERROR(core_->coreLogger_) <<
+                  "CameraChannelIndex not parseable in image from "
+                  << sa->CameraLabel();
+               return DEVICE_INCOMPATIBLE_IMAGE;
+            }
+            if (parsedIdx < 0 ||
+                static_cast<unsigned>(parsedIdx) >= sa->NumChannels()) {
+               LOG_ERROR(core_->coreLogger_) <<
+                  "CameraChannelIndex out of range (" << parsedIdx
+                  << ") in image from " << sa->CameraLabel();
+               return DEVICE_INCOMPATIBLE_IMAGE;
+            }
+            md.AddTag(prefixedIndexKey, std::to_string(parsedIdx));
+            md.AddTag(prefixedNameKey,
+               sa->Channel(static_cast<unsigned>(parsedIdx)).channelName);
+         }
+      }
 
       MM::ImageProcessor* ip = GetImageProcessor(caller);
       if (ip != nullptr)
@@ -357,6 +403,21 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
          "AcqFinished() called from unregistered device";
       return DEVICE_ERR;
    }
+
+   auto sa = core_->findAcquisitionByCaller(caller);
+   if (!sa) {
+      LOG_ERROR(core_->coreLogger_) <<
+         "AcqFinished() from device '" << camera->GetLabel() <<
+         "' that is not a participant of any active sequence acquisition"
+         "; if this device is a physical sub-camera of a multi-channel "
+         "camera, the multi-channel camera must override "
+         "GetChannelCameraPtr()";
+      return DEVICE_ERR;
+   }
+
+   const bool isLast = sa->RecordFinish(caller);
+   if (!isLast)
+      return DEVICE_OK;
 
    std::shared_ptr<DeviceInstance> currentCamera =
       core_->currentCameraDevice_.lock();
@@ -410,13 +471,48 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
    }
 
    core_->postNotification(
-      notif::SequenceAcquisitionStopped{camera->GetLabel()});
+      notif::SequenceAcquisitionStopped{sa->CameraLabel()});
+
+   if (sa->IsComplete())
+      core_->eraseCompletedAcquisition(sa->CameraLabel());
 
    return DEVICE_OK;
 }
 
 int CoreCallback::PrepareForAcq(const MM::Device* caller)
 {
+   auto sa = core_->findAcquisitionByCaller(caller);
+   if (!sa) {
+      char label[MM::MaxStrLength];
+      caller->GetLabel(label);
+      LOG_ERROR(core_->coreLogger_) <<
+         "PrepareForAcq() from device '" << label <<
+         "' that is not a participant of any active sequence acquisition"
+         "; if this device is a physical sub-camera of a multi-channel "
+         "camera, the multi-channel camera must override "
+         "GetChannelCameraPtr()";
+      return DEVICE_ERR;
+   }
+
+   const auto disp = sa->BeginPrepare(caller);
+   using PD = SequenceAcquisition::PrepareDisposition;
+   switch (disp) {
+   case PD::NotParticipant:
+      // Should not happen — findAcquisitionByCaller already verified.
+      return DEVICE_ERR;
+   case PD::AlreadyPrepared:
+      return DEVICE_OK;
+   case PD::AlreadyOpened:
+      return DEVICE_OK;
+   case PD::OpenFailed:
+      return DEVICE_ERR;
+   case PD::WaitForOpener:
+      return sa->WaitForShutterOpened() ? DEVICE_OK : DEVICE_ERR;
+   case PD::FirstOpener:
+      break;
+   }
+
+   bool openOk = true;
    if (core_->autoShutter_)
    {
       std::shared_ptr<ShutterInstance> shutter =
@@ -428,18 +524,22 @@ int CoreCallback::PrepareForAcq(const MM::Device* caller)
             DeviceModuleLockGuard g(shutter);
             sret = shutter->SetOpen(true);
          }
-         if (sret == DEVICE_OK)
+         if (sret == DEVICE_OK) {
             core_->postNotification(notif::ShutterOpenChanged{
                shutter->GetLabel(), true});
-         core_->waitForDevice(shutter);
+            core_->waitForDevice(shutter);
+         } else {
+            openOk = false;
+         }
       }
    }
 
-   char label[MM::MaxStrLength];
-   caller->GetLabel(label);
-   core_->postNotification(notif::SequenceAcquisitionStarted{label});
+   if (openOk)
+      core_->postNotification(notif::SequenceAcquisitionStarted{sa->CameraLabel()});
 
-   return DEVICE_OK;
+   sa->FinishShutterOpen(openOk);
+
+   return openOk ? DEVICE_OK : DEVICE_ERR;
 }
 
 /**

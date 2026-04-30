@@ -246,10 +246,14 @@ TEST_CASE("startSequenceAcquisition clears pre-existing images from buffer",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+
+   c.startSequenceAcquisition(10, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(c.getRemainingImageCount() == 2);
+   c.stopSequenceAcquisition();
+   REQUIRE(c.getRemainingImageCount() == 2);
+
    c.startSequenceAcquisition(10, 0.0, true);
    CHECK(c.getRemainingImageCount() == 0);
    c.stopSequenceAcquisition();
@@ -313,9 +317,12 @@ TEST_CASE("Named-camera startSequenceAcquisition initializes and clears buffer",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+
+   c.startSequenceAcquisition("cam", 10, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(c.getRemainingImageCount() == 1);
+   c.stopSequenceAcquisition("cam");
+
    c.startSequenceAcquisition("cam", 10, 0.0, true);
    CHECK(c.getRemainingImageCount() == 0);
    c.stopSequenceAcquisition("cam");

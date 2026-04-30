@@ -1452,6 +1452,22 @@ public:
    }
 
    /**
+    * @brief Return the physical camera responsible for channel `n`, or
+    * nullptr.
+    * 
+    * Regular cameras should not override this function.
+    *
+    * Default implementation: returns nullptr (i.e., the camera is intrinsic
+    * or single-channel). Composite multi-channel cameras (such as
+    * MultiCamera) must override this to return the physical camera assigned
+    * to channel `n`.
+    */
+   virtual MM::Camera* GetChannelCameraPtr(unsigned /* n */)
+   {
+      return nullptr;
+   }
+
+   /**
     * @brief Return the image buffer for a specific channel.
     *
     * Version of GetImageBuffer for multi-channel cameras.
@@ -1467,19 +1483,6 @@ public:
    virtual const unsigned int* GetImageBufferAsRGB32()
    {
       return 0;
-   }
-
-   /**
-    * @brief Fill serializedMetadata with the device's metadata tags.
-    */
-   virtual void GetTags(char* serializedMetadata)
-   {
-      MM::CameraImageMetadata md;
-      for (const auto& p : addedTags_)
-      {
-         md.AddTag(p.first.c_str(), p.second.c_str());
-      }
-      CDeviceUtils::CopyLimitedString(serializedMetadata, md.Serialize());
    }
 
    /**
@@ -1522,23 +1525,6 @@ public:
 
    virtual bool IsCapturing() = 0;
 
-   virtual void AddTag(const char* key, const char* deviceLabel, const char* value)
-   {
-      std::string k;
-      if (deviceLabel != std::string("_"))
-      {
-         k += deviceLabel;
-         k += '-';
-      }
-      k += key;
-      addedTags_[k] = value;
-   }
-
-   virtual void RemoveTag(const char* key)
-   {
-      addedTags_.erase(key);
-   }
-
    virtual bool SupportsMultiROI()
    {
       return false;
@@ -1566,9 +1552,6 @@ public:
    {
       return DEVICE_UNSUPPORTED_COMMAND;
    }
-
-private:
-   std::map<std::string, std::string> addedTags_;
 };
 
 

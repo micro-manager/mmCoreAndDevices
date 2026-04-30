@@ -26,7 +26,7 @@
 
 // Device Interface Version — see README.md for the full versioning policy.
 // Must be incremented for any binary-incompatible change.
-#define DEVICE_INTERFACE_VERSION 75
+#define DEVICE_INTERFACE_VERSION 76
 
 // N.B. Method parameters and return values in Device and its derived
 // classes must be POD types or pointers (no std::string, etc.) to
@@ -379,6 +379,28 @@ namespace MM {
        * An implementation of this function is provided in DeviceBase.h.  It will return an empty string
        */
       virtual int GetChannelName(unsigned channel, char* name) = 0;
+
+      /**
+       * @brief Return the physical camera responsible for channel `n`, or nullptr.
+       *
+       * For a composite multi-channel camera (such as Multi Camera), each
+       * channel is backed by a distinct physical Camera; this returns the
+       * MM::Camera* of the device assigned to channel `n`. For an intrinsic
+       * multi-channel camera (a single device emitting multiple channels) and
+       * for ordinary single-channel cameras, this returns nullptr.
+       *
+       * Mixed devices (some channels composite, others intrinsic) are
+       * permitted: channels with non-null pointers are treated as composite,
+       * channels with null pointers are treated as intrinsic and are
+       * MMCore-tagged accordingly via verification of CameraChannelIndex /
+       * CameraChannelName in the device-supplied image metadata.
+       *
+       * Required: 0 <= n < GetNumberOfChannels(); behavior outside that range
+       * is undefined except that the default CCameraBase implementation
+       * returns nullptr for any in-range n and logs+returns nullptr for
+       * out-of-range n.
+       */
+      virtual MM::Camera* GetChannelCameraPtr(unsigned n) = 0;
       /**
        * @brief Return the size in bytes of the image buffer.
        *
@@ -493,32 +515,6 @@ namespace MM {
        * Returns true when sequence acquisition is active, false otherwise.
        */
       virtual bool IsCapturing() = 0;
-
-      /**
-       * @brief Get the metadata tags stored in this device.
-       *
-       * These tags will automatically be add to the metadata of an image inserted
-       * into the circular buffer.
-       */
-      virtual void GetTags(char* serializedMetadata) = 0;
-
-      /**
-       * @brief Add new tag or modify the value of an existing one.
-       *
-       * These will automatically be added to images inserted into the circular buffer.
-       * Use this mechanism for tags that do not change often.  For metadata that
-       * change often, create an instance of metadata yourself and add to one of
-       * the versions of the InsertImage function.
-       */
-      virtual void AddTag(const char* key, const char* deviceLabel, const char* value) = 0;
-
-      /**
-       * @brief Remove an existing tag from the metadata associated with this device.
-       *
-       * These tags will automatically be add to the metadata of an image inserted
-       * into the circular buffer.
-       */
-      virtual void RemoveTag(const char* key) = 0;
 
       /**
        * @brief Return whether a camera's exposure time can be sequenced.

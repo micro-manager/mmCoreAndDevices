@@ -874,15 +874,89 @@ void CMMCore::removeAllDeviceRoles() {
    setSLMDevice("");
 }
 
-void CMMCore::stopAllSequenceAcquisitionsForUnload()
+std::vector<mmi::SequenceAcquisition::ChannelInfo>
+CMMCore::buildSequenceChannelSnapshot(
+   std::shared_ptr<mmi::CameraInstance> camera) MMCORE_LEGACY_THROW(CMMError)
 {
-   for (auto& kv : acquisitions_) {
+   const unsigned n = camera->GetNumberOfChannels();
+   std::vector<mmi::SequenceAcquisition::ChannelInfo> channels;
+   channels.reserve(n);
+   for (unsigned i = 0; i < n; ++i) {
+      mmi::SequenceAcquisition::ChannelInfo info;
+      info.channelName = camera->GetChannelName(i);
+      MM::Camera* physCam = camera->GetChannelCameraPtr(i);
+      info.physCamDevice = physCam;
+      if (physCam) {
+         std::shared_ptr<mmi::CameraInstance> physInstance;
+         try {
+            physInstance = std::dynamic_pointer_cast<mmi::CameraInstance>(
+               deviceManager_->GetDevice(physCam));
+         } catch (const CMMError&) {
+            throw CMMError(
+               "Composite camera '" + camera->GetLabel() + "' channel " +
+               std::to_string(i) +
+               " references unregistered physical camera",
+               MMERR_DEVICE_GENERIC);
+         }
+         if (!physInstance) {
+            throw CMMError(
+               "Composite camera '" + camera->GetLabel() + "' channel " +
+               std::to_string(i) +
+               " physical pointer is not a Camera",
+               MMERR_DEVICE_GENERIC);
+         }
+         {
+            mmi::DeviceModuleLockGuard pg(physInstance);
+            if (physInstance->GetNumberOfChannels() > 1) {
+               throw CMMError(
+                  "Composite camera '" + camera->GetLabel() + "' channel " +
+                  std::to_string(i) +
+                  " is itself a multi-channel camera ('" +
+                  physInstance->GetLabel() +
+                  "'); nested multi-channel cameras are not supported",
+                  MMERR_DEVICE_GENERIC);
+            }
+         }
+         info.physCamLabel = physInstance->GetLabel();
+      }
+      channels.push_back(std::move(info));
+   }
+   return channels;
+}
+
+std::shared_ptr<mmi::SequenceAcquisition>
+CMMCore::findAcquisitionByCaller(const MM::Device* caller)
+{
+   if (!caller)
+      return nullptr;
+   std::lock_guard<std::mutex> g(acquisitionsMutex_);
+   for (const auto& kv : acquisitions_) {
+      if (kv.second->HasParticipant(caller))
+         return kv.second;
+   }
+   return nullptr;
+}
+
+void CMMCore::eraseCompletedAcquisition(const std::string& cameraLabel)
+{
+   std::lock_guard<std::mutex> g(acquisitionsMutex_);
+   acquisitions_.erase(cameraLabel);
+}
+
+void CMMCore::stopAndClearAllSequenceAcquisitions()
+{
+   std::map<std::string,
+            std::shared_ptr<mmcore::internal::SequenceAcquisition>> toStop;
+   {
+      std::lock_guard<std::mutex> g(acquisitionsMutex_);
+      toStop.swap(acquisitions_);
+   }
+   for (auto& kv : toStop) {
       auto& cam = kv.second->Camera();
       mmi::DeviceModuleLockGuard guard(cam);
       if (cam->IsCapturing())
          cam->StopSequenceAcquisition();
    }
-   acquisitions_.clear();
 }
 
 
@@ -900,7 +974,7 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
 
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
-   stopAllSequenceAcquisitionsForUnload();
+   stopAndClearAllSequenceAcquisitions();
 
    try {
       removeDeviceRole(pDevice);
@@ -924,7 +998,7 @@ void CMMCore::unloadDevice(const char* label///< the name of the device to unloa
  */
 void CMMCore::unloadAllDevices() MMCORE_LEGACY_THROW(CMMError)
 {
-   stopAllSequenceAcquisitionsForUnload();
+   stopAndClearAllSequenceAcquisitions();
 
    try {
       removeAllDeviceRoles();
@@ -3077,15 +3151,23 @@ void CMMCore::startSequenceAcquisition(long numImages, double unused, bool stopO
          mmi::DeviceModuleLockGuard guard(camera);
 
          LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
-         acquisitions_[camera->GetLabel()] =
-            mmcore::internal::SequenceAcquisition::Create(camera);
+         auto channels = buildSequenceChannelSnapshot(camera);
+         {
+            std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+            acquisitions_[camera->GetLabel()] =
+               mmcore::internal::SequenceAcquisition::Create(
+                  camera, std::move(channels));
+         }
 			// Forward `unused` to the device rather than substituting 0.0:
 			// a small number of camera adapters (Andor) did implement this
 			// parameter, and passing 0.0 unconditionally could regress them.
 			// The MM::Camera contract now says new adapters must ignore it.
 			int nRet = camera->StartSequenceAcquisition(numImages, unused, stopOnOverflow);
 			if (nRet != DEVICE_OK) {
-				acquisitions_.erase(camera->GetLabel());
+				{
+					std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+					acquisitions_.erase(camera->GetLabel());
+				}
 				throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
 			}
 		}
@@ -3142,15 +3224,23 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
    cbuf_->SetOverwriteData(!stopOnOverflow);
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
-   acquisitions_[pCam->GetLabel()] =
-      mmcore::internal::SequenceAcquisition::Create(pCam);
+   auto channels = buildSequenceChannelSnapshot(pCam);
+   {
+      std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+      acquisitions_[pCam->GetLabel()] =
+         mmcore::internal::SequenceAcquisition::Create(
+            pCam, std::move(channels));
+   }
    // Forward `unused` to the device rather than substituting 0.0: a small
    // number of camera adapters (Andor) did implement this parameter, and
    // passing 0.0 unconditionally could regress them. The MM::Camera
    // contract now says new adapters must ignore it.
    int nRet = pCam->StartSequenceAcquisition(numImages, unused, stopOnOverflow);
    if (nRet != DEVICE_OK) {
-      acquisitions_.erase(pCam->GetLabel());
+      {
+         std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+         acquisitions_.erase(pCam->GetLabel());
+      }
       throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
    }
 
@@ -3224,9 +3314,18 @@ void CMMCore::stopSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(CMM
       throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
    }
    {
-      auto it = acquisitions_.find(pCam->GetLabel());
-      if (it != acquisitions_.end())
-         it->second->MarkStopRequested();
+      std::shared_ptr<mmi::SequenceAcquisition> sa;
+      {
+         std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+         auto it = acquisitions_.find(pCam->GetLabel());
+         if (it != acquisitions_.end())
+            sa = it->second;
+      }
+      if (sa) {
+         const bool causedComplete = sa->MarkStopRequested();
+         if (causedComplete)
+            eraseCompletedAcquisition(sa->CameraLabel());
+      }
    }
 
    LOG_DEBUG(coreLogger_) << "Did stop sequence acquisition from camera " << label;
@@ -3265,15 +3364,23 @@ void CMMCore::startContinuousSequenceAcquisition(double unused) MMCORE_LEGACY_TH
       callback_->ResetImageInsertionState();
       cbuf_->SetOverwriteData(true);
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
-      acquisitions_[camera->GetLabel()] =
-         mmcore::internal::SequenceAcquisition::Create(camera);
+      auto channels = buildSequenceChannelSnapshot(camera);
+      {
+         std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+         acquisitions_[camera->GetLabel()] =
+            mmcore::internal::SequenceAcquisition::Create(
+               camera, std::move(channels));
+      }
       // Forward `unused` to the device rather than substituting 0.0: a small
       // number of camera adapters (Andor) did implement this parameter, and
       // passing 0.0 unconditionally could regress them. The MM::Camera
       // contract now says new adapters must ignore it.
       int nRet = camera->StartSequenceAcquisition(unused);
       if (nRet != DEVICE_OK) {
-         acquisitions_.erase(camera->GetLabel());
+         {
+            std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+            acquisitions_.erase(camera->GetLabel());
+         }
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
       }
    }
@@ -3302,9 +3409,18 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
          logError(getDeviceName(camera).c_str(), getDeviceErrorText(nRet, camera).c_str());
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
       }
-      auto it = acquisitions_.find(camera->GetLabel());
-      if (it != acquisitions_.end())
-         it->second->MarkStopRequested();
+      std::shared_ptr<mmi::SequenceAcquisition> sa;
+      {
+         std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+         auto it = acquisitions_.find(camera->GetLabel());
+         if (it != acquisitions_.end())
+            sa = it->second;
+      }
+      if (sa) {
+         const bool causedComplete = sa->MarkStopRequested();
+         if (causedComplete)
+            eraseCompletedAcquisition(sa->CameraLabel());
+      }
    }
    else
    {

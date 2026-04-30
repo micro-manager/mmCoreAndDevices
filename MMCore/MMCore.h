@@ -53,6 +53,7 @@
 #include "Logging/Logger.h"
 #include "MockDeviceAdapter.h"
 #include "Notification.h"
+#include "SequenceAcquisition.h"
 
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
@@ -736,10 +737,13 @@ private:
    // Active sequence acquisitions keyed by logical-camera label. At most
    // one entry per camera, but multiple cameras may have concurrent
    // acquisitions because the labelled start/stop API is per-camera (sort of).
-   // Mutated only from the user thread.
+   // Both the user thread and device-callback threads access this map; all
+   // access is protected by acquisitionsMutex_.
    std::map<std::string,
             std::shared_ptr<mmcore::internal::SequenceAcquisition>>
        acquisitions_;
+
+   mutable std::mutex acquisitionsMutex_;
 
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
@@ -789,7 +793,26 @@ private:
    // Stops every acquisition (not just one for the unloaded camera)
    // because Core (for now) does not know which logical cameras a given
    // physical device participates in (e.g. via Multi Camera).
-   void stopAllSequenceAcquisitionsForUnload();
+   void stopAndClearAllSequenceAcquisitions();
+
+   // Build the per-channel snapshot for `camera`, throwing CMMError if any
+   // composite channel references a multi-channel phys cam (nested
+   // multi-channel cameras are unsupported). Caller must hold the camera's
+   // DeviceModuleLockGuard.
+   std::vector<
+      mmcore::internal::SequenceAcquisition::ChannelInfo>
+      buildSequenceChannelSnapshot(
+         std::shared_ptr<mmcore::internal::CameraInstance> camera)
+         MMCORE_LEGACY_THROW(CMMError);
+
+   // Look up the SA whose participant set contains `caller`. Returns nullptr
+   // if none. Takes acquisitionsMutex_.
+   std::shared_ptr<mmcore::internal::SequenceAcquisition>
+   findAcquisitionByCaller(const MM::Device* caller);
+
+   // Erase a completed SA from `acquisitions_` (if present, by label).
+   // Idempotent. Takes acquisitionsMutex_.
+   void eraseCompletedAcquisition(const std::string& cameraLabel);
 
    void setCameraInternal(const std::string& label);
    void setShutterInternal(const std::string& label);
