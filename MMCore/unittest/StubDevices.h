@@ -74,19 +74,21 @@ struct StubCamera : CCameraBase<StubCamera> {
       return DEVICE_OK;
    }
    int StartSequenceAcquisition(long, double, bool) override {
-      return DEVICE_OK;
-   }
-   int StartSequenceAcquisition(double) override { return DEVICE_OK; }
-   int StopSequenceAcquisition() override { return DEVICE_OK; }
-   bool IsCapturing() override { return capturing; }
-
-   int PrepareForAcq() {
+      capturing = true;
       return GetCoreCallback()->PrepareForAcq(this);
    }
-
-   int AcqFinished(int statusCode = 0) {
-      return GetCoreCallback()->AcqFinished(this, statusCode);
+   int StartSequenceAcquisition(double) override {
+      capturing = true;
+      return GetCoreCallback()->PrepareForAcq(this);
    }
+   int StopSequenceAcquisition() override {
+      if (capturing) {
+         capturing = false;
+         GetCoreCallback()->AcqFinished(this, 0);
+      }
+      return DEVICE_OK;
+   }
+   bool IsCapturing() override { return capturing; }
 
    int InsertTestImage(
          const MM::CameraImageMetadata& md = MM::CameraImageMetadata{},
@@ -167,13 +169,11 @@ struct SyncCamera : CCameraBase<SyncCamera> {
 
    int StartSequenceAcquisition(long, double, bool) override {
       capturing = true;
-      GetCoreCallback()->PrepareForAcq(this);
-      return DEVICE_OK;
+      return GetCoreCallback()->PrepareForAcq(this);
    }
    int StartSequenceAcquisition(double) override {
       capturing = true;
-      GetCoreCallback()->PrepareForAcq(this);
-      return DEVICE_OK;
+      return GetCoreCallback()->PrepareForAcq(this);
    }
    int StopSequenceAcquisition() override {
       Finish();

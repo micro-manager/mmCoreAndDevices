@@ -54,6 +54,7 @@ public:
    unsigned  GetNumberOfComponents() const;
    unsigned  GetNumberOfChannels() const;
    int GetChannelName(unsigned channel, char* name);
+   MM::Camera* GetChannelCameraPtr(unsigned n);
    bool IsCapturing();
 
    // action interface

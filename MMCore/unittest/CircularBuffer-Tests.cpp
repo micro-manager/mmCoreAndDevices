@@ -39,34 +39,21 @@ TEST_CASE("Buffer is empty after init", "[CircularBuffer]") {
    CHECK(c.isBufferOverflowed() == false);
 }
 
-TEST_CASE("initializeCircularBuffer clears existing images",
+TEST_CASE("Starting a fresh sequence acquisition clears existing images",
           "[CircularBuffer]") {
    StubCamera cam;
    MockAdapterWithDevices adapter{{"cam", &cam}};
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
-   c.initializeCircularBuffer();
+   c.stopSequenceAcquisition();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    CHECK(c.getRemainingImageCount() == 0);
    CHECK(c.isBufferOverflowed() == false);
-}
-
-TEST_CASE("initializeCircularBuffer clears images even with same dimensions",
-          "[CircularBuffer]") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
-   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
-   REQUIRE(c.getRemainingImageCount() == 2);
-   c.initializeCircularBuffer();
-   CHECK(c.getRemainingImageCount() == 0);
+   c.stopSequenceAcquisition();
 }
 
 // Insert
@@ -78,9 +65,10 @@ TEST_CASE("getRemainingImageCount is 1 after one insert",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    CHECK(cam.InsertTestImage() == DEVICE_OK);
    CHECK(c.getRemainingImageCount() == 1);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("Insert with mismatched width returns DEVICE_INCOMPATIBLE_IMAGE",
@@ -90,10 +78,11 @@ TEST_CASE("Insert with mismatched width returns DEVICE_INCOMPATIBLE_IMAGE",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    cam.width = 256;
    CHECK(cam.InsertTestImage() == DEVICE_INCOMPATIBLE_IMAGE);
    CHECK(c.getRemainingImageCount() == 0);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("Insert with mismatched height returns DEVICE_INCOMPATIBLE_IMAGE",
@@ -103,10 +92,11 @@ TEST_CASE("Insert with mismatched height returns DEVICE_INCOMPATIBLE_IMAGE",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    cam.height = 256;
    CHECK(cam.InsertTestImage() == DEVICE_INCOMPATIBLE_IMAGE);
    CHECK(c.getRemainingImageCount() == 0);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE(
@@ -117,10 +107,11 @@ TEST_CASE(
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    cam.bytesPerPixel = 2;
    CHECK(cam.InsertTestImage() == DEVICE_INCOMPATIBLE_IMAGE);
    CHECK(c.getRemainingImageCount() == 0);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("Insert with mismatched nComponents succeeds",
@@ -130,10 +121,11 @@ TEST_CASE("Insert with mismatched nComponents succeeds",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    cam.nComponents = 4;
    CHECK(cam.InsertTestImage() == DEVICE_OK);
    CHECK(c.getRemainingImageCount() == 1);
+   c.stopSequenceAcquisition();
 }
 
 // getLastImage
@@ -144,9 +136,10 @@ TEST_CASE("getLastImage returns non-null after insert", "[CircularBuffer]") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    CHECK(c.getLastImage() != nullptr);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("getLastImage on empty buffer throws", "[CircularBuffer]") {
@@ -166,7 +159,7 @@ TEST_CASE("getLastImage returns most recently inserted image",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
 
    const std::size_t imgSize =
        static_cast<std::size_t>(cam.width) * cam.height * cam.bytesPerPixel;
@@ -178,6 +171,7 @@ TEST_CASE("getLastImage returns most recently inserted image",
    auto* img = static_cast<const unsigned char*>(c.getLastImage());
    REQUIRE(img != nullptr);
    CHECK(img[0] == 30);
+   c.stopSequenceAcquisition();
 }
 
 // popNextImage
@@ -189,10 +183,11 @@ TEST_CASE("popNextImage returns non-null and decrements count",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    CHECK(c.popNextImage() != nullptr);
    CHECK(c.getRemainingImageCount() == 0);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("popNextImage on empty buffer throws", "[CircularBuffer]") {
@@ -212,7 +207,7 @@ TEST_CASE("popNextImage returns images in insertion order",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
 
    const std::size_t imgSize =
        static_cast<std::size_t>(cam.width) * cam.height * cam.bytesPerPixel;
@@ -226,6 +221,7 @@ TEST_CASE("popNextImage returns images in insertion order",
       REQUIRE(img != nullptr);
       CHECK(img[0] == expected);
    }
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("FIFO ordering is maintained across interleaved pops and inserts",
@@ -235,7 +231,7 @@ TEST_CASE("FIFO ordering is maintained across interleaved pops and inserts",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
 
    const std::size_t imgSize =
        static_cast<std::size_t>(cam.width) * cam.height * cam.bytesPerPixel;
@@ -257,6 +253,7 @@ TEST_CASE("FIFO ordering is maintained across interleaved pops and inserts",
       REQUIRE(img != nullptr);
       CHECK(img[0] == expected);
    }
+   c.stopSequenceAcquisition();
 }
 
 // getNBeforeLastImageMD
@@ -268,7 +265,7 @@ TEST_CASE("getNBeforeLastImageMD returns images by reverse offset",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
 
    for (int i = 0; i < 3; ++i)
       REQUIRE(cam.InsertTestImage() == DEVICE_OK);
@@ -281,6 +278,7 @@ TEST_CASE("getNBeforeLastImageMD returns images by reverse offset",
    c.getNBeforeLastImageMD(2, md);
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
          "0");
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("getNBeforeLastImageMD throws when offset exceeds available images",
@@ -290,7 +288,7 @@ TEST_CASE("getNBeforeLastImageMD throws when offset exceeds available images",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
 
@@ -298,6 +296,7 @@ TEST_CASE("getNBeforeLastImageMD throws when offset exceeds available images",
    CHECK_NOTHROW(c.getNBeforeLastImageMD(0, md));
    CHECK_NOTHROW(c.getNBeforeLastImageMD(1, md));
    CHECK_THROWS_AS(c.getNBeforeLastImageMD(2, md), CMMError);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("getNBeforeLastImageMD on empty buffer throws",
@@ -323,7 +322,7 @@ TEST_CASE("Free plus remaining equals total after each insert",
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
    c.setCircularBufferMemoryFootprint(1);
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
 
    long total = c.getBufferTotalCapacity();
    REQUIRE(total == 4);
@@ -332,6 +331,7 @@ TEST_CASE("Free plus remaining equals total after each insert",
       REQUIRE(cam.InsertTestImage() == DEVICE_OK);
       CHECK(c.getBufferFreeCapacity() + c.getRemainingImageCount() == total);
    }
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("setCircularBufferMemoryFootprint round-trips", "[CircularBuffer]") {
@@ -368,7 +368,7 @@ TEST_CASE("Overflow with overwrite disabled", "[CircularBuffer]") {
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
    c.setCircularBufferMemoryFootprint(1);
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
 
    long total = c.getBufferTotalCapacity();
    REQUIRE(total == 4);
@@ -380,6 +380,7 @@ TEST_CASE("Overflow with overwrite disabled", "[CircularBuffer]") {
    CHECK(cam.InsertTestImage() == DEVICE_BUFFER_OVERFLOW);
    CHECK(c.isBufferOverflowed() == true);
    CHECK(c.getRemainingImageCount() == total);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("Overflow with overwrite enabled", "[CircularBuffer]") {
@@ -402,6 +403,7 @@ TEST_CASE("Overflow with overwrite enabled", "[CircularBuffer]") {
    CHECK(cam.InsertTestImage() == DEVICE_OK);
    CHECK(c.isBufferOverflowed() == false);
    CHECK(c.getRemainingImageCount() == 1);
+   c.stopSequenceAcquisition();
 }
 
 // Clear
@@ -412,11 +414,12 @@ TEST_CASE("clearCircularBuffer resets remaining count", "[CircularBuffer]") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    c.clearCircularBuffer();
    CHECK(c.getRemainingImageCount() == 0);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("Overflow is sticky until buffer is cleared", "[CircularBuffer]") {
@@ -426,7 +429,7 @@ TEST_CASE("Overflow is sticky until buffer is cleared", "[CircularBuffer]") {
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
    c.setCircularBufferMemoryFootprint(1);
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
 
    long total = c.getBufferTotalCapacity();
    REQUIRE(total == 4);
@@ -440,6 +443,7 @@ TEST_CASE("Overflow is sticky until buffer is cleared", "[CircularBuffer]") {
 
    c.clearCircularBuffer();
    CHECK(cam.InsertTestImage() == DEVICE_OK);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("clearCircularBuffer resets overflow flag", "[CircularBuffer]") {
@@ -449,7 +453,7 @@ TEST_CASE("clearCircularBuffer resets overflow flag", "[CircularBuffer]") {
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
    c.setCircularBufferMemoryFootprint(1);
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(1'000'000, 0.0, true);
 
    long total = c.getBufferTotalCapacity();
    for (long i = 0; i < total; ++i)
@@ -459,4 +463,5 @@ TEST_CASE("clearCircularBuffer resets overflow flag", "[CircularBuffer]") {
 
    c.clearCircularBuffer();
    CHECK(c.isBufferOverflowed() == false);
+   c.stopSequenceAcquisition();
 }
