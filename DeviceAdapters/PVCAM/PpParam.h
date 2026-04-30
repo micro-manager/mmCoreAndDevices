@@ -1,5 +1,4 @@
-#ifndef _PPPARAM_H_
-#define _PPPARAM_H_
+#pragma once
 
 #include <string>
 
@@ -7,11 +6,11 @@
 * Class used by post processing, a list of these elements is built up one for each post processing function
 * so the call back function in CPropertyActionEx can get to information about that particular feature in
 * the call back function
-*/ 
+*/
 class PpParam
 {
 public:
-    PpParam(const std::string& name, short featIndex, short propIndex,
+    explicit PpParam(const std::string& name, short featIndex, short propIndex,
             bool isBoolean, unsigned int featId, unsigned int propId);
 
     const std::string& GetName() const;
@@ -33,5 +32,3 @@ protected:
     unsigned int mPropId{ (unsigned int)-1 };
     unsigned int mCurValue{ 0 };
 };
-
-#endif

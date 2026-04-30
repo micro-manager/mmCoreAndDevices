@@ -1,5 +1,4 @@
-#ifndef _NOTIFICATIONENTRY_H_
-#define _NOTIFICATIONENTRY_H_
+#pragma once
 
 #include "PvFrameInfo.h"
 
@@ -12,7 +11,8 @@ class NotificationEntry
 public:
 
     NotificationEntry();
-    NotificationEntry(const void* pData, unsigned int dataSz, const PvFrameInfo& metadata);
+    explicit NotificationEntry(
+            const void* pData, unsigned int dataSz, const PvFrameInfo& metadata);
 
     /**
     * Returns the frame metadata
@@ -32,12 +32,7 @@ public:
     unsigned int FrameDataSize() const;
 
 private:
-
-    // Copy of the frame metadata
-    PvFrameInfo frameMetaData_;
-
-    const void*  pFrameData_;  ///< Pointer to the frame in circular buffer
-    unsigned int frameDataSz_; ///< Size of the data in bytes
+    const void*  pFrameData_{ nullptr }; ///< Pointer to the frame in circular buffer
+    unsigned int frameDataSz_{ 0 }; ///< Size of the data in bytes
+    PvFrameInfo frameMetaData_{}; ///< Copy of the frame metadata
 };
-
-#endif // _NOTIFICATIONENTRY_H_

@@ -1,5 +1,4 @@
-#ifndef _PVROICOLLECTION_H_
-#define _PVROICOLLECTION_H_
+#pragma once
 
 #include "PVCAMIncludes.h"
 #include "PvRoi.h"
@@ -120,7 +119,7 @@ public:
     * Return an array of PVCAM rgn_types, used in pl_exp_setup() functions.
     * @return Array of PVCAM specific region types.
     */
-    rgn_type* ToRgnArray() const;
+    const rgn_type* ToRgnArray() const;
 
     /**
     * Validates all ROIs - checks whether all ROIs fit into given sensor dimensions.
@@ -145,11 +144,8 @@ protected:
     void updateImpliedRoi();
 
 private:
-    unsigned int       m_capacity;     ///< Maximum capacity of the collection.
-    std::vector<PvRoi> m_rois;         ///< Current ROIs.
-    PvRoi              m_impliedRoi;   ///< Pre-calculated implied ROI.
-
-    rgn_type*          m_rgnTypeArray; ///< Prepared PVCAM region array.
+    unsigned int m_capacity{ 0 }; ///< Maximum capacity of the collection.
+    std::vector<PvRoi> m_rois{}; ///< Current ROIs.
+    PvRoi m_impliedRoi{ 0,0,0,0 }; ///< Pre-calculated implied ROI.
+    std::vector<rgn_type> m_rgnTypeArray{}; ///< Prepared PVCAM region array.
 };
-
-#endif // _PVROICOLLECTION_H_
