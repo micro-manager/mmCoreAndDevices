@@ -621,7 +621,10 @@ int RappUGA42Scanner::OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (device_ != nullptr)
       {
          UINT32 ret = device_->SetScanMode(scanMode_);
-         return MapRetCode(ret);
+         if (ret != RETCODE::OK)
+            return MapRetCode(ret);
+         if (polygonsLoaded_)
+            LoadPolygons();
       }
    }
    return DEVICE_OK;
@@ -642,7 +645,10 @@ int RappUGA42Scanner::OnSpotSize(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (device_ != nullptr && laserAdded_)
       {
          UINT32 ret = device_->SetLaserStepSize(laserID_, spotSize_);
-         return MapRetCode(ret);
+         if (ret != RETCODE::OK)
+            return MapRetCode(ret);
+         if (polygonsLoaded_)
+            LoadPolygons();
       }
    }
    return DEVICE_OK;
@@ -663,7 +669,10 @@ int RappUGA42Scanner::OnLaserIntensity(MM::PropertyBase* pProp, MM::ActionType e
       if (device_ != nullptr && laserAdded_ && IsDeviceIdle())
       {
          UINT32 ret = device_->SetLaserIntensity(laserID_, currentIntensity_);
-         return MapRetCode(ret);
+         if (ret != RETCODE::OK)
+            return MapRetCode(ret);
+         if (polygonsLoaded_)
+            LoadPolygons();
       }
    }
    return DEVICE_OK;
@@ -894,6 +903,8 @@ int RappUGA42Scanner::OnPolygonIlluminationRepeats(MM::PropertyBase* pProp, MM::
       long value;
       pProp->Get(value);
       polygonIlluminationRepeats_ = static_cast<int>(value);
+      if (polygonsLoaded_)
+         LoadPolygons();
    }
    return DEVICE_OK;
 }
@@ -909,6 +920,8 @@ int RappUGA42Scanner::OnPolygonFilled(MM::PropertyBase* pProp, MM::ActionType eA
       std::string value;
       pProp->Get(value);
       polygonFilled_ = (value == "Yes");
+      if (polygonsLoaded_)
+         LoadPolygons();
    }
    return DEVICE_OK;
 }
@@ -1181,6 +1194,7 @@ int LoadPolygonsCommand::Execute(RappUGA42Scanner& device)
 
    // Create sequence objects for each polygon
    std::vector<SequenceObject*> sequenceObjects;
+   UINT32 currentTick = 0;
 
    for (size_t i = 0; i < polygons_.size(); i++)
    {
@@ -1192,12 +1206,19 @@ int LoadPolygonsCommand::Execute(RappUGA42Scanner& device)
          static_cast<UINT32>(polygons_[i].size()),
          device.polygonFilled_ ? TRUE : FALSE);
 
-      poly->StartTick = 0;  // SDK chains objects sequentially when StartTick=0
+      poly->StartTick = currentTick;
       poly->LaserID[0] = device.laserID_;
       poly->Intensity[0] = device.currentIntensity_;
       poly->Repeats = static_cast<UINT32>(device.polygonIlluminationRepeats_);
 
       sequenceObjects.push_back(poly);
+
+      // GetTiming() must be called after all polygon parameters are set, as
+      // the tick count depends on SpotSize, Repeats, and polygon geometry.
+      UINT32 objTickCount = 0;
+      UINT32 illTickCount = 0;
+      device.device_->GetTiming(*poly, &objTickCount, &illTickCount);
+      currentTick += objTickCount;
    }
 
    if (sequenceObjects.empty())
