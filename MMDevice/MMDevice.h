@@ -485,6 +485,9 @@ namespace MM {
       /**
        * @brief Start sequence acquisition.
        *
+       * Implementations must call `Core::PrepareForAcq()` before inserting
+       * any images.
+       *
        * @param numImages       Number of images to acquire.
        * @param unused          Has no effect. Implementations **must** ignore
        *                        this parameter. Previously named `intervalMs` /
@@ -507,12 +510,22 @@ namespace MM {
       virtual int StartSequenceAcquisition(double unused) = 0;
       /**
        * @brief Stop an ongoing sequence acquisition.
+       *
+       * Must be synchronous: must not return until the acquisition has
+       * actually stopped (acquisition thread joined or equivalent). After
+       * return, `IsCapturing()` must return false.
+       *
+       * Must be a no-op when no acquisition is running.
+       *
+       * Should not call `Core::AcqFinished()` directly — see
+       * `Core::AcqFinished()` for the rationale.
        */
       virtual int StopSequenceAcquisition() = 0;
       /**
        * @brief Indicate whether sequence acquisition is currently running.
        *
-       * Returns true when sequence acquisition is active, false otherwise.
+       * Must return false after `StopSequenceAcquisition()` returns and
+       * after an acquisition finishes on its own. Safe to call at any time.
        */
       virtual bool IsCapturing() = 0;
 
@@ -1685,8 +1698,42 @@ namespace MM {
       // Prefer std::chrono::steady_clock::now() in new code.
       virtual MM::MMTime GetCurrentMMTime() = 0;
 
-      // sequence acquisition
+      /**
+       * @brief Notify the Core that a sequence acquisition has finished.
+       *
+       * Must be called exactly once per acquisition, when the acquisition
+       * actually stops — whether it completed all requested images,
+       * encountered an error, or was told to stop via
+       * `Camera::StopSequenceAcquisition()`.
+       *
+       * Call from the acquisition thread as it exits (e.g., in an
+       * `OnThreadExiting()` override), not from
+       * `StopSequenceAcquisition()` itself. This ensures the callback
+       * fires both when the acquisition finishes on its own and when it is
+       * stopped externally. When `StopSequenceAcquisition()` joins the
+       * acquisition thread, `AcqFinished()` will be called during the
+       * join, before `StopSequenceAcquisition()` returns.
+       *
+       * For multi-channel cameras: each physical sub-camera calls
+       * `AcqFinished()` independently. The primary camera calls only if
+       * it has at least one intrinsic channel.
+       *
+       * @param caller      The calling device (pass `this`).
+       * @param statusCode  0 on success, or an error code.
+       */
       virtual int AcqFinished(const Device* caller, int statusCode) = 0;
+      /**
+       * @brief Prepare the Core for a sequence acquisition.
+       *
+       * Must be called during `Camera::StartSequenceAcquisition()`, before
+       * inserting any images.
+       *
+       * For multi-channel cameras: each physical sub-camera calls
+       * `PrepareForAcq()` independently. The primary camera calls only if
+       * it has at least one intrinsic channel.
+       *
+       * @param caller  The calling device (pass `this`).
+       */
       virtual int PrepareForAcq(const Device* caller) = 0;
 
       /**
