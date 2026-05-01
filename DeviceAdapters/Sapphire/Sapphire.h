@@ -124,13 +124,12 @@ public:
 
 	void initLimits()
 	{
-		//std::string val = queryLaser("MINLP");
-		//minlp(atof(val.c_str()));
-		minlp(0.5);
-		//val = queryLaser("MAXLP");
-		//maxlp(atof(val.c_str()));
-		maxlp(50.0);
-		wave(561.0);
+		std::string val = queryLaser("MINLP");
+		minlp(atof(val.c_str()));
+		//minlp(0.5);
+		val = queryLaser("MAXLP");
+		maxlp(atof(val.c_str()));
+		//maxlp(50.0);
 
 	}
 
@@ -169,6 +168,8 @@ public:
 	// some important read-only properties
 	int OnHeadID(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnHeadUsageHours(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnLaserDiodeCurrent(MM::PropertyBase* pProp, MM::ActionType eAct);
+	int OnBasePlateTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnMinimumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnMaximumLaserPower(MM::PropertyBase* pProp, MM::ActionType eAct);
 	int OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct/*, long*/);
@@ -202,6 +203,9 @@ private:
 	const std::string TECServoToken_;
 	const std::string headSerialNoToken_;
 	const std::string headUsageHoursToken_;
+	const std::string laserDiodeCurrentToken_;
+	const std::string basePlateTemperatureToken_;
+	const std::string maximumLaserPowerToken_;
 	const std::string externalPowerControlToken_;
 	const std::string wavelengthToken_;
 
@@ -216,7 +220,7 @@ private:
 
 
 
-   void SetPowerSetpoint(double powerSetpoint__, double& achievedSetpoint__);
+   void SetPowerSetpoint(double powerSetpoint__);
    void GetPowerSetpoint(double& powerSetpoint__);
 	void GetPowerReadback(double& value__);
    void ReadGreeting();
