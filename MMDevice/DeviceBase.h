@@ -1678,7 +1678,7 @@ protected:
          md.Serialize());
    }
 
-   virtual double GetIntervalMs() {return thd_->GetIntervalMs();}
+   virtual double GetIntervalMs() {return 0.0;}
    virtual long GetImageCounter() {return thd_->GetImageCounter();}
    virtual long GetNumberOfImages() {return thd_->GetNumberOfImages();}
 
