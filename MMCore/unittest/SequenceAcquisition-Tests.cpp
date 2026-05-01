@@ -62,7 +62,7 @@ struct AsyncCamera : CCameraBase<AsyncCamera> {
       return DEVICE_OK;
    }
 
-   int StartSequenceAcquisition(long numImages, double, bool) override {
+   int StartSequenceAcquisition(long numImages, double /*unused*/, bool /*stopOnOverflow*/) override {
       GetCoreCallback()->PrepareForAcq(this);
       {
          std::lock_guard<std::mutex> lk(mu_);
@@ -75,7 +75,7 @@ struct AsyncCamera : CCameraBase<AsyncCamera> {
       return DEVICE_OK;
    }
 
-   int StartSequenceAcquisition(double) override {
+   int StartSequenceAcquisition(double /*unused*/) override {
       GetCoreCallback()->PrepareForAcq(this);
       {
          std::lock_guard<std::mutex> lk(mu_);

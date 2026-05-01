@@ -1,5 +1,4 @@
-#ifndef _STREAMWRITER_H_
-#define _STREAMWRITER_H_
+#pragma once
 
 #include <memory>
 #include <mutex>
@@ -95,7 +94,7 @@ private:
     void MoveStackToTotalSummary();
 
 private:
-    const Universal* camera_;
+    Universal* const camera_;
 
     // TODO: Get some shared pool from outside
     const std::shared_ptr<ThreadPool> threadPool_;
@@ -115,13 +114,14 @@ private:
     size_t frameBytes_{ 0 }; // Taken from PVCAM, may include metadata
     size_t frameBytesAligned_{ 0 }; // frameBytes_ aligned to bufferAlignment_
     size_t maxFramesPerStack_{ 0 }; // Max. number of frames that fit in 3 GB
+    // Must remain C-pointer for AllocatePageAlignedBuffer & FreePageAlignedBuffer
     void* alignedBuffer_{ nullptr }; // Allocated to frameBytesAligned_ if differs from frameBytes_
 
     std::string sessionId_{}; // Auto-generated as timestamp
     std::string path_{}; // dirRoot_ + session_
     bool isActive_{ false }; // True when set up and configured
 
-    StackFile* stackFile_{ nullptr };
+    std::unique_ptr<StackFile> stackFile_{ nullptr };
     std::string stackFileName_{}; // Only file name without path
     size_t stackFileIndex_{ 0 };
     size_t stackFileFrameIndex_{ 0 };
@@ -133,5 +133,3 @@ private:
     std::string stackSummary_{};
     size_t lastFrameNr_{ 0 };
 };
-
-#endif // _STREAMWRITER_H_

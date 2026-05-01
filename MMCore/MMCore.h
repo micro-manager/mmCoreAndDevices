@@ -425,12 +425,12 @@ public:
    void setShutterOpen(const char* shutterLabel, bool state) MMCORE_LEGACY_THROW(CMMError);
    bool getShutterOpen(const char* shutterLabel) MMCORE_LEGACY_THROW(CMMError);
 
-   void startSequenceAcquisition(long numImages, double intervalMs,
+   void startSequenceAcquisition(long numImages, double unused,
          bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError);
    void startSequenceAcquisition(const char* cameraLabel, long numImages,
-         double intervalMs, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError);
+         double unused, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError);
    MMCORE_DEPRECATED void prepareSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError);
-   void startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGACY_THROW(CMMError);
+   void startContinuousSequenceAcquisition(double unused) MMCORE_LEGACY_THROW(CMMError);
    void stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError);
    void stopSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError);
    bool isSequenceRunning() MMCORE_NOEXCEPT;

@@ -22,8 +22,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !defined(_DEBAYER_)
-#define _DEBAYER_
+#pragma once
 
 // MMDevice
 #include "ImgBuffer.h"
@@ -41,11 +40,13 @@ typedef struct
 }
 RGBscales;
 
+// Serves as index to orders_
 #define CFA_RGGB 0
 #define CFA_BGGR 1
 #define CFA_GRBG 2
 #define CFA_GBRG 3
 
+// Serves as index to algorithms_
 #define ALG_REPLICATION 0
 #define ALG_BILINEAR 1
 #define ALG_SMOOTH_HUE 2
@@ -100,16 +101,24 @@ private:
     void SetPixel(std::vector<T>& v, T val, int x, int y, int width, int height);
 
 private:
-    std::vector<unsigned short> r_; // red scratch buffer
-    std::vector<unsigned short> g_; // green scratch buffer
-    std::vector<unsigned short> b_; // blue scratch buffer
+    std::vector<unsigned short> r_{}; // red scratch buffer
+    std::vector<unsigned short> g_{}; // green scratch buffer
+    std::vector<unsigned short> b_{}; // blue scratch buffer
 
-    std::vector<std::string> orders_;
-    std::vector<std::string> algorithms_;
+    const std::vector<std::string> orders_{
+        "R-G-R-G",
+        "B-G-B-G",
+        "G-R-G-R",
+        "G-B-G-B",
+    };
+    const std::vector<std::string> algorithms_{
+        "Replication",
+        "Bilinear",
+        "Smooth-Hue",
+        "Adaptive-Smooth-Hue",
+    };
 
-    int orderIndex_;
-    int algoIndex_;
-    RGBscales rgbScales_;
+    int orderIndex_{ CFA_RGGB };
+    int algoIndex_{ ALG_REPLICATION };
+    RGBscales rgbScales_{ 1.0, 1.0, 1.0 };
 };
-
-#endif // !defined(_DEBAYER_)

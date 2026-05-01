@@ -1,5 +1,4 @@
-#ifndef _ACQTHREAD_H_
-#define _ACQTHREAD_H_
+#pragma once
 
 // MMDevice
 #include "DeviceThreads.h"
@@ -21,7 +20,7 @@ public:
     * Creates the thread. The thread needs to be started with Start().
     * @param camera A pointer to the owner class.
     */
-    AcqThread(Universal* camera);
+    explicit AcqThread(Universal* camera);
     /**
     * Deletes the object, stops the thread if active.
     */
@@ -49,12 +48,10 @@ public:
     /**
     * Overridden function from MMDeviceThreadBase.
     */
-    int svc();
+    virtual int svc() override;
 
 private:
-    Universal* camera_;
-    bool       requestStop_;
-    Event      resumeEvent_;
+    Universal* const camera_;
+    bool requestStop_{ false };
+    Event resumeEvent_{ true, false };
 };
-
-#endif // _ACQTHREAD_H_

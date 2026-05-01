@@ -1,5 +1,4 @@
-#ifndef _EVENT_H_
-#define _EVENT_H_
+#pragma once
 
 #include <condition_variable>
 #include <mutex>
@@ -48,5 +47,3 @@ private:
     std::mutex mutex_{};
     std::condition_variable condVar_{};
 };
-
-#endif // _EVENT_H_

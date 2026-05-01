@@ -3022,11 +3022,17 @@ long CMMCore::getImageBufferSize()
  * Starts streaming camera sequence acquisition.
  * This command does not block the calling thread for the duration of the acquisition.
  *
- * @param numImages        Number of images requested from the camera
- * @param intervalMs       The interval between images, currently only supported by Andor cameras
- * @param stopOnOverflow   whether or not the camera stops acquiring when the circular buffer is full
+ * @param numImages       Number of images requested from the camera.
+ * @param unused          Has no effect. Pass 0.0. This parameter was
+ *                        previously named `intervalMs` but was never
+ *                        reliably implemented across camera adapters.
+ *                        Cameras that support a configurable frame rate
+ *                        typically expose it as a device property.
+ * @param stopOnOverflow  Whether the camera stops acquiring when the
+ *                        circular buffer is full. If false, frames may be
+ *                        skipped.
  */
-void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::startSequenceAcquisition(long numImages, double unused, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
@@ -3054,7 +3060,11 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
          mmi::DeviceModuleLockGuard guard(camera);
 
          LOG_DEBUG(coreLogger_) << "Will start sequence acquisition from default camera";
-			int nRet = camera->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
+			// Forward `unused` to the device rather than substituting 0.0:
+			// a small number of camera adapters (Andor) did implement this
+			// parameter, and passing 0.0 unconditionally could regress them.
+			// The MM::Camera contract now says new adapters must ignore it.
+			int nRet = camera->StartSequenceAcquisition(numImages, unused, stopOnOverflow);
 			if (nRet != DEVICE_OK)
 				throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
 		}
@@ -3079,8 +3089,16 @@ void CMMCore::startSequenceAcquisition(long numImages, double intervalMs, bool s
  * This command does not block the calling thread for the duration of the acquisition.
  * The difference between this method and the one with the same name but operating on the "default"
  * camera is that it does not automatically initialize the circular buffer.
+ *
+ * @param label            Label of the camera device.
+ * @param numImages        Number of images requested from the camera.
+ * @param unused           Has no effect. Pass 0.0. See the default-camera
+ *                         overload for details.
+ * @param stopOnOverflow   Whether the camera stops acquiring when the
+ *                         circular buffer is full. If false, frames may be
+ *                         skipped.
  */
-void CMMCore::startSequenceAcquisition(const char* label, long numImages, double intervalMs, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::startSequenceAcquisition(const char* label, long numImages, double unused, bool stopOnOverflow) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> pCam =
       deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
@@ -3103,7 +3121,11 @@ void CMMCore::startSequenceAcquisition(const char* label, long numImages, double
    cbuf_->SetOverwriteData(!stopOnOverflow);
    LOG_DEBUG(coreLogger_) <<
       "Will start sequence acquisition from camera " << label;
-   int nRet = pCam->StartSequenceAcquisition(numImages, intervalMs, stopOnOverflow);
+   // Forward `unused` to the device rather than substituting 0.0: a small
+   // number of camera adapters (Andor) did implement this parameter, and
+   // passing 0.0 unconditionally could regress them. The MM::Camera
+   // contract now says new adapters must ignore it.
+   int nRet = pCam->StartSequenceAcquisition(numImages, unused, stopOnOverflow);
    if (nRet != DEVICE_OK)
       throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
 
@@ -3184,8 +3206,11 @@ void CMMCore::stopSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(CMM
 /**
  * Starts the continuous camera sequence acquisition.
  * This command does not block the calling thread for the duration of the acquisition.
+ *
+ * @param unused  Has no effect. Pass 0.0. See `startSequenceAcquisition` for
+ *                the history of this parameter.
  */
-void CMMCore::startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::startContinuousSequenceAcquisition(double unused) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
@@ -3210,7 +3235,11 @@ void CMMCore::startContinuousSequenceAcquisition(double intervalMs) MMCORE_LEGAC
       callback_->ResetImageInsertionState();
       cbuf_->SetOverwriteData(true);
       LOG_DEBUG(coreLogger_) << "Will start continuous sequence acquisition from current camera";
-      int nRet = camera->StartSequenceAcquisition(intervalMs);
+      // Forward `unused` to the device rather than substituting 0.0: a small
+      // number of camera adapters (Andor) did implement this parameter, and
+      // passing 0.0 unconditionally could regress them. The MM::Camera
+      // contract now says new adapters must ignore it.
+      int nRet = camera->StartSequenceAcquisition(unused);
       if (nRet != DEVICE_OK)
          throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
    }

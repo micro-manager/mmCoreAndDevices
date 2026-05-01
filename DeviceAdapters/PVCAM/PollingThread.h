@@ -1,5 +1,4 @@
-#ifndef _POLLINGTHREAD_H_
-#define _POLLINGTHREAD_H_
+#pragma once
 
 // MMDevice
 #include "DeviceThreads.h"
@@ -12,18 +11,16 @@ class Universal;
 class PollingThread : public MMDeviceThreadBase
 {
 public:
-    PollingThread(Universal* camera) :
-      stop_(true), camera_(camera) {}
-      virtual ~PollingThread() {}
-      int svc (void);
+    explicit PollingThread(Universal* camera);
+    virtual ~PollingThread();
 
-      void setStop(bool stop) {stop_ = stop;}
-      bool getStop() {return stop_;}
-      void Start() {stop_ = false; activate();}
+    void SetStop(bool stop);
+    bool GetStop() const;
+    void Start();
+
+    virtual int svc() override; // From MMDeviceThreadBase
 
 private:
-    bool stop_;
-    Universal* camera_;
+    Universal* const camera_;
+    bool stop_{ true };
 };
-
-#endif // _POLLINGTHREAD_H_

@@ -1,5 +1,4 @@
-#ifndef _PVCAMINCLUDES_H_
-#define _PVCAMINCLUDES_H_
+#pragma once
 
 #if defined(_WIN32)
     // Taken from $(MM_3RDPARTYPUBLIC)/Photometrics/PVCAM/SDK/Headers
@@ -14,5 +13,3 @@
 #else
     #error OS not supported
 #endif
-
-#endif // _PVCAMINCLUDES_H_

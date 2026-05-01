@@ -1,5 +1,4 @@
-#ifndef _PVCAM_PARAM_H_
-#define _PVCAM_PARAM_H_
+#pragma once
 
 // MMDevice
 #include "DeviceBase.h"
@@ -19,23 +18,24 @@
 class PvParamBase
 {
 public:
-    PvParamBase(const std::string& aDebugName, uns32 aParamId, Universal* aCamera, bool aDbgPrint)
-        : mId(aParamId),
-        mCamera(aCamera),
-        mDebugName(aDebugName)
+    explicit PvParamBase(const std::string& aDebugName,
+            uns32 aParamId, Universal* aCamera, bool aDbgPrint)
+        : mDebugName(aDebugName),
+        mId(aParamId),
+        mCamera(aCamera)
     {
         Initialize(aDbgPrint);
     }
 
     virtual ~PvParamBase() {}
 
-    uns32 Id() { return mId; }
-    Universal* Camera() { return mCamera; }
-    const std::string& DebugName() { return mDebugName; }
+    uns32 Id() const { return mId; }
+    Universal* const Camera() const { return mCamera; }
+    const std::string& DebugName() const { return mDebugName; }
 
-    bool IsAvailable() { return (mAvail == TRUE); }
-    bool IsReadOnly()  { return (mAccess == ACC_READ_ONLY); }
-    bool IsEnum()      { return (mType == TYPE_ENUM); }
+    bool IsAvailable() const { return (mAvail == TRUE); }
+    bool IsReadOnly() const  { return (mAccess == ACC_READ_ONLY); }
+    bool IsEnum() const      { return (mType == TYPE_ENUM); }
 
 public:
     int Initialize(bool aDbgPrint = false)
@@ -83,24 +83,25 @@ public:
     virtual int Reset() = 0;
 
 protected:
-    uns32       mId{ 0 };
-    Universal*  mCamera{ nullptr };
-    std::string mDebugName{};
+    const std::string mDebugName;
+    const uns32       mId;
+    Universal* const  mCamera;
 
     rs_bool     mAvail { FALSE };
     uns16       mAccess{ ACC_READ_ONLY };
     uns16       mType  { TYPE_INT32 };
 };
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
 template<>
 class PvParam<smart_stream_type> : public PvParamBase
 {
 public:
-    PvParam(const std::string& aDebugName, uns32 aParamId, Universal* aCamera, bool aDbgPrint)
+    explicit PvParam(const std::string& aDebugName,
+            uns32 aParamId, Universal* aCamera, bool aDbgPrint)
         : PvParamBase(aDebugName, aParamId, aCamera, aDbgPrint)
     {
         mCurrent.entries = SMART_STREAM_MAX_EXPOSURES;
+        // TODO: Cannot use smart pointer, use pl_md_create_frame_struct_cont?
         mCurrent.params = new uns32[SMART_STREAM_MAX_EXPOSURES];
         if (IsAvailable())
         {
@@ -108,23 +109,23 @@ public:
         }
     }
 
-    ~PvParam()
+    virtual ~PvParam()
     {
         delete[] mCurrent.params;
     }
 
     // Getters
-    smart_stream_type Current()   { return mCurrent; }
-    smart_stream_type Max()       { return mMax; }
-    smart_stream_type Min()       { return mMin; }
-    smart_stream_type Increment() { return mIncrement; }
-    uns32             Count()     { return mCount; }
-    smart_stream_type Default()   { return mDefault; }
+    smart_stream_type Current() const   { return mCurrent; }
+    smart_stream_type Max() const       { return mMax; }
+    smart_stream_type Min() const       { return mMin; }
+    smart_stream_type Increment() const { return mIncrement; }
+    uns32             Count() const     { return mCount; }
+    smart_stream_type Default() const   { return mDefault; }
 
     /**
     * Returns the current parameter value as string (useful for settings MM property)
     */
-    virtual std::string ToString()
+    virtual std::string ToString() const
     {
         std::ostringstream os;
         for (int i = 0; i < mCurrent.entries; i++)
@@ -133,7 +134,7 @@ public:
     }
 
     /**
-    * Sets the parameter value but does not apply the settings. Use Write() to 
+    * Sets the parameter value but does not apply the settings. Use Write() to
     * send the parameter to the camera.
     * TODO: Revisit the method name (might be confusing to have Set/Apply/Update methods)
     */
@@ -152,7 +153,7 @@ public:
             mCamera->LogAdapterMessage("Updating " + mDebugName + "...");
 
         // Must be set to max exposures number so we can retrieve current number of exposures
-        // from the camera in case new requested exposures count is greater than the previous  
+        // from the camera in case new requested exposures count is greater than the previous
         mCurrent.entries = SMART_STREAM_MAX_EXPOSURES;
         if (pl_get_param(mCamera->Handle(), mId, ATTR_CURRENT, &mCurrent) != PV_OK)
         {
@@ -233,25 +234,25 @@ public:
     }
 
 protected:
-    smart_stream_type mCurrent  { 0, NULL };
-    smart_stream_type mMax      { 0, NULL };
-    smart_stream_type mMin      { 0, NULL };
+    smart_stream_type mCurrent  { 0, nullptr };
+    smart_stream_type mMax      { 0, nullptr };
+    smart_stream_type mMin      { 0, nullptr };
     uns32             mCount    { 0 }; // ATTR_COUNT is always TYPE_UNS32
-    smart_stream_type mIncrement{ 0, NULL };
-    smart_stream_type mDefault  { 0, NULL };
+    smart_stream_type mIncrement{ 0, nullptr };
+    smart_stream_type mDefault  { 0, nullptr };
 };
-#endif
 
 /**
 * Template class for PVCAM parameters. This class makes the access to PVCAM parameters easier.
 * The user must use the correct parameter type as defined in PVCAM manual.
-* Usage: PvParam<int16> prmTemperature = new PvParam<int16>( "PARAM_TEMP", PARAM_TEMP, this );
+* Usage: PvParam<int16> prmTemperature = PvParam<int16>( "PARAM_TEMP", PARAM_TEMP, this );
 */
 template<class T>
 class PvParam : public PvParamBase
 {
 public:
-    PvParam(const std::string& aDebugName, uns32 aParamId, Universal* aCamera, bool aDbgPrint)
+    explicit PvParam(const std::string& aDebugName,
+            uns32 aParamId, Universal* aCamera, bool aDbgPrint)
         : PvParamBase( aDebugName, aParamId, aCamera, aDbgPrint)
     {
         if (IsAvailable())
@@ -261,23 +262,23 @@ public:
     }
 
     // Getters
-    T     Current()   { return mCurrent; }
-    T     Max()       { return mMax; }
-    T     Min()       { return mMin; }
-    T     Increment() { return mIncrement; }
-    uns32 Count()     { return mCount; }
-    T     Default()   { return mDefault; }
+    T     Current() const   { return mCurrent; }
+    T     Max() const       { return mMax; }
+    T     Min() const       { return mMin; }
+    T     Increment() const { return mIncrement; }
+    uns32 Count() const     { return mCount; }
+    T     Default() const   { return mDefault; }
 
     /**
     * Returns the current parameter value as string (useful for settings MM property)
     */
-    virtual std::string ToString()
+    virtual std::string ToString() const
     {
         return std::to_string(mCurrent);
     }
 
     /**
-    * Sets the parameter value but does not apply the settings. Use Write() to 
+    * Sets the parameter value but does not apply the settings. Use Write() to
     * send the parameter to the camera.
     * TODO: Revisit the method name (might be confusing to have Set/Apply/Update methods)
     */
@@ -391,34 +392,30 @@ protected:
 class PvStringParam : public PvParamBase
 {
 public:
-    PvStringParam(const std::string& aDebugName, uns32 aParamId, uns32 aMaxStrLen, Universal* aCamera, bool aDbgPrint)
+    explicit PvStringParam(const std::string& aDebugName,
+            uns32 aParamId, uns32 aMaxStrLen, Universal* aCamera, bool aDbgPrint)
         : PvParamBase(aDebugName, aParamId, aCamera, aDbgPrint),
+        mTemp(std::make_unique<char[]>(aMaxStrLen)),
         mMaxLen(aMaxStrLen)
     {
-        mTemp = new char[mMaxLen];
         if (IsAvailable())
         {
             Update(aDbgPrint);
         }
     }
 
-    ~PvStringParam()
-      {
-          delete mTemp;
-      }
-
     // Getters
-    std::string Current()   { return mCurrent; }
-    std::string Max()       { return mMax; }
-    std::string Min()       { return mMin; }
-    std::string Increment() { return mIncrement; }
-    uns32       Count()     { return mCount; }
-    std::string Default()   { return mDefault; }
+    std::string Current() const   { return mCurrent; }
+    std::string Max() const       { return mMax; }
+    std::string Min() const       { return mMin; }
+    std::string Increment() const { return mIncrement; }
+    uns32       Count() const     { return mCount; }
+    std::string Default() const   { return mDefault; }
 
     /**
       * Returns the current parameter value as string (useful for settings MM property)
       */
-    virtual std::string ToString()
+    virtual std::string ToString() const
     {
         return mCurrent;
     }
@@ -431,30 +428,30 @@ public:
         if (aDbgPrint)
             mCamera->LogAdapterMessage("Updating " + mDebugName + "...");
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_CURRENT, mTemp) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_CURRENT, mTemp.get()) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_CURRENT failed");
             return DEVICE_ERR;
         }
-        mCurrent.assign(mTemp);
+        mCurrent.assign(mTemp.get());
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_CURRENT '" + mCurrent + "'");
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_MIN, mTemp) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_MIN, mTemp.get()) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_MIN failed");
             return DEVICE_ERR;
         }
-        mMin.assign(mTemp);
+        mMin.assign(mTemp.get());
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_MIN: '" + mMin + "'");
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_MAX, mTemp) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_MAX, mTemp.get()) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_MAX failed");
             return DEVICE_ERR;
         }
-        mMax.assign(mTemp);
+        mMax.assign(mTemp.get());
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_MAX: '" + mMax + "'");
 
@@ -466,21 +463,21 @@ public:
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_COUNT: " + std::to_string(mCount));
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_INCREMENT, mTemp) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_INCREMENT, mTemp.get()) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_INCREMENT failed");
             return DEVICE_ERR;
         }
-        mIncrement.assign(mTemp);
+        mIncrement.assign(mTemp.get());
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_INCREMENT: '" + mIncrement + "'");
 
-        if (pl_get_param(mCamera->Handle(), mId, ATTR_DEFAULT, mTemp) != PV_OK)
+        if (pl_get_param(mCamera->Handle(), mId, ATTR_DEFAULT, mTemp.get()) != PV_OK)
         {
             mCamera->LogPvcamError(__LINE__, "pl_get_param for " + mDebugName + " ATTR_DEFAULT failed");
             return DEVICE_ERR;
         }
-        mDefault.assign(mTemp);
+        mDefault.assign(mTemp.get());
         if (aDbgPrint)
             mCamera->LogAdapterMessage(mDebugName + " ATTR_DEFAULT: '" + mDefault + "'");
 
@@ -502,7 +499,7 @@ public:
     }
 
 protected:
-    char*       mTemp{ nullptr };
+    std::unique_ptr<char[]> mTemp{ nullptr };
     uns32       mMaxLen{ 0 };
 
     std::string mCurrent  {};
@@ -523,7 +520,8 @@ public:
     /**
     * Initializes the enumerable PVCAM parameter type
     */
-    PvEnumParam(const std::string& aDebugName, uns32 aParamId, Universal* aCamera, bool aDbgPrint)
+    explicit PvEnumParam(const std::string& aDebugName,
+            uns32 aParamId, Universal* aCamera, bool aDbgPrint)
         : PvParam<int32>(aDebugName, aParamId, aCamera, aDbgPrint)
     {
         if (IsAvailable())
@@ -535,38 +533,39 @@ public:
     /**
     * Overridden function. Return the enum string instead of the value only.
     */
-    virtual std::string ToString() override
+    virtual std::string ToString() const override
     {
-        return mEnumMap[mCurrent];
+        return mEnumMap.at(mCurrent);
     }
 
     /**
     * Returns all available enum strings for this parameter
     */
-    std::vector<std::string>& GetEnumStrings()
+    // TODO: Cannot be const because of CDeviceBase::SetAllowedValues()
+    /*const */std::vector<std::string>& GetEnumStrings()/* const*/
     {
         return mEnumStrings;
     }
     /**
     * Returns the string that corresponds to given value
     */
-    std::string GetEnumString(int32 value)
+    std::string GetEnumString(int32 value) const
     {
-        return mEnumMap[value];
+        return mEnumMap.at(value);
     }
     /**
     * Returns all available enum values for this parameter
     */
-    std::vector<int32>& GetEnumValues()
+    const std::vector<int32>& GetEnumValues() const
     {
         return mEnumValues;
     }
     /**
     * Returns the value that corresponds to given string
     */
-    int32 GetEnumValue(const std::string& string)
+    int32 GetEnumValue(const std::string& string) const
     {
-        return mEnumMapReverse[string];
+        return mEnumMapReverse.at(string);
     }
 
     /**
@@ -637,9 +636,9 @@ private:
                 mCamera->LogPvcamError(__LINE__, "pl_enum_str_length");
                 break;
             }
-            char* enumStrBuf = new char[enumStrLen + 1];
+            auto enumStrBuf = std::make_unique<char[]>(enumStrLen + 1);
             enumStrBuf[enumStrLen] = '\0';
-            if (pl_get_enum_param(mCamera->Handle(), mId, i, &enumVal, enumStrBuf, enumStrLen) != PV_OK)
+            if (pl_get_enum_param(mCamera->Handle(), mId, i, &enumVal, enumStrBuf.get(), enumStrLen) != PV_OK)
             {
                 mCamera->LogPvcamError(__LINE__, "pl_get_enum_param");
                 mEnumStrings.push_back( "Unable to read" );
@@ -648,7 +647,7 @@ private:
             }
             else
             {
-                const std::string enumStr(enumStrBuf);
+                const std::string enumStr(enumStrBuf.get());
                 mEnumStrings.push_back(enumStr);
                 mEnumValues.push_back(enumVal);
                 mEnumMap[enumVal] = enumStr;
@@ -660,7 +659,6 @@ private:
                         + ", string=" + enumStr);
                 }
             }
-            delete[] enumStrBuf;
         }
 
         if (aDbgPrint)
@@ -670,12 +668,12 @@ private:
 private:
     // Enum values and their corresponding names, stored in vectors in the
     // exactly the same order as retrieved from PVCAM.
-    std::vector<std::string> mEnumStrings;
-    std::vector<int32>       mEnumValues;
+    std::vector<std::string> mEnumStrings{};
+    std::vector<int32>       mEnumValues{};
     // Enum map contains the same info as the previous two vectors but
     // is used for faster searching and retrieval.
-    std::map<int32, std::string> mEnumMap;
-    std::map<std::string, int32> mEnumMapReverse;
+    std::map<int32, std::string> mEnumMap{};
+    std::map<std::string, int32> mEnumMapReverse{};
 };
 
 //=============================================================================
@@ -714,14 +712,16 @@ typedef union
 class PvUniversalParam : public PvParamBase
 {
 public:
-    PvUniversalParam(const std::string& aDebugName, uns32 aParamId, Universal* aCamera, bool bDbgPrint);
+    explicit PvUniversalParam(const std::string& aDebugName,
+            uns32 aParamId, Universal* aCamera, bool bDbgPrint);
 
-    std::vector<std::string>& GetEnumStrings();
+    // TODO: Cannot be const because of CDeviceBase::SetAllowedValues()
+    /*const */std::vector<std::string>& GetEnumStrings()/* const*/;
 
     // Getters: MM property can be either string, double or long
-    std::string ToString();
-    double ToDouble();
-    long ToLong();
+    std::string ToString() const;
+    double ToDouble() const;
+    long ToLong() const;
 
     // Setters
     int Set(std::string aValue);
@@ -735,25 +735,23 @@ public:
     int Read();
     int Write();
 
-    double GetMax();
-    double GetMin();
+    double GetMax() const;
+    double GetMin() const;
 
 protected:
     int initialize();
 
 protected:
-    PvUniversalParamValue mValue;
-    PvUniversalParamValue mValueMax;
-    PvUniversalParamValue mValueMin;
-    PvUniversalParamValue mValueDefault;
+    PvUniversalParamValue mValue{};
+    PvUniversalParamValue mValueMax{};
+    PvUniversalParamValue mValueMin{};
+    PvUniversalParamValue mValueDefault{};
 
     // Enum values and their corresponding names obtained by pl_get_enum_param
-    std::vector<std::string> mEnumStrings;
-    std::vector<int>         mEnumValues;
+    std::vector<std::string> mEnumStrings{};
+    std::vector<int>         mEnumValues{};
 
 private:
     int plGetParam(int16 aAttr, PvUniversalParamValue& aValueOut);
     int plSetParam(PvUniversalParamValue& aValueOut);
 };
-
-#endif // _PVCAM_PARAM_H_

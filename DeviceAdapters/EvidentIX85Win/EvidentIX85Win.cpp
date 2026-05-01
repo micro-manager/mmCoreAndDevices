@@ -2205,7 +2205,7 @@ int EvidentEPIShutter1::SetOpen(bool open)
     if (!hub)
         return DEVICE_ERR;
 
-    std::string cmd = BuildCommand(CMD_EPI_SHUTTER1, open ? 1 : 0);
+    std::string cmd = BuildCommand(CMD_EPI_SHUTTER1, open ? 0 : 1);
     std::string response;
 
      hub->GetModel()->SetBusy(DeviceType_EPIShutter1, true);  // Shutter changes are instantaneous
@@ -2241,7 +2241,7 @@ int EvidentEPIShutter1::GetOpen(bool& open)
     if (params.size() > 0)
     {
         int state = ParseIntParameter(params[0]);
-        open = (state == 1);
+        open = (state == 0);
     }
 
     return DEVICE_OK;
@@ -3288,7 +3288,7 @@ int EvidentEPIShutter2::SetOpen(bool open)
     if (!hub)
         return DEVICE_ERR;
 
-    std::string cmd = BuildCommand(CMD_EPI_SHUTTER2, open ? 1 : 0);
+    std::string cmd = BuildCommand(CMD_EPI_SHUTTER2, open ? 0 : 1);
     std::string response;
 
      int ret = hub->ExecuteCommand(cmd, response);
@@ -3321,7 +3321,7 @@ int EvidentEPIShutter2::GetOpen(bool& open)
     if (params.size() > 0)
     {
         int state = ParseIntParameter(params[0]);
-        open = (state == 1);
+        open = (state == 0);
     }
 
     return DEVICE_OK;

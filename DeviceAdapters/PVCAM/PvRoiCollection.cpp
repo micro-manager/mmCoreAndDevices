@@ -7,27 +7,21 @@
 
 //=============================================================================
 
-PvRoiCollection::PvRoiCollection() :
-    m_capacity(0),
-    m_rois(),
-    m_impliedRoi(0,0,0,0,1,1),
-    m_rgnTypeArray(NULL)
+PvRoiCollection::PvRoiCollection()
 {
     Clear();
 }
 
-PvRoiCollection::PvRoiCollection(const PvRoiCollection& other) :
-    m_capacity(other.m_capacity),
+PvRoiCollection::PvRoiCollection(const PvRoiCollection& other)
+    : m_capacity(other.m_capacity),
     m_rois(other.m_rois),
     m_impliedRoi(other.m_impliedRoi),
-    m_rgnTypeArray(m_capacity > 0 ? new rgn_type[m_capacity] : NULL)
+    m_rgnTypeArray(other.m_rgnTypeArray)
 {
-    std::copy(other.m_rgnTypeArray, other.m_rgnTypeArray + m_capacity, m_rgnTypeArray);
 }
 
 PvRoiCollection::~PvRoiCollection()
 {
-    delete[] m_rgnTypeArray;
 }
 
 //=============================================================================
@@ -51,8 +45,7 @@ void PvRoiCollection::swap(PvRoiCollection& first, PvRoiCollection& second)
 void PvRoiCollection::SetCapacity(unsigned int capacity)
 {
     m_rois.reserve(capacity);
-    delete[] m_rgnTypeArray;
-    m_rgnTypeArray = new rgn_type[capacity]();
+    m_rgnTypeArray.reserve(capacity);
     m_capacity = capacity;
 
     Clear();
@@ -69,11 +62,9 @@ void PvRoiCollection::Add(const PvRoi& newRoi)
     if (m_capacity == oldCount)
         throw std::length_error("Insufficient capacity");
 
-    // Add the ROI to our internal array
+    // Add the ROI to our internal arrays
     m_rois.push_back(newRoi);
-
-    // Convert the new ROI to the PVCAM-specific type and add it to the array
-    m_rgnTypeArray[oldCount] = newRoi.ToRgnType();
+    m_rgnTypeArray.push_back(newRoi.ToRgnType());
 
     // Recalculate the implied ROI
     updateImpliedRoi();
@@ -94,7 +85,7 @@ void PvRoiCollection::Clear()
         (std::numeric_limits<uns16>::min)(),
         (std::numeric_limits<uns16>::min)());
 
-    memset(m_rgnTypeArray, 0, sizeof(rgn_type) * m_capacity);
+    m_rgnTypeArray.clear();
 }
 
 unsigned int PvRoiCollection::Count() const
@@ -112,6 +103,7 @@ void PvRoiCollection::SetBinningX(uns16 bin)
     }
     m_impliedRoi.SetBinningX(bin);
 }
+
 void PvRoiCollection::SetBinningY(uns16 bin)
 {
     const unsigned int count = Count();
@@ -122,6 +114,7 @@ void PvRoiCollection::SetBinningY(uns16 bin)
     }
     m_impliedRoi.SetBinningY(bin);
 }
+
 void PvRoiCollection::SetBinning(uns16 bX, uns16 bY)
 {
     const unsigned int count = Count();
@@ -160,9 +153,9 @@ PvRoi PvRoiCollection::ImpliedRoi() const
     return m_impliedRoi;
 }
 
-rgn_type* PvRoiCollection::ToRgnArray() const
+const rgn_type* PvRoiCollection::ToRgnArray() const
 {
-    return m_rgnTypeArray;
+    return m_rgnTypeArray.data();
 }
 
 bool PvRoiCollection::IsValid(uns16 sensorWidth, uns16 sensorHeight) const

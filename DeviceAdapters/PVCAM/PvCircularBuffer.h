@@ -1,10 +1,10 @@
-#ifndef _PVCIRCULARBUFFER_H_
-#define _PVCIRCULARBUFFER_H_
+#pragma once
 
 #include "PVCAMIncludes.h"
 #include "PvFrameInfo.h"
 
 #include <cstdlib>
+#include <memory>
 
 /**
 * A wrapper class over the PVCAM circular buffer. The class keeps track of
@@ -21,7 +21,7 @@ public:
 
     /**
     * Returns the maximum number of frames the buffer can hold before it overruns
-    * @return Number of frames 
+    * @return Number of frames
     */
     int Capacity() const;
     /**
@@ -80,15 +80,10 @@ public:
     void ReportFrameArrived(const PvFrameInfo& frameNfo, void* pFrameData);
 
 private:
-    unsigned char* pBuffer_;
-    size_t         size_;
-    size_t         frameSize_;
-    int            frameCount_;
-
-    int            latestFrameIdx_;
-
-    PvFrameInfo*   pFrameInfoArray_;
+    std::unique_ptr<unsigned char[]> pBuffer_{ nullptr };
+    size_t size_{ 0 };
+    size_t frameSize_{ 0 };
+    int frameCount_{ 0 };
+    int latestFrameIdx_{ -1 };
+    std::unique_ptr<PvFrameInfo[]> pFrameInfoArray_{ nullptr };
 };
-
-
-#endif // _PVCIRCULARBUFFER_H_

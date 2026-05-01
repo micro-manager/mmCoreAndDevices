@@ -229,8 +229,8 @@ int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
         stackFileName_ = convBuf_;
 
         const std::string fullStackFileName = path_ + convBuf_;
-        stackFile_ = new (std::nothrow) StackFile(fullStackFileName.c_str());
-        if (!stackFile_ || !stackFile_->IsOpen())
+        stackFile_ = std::make_unique<StackFile>(fullStackFileName.c_str());
+        if (!stackFile_->IsOpen())
         {
             StopInternal();
             return camera_->LogAdapterError(ERR_FILE_OPERATION_FAILED, __LINE__,
@@ -275,8 +275,7 @@ int StreamWriter::WriteFrame(const void* pFrame, size_t frameNr)
     stackFileFrameIndex_++;
     if (stackFileFrameIndex_ == maxFramesPerStack_)
     {
-        delete stackFile_;
-        stackFile_ = NULL;
+        stackFile_.reset();
         stackFileIndex_++;
         stackFileFrameIndex_ = 0;
 
@@ -319,8 +318,7 @@ void StreamWriter::StopInternal()
 
     isActive_ = false;
 
-    delete stackFile_;
-    stackFile_ = NULL;
+    stackFile_.reset();
 
     MoveStackToTotalSummary();
 
@@ -332,7 +330,7 @@ void StreamWriter::StopInternal()
 
 int StreamWriter::GenerateNewSessionId(std::string& sessionId) const
 {
-    const std::time_t time = std::time(NULL);
+    const std::time_t time = std::time(nullptr);
 
     std::tm tm;
     // Thread-safe conversion to local time

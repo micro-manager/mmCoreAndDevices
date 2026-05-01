@@ -4,7 +4,7 @@
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
 // DESCRIPTION:   PVCAM camera module
-//                
+//
 // AUTHOR:        Nico Stuurman, Nenad Amodaj nenad@amodaj.com, 09/13/2005
 // COPYRIGHT:     University of California, San Francisco, 2006
 //                100X Imaging Inc, 2008
@@ -24,8 +24,7 @@
 //
 // CVS:           $Id: PVCAM.h 8240 2011-12-04 01:05:17Z nico $
 
-#ifndef _PVCAMADAPTER_H_
-#define _PVCAMADAPTER_H_
+#pragma once
 
 
 //=============================================================================
@@ -35,7 +34,6 @@
 // MMDevice
 #include "CameraImageMetadata.h"
 #include "DeviceBase.h"
-#include "DeviceThreads.h"
 #include "DeviceUtils.h"
 #include "ImgBuffer.h"
 
@@ -51,34 +49,28 @@
 // System
 #include <map>
 #include <memory> // smart pointers
+#include <mutex>
 #include <string>
 #include <utility> // std::pair
-
 
 //=============================================================================
 //===================================================================== DEFINES
 
+// Current PVCAM SDK in 3rdpartypublic is 3.10.0 from January 31, 2023.
+// Oldest supported PVCAM runtime should be now 3.0.12 due to used
+// metadata functions in the adapter code.
+// Parameter IDs added in newer versions are used only when reported available.
 
-// FRAME_INFO support (on Windows since PVCAM 2.9.5, on Linux since 3.0.4)
-#define PVCAM_FRAME_INFO_SUPPORTED
-// Callbacks ex3 support (on Windows since PVCAM 2.8.1, on Linux since 3.0.4)
-#define PVCAM_CALLBACKS_SUPPORTED
-// The new parameter support (on Windows since PVCAM 3.0.0, on Linux since 3.0.4)
-#define PVCAM_PARAM_EXPOSE_OUT_DEFINED
-// The SMART streaming support (on Windows since PVCAM 2.8.0, on Linux since 3.0.4)
-#define PVCAM_SMART_STREAMING_SUPPORTED
-// Metadata, Multi-ROI, Centroids and other features that were added to PVCAM 3.0.12
-#define PVCAM_METADATA_SUPPORTED
-// Software trigger support (since PVCAM 3.9.0)
-#define PVCAM_SW_TRIGGER_SUPPORTED
 
-// PVCAM 3.1+ has some additional PL_COLOR_MODES defined which we use across the code
-// even if we don't compile against that PVCAM. To make it easier we define them ourselves.
-#ifndef PVCAM_METADATA_SUPPORTED
-#define COLOR_GRBG 3
-#define COLOR_GBRG 4
-#define COLOR_BGGR 5
-#endif
+// FRAME_INFO support - on Windows since PVCAM 2.9.5, on Linux since 3.0.4
+// Callbacks ex3 support - on Windows since PVCAM 2.8.1, on Linux since 3.0.4
+// SMART streaming support - on Windows since PVCAM 2.8.0, on Linux since 3.0.4
+// Metadata support (multi-ROI, Centroids, etc.) - since PVCAM 3.0.12
+
+// Software trigger support - since PVCAM 3.9.0
+// TODO: Uncomment/remove once pl_exp_trigger() is used in the adapter code
+//       and update min. PVCAM version to 3.9.0 in the above text.
+//#define PVCAM_SW_TRIGGER_SUPPORTED
 
 // PVCAM 3.9+ has some additional PL_EXPOSURE_MODES defined which we use across the code
 // even if we don't compile against that PVCAM. To make it easier we define them ourselves.
@@ -116,16 +108,6 @@
 
 //=============================================================================
 //=========================================================== TYPE DECLARATIONS
-
-/**
-* Structure used for Universal Parameters definition
-*/
-struct ParamNameIdPair
-{
-    const char* name;
-    const char* debugName;
-    uns32 id;
-};
 
 /**
 * Speed table row
@@ -180,53 +162,57 @@ class PvEnumParam;
 class Universal : public CCameraBase<Universal>
 {
 public: // Constructors, destructor
-    Universal(short cameraId, const char* deviceName);
-    ~Universal();
+    explicit Universal(short cameraId, const char* deviceName);
+    virtual ~Universal();
 
-public: // MMDevice API
-    int  Initialize();
-    int  Shutdown();
-    void GetName(char* pszName) const;
-    bool Busy();
-    bool GetErrorText(int errorCode, char* text) const;
+public: // MM::Device API
+    virtual int Initialize() override;
+    virtual int Shutdown() override;
+    virtual void GetName(char* pszName) const override;
+    virtual bool Busy() override;
+    virtual bool GetErrorText(int errorCode, char* text) const override;
 
-public: // MMCamera API
+public: // MM::Camera API
     /**
     * Acquires a single frame and stores it in the internal buffer.
     * This command blocks the calling thread until the image is fully captured.
     */
-    int SnapImage();
-    const unsigned char* GetImageBuffer();
-    const unsigned* GetImageBufferAsRGB32();
-    unsigned GetImageWidth() const;
-    unsigned GetImageHeight() const;
-    unsigned GetImageBytesPerPixel() const; 
-    long GetImageBufferSize() const;
-    unsigned GetBitDepth() const;
-    int GetBinning() const;
-    int SetBinning(int binSize);
-    double GetExposure() const;
-    void SetExposure(double dExp);
-    int IsExposureSequenceable(bool& isSequenceable) const;
-    unsigned GetNumberOfComponents() const;
+    virtual int SnapImage() override;
+    virtual const unsigned char* GetImageBuffer() override;
+    virtual const unsigned* GetImageBufferAsRGB32() override;
+    virtual unsigned GetImageWidth() const override;
+    virtual unsigned GetImageHeight() const override;
+    virtual unsigned GetImageBytesPerPixel() const override;
+    virtual long GetImageBufferSize() const override;
+    virtual unsigned GetBitDepth() const override;
+    virtual int GetBinning() const override;
+    virtual int SetBinning(int binSize) override;
+    virtual double GetExposure() const override;
+    virtual void SetExposure(double dExp) override;
+    virtual int IsExposureSequenceable(bool& isSequenceable) const override;
+    virtual unsigned GetNumberOfComponents() const override;
 
-    int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize);
-    int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize);
-    int ClearROI();
-    bool SupportsMultiROI();
-    bool IsMultiROISet();
-    int GetMultiROICount(unsigned& count);
-    int SetMultiROI(const unsigned* xs, const unsigned* ys, const unsigned* widths, const unsigned* heights, unsigned numROIs);
-    int GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths, unsigned* heights, unsigned* length);
+    virtual int SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize) override;
+    virtual int GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize) override;
+    virtual int ClearROI() override;
+    virtual bool SupportsMultiROI() override;
+    virtual bool IsMultiROISet() override;
+    virtual int GetMultiROICount(unsigned& count) override;
+    virtual int SetMultiROI(const unsigned* xs, const unsigned* ys,
+            const unsigned* widths, const unsigned* heights, unsigned numROIs) override;
+    virtual int GetMultiROI(unsigned* xs, unsigned* ys,
+            unsigned* widths, unsigned* heights, unsigned* length) override;
 
-    bool IsCapturing();
+    virtual bool IsCapturing() override;
 
     /**
     * Micro-manager calls the "live" acquisition a "sequence". PVCAM calls this "continuous - circular buffer" mode.
     */
-    int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow);
-    int StartSequenceAcquisition(double interval_ms) { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
-    int StopSequenceAcquisition();
+    virtual int StartSequenceAcquisition(
+            long numImages, double interval_ms, bool stopOnOverflow) override;
+    virtual int StartSequenceAcquisition(double interval_ms) override
+    { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
+    virtual int StopSequenceAcquisition() override;
 
 public: // Action handlers
     /**
@@ -251,7 +237,7 @@ public: // Action handlers
     int OnBinningY(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     /**
-    * Gets or sets the current exposure time, in milli seconds, floating point value.
+    * Gets or sets the current exposure time, in milliseconds, floating point value.
     */
     int OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
@@ -334,7 +320,7 @@ public: // Action handlers
     int OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Get or sets the current Scan Mode Direction.
-    */    
+    */
     int OnScanDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Get or sets the current Scan Direction Reset mode (on/off).
@@ -342,7 +328,7 @@ public: // Action handlers
     int OnScanDirectionReset(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Gets or sets the scan line delay.
-    */ 
+    */
     int OnScanLineDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
     /**
     * Gets the current scan line time.
@@ -516,12 +502,10 @@ public: // Action handlers
     */
     int OnDiskStreamingCoreSkipRatio(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-#ifdef PVCAM_CALLBACKS_SUPPORTED
     /**
     * Switches between Callbacks or Polling acquisition type.
     */
     int OnAcquisitionMethod(MM::PropertyBase* pProp, MM::ActionType eAct);
-#endif
 
     /**
     * Post processing parameter handler. Post processing features and parameters are
@@ -536,7 +520,6 @@ public: // Action handlers
     */
     int OnResetPostProcProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
     /**
     * Enables or disables the S.M.A.R.T streaming feature.
     */
@@ -546,7 +529,6 @@ public: // Action handlers
     * values in milliseconds. Internally value is converted to microseconds if needed.
     */
     int OnSmartStreamingValues(MM::PropertyBase* pProp, MM::ActionType eAct);
-#endif
 
     /**
     * Read-only: Shows the camera actual exposure time value in ns.
@@ -735,12 +717,10 @@ private:
     */
     int abortAcquisitionInternal();
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
     /**
     * Sends the S.M.A.R.T streaming configuration to the camera.
     */
     int sendSmartStreamingToCamera(const std::vector<double>& exposuresMs, int exposureRes);
-#endif
 
     /**
     * This function returns the correct exposure mode to be used in both
@@ -834,114 +814,112 @@ private:
 
 private: // Static
 
-#ifdef PVCAM_CALLBACKS_SUPPORTED
     /**
     * Static PVCAM callback handler.
     */
     static void PvcamCallbackEofEx3(FRAME_INFO* pNewFrameInfo, void* pContext);
-#endif
 
 private:
     const short     cameraId_;             // 0-based camera ID, used to allow multiple cameras connected
     const std::string deviceName_;         // Name assigned in constructor, returned by GetName
 
-    bool            initialized_;          // Driver initialization status in this class instance
-    long            imagesToAcquire_;      // Number of images to acquire
-    long            imagesInserted_;       // Current number of images inserted to MMCore buffer
-    long            imagesAcquired_;       // Current number of images acquired by the camera
-    long            imagesRecovered_;      // Total number of images recovered from missed callback(s)
-    short           hPVCAM_;               // Camera handle
+    bool            initialized_{ false }; // Driver initialization status in this class instance
+    long            imagesToAcquire_{ 0 }; // Number of images to acquire
+    long            imagesInserted_{ 0 };  // Current number of images inserted to MMCore buffer
+    long            imagesAcquired_{ 0 };  // Current number of images acquired by the camera
+    long            imagesRecovered_{ 0 }; // Total number of images recovered from missed callback(s)
+    short           hPVCAM_{ 0 };          // Camera handle
+
     static int      refCount_;             // This class reference counter
     static bool     PVCAM_initialized_;    // Global PVCAM initialization status
-    PvDebayer       debayer_;              // debayer processor
+
+    PvDebayer       debayer_{};            // debayer processor
 
     MM::MMTime      startTime_;            // Acquisition start time
 
-    PvCameraModel   cameraModel_;
-    char            deviceLabel_[MM::MaxStrLength]; // Cached device label used when inserting metadata
+    PvCameraModel   cameraModel_{ PvCameraModel_Generic };
+    char            deviceLabel_[MM::MaxStrLength]{ '\0' }; // Cached device label used when inserting metadata
 
-    int             circBufFrameCount_; // number of frames to allocate the buffer for
-    bool            circBufFrameRecoveryEnabled_; // True if we perform recovery from lost callbacks
+    int             circBufFrameCount_{ 10 }; // number of frames to allocate the buffer for
+    bool            circBufFrameRecoveryEnabled_{ false }; // True if we perform recovery from lost callbacks
 
-    bool            stopOnOverflow_;       // Stop inserting images to MM buffer if it's full
-    bool            snappingSingleFrame_;  // Single frame mode acquisition ongoing
-    bool            singleFrameModeReady_; // Single frame mode acquisition prepared
-    bool            sequenceModeReady_;    // Continuous acquisition prepared
-    bool            callPrepareForAcq_;    // Call PrepareForAcq after {sequence,singleFrame}ModeReady_ is set
+    bool            stopOnOverflow_{ true }; // Stop inserting images to MM buffer if it's full
+    bool            snappingSingleFrame_{ false }; // Single frame mode acquisition ongoing
+    bool            singleFrameModeReady_{ false }; // Single frame mode acquisition prepared
+    bool            sequenceModeReady_{ false }; // Continuous acquisition prepared
+    bool            callPrepareForAcq_{ true }; // Call PrepareForAcq after {sequence,singleFrame}ModeReady_ is set
+    bool            isAcquiring_{ false };
 
-    bool            isAcquiring_;
-
-    long            triggerTimeout_;       // Max time to wait for an external trigger
+    long            triggerTimeout_{ 10 }; // Max time to wait for an external trigger
 
     std::map<int32, std::pair<uns32, uns32>> expTimeResLimits_{}; // [expTimeRes]={min,max}
 
     friend class    PollingThread;
-    PollingThread*  pollingThd_;           // Pointer to the sequencing thread
+    std::unique_ptr<PollingThread>      pollingThd_{}; // Pointer to the sequencing thread
     friend class    NotificationThread;
-    NotificationThread* notificationThd_;  // Frame notification thread
+    std::unique_ptr<NotificationThread> notificationThd_{}; // Frame notification thread
     friend class    AcqThread;
-    AcqThread*      acqThd_;               // Non-CB live thread
+    std::unique_ptr<AcqThread>          acqThd_{}; // Non-CB live thread
 
-    StreamWriter*   customDiskWriter_;     // Writer for custom disk streaming feature
-    bool            customDiskWriterActive_; // Cached value updated after writer->Start
+    std::unique_ptr<StreamWriter>       customDiskWriter_{}; // Writer for custom disk streaming feature
+    bool                                customDiskWriterActive_{ false }; // Cached value updated after writer->Start
 
     /// CAMERA PARAMETERS:
-    uns16           camParSize_;           // CCD parallel size
-    uns16           camSerSize_;           // CCD serial size
+    uns16           camParSize_{ 0 }; // CCD parallel size
+    uns16           camSerSize_{ 0 }; // CCD serial size
 
-    char            camName_[CAM_NAME_LEN];
-    std::string     camChipName_;
+    char            camName_[CAM_NAME_LEN]{ '\0' };
+    std::string     camChipName_{};
 
-    std::vector<std::string>        binningLabels_;
-    std::vector<int32>              binningValuesX_;
-    std::vector<int32>              binningValuesY_;
-    bool                            binningRestricted_;
+    std::vector<std::string>        binningLabels_{};
+    std::vector<int32>              binningValuesX_{};
+    std::vector<int32>              binningValuesY_{};
+    bool                            binningRestricted_{ false };
 
-    double           redScale_;
-    double           greenScale_;
-    double           blueScale_;
+    double           redScale_{ 1.0 };
+    double           greenScale_{ 1.0 };
+    double           blueScale_{ 1.0 };
 
     // Acquisition configuration
-    AcqConfig acqCfgCur_; // Current configuration
-    AcqConfig acqCfgNew_; // New configuration waiting to be applied
+    AcqConfig acqCfgCur_{}; // Current configuration
+    AcqConfig acqCfgNew_{}; // New configuration waiting to be applied
 
     // Single Snaps and Live mode has each its own buffer. However, depending on
     // the configuration the buffer may need to be further processed before its used by MMCore.
 
     // PVCAM helper structure for decoding an embedded-metadata-enabled frame buffer
-#ifdef PVCAM_METADATA_SUPPORTED
-    md_frame*        metaFrameStruct_;
-    std::map<uns16, md_ext_item_collection> metaFrameExtData_; // The key is roiNr
+    // Must remain C-pointer for pl_md_create_frame_struct_cont & pl_md_release_frame_struct
+    md_frame*                               metaFrameStruct_{ nullptr };
+    std::map<uns16, md_ext_item_collection> metaFrameExtData_{}; // The key is roiNr
 
     // For metadata serialization, optimization to not allocate the same for each frame
-    std::string      metaAllRoisStr_;
-    char             metaRoiStr_[1000];
-#endif
+    std::string      metaAllRoisStr_{};
+    char             metaRoiStr_[1000]{ '\0' };
     // A buffer used for creating a black-filled frame when Centroids or Multi-ROI
     // acquisition is running. Used in both single snap and live mode if needed.
-    unsigned char*   metaBlackFilledBuf_;
-    size_t           metaBlackFilledBufSz_;
+    std::unique_ptr<unsigned char[]>    metaBlackFilledBuf_{ nullptr };
+    size_t                              metaBlackFilledBufSz_{ 0 };
     // A buffer used in setup_seq() only (single snaps mode)
-    unsigned char*   singleFrameBufRaw_;
-    size_t           singleFrameBufRawSz_;
-    // A pointer to the final, post processed image buffer that will be returned
-    // in GetImageBuffer() and GetImageBufferAsRGB32(). This is a pointer only that
-    // points to either RAW, RGB or Black-Filled buffer.
-    unsigned char*   singleFrameBufFinal_;
+    std::unique_ptr<unsigned char[]>    singleFrameBufRaw_{ nullptr };
+    size_t                              singleFrameBufRawSz_{ 0 };
+    // A pointer to the final post-processed image buffer that will be returned
+    // in GetImageBuffer() and GetImageBufferAsRGB32().
+    // This is a plain C-pointer that points to either RAW (singleFrameBufRaw_),
+    // RGB (rgbImgBuf_->GetPixelsRW()) or Black-Filled (metaBlackFilledBuf_) buffer.
+    unsigned char*                      singleFrameBufFinal_{ nullptr };
     // Circular buffer, used in setup_cont() only (live mode)
-    PvCircularBuffer circBuf_;
+    PvCircularBuffer                    circBuf_{};
     // Color image buffer. Used in both single snap and live mode if needed.
-    ImgBuffer*       rgbImgBuf_;
+    std::unique_ptr<ImgBuffer>          rgbImgBuf_{ nullptr };
 
-    Event            eofEvent_;
-    MMThreadLock     acqLock_;
+    Event            eofEvent_{ false, false };
+    std::mutex       acqLock_{};
 
-#ifdef PVCAM_FRAME_INFO_SUPPORTED
-    FRAME_INFO*     pFrameInfo_;           // PVCAM frame metadata
-#endif
-    int             lastPvFrameNr_;        // The last FrameNr reported by PVCAM
+    // Must remain C-pointer for pl_create_frame_info_struct & pl_release_frame_info_struct
+    FRAME_INFO*     pFrameInfo_{ nullptr }; // PVCAM frame metadata
+    int             lastPvFrameNr_{ 0 }; // The last FrameNr reported by PVCAM
 
-    // All dependant parameters that should be updated after setting new value
+    // All dependent parameters that should be updated after setting new value
     // are listed in the comment after every parameter. For every listed parameter
     // is needed to reset the cache and re-read at least the current value.
     // If there is added '+range', also min/max/inc/def/count values should be updated,
@@ -950,91 +928,88 @@ private:
     // like availability or read-write to/from read-only.
     // The dependencies should be treated recursively.
 
-    // TODO: Convert remaining PvParam pointers to unique_ptr
+    std::unique_ptr<PvParam<smart_stream_type>> prmSmartStreamingValues_{};
+    std::unique_ptr<PvParam<rs_bool>>           prmSmartStreamingEnabled_{};
 
-#ifdef PVCAM_SMART_STREAMING_SUPPORTED
-    PvParam<smart_stream_type>* prmSmartStreamingValues_;
-    PvParam<rs_bool>* prmSmartStreamingEnabled_;
-#endif
+    std::unique_ptr<PvEnumParam>      prmTriggerMode_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns16>>   prmExpResIndex_{}; // Can change: EXP_RES, EXPOSURE_TIME(+range)
+    std::unique_ptr<PvEnumParam>      prmExpRes_{}; // Can change: EXP_RES_INDEX, EXPOSURE_TIME(+range)
+    std::unique_ptr<PvParam<ulong64>> prmExposureTime_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmExposeOutMode_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmTriggerMode_; // Updated after pl_exp_setup_*()
-    PvParam<uns16>*   prmExpResIndex_; // Can change: EXP_RES, EXPOSURE_TIME(+range)
-    PvEnumParam*      prmExpRes_; // Can change: EXP_RES_INDEX, EXPOSURE_TIME(+range)
-    PvParam<ulong64>* prmExposureTime_; // Updated after pl_exp_setup_*()
-    PvEnumParam*      prmExposeOutMode_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns16>>   prmClearCycles_{};
+    std::unique_ptr<PvEnumParam>      prmClearMode_{};
 
-    PvParam<uns16>*   prmClearCycles_;
-    PvEnumParam*      prmClearMode_;
+    std::unique_ptr<PvEnumParam>      prmReadoutPort_{}; // Can change: SPDTAB_INDEX(+range)
+    std::unique_ptr<PvParam<int16>>   prmSpdTabIndex_{}; // Can change: PIX_TIME, SPDTAB_NAME,
+                                                         //     GAIN_INDEX(+range), ADC_OFFSET,
+                                                         //     COLOR_MODE, IMAGE_FORMAT,
+                                                         //     IMAGE_COMPRESSION(+range), PP_INDEX
+    std::unique_ptr<PvParam<int16>>   prmGainIndex_{}; // Can change: BIT_DEPTH, GAIN_NAME, SCAN_MODE,
+                                                       //     GAIN_MULT_FACTOR, TEMP_SETPOINT
+    std::unique_ptr<PvParam<uns16>>   prmGainMultFactor_{};
+    std::unique_ptr<PvParam<int16>>   prmBitDepth_{};
+    std::unique_ptr<PvEnumParam>      prmImageFormat_{};
+    std::unique_ptr<PvEnumParam>      prmImageCompression_{};
+    std::unique_ptr<PvParam<int16>>   prmBitDepthHost_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmImageFormatHost_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmImageCompressionHost_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmReadoutPort_; // Can change: SPDTAB_INDEX(+range)
-    PvParam<int16>*   prmSpdTabIndex_; // Can change: PIX_TIME, SPDTAB_NAME, GAIN_INDEX(+range), ADC_OFFSET,
-                                       //     COLOR_MODE, IMAGE_FORMAT, IMAGE_COMPRESSION(+range), PP_INDEX
-    PvParam<int16>*   prmGainIndex_; // Can change: BIT_DEPTH, GAIN_NAME, SCAN_MODE, GAIN_MULT_FACTOR, TEMP_SETPOINT
-    PvParam<uns16>*   prmGainMultFactor_;
-    std::unique_ptr<PvParam<int16>>   prmBitDepth_;
-    std::unique_ptr<PvEnumParam>      prmImageFormat_;
-    std::unique_ptr<PvEnumParam>      prmImageCompression_;
-    std::unique_ptr<PvParam<int16>>   prmBitDepthHost_; // Updated after pl_exp_setup_*()
-    std::unique_ptr<PvEnumParam>      prmImageFormatHost_; // Updated after pl_exp_setup_*()
-    std::unique_ptr<PvEnumParam>      prmImageCompressionHost_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmColorMode_{};
+    std::unique_ptr<PvParam<ulong64>> prmFrameBufSize_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmColorMode_;
-    PvParam<ulong64>* prmFrameBufSize_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<int16>>   prmTemp_{};
+    std::unique_ptr<PvParam<int16>>   prmTempSetpoint_{};
 
-    PvParam<int16>*   prmTemp_;
-    PvParam<int16>*   prmTempSetpoint_;
+    std::unique_ptr<PvEnumParam>      prmBinningSer_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvEnumParam>      prmBinningPar_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmBinningSer_; // Updated after pl_exp_setup_*()
-    PvEnumParam*      prmBinningPar_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns16>>   prmRoiCount_{}; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<rs_bool>> prmMetadataEnabled_{};
+    std::unique_ptr<PvParam<rs_bool>> prmMetadataResetTimestamp_{};
+    std::unique_ptr<PvParam<rs_bool>> prmCentroidsEnabled_{};
+    std::unique_ptr<PvParam<uns16>>   prmCentroidsRadius_{};
+    std::unique_ptr<PvParam<uns16>>   prmCentroidsCount_{};
+    std::unique_ptr<PvEnumParam>      prmCentroidsMode_{};
+    std::unique_ptr<PvEnumParam>      prmCentroidsBgCount_{};
+    std::unique_ptr<PvParam<uns32>>   prmCentroidsThreshold_{};
 
-    PvParam<uns16>*   prmRoiCount_; // Updated after pl_exp_setup_*()
-    PvParam<rs_bool>* prmMetadataEnabled_;
-    PvParam<rs_bool>* prmMetadataResetTimestamp_;
-    PvParam<rs_bool>* prmCentroidsEnabled_;
-    PvParam<uns16>*   prmCentroidsRadius_;
-    PvParam<uns16>*   prmCentroidsCount_;
-    PvEnumParam*      prmCentroidsMode_;
-    PvEnumParam*      prmCentroidsBgCount_;
-    PvParam<uns32>*   prmCentroidsThreshold_;
+    std::unique_ptr<PvEnumParam>      prmFanSpeedSetpoint_{}; // Can change: TEMP_SETPOINT
 
-    PvEnumParam*      prmFanSpeedSetpoint_; // Can change: TEMP_SETPOINT
+    std::unique_ptr<PvEnumParam>      prmTrigTabSignal_{}; // Can change: LAST_MUXED_SIGNAL(+range)
+    std::unique_ptr<PvParam<uns8>>    prmLastMuxedSignal_{};
 
-    PvEnumParam*      prmTrigTabSignal_; // Can change: LAST_MUXED_SIGNAL(+range)
-    PvParam<uns8>*    prmLastMuxedSignal_;
+    std::unique_ptr<PvEnumParam>      prmPMode_{}; // Can change: TEMP_SETPOINT
+    std::unique_ptr<PvParam<int16>>   prmAdcOffset_{};
 
-    PvEnumParam*      prmPMode_; // Can change: TEMP_SETPOINT
-    PvParam<int16>*   prmAdcOffset_;
+    std::unique_ptr<PvEnumParam>      prmScanMode_{}; // Can change: SCAN_LINE_DELAY(all)/SCAN_WIDTH(all), SCAN_DIRECTION, SCAN_DIRECTION_RESET
+    std::unique_ptr<PvEnumParam>      prmScanDirection_{};
+    std::unique_ptr<PvParam<rs_bool>> prmScanDirectionReset_{};
+    std::unique_ptr<PvParam<uns16>>   prmScanLineDelay_{}; // Can change: SCAN_WIDTH, SCAN_LINE_TIME and updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns16>>   prmScanWidth_{}; // Can change: SCAN_LINE_DELAY, SCAN_LINE_TIME and updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<long64>>  prmScanLineTime_{}; // Updated after pl_exp_setup_*()
 
-    PvEnumParam*      prmScanMode_; // Can change: SCAN_LINE_DELAY(all)/SCAN_WIDTH(all), SCAN_DIRECTION, SCAN_DIRECTION_RESET
-    PvEnumParam*      prmScanDirection_;
-    PvParam<rs_bool>* prmScanDirectionReset_;
-    PvParam<uns16>*   prmScanLineDelay_; // Can change: SCAN_WIDTH, SCAN_LINE_TIME and updated after pl_exp_setup_*()
-    PvParam<uns16>*   prmScanWidth_; // Can change: SCAN_LINE_DELAY, SCAN_LINE_TIME and updated after pl_exp_setup_*()
-    PvParam<long64>*  prmScanLineTime_; // Updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<uns32>>   prmReadoutTime_{}; // Available/updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<long64>>  prmClearingTime_{}; // Available/updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<long64>>  prmPostTriggerDelay_{}; // Available/updated after pl_exp_setup_*()
+    std::unique_ptr<PvParam<long64>>  prmPreTriggerDelay_{}; // Available/updated after pl_exp_setup_*()
 
-    PvParam<uns32>*   prmReadoutTime_; // Available/updated after pl_exp_setup_*()
-    PvParam<long64>*  prmClearingTime_; // Available/updated after pl_exp_setup_*()
-    PvParam<long64>*  prmPostTriggerDelay_; // Available/updated after pl_exp_setup_*()
-    PvParam<long64>*  prmPreTriggerDelay_; // Available/updated after pl_exp_setup_*()
-
-    std::unique_ptr<PvParam<rs_bool>> prmHostFrameSummingEnabled_;
-    std::unique_ptr<PvParam<uns32>>   prmHostFrameSummingCount_;
-    std::unique_ptr<PvEnumParam>      prmHostFrameSummingFormat_;
+    std::unique_ptr<PvParam<rs_bool>> prmHostFrameSummingEnabled_{};
+    std::unique_ptr<PvParam<uns32>>   prmHostFrameSummingCount_{};
+    std::unique_ptr<PvEnumParam>      prmHostFrameSummingFormat_{};
 
     // List of post processing features
-    std::vector<PpParam> PostProc_; // PP_PARAM can change: BIT_DEPTH, IMAGE_FORMAT
+    std::vector<PpParam> PostProc_{}; // PP_PARAM can change: BIT_DEPTH, IMAGE_FORMAT
 
     // Camera speed table
     //  usage: SpdTabEntry e = camSpdTable_[port][speed];
-    std::map<int32, std::map<int16, SpdTabEntry>> camSpdTable_;
+    std::map<int32, std::map<int16, SpdTabEntry>> camSpdTable_{};
     // Reverse speed table to get the speed based on UI selection
     //  usage: SpdTabEntry e = camSpdTableReverse_[port][ui_selected_string];
-    std::map<int32, std::map<std::string, SpdTabEntry>> camSpdTableReverse_;
+    std::map<int32, std::map<std::string, SpdTabEntry>> camSpdTableReverse_{};
     // Currently selected speed
-    SpdTabEntry camCurrentSpeed_;
+    SpdTabEntry camCurrentSpeed_{};
 
     // 'Universal' parameters
-    std::vector<PvUniversalParam*> universalParams_;
+    std::vector<std::unique_ptr<PvUniversalParam>> universalParams_{};
 };
-
-#endif //_PVCAMADAPTER_H_

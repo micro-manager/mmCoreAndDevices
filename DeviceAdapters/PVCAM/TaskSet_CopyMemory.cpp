@@ -78,8 +78,8 @@ void TaskSet_CopyMemory::SetUp(void* dst, const void* src, size_t bytes)
         return;
     }
 
-    for (Task* task : tasks_)
-        static_cast<ATask*>(task)->SetUp(dst, src, bytes, usedTaskCount_);
+    for (auto& task : tasks_)
+        static_cast<ATask*>(task.get())->SetUp(dst, src, bytes, usedTaskCount_);
 }
 
 void TaskSet_CopyMemory::Execute()

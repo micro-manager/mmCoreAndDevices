@@ -1,5 +1,4 @@
-#ifndef _ACQCONFIG_H_
-#define _ACQCONFIG_H_
+#pragma once
 
 #include "PvRoiCollection.h"
 
@@ -257,5 +256,3 @@ public:
     */
     bool PostProcParamSet{ false };
 };
-
-#endif
