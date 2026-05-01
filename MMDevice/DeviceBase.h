@@ -1413,9 +1413,9 @@ public:
    /**
     * @brief Start continuous sequence acquisition.
     *
-    * Default to sequence acquisition with a high number of images.
+    * See `MM::Camera::StartSequenceAcquisition` — `unused` has no effect.
     */
-   virtual int StartSequenceAcquisition(double interval) = 0;
+   virtual int StartSequenceAcquisition(double unused) = 0;
 
    /**
     * @brief Stop and wait for the thread to finish.
@@ -1484,8 +1484,10 @@ public:
 
    /**
     * @brief Start sequence acquisition.
+    *
+    * See `MM::Camera::StartSequenceAcquisition` — `unused` has no effect.
     */
-   virtual int StartSequenceAcquisition(long numImages, double interval_ms,
+   virtual int StartSequenceAcquisition(long numImages, double unused,
                               bool stopOnOverflow) = 0;
 
    virtual int GetExposureSequenceMaxLength(long& /*nrEvents*/) const
@@ -1603,11 +1605,11 @@ public:
    /**
     * @brief Start continuous sequence acquisition.
     *
-    * Default to sequence acquisition with a high number of images.
+    * See `MM::Camera::StartSequenceAcquisition` — `unused` has no effect.
     */
-   virtual int StartSequenceAcquisition(double interval)
+   virtual int StartSequenceAcquisition(double /*unused*/)
    {
-      return StartSequenceAcquisition(LONG_MAX, interval, false);
+      return StartSequenceAcquisition(LONG_MAX, 0.0, false);
    }
 
    /**
@@ -1626,8 +1628,8 @@ public:
    // Implementation of a sequence acquisition as a series of snaps
    // This was a temporary method used for debugging, which is why its now
    // implemented in this legacy class. It's preferable that camera devices
-   // inherit directly from CCameraBase and not use these default implementations.   
-   virtual int StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+   // inherit directly from CCameraBase and not use these default implementations.
+   virtual int StartSequenceAcquisition(long numImages, double /*unused*/, bool stopOnOverflow)
    {
       if (IsCapturing())
          return DEVICE_CAMERA_BUSY_ACQUIRING;
@@ -1635,7 +1637,7 @@ public:
       int ret = this->GetCoreCallback()->PrepareForAcq(this);
       if (ret != DEVICE_OK)
          return ret;
-      thd_->Start(numImages,interval_ms);
+      thd_->Start(numImages);
       stopWhenCBOverflows_ = stopOnOverflow;
       return DEVICE_OK;
    }
@@ -1724,11 +1726,10 @@ protected:
    class BaseSequenceThread : public MMDeviceThreadBase
    {
       friend class CLegacyCameraBase;
-      enum { default_numImages=1, default_intervalMS = 100 };
+      enum { default_numImages=1 };
    public:
       BaseSequenceThread(CLegacyCameraBase* pCam)
-         :intervalMs_(default_intervalMS)
-         ,numImages_(default_numImages)
+         :numImages_(default_numImages)
          ,imageCounter_(0)
          ,stop_(true)
          ,suspend_(false)
@@ -1745,12 +1746,11 @@ protected:
          stop_=true;
       }
 
-      void Start(long numImages, double intervalMs)
+      void Start(long numImages)
       {
          MMThreadGuard g1(this->stopLock_);
          MMThreadGuard g2(this->suspendLock_);
          numImages_=numImages;
-         intervalMs_=intervalMs;
          imageCounter_=0;
          stop_ = false;
          suspend_=false;
@@ -1775,9 +1775,7 @@ protected:
          MMThreadGuard g(this->suspendLock_);
          suspend_ = false;
       }
-      double GetIntervalMs(){return intervalMs_;}
       void SetLength(long images) {numImages_ = images;}
-      //long GetLength() const {return numImages_;}
 
       long GetImageCounter(){return imageCounter_;}
       MM::MMTime GetStartTime(){return startTime_;}
@@ -1810,7 +1808,6 @@ protected:
          return ret;
       }
    private:
-      double intervalMs_;
       long numImages_;
       long imageCounter_;
       bool stop_;
