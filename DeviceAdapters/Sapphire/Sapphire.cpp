@@ -594,6 +594,7 @@ void Sapphire::SetPowerSetpoint(double requestedPowerSetpoint)
 	msg << "P=" << setpointString.str();
 	Purge();
 	Send(msg.str());
+	CDeviceUtils::SleepMs(700);
 }
 
 void Sapphire::GetPowerSetpoint(double& value)
