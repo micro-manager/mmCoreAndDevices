@@ -3158,25 +3158,25 @@ void CMMCore::startSequenceAcquisition(long numImages, double unused, bool stopO
                mmcore::internal::SequenceAcquisition::Create(
                   camera, std::move(channels));
          }
-			// Forward `unused` to the device rather than substituting 0.0:
-			// a small number of camera adapters (Andor) did implement this
-			// parameter, and passing 0.0 unconditionally could regress them.
-			// The MM::Camera contract now says new adapters must ignore it.
-			int nRet = camera->StartSequenceAcquisition(numImages, unused, stopOnOverflow);
-			if (nRet != DEVICE_OK) {
-				{
-					std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
-					acquisitions_.erase(camera->GetLabel());
-				}
-				throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
-			}
-		}
-		catch (std::bad_alloc& ex)
-		{
-			std::ostringstream messs;
-			messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
-			throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
-		}
+         // Forward `unused` to the device rather than substituting 0.0:
+         // a small number of camera adapters (Andor) did implement this
+         // parameter, and passing 0.0 unconditionally could regress them.
+         // The MM::Camera contract now says new adapters must ignore it.
+         int nRet = camera->StartSequenceAcquisition(numImages, unused, stopOnOverflow);
+         if (nRet != DEVICE_OK) {
+            {
+               std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+               acquisitions_.erase(camera->GetLabel());
+            }
+            throw CMMError(getDeviceErrorText(nRet, camera).c_str(), MMERR_DEVICE_GENERIC);
+         }
+      }
+      catch (std::bad_alloc& ex)
+      {
+         std::ostringstream messs;
+         messs << getCoreErrorText(MMERR_OutOfMemory).c_str() << " " << ex.what() << '\n';
+         throw CMMError(messs.str().c_str() , MMERR_OutOfMemory);
+      }
    }
    else
    {
