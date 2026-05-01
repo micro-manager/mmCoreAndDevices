@@ -231,6 +231,7 @@ public:
    int OnMinIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnMaxIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPolygonIlluminationRepeats(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnPolygonFilled(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
    // Device connection
@@ -271,6 +272,7 @@ private:
    std::vector<std::vector<RPOINTF>> polygons_;
    int polygonRepetitions_;
    int polygonIlluminationRepeats_;  // How many times each polygon is illuminated (0 = once)
+   bool polygonFilled_;              // true = raster fill, false = outline only (faster for large polygons)
 
    // Sequence management
    UINT16 lastSequenceID_;

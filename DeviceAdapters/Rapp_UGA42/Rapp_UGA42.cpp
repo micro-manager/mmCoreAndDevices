@@ -43,7 +43,7 @@ const UINT32 DEFAULT_MIN_INTENSITY = 0;          // 0%
 const UINT32 DEFAULT_MAX_INTENSITY = 10000;      // 100%
 const UINT32 DEFAULT_LASER_FREQUENCY = 0;        // Continuous laser
 const UINT32 DEFAULT_TICK_TIME = 50;             // 50 microseconds
-const int DEFAULT_SPOT_SIZE = 50;                // Device coordinates
+const int DEFAULT_SPOT_SIZE = 500;               // Device coordinates (0-65535 range)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Exported MMDevice API
@@ -94,13 +94,14 @@ RappUGA42Scanner::RappUGA42Scanner() :
    spotSize_(DEFAULT_SPOT_SIZE),
    tickTime_(DEFAULT_TICK_TIME),
    pulseTime_us_(1000.0),    // 1ms default
-   scanMode_(ScanMode::Accurate),
+   scanMode_(ScanMode::Fast),
    ttlTriggerPort_(InputPorts::None),
    ttlTriggerBehavior_(TriggerBehaviour::Rising),
    currentX_(0.0),
    currentY_(0.0),
    polygonRepetitions_(1),
    polygonIlluminationRepeats_(0),
+   polygonFilled_(true),
    lastSequenceID_(0),
    sequenceRunning_(false),
    loadedPolygonSequenceID_(0),
@@ -216,6 +217,11 @@ int RappUGA42Scanner::Initialize()
    }
    LogMessage("UGA42: Tick time set successfully", true);
 
+   // Set scan mode (apply initial value to device; property handler only fires on user change)
+   ret = device_->SetScanMode(scanMode_);
+   if (ret != RETCODE::OK)
+      LogMessage("UGA42: SetScanMode failed with code " + std::to_string(ret) + " (non-fatal)", true);
+
    // Add and configure laser
    LogMessage("UGA42: Adding laser", true);
    int result = AddLaser();
@@ -232,14 +238,14 @@ int RappUGA42Scanner::Initialize()
 
    // Scan Mode
    pAct = new CPropertyAction(this, &RappUGA42Scanner::OnScanMode);
-   CreateProperty("ScanMode", "Accurate", MM::String, false, pAct);
+   CreateProperty("ScanMode", "Fast", MM::String, false, pAct);
    AddAllowedValue("ScanMode", "Accurate");
    AddAllowedValue("ScanMode", "Fast");
 
    // Spot Size
    pAct = new CPropertyAction(this, &RappUGA42Scanner::OnSpotSize);
    CreateIntegerProperty("SpotSize", spotSize_, false, pAct);
-   SetPropertyLimits("SpotSize", 1, 1000);
+   SetPropertyLimits("SpotSize", 1, 5000);
 
    // Laser Intensity
    pAct = new CPropertyAction(this, &RappUGA42Scanner::OnLaserIntensity);
@@ -309,6 +315,13 @@ int RappUGA42Scanner::Initialize()
    pAct = new CPropertyAction(this, &RappUGA42Scanner::OnPolygonIlluminationRepeats);
    CreateIntegerProperty("PolygonIlluminationRepeats", polygonIlluminationRepeats_, false, pAct);
    SetPropertyLimits("PolygonIlluminationRepeats", 0, 1000);
+
+   // Polygon fill mode: Yes = raster-scan full interior (full coverage, slower),
+   //                    No  = trace outline only (faster, illuminates boundary only)
+   pAct = new CPropertyAction(this, &RappUGA42Scanner::OnPolygonFilled);
+   CreateProperty("PolygonFilled", "Yes", MM::String, false, pAct);
+   AddAllowedValue("PolygonFilled", "Yes");
+   AddAllowedValue("PolygonFilled", "No");
 
    // Start worker thread AFTER all initialization is complete
    // This prevents race conditions between main thread SDK calls and worker keepalive
@@ -608,7 +621,10 @@ int RappUGA42Scanner::OnScanMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (device_ != nullptr)
       {
          UINT32 ret = device_->SetScanMode(scanMode_);
-         return MapRetCode(ret);
+         if (ret != RETCODE::OK)
+            return MapRetCode(ret);
+         if (polygonsLoaded_)
+            LoadPolygons();
       }
    }
    return DEVICE_OK;
@@ -629,7 +645,10 @@ int RappUGA42Scanner::OnSpotSize(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (device_ != nullptr && laserAdded_)
       {
          UINT32 ret = device_->SetLaserStepSize(laserID_, spotSize_);
-         return MapRetCode(ret);
+         if (ret != RETCODE::OK)
+            return MapRetCode(ret);
+         if (polygonsLoaded_)
+            LoadPolygons();
       }
    }
    return DEVICE_OK;
@@ -650,7 +669,10 @@ int RappUGA42Scanner::OnLaserIntensity(MM::PropertyBase* pProp, MM::ActionType e
       if (device_ != nullptr && laserAdded_ && IsDeviceIdle())
       {
          UINT32 ret = device_->SetLaserIntensity(laserID_, currentIntensity_);
-         return MapRetCode(ret);
+         if (ret != RETCODE::OK)
+            return MapRetCode(ret);
+         if (polygonsLoaded_)
+            LoadPolygons();
       }
    }
    return DEVICE_OK;
@@ -881,6 +903,25 @@ int RappUGA42Scanner::OnPolygonIlluminationRepeats(MM::PropertyBase* pProp, MM::
       long value;
       pProp->Get(value);
       polygonIlluminationRepeats_ = static_cast<int>(value);
+      if (polygonsLoaded_)
+         LoadPolygons();
+   }
+   return DEVICE_OK;
+}
+
+int RappUGA42Scanner::OnPolygonFilled(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(polygonFilled_ ? "Yes" : "No");
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string value;
+      pProp->Get(value);
+      polygonFilled_ = (value == "Yes");
+      if (polygonsLoaded_)
+         LoadPolygons();
    }
    return DEVICE_OK;
 }
@@ -1163,7 +1204,7 @@ int LoadPolygonsCommand::Execute(RappUGA42Scanner& device)
       SequencePolygon* poly = new SequencePolygon(
          polygons_[i].data(),
          static_cast<UINT32>(polygons_[i].size()),
-         TRUE);  // Filled
+         device.polygonFilled_ ? TRUE : FALSE);
 
       poly->StartTick = currentTick;
       poly->LaserID[0] = device.laserID_;
@@ -1172,7 +1213,8 @@ int LoadPolygonsCommand::Execute(RappUGA42Scanner& device)
 
       sequenceObjects.push_back(poly);
 
-      // Calculate timing for next polygon
+      // GetTiming() must be called after all polygon parameters are set, as
+      // the tick count depends on SpotSize, Repeats, and polygon geometry.
       UINT32 objTickCount = 0;
       UINT32 illTickCount = 0;
       device.device_->GetTiming(*poly, &objTickCount, &illTickCount);
