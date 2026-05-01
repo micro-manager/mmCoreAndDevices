@@ -1418,7 +1418,10 @@ public:
    virtual int StartSequenceAcquisition(double unused) = 0;
 
    /**
-    * @brief Stop and wait for the thread to finish.
+    * @brief Stop and wait for the acquisition thread to finish.
+    *
+    * See `MM::Camera::StopSequenceAcquisition` for the behavioral
+    * contract.
     */
    virtual int StopSequenceAcquisition() = 0;
 
@@ -1665,7 +1668,12 @@ protected:
    virtual long GetImageCounter() {return thd_->GetImageCounter();}
    virtual long GetNumberOfImages() {return thd_->GetNumberOfImages();}
 
-   // called from the thread function before exit
+   /**
+    * @brief Called from the acquisition thread before it exits.
+    *
+    * The default calls `Core::AcqFinished()`. Overrides must also call
+    * `AcqFinished()` exactly once.
+    */
    virtual void OnThreadExiting()
    {
       try
