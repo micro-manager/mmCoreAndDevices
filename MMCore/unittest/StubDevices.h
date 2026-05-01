@@ -107,6 +107,105 @@ private:
    std::vector<unsigned char> imgBuf_;
 };
 
+// A single-channel camera that tracks its capturing state synchronously and
+// calls AcqFinished() exactly once per acquisition. The device never produces
+// images on its own; tests drive InsertTestImage() manually.
+//
+// Used both as a standalone test camera and as a building block for
+// composite-multi-channel mocks (where each instance acts as one physical
+// camera).
+struct SyncCamera : CCameraBase<SyncCamera> {
+   std::string name;
+   unsigned width = 64;
+   unsigned height = 64;
+   unsigned bytesPerPixel = 1;
+   unsigned nComponents = 1;
+   unsigned bitDepth = 8;
+   int binning = 1;
+   double exposure = 10.0;
+   bool capturing = false;
+
+   explicit SyncCamera(std::string n = "SyncCamera") : name(std::move(n)) {}
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SnapImage() override {
+      imgBuf_.assign(
+         static_cast<size_t>(width) * height * bytesPerPixel, 0);
+      return DEVICE_OK;
+   }
+   const unsigned char* GetImageBuffer() override { return imgBuf_.data(); }
+   long GetImageBufferSize() const override {
+      return static_cast<long>(width) * height * bytesPerPixel;
+   }
+   unsigned GetImageWidth() const override { return width; }
+   unsigned GetImageHeight() const override { return height; }
+   unsigned GetImageBytesPerPixel() const override { return bytesPerPixel; }
+   unsigned GetNumberOfComponents() const override { return nComponents; }
+   unsigned GetBitDepth() const override { return bitDepth; }
+   int GetBinning() const override { return binning; }
+   int SetBinning(int b) override { binning = b; return DEVICE_OK; }
+   void SetExposure(double e) override { exposure = e; }
+   double GetExposure() const override { return exposure; }
+   int SetROI(unsigned, unsigned, unsigned, unsigned) override {
+      return DEVICE_OK;
+   }
+   int GetROI(unsigned& x, unsigned& y, unsigned& w, unsigned& h) override {
+      x = 0; y = 0; w = width; h = height;
+      return DEVICE_OK;
+   }
+   int ClearROI() override { return DEVICE_OK; }
+   int IsExposureSequenceable(bool& seq) const override {
+      seq = false;
+      return DEVICE_OK;
+   }
+
+   int StartSequenceAcquisition(long, double, bool) override {
+      capturing = true;
+      GetCoreCallback()->PrepareForAcq(this);
+      return DEVICE_OK;
+   }
+   int StartSequenceAcquisition(double) override {
+      capturing = true;
+      GetCoreCallback()->PrepareForAcq(this);
+      return DEVICE_OK;
+   }
+   int StopSequenceAcquisition() override {
+      Finish();
+      return DEVICE_OK;
+   }
+   bool IsCapturing() override { return capturing; }
+
+   void TriggerSelfFinish() { Finish(); }
+
+   int InsertTestImage(const unsigned char* pixels = nullptr) {
+      std::vector<unsigned char> defaultBuf;
+      const unsigned char* buf = pixels;
+      if (!buf) {
+         defaultBuf.assign(
+            static_cast<size_t>(width) * height * bytesPerPixel, 0);
+         buf = defaultBuf.data();
+      }
+      return GetCoreCallback()->InsertImage(this, buf,
+         width, height, bytesPerPixel, nComponents, "{}");
+   }
+
+private:
+   void Finish() {
+      if (capturing) {
+         capturing = false;
+         GetCoreCallback()->AcqFinished(this, 0);
+      }
+   }
+
+   std::vector<unsigned char> imgBuf_;
+};
+
 struct StubStage : CStageBase<StubStage> {
    std::string name = "StubStage";
    using CStageBase::OnStagePositionChanged;
