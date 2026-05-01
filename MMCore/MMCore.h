@@ -60,6 +60,7 @@
 
 #include <cstring>
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -813,6 +814,13 @@ private:
    // Erase a completed SA from `acquisitions_` (if present, by label).
    // Idempotent. Takes acquisitionsMutex_.
    void eraseCompletedAcquisition(const std::string& cameraLabel);
+
+   void startSequenceAcquisitionImpl(
+       std::shared_ptr<mmcore::internal::CameraInstance> camera,
+       bool overwriteData,
+       std::function<int()> startDevice);
+
+   void markAcquisitionStopRequested(const std::string& cameraLabel);
 
    void setCameraInternal(const std::string& label);
    void setShutterInternal(const std::string& label);
