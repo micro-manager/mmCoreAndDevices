@@ -937,6 +937,14 @@ CMMCore::findAcquisitionByCaller(const MM::Device* caller)
    return nullptr;
 }
 
+std::shared_ptr<mmi::SequenceAcquisition>
+CMMCore::findAcquisitionByCamera(const std::string& cameraLabel)
+{
+   std::lock_guard<std::mutex> g(acquisitionsMutex_);
+   auto it = acquisitions_.find(cameraLabel);
+   return it != acquisitions_.end() ? it->second : nullptr;
+}
+
 void CMMCore::eraseCompletedAcquisition(const std::string& cameraLabel)
 {
    std::lock_guard<std::mutex> g(acquisitionsMutex_);
@@ -957,6 +965,24 @@ void CMMCore::markAcquisitionStopRequested(const std::string& cameraLabel)
       if (causedComplete)
          eraseCompletedAcquisition(sa->CameraLabel());
    }
+}
+
+void CMMCore::closeDeferredAutoShutter()
+{
+   if (!autoShutter_)
+      return;
+   std::shared_ptr<mmi::ShutterInstance> shutter =
+      currentShutterDevice_.lock();
+   if (!shutter)
+      return;
+   {
+      mmi::DeviceModuleLockGuard g(shutter);
+      int sret = shutter->SetOpen(false);
+      if (sret != DEVICE_OK)
+         return;
+   }
+   postNotification(notif::ShutterOpenChanged{
+      shutter->GetLabel(), false});
 }
 
 void CMMCore::stopAndClearAllSequenceAcquisitions()
@@ -3288,17 +3314,27 @@ void CMMCore::stopSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(CMM
    std::shared_ptr<mmi::CameraInstance> pCam =
       deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
 
-   mmi::DeviceModuleLockGuard guard(pCam);
-   LOG_DEBUG(coreLogger_) << "Will stop sequence acquisition from camera " << label;
-   int nRet = pCam->StopSequenceAcquisition();
-   if (nRet != DEVICE_OK)
+   auto sa = findAcquisitionByCamera(pCam->GetLabel());
+
    {
-      logError(label, getDeviceErrorText(nRet, pCam).c_str());
-      throw CMMError(getDeviceErrorText(nRet, pCam).c_str(), MMERR_DEVICE_GENERIC);
+      mmi::DeviceModuleLockGuard guard(pCam);
+      LOG_DEBUG(coreLogger_) <<
+         "Will stop sequence acquisition from camera " << label;
+      int nRet = pCam->StopSequenceAcquisition();
+      if (nRet != DEVICE_OK)
+      {
+         logError(label, getDeviceErrorText(nRet, pCam).c_str());
+         throw CMMError(getDeviceErrorText(nRet, pCam).c_str(),
+            MMERR_DEVICE_GENERIC);
+      }
    }
+
+   if (sa && sa->TakeDeferredShutterClose())
+      closeDeferredAutoShutter();
+
    markAcquisitionStopRequested(pCam->GetLabel());
-   LOG_DEBUG(coreLogger_) << "Did stop sequence acquisition from camera " << label;
-   // onSequenceAcquisitionStopped will be called by CoreCallback::AcqFinished
+   LOG_DEBUG(coreLogger_) <<
+      "Did stop sequence acquisition from camera " << label;
 }
 
 /**
@@ -3338,16 +3374,25 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(),
          MMERR_CameraNotAvailable);
    }
-   mmi::DeviceModuleLockGuard guard(camera);
-   LOG_DEBUG(coreLogger_) <<
-      "Will stop sequence acquisition from current camera";
-   int nRet = camera->StopSequenceAcquisition();
-   if (nRet != DEVICE_OK) {
-      logError(getDeviceName(camera).c_str(),
-         getDeviceErrorText(nRet, camera).c_str());
-      throw CMMError(getDeviceErrorText(nRet, camera).c_str(),
-         MMERR_DEVICE_GENERIC);
+
+   auto sa = findAcquisitionByCamera(camera->GetLabel());
+
+   {
+      mmi::DeviceModuleLockGuard guard(camera);
+      LOG_DEBUG(coreLogger_) <<
+         "Will stop sequence acquisition from current camera";
+      int nRet = camera->StopSequenceAcquisition();
+      if (nRet != DEVICE_OK) {
+         logError(getDeviceName(camera).c_str(),
+            getDeviceErrorText(nRet, camera).c_str());
+         throw CMMError(getDeviceErrorText(nRet, camera).c_str(),
+            MMERR_DEVICE_GENERIC);
+      }
    }
+
+   if (sa && sa->TakeDeferredShutterClose())
+      closeDeferredAutoShutter();
+
    markAcquisitionStopRequested(camera->GetLabel());
    LOG_DEBUG(coreLogger_) <<
       "Did stop sequence acquisition from current camera";

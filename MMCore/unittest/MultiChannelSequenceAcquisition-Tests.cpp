@@ -7,7 +7,9 @@
 #include "MockDeviceUtils.h"
 #include "StubDevices.h"
 
+#include <chrono>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -506,6 +508,78 @@ TEST_CASE("Composite: physical's AcqFinished does not touch shutter "
    CHECK(shutter.open == true);
 
    c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Composite with async physicals: same-module shutter closes on stop "
+          "without deadlock",
+          "[MultiChannelSequenceAcquisition]") {
+   AsyncCamera p0;
+   p0.name = "p0";
+   AsyncCamera p1;
+   p1.name = "p1";
+   MockCompositeCamera composite({&p0, &p1});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.open == true);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Composite in separate module from phys cam and shutter: shutter "
+          "closes via blocking lock without deadlock",
+          "[MultiChannelSequenceAcquisition]") {
+   AsyncCamera p0;
+   p0.name = "p0";
+   MockCompositeCamera composite({&p0});
+   StubShutter shutter;
+   MockAdapterWithDevices compositeAdapter{"composite_adapter",
+      {{"composite", &composite}}};
+   MockAdapterWithDevices physAdapter{"phys_adapter",
+      {{"p0", &p0}, {"shutter", &shutter}}};
+   CMMCore c;
+   compositeAdapter.LoadIntoCore(c);
+   physAdapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.open == true);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Composite with async physicals: same-module shutter not touched "
+          "when autoShutter is off",
+          "[MultiChannelSequenceAcquisition]") {
+   AsyncCamera p0;
+   p0.name = "p0";
+   AsyncCamera p1;
+   p1.name = "p1";
+   MockCompositeCamera composite({&p0, &p1});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(false);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   shutter.open = true;
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == true);
 }
 
 TEST_CASE("Composite: startSequenceAcquisition after all physicals self-finish "

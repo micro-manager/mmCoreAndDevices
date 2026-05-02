@@ -811,6 +811,10 @@ private:
    std::shared_ptr<mmcore::internal::SequenceAcquisition>
    findAcquisitionByCaller(const MM::Device* caller);
 
+   // Look up SA by primary camera label. Returns nullptr if none.
+   std::shared_ptr<mmcore::internal::SequenceAcquisition>
+   findAcquisitionByCamera(const std::string& cameraLabel);
+
    // Erase a completed SA from `acquisitions_` (if present, by label).
    // Idempotent. Takes acquisitionsMutex_.
    void eraseCompletedAcquisition(const std::string& cameraLabel);
@@ -821,6 +825,8 @@ private:
        std::function<int()> startDevice);
 
    void markAcquisitionStopRequested(const std::string& cameraLabel);
+
+   void closeDeferredAutoShutter();
 
    void setCameraInternal(const std::string& label);
    void setShutterInternal(const std::string& label);
