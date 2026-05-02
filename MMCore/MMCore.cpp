@@ -3188,9 +3188,19 @@ void CMMCore::startSequenceAcquisitionImpl(
 
    int nRet = startDevice();
    if (nRet != DEVICE_OK) {
+      std::shared_ptr<mmcore::internal::SequenceAcquisition> sa;
       {
          std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
-         acquisitions_.erase(camera->GetLabel());
+         auto it = acquisitions_.find(camera->GetLabel());
+         if (it != acquisitions_.end()) {
+            sa = std::move(it->second);
+            acquisitions_.erase(it);
+         }
+      }
+      if (sa && sa->NeedsStartRollback()) {
+         closeDeferredAutoShutter();
+         postNotification(
+            notif::SequenceAcquisitionStopped{sa->CameraLabel()});
       }
       throw CMMError(getDeviceErrorText(nRet, camera).c_str(),
          MMERR_DEVICE_GENERIC);
