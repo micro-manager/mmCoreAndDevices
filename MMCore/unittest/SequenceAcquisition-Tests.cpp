@@ -30,6 +30,96 @@ TEST_CASE("startSequenceAcquisition throws when already capturing",
    c.stopSequenceAcquisition();
 }
 
+// --- Participant-level conflict detection ---
+
+TEST_CASE("Standalone camera conflicts with running composite that uses it",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("composite", 10, 0.0, true);
+   REQUIRE(c.isSequenceRunning("composite"));
+
+   // Hide IsCapturing() so the acquisitions_ check is the one that fires.
+   p1.reportCapturing = false;
+   CHECK_THROWS_AS(
+      c.startSequenceAcquisition("p1", 10, 0.0, true), CMMError);
+
+   CHECK(c.isSequenceRunning("composite"));
+   c.stopSequenceAcquisition("composite");
+}
+
+TEST_CASE("Composite conflicts with running standalone that shares a physical",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("p1", 10, 0.0, true);
+   REQUIRE(c.isSequenceRunning("p1"));
+
+   CHECK_THROWS_AS(
+      c.startSequenceAcquisition("composite", 10, 0.0, true), CMMError);
+
+   CHECK(c.isSequenceRunning("p1"));
+   c.stopSequenceAcquisition("p1");
+}
+
+TEST_CASE("Two composites sharing a physical camera conflict",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   SyncCamera p3("p3");
+   MockCompositeCamera compositeA({&p1, &p2});
+   MockCompositeCamera compositeB({&p1, &p3});
+   compositeB.name = "compositeB";
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"p3", &p3},
+      {"compositeA", &compositeA}, {"compositeB", &compositeB}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("compositeA", 10, 0.0, true);
+   REQUIRE(c.isSequenceRunning("compositeA"));
+
+   // Hide IsCapturing() on the physicals that compositeB would check.
+   p1.reportCapturing = false;
+   p3.reportCapturing = false;
+   CHECK_THROWS_AS(
+      c.startSequenceAcquisition("compositeB", 10, 0.0, true), CMMError);
+
+   CHECK(c.isSequenceRunning("compositeA"));
+   c.stopSequenceAcquisition("compositeA");
+}
+
+TEST_CASE("Independent cameras do not conflict",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockAdapterWithDevices adapter{{"p1", &p1}, {"p2", &p2}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("p1", 10, 0.0, true);
+   REQUIRE(c.isSequenceRunning("p1"));
+
+   c.startSequenceAcquisition("p2", 10, 0.0, true);
+   CHECK(c.isSequenceRunning("p1"));
+   CHECK(c.isSequenceRunning("p2"));
+
+   c.stopSequenceAcquisition("p1");
+   c.stopSequenceAcquisition("p2");
+}
+
 TEST_CASE("startContinuousSequenceAcquisition throws when no camera set",
           "[SequenceAcquisition]") {
    CMMCore c;

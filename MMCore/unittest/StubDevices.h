@@ -11,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 struct StubGeneric : CGenericBase<StubGeneric> {
@@ -129,6 +130,7 @@ struct SyncCamera : CCameraBase<SyncCamera> {
    int binning = 1;
    double exposure = 10.0;
    bool capturing = false;
+   bool reportCapturing = true;
 
    explicit SyncCamera(std::string n = "SyncCamera") : name(std::move(n)) {}
 
@@ -182,7 +184,7 @@ struct SyncCamera : CCameraBase<SyncCamera> {
       Finish();
       return DEVICE_OK;
    }
-   bool IsCapturing() override { return capturing; }
+   bool IsCapturing() override { return capturing && reportCapturing; }
 
    void TriggerSelfFinish() { Finish(); }
 
@@ -615,5 +617,112 @@ struct StubGalvo : CGalvoBase<StubGalvo> {
    int GetChannel(char* channelName) override {
       CDeviceUtils::CopyLimitedString(channelName, "");
       return DEVICE_OK;
+   }
+};
+
+// Minimal mock of a composite multi-channel camera (in the style of the
+// Multi Camera adapter). Holds its physical cameras as direct pointers.
+struct MockCompositeCamera : CCameraBase<MockCompositeCamera> {
+   std::string name = "MockCompositeCamera";
+   std::vector<MM::Camera*> physicals;
+
+   explicit MockCompositeCamera(std::vector<MM::Camera*> p)
+      : physicals(std::move(p)) {}
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SnapImage() override { return DEVICE_OK; }
+   const unsigned char* GetImageBuffer() override {
+      return physicals.empty() ? nullptr : physicals[0]->GetImageBuffer();
+   }
+   long GetImageBufferSize() const override {
+      return physicals.empty() ? 0 : physicals[0]->GetImageBufferSize();
+   }
+   unsigned GetImageWidth() const override {
+      return physicals.empty() ? 0 : physicals[0]->GetImageWidth();
+   }
+   unsigned GetImageHeight() const override {
+      return physicals.empty() ? 0 : physicals[0]->GetImageHeight();
+   }
+   unsigned GetImageBytesPerPixel() const override {
+      return physicals.empty() ? 0 : physicals[0]->GetImageBytesPerPixel();
+   }
+   unsigned GetNumberOfComponents() const override { return 1; }
+   unsigned GetNumberOfChannels() const override {
+      return static_cast<unsigned>(physicals.size());
+   }
+   int GetChannelName(unsigned channel, char* chName) override {
+      if (channel < physicals.size()) {
+         physicals[channel]->GetLabel(chName);
+      } else {
+         CDeviceUtils::CopyLimitedString(chName, "");
+      }
+      return DEVICE_OK;
+   }
+   MM::Camera* GetChannelCameraPtr(unsigned n) override {
+      return n < physicals.size() ? physicals[n] : nullptr;
+   }
+   unsigned GetBitDepth() const override {
+      return physicals.empty() ? 8 : physicals[0]->GetBitDepth();
+   }
+   int GetBinning() const override {
+      return physicals.empty() ? 1 : physicals[0]->GetBinning();
+   }
+   int SetBinning(int b) override {
+      for (auto* p : physicals) p->SetBinning(b);
+      return DEVICE_OK;
+   }
+   void SetExposure(double e) override {
+      for (auto* p : physicals) p->SetExposure(e);
+   }
+   double GetExposure() const override {
+      return physicals.empty() ? 0.0 : physicals[0]->GetExposure();
+   }
+   int SetROI(unsigned, unsigned, unsigned, unsigned) override {
+      return DEVICE_OK;
+   }
+   int GetROI(unsigned& x, unsigned& y, unsigned& w, unsigned& h) override {
+      x = 0; y = 0;
+      w = GetImageWidth();
+      h = GetImageHeight();
+      return DEVICE_OK;
+   }
+   int ClearROI() override { return DEVICE_OK; }
+   int IsExposureSequenceable(bool& seq) const override {
+      seq = false;
+      return DEVICE_OK;
+   }
+
+   int StartSequenceAcquisition(long n, double i, bool s) override {
+      for (auto* p : physicals) {
+         int ret = p->StartSequenceAcquisition(n, i, s);
+         if (ret != DEVICE_OK) return ret;
+      }
+      return DEVICE_OK;
+   }
+   int StartSequenceAcquisition(double i) override {
+      for (auto* p : physicals) {
+         int ret = p->StartSequenceAcquisition(i);
+         if (ret != DEVICE_OK) return ret;
+      }
+      return DEVICE_OK;
+   }
+   int StopSequenceAcquisition() override {
+      for (auto* p : physicals) {
+         int ret = p->StopSequenceAcquisition();
+         if (ret != DEVICE_OK) return ret;
+      }
+      return DEVICE_OK;
+   }
+   bool IsCapturing() override {
+      for (auto* p : physicals) {
+         if (p->IsCapturing()) return true;
+      }
+      return false;
    }
 };

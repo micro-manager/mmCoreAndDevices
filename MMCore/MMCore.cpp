@@ -3179,11 +3179,45 @@ void CMMCore::startSequenceAcquisitionImpl(
    cbuf_->SetOverwriteData(overwriteData);
 
    auto channels = buildSequenceChannelSnapshot(camera);
+   auto newSa = mmcore::internal::SequenceAcquisition::Create(
+      camera, std::move(channels));
    {
       std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
-      acquisitions_[camera->GetLabel()] =
-         mmcore::internal::SequenceAcquisition::Create(
-            camera, std::move(channels));
+
+      {
+         auto it = acquisitions_.find(camera->GetLabel());
+         if (it != acquisitions_.end() &&
+             !it->second->AllParticipantsFinished()) {
+            throw CMMError(
+               "Sequence acquisition on '" + camera->GetLabel() +
+               "' is already running",
+               MMERR_NotAllowedDuringSequenceAcquisition);
+         }
+      }
+
+      for (const auto& [existingLabel, existingSa] : acquisitions_) {
+         if (existingSa->AllParticipantsFinished())
+            continue;
+         if (existingSa->HasParticipant(camera->GetRawPtr())) {
+            throw CMMError(
+               "Camera '" + camera->GetLabel() +
+               "' is already participating in a sequence acquisition on '" +
+               existingLabel + "'",
+               MMERR_NotAllowedDuringSequenceAcquisition);
+         }
+         for (const auto& ch : newSa->Channels()) {
+            if (ch.physCamDevice &&
+                existingSa->HasParticipant(ch.physCamDevice)) {
+               throw CMMError(
+                  "Camera '" + ch.physCamLabel +
+                  "' is already participating in a sequence acquisition on '" +
+                  existingLabel + "'",
+                  MMERR_NotAllowedDuringSequenceAcquisition);
+            }
+         }
+      }
+
+      acquisitions_[camera->GetLabel()] = std::move(newSa);
    }
 
    int nRet = startDevice();
