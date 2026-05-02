@@ -186,6 +186,12 @@ bool SequenceAcquisition::IsComplete() const noexcept
       finishedParticipants_.size() == expectedParticipants_.size();
 }
 
+bool SequenceAcquisition::AllParticipantsFinished() const noexcept
+{
+   std::lock_guard<std::mutex> g(mu_);
+   return finishedParticipants_.size() == expectedParticipants_.size();
+}
+
 void SequenceAcquisition::DeferShutterClose()
 {
    std::lock_guard<std::mutex> g(mu_);

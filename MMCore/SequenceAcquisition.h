@@ -124,6 +124,10 @@ public:
    // RecordFinish.
    bool IsComplete() const noexcept;
 
+   // True iff all expected participants have called RecordFinish
+   // (regardless of whether stop was requested).
+   bool AllParticipantsFinished() const noexcept;
+
    void DeferShutterClose();
    bool TakeDeferredShutterClose();
 
