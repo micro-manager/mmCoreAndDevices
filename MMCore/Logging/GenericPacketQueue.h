@@ -130,11 +130,10 @@ private:
       {
          if (timedWaitMode)
          {
-            // TODO Make interval configurable
-            std::this_thread::sleep_for(10ms);
-
             {
-               std::lock_guard<std::mutex> lock(mutex_);
+               std::unique_lock<std::mutex> lock(mutex_);
+               condVar_.wait_for(lock, 10ms,
+                  [&] { return shutdownRequested_; });
                if (shutdownRequested_)
                {
                   shutdownRequested_ = false; // Allow for restarting
