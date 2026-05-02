@@ -122,6 +122,9 @@ public:
    // RecordFinish.
    bool IsComplete() const noexcept;
 
+   void DeferShutterClose();
+   bool TakeDeferredShutterClose();
+
 private:
    SequenceAcquisition(std::shared_ptr<CameraInstance> camera,
                        std::vector<ChannelInfo> channels);
@@ -137,6 +140,7 @@ private:
    enum class ShutterState { NotOpened, Opening, Opened, OpenFailed };
    ShutterState shutterState_ = ShutterState::NotOpened;
    bool stopRequested_ = false;
+   bool shutterCloseDeferred_ = false;
    std::set<const MM::Device*> readyParticipants_;
    std::set<const MM::Device*> finishedParticipants_;
 };

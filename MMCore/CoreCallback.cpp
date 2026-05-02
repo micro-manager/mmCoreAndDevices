@@ -419,50 +419,35 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
    if (!isLast)
       return DEVICE_OK;
 
-   std::shared_ptr<DeviceInstance> currentCamera =
-      core_->currentCameraDevice_.lock();
-
    if (core_->autoShutter_)
    {
       std::shared_ptr<ShutterInstance> shutter =
          core_->currentShutterDevice_.lock();
       if (shutter)
       {
-         // We need to lock the shutter's module for thread safety, but there's
-         // a case where deadlock would result.
          int sret = DEVICE_ERR;
-         if (camera->GetAdapterModule() == shutter->GetAdapterModule())
+         if (shutter->GetAdapterModule() ==
+               sa->Camera()->GetAdapterModule())
          {
-            // This is a nasty hack to allow the case where the shutter and
-            // camera live in the same module. It is not safe, but this is how
-            // _all_ cases used to be implemented, and I can't immediately
-            // think of a fully safe fix that is reasonably simple.
-            sret = shutter->SetOpen(false);
-         }
-         else if (currentCamera && currentCamera->GetAdapterModule() ==
-               shutter->GetAdapterModule())
-         {
-            // Likewise, we might be called as a result of a call to
-            // StopSequenceAcquisition() on a virtual wrapper camera device
-            // (such as Multi Camera), in which case we would get a deadlock if
-            // the shutter is in the same module as the virtual camera.
-            // This is an even nastier hack in that it ignores the possibility
-            // of StopSequenceAcquisition() being called on a camera other than
-            // currentCamera, but such cases are rare.
-            sret = shutter->SetOpen(false);
+            // Shutter is in the same adapter module as the primary camera.
+            // stopSequenceAcquisition() may be holding that module's lock
+            // (on a different thread, waiting for this thread to exit via
+            // join), so a blocking lock would deadlock. Use try_lock: if
+            // the lock is free, close immediately; otherwise defer to
+            // stopSequenceAcquisition(), which will close after releasing
+            // the module lock.
+            auto& mtx = shutter->GetAdapterModule()->GetLock();
+            if (mtx.try_lock()) {
+               std::lock_guard<std::recursive_mutex> g(mtx, std::adopt_lock);
+               sret = shutter->SetOpen(false);
+            } else {
+               sa->DeferShutterClose();
+            }
          }
          else
          {
-            // If the shutter is in a different device adapter, it is safe to
-            // lock that adapter.
             DeviceModuleLockGuard g(shutter);
             sret = shutter->SetOpen(false);
-
-            // We could wait for the shutter to close here, but the
-            // implementation has always returned without waiting. The camera
-            // doesn't care, so let's keep the behavior. Thus,
-            // stopSequenceAcquisition() does not wait for the shutter before
-            // returning.
          }
          if (sret == DEVICE_OK)
             core_->postNotification(notif::ShutterOpenChanged{

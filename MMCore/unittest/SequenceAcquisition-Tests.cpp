@@ -396,6 +396,88 @@ TEST_CASE("Camera self-finish does not touch shutter when autoShutter is off",
    c.stopSequenceAcquisition();
 }
 
+// --- Async shutter close paths ---
+
+TEST_CASE("Async same-module shutter closes on stopSequenceAcquisition without "
+          "deadlock",
+          "[SequenceAcquisition]") {
+   AsyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.open == true);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Async same-module shutter closes on camera self-finish",
+          "[SequenceAcquisition]") {
+   AsyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(3, 0.0, true);
+   REQUIRE(shutter.open == true);
+
+   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+   while (c.isSequenceRunning() &&
+          std::chrono::steady_clock::now() < deadline) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+   }
+   REQUIRE_FALSE(c.isSequenceRunning());
+   CHECK(shutter.open == false);
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Async same-module shutter not touched when autoShutter is off",
+          "[SequenceAcquisition]") {
+   AsyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(false);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   shutter.open = true;
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == true);
+}
+
+TEST_CASE("Async different-module shutter closes on stopSequenceAcquisition "
+          "without deadlock",
+          "[SequenceAcquisition]") {
+   AsyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices camAdapter{"cam_adapter", {{"cam", &cam}}};
+   MockAdapterWithDevices shutterAdapter{"shutter_adapter",
+      {{"shutter", &shutter}}};
+   CMMCore c;
+   camAdapter.LoadIntoCore(c);
+   shutterAdapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.open == true);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
 TEST_CASE("startSequenceAcquisition after camera self-finish without "
           "intervening stop succeeds",
           "[SequenceAcquisition]") {

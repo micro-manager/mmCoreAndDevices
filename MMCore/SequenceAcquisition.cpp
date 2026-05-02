@@ -180,5 +180,17 @@ bool SequenceAcquisition::IsComplete() const noexcept
       finishedParticipants_.size() == expectedParticipants_.size();
 }
 
+void SequenceAcquisition::DeferShutterClose()
+{
+   std::lock_guard<std::mutex> g(mu_);
+   shutterCloseDeferred_ = true;
+}
+
+bool SequenceAcquisition::TakeDeferredShutterClose()
+{
+   std::lock_guard<std::mutex> g(mu_);
+   return std::exchange(shutterCloseDeferred_, false);
+}
+
 } // namespace internal
 } // namespace mmcore
