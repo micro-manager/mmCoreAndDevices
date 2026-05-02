@@ -111,6 +111,8 @@ public:
    // true if Opened, false if OpenFailed.
    bool WaitForShutterOpened();
 
+   bool NeedsStartRollback() const noexcept;
+
    // Records that `caller` finished the acquisition. Returns true iff this is
    // the boundary call (last expected participant to finish), in which case
    // the caller is responsible for the auto-shutter close + notification.

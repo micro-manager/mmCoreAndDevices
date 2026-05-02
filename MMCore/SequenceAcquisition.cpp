@@ -159,6 +159,12 @@ bool SequenceAcquisition::WaitForShutterOpened()
    return shutterState_ == ShutterState::Opened;
 }
 
+bool SequenceAcquisition::NeedsStartRollback() const noexcept
+{
+   std::lock_guard<std::mutex> g(mu_);
+   return shutterState_ == ShutterState::Opened;
+}
+
 bool SequenceAcquisition::RecordFinish(const MM::Device* caller)
 {
    if (caller == nullptr)
