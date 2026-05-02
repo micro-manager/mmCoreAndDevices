@@ -109,6 +109,7 @@ void MicroscopeGeometry::CreateDeviceMap() {
                 {"TriggerLaser", MM::ShutterDevice},
                 {"IllumSlice", MM::GalvoDevice},
                 {"IllumBeam", MM::GalvoDevice}, // Skip property if "LightSheetType" is "Static"
+                {"IllumAngle", MM::StageDevice},
                 {"ImagingFocus", MM::StageDevice},
                 {"ImagingCamera", MM::CameraDevice},
                 {"PreviewCamera", MM::CameraDevice}
