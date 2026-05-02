@@ -1056,3 +1056,65 @@ TEST_CASE("Intrinsic multi-channel device emitting out-of-range "
    CHECK(cam.InsertTestImage(99) == DEVICE_INCOMPATIBLE_IMAGE);
    c.stopSequenceAcquisition();
 }
+
+// --- Image geometry validation ---
+
+TEST_CASE("Composite seq acq rejects mismatched width",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   p1.width = 128;
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(1, 0.0, true), CMMError);
+}
+
+TEST_CASE("Composite seq acq rejects mismatched height",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   p1.height = 128;
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(1, 0.0, true), CMMError);
+}
+
+TEST_CASE("Composite seq acq rejects mismatched bytesPerPixel",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   p1.bytesPerPixel = 2;
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(1, 0.0, true), CMMError);
+}
+
+TEST_CASE("Composite seq acq rejects mismatched numberOfComponents",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   p1.nComponents = 4;
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(1, 0.0, true), CMMError);
+}

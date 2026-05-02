@@ -879,6 +879,11 @@ CMMCore::buildSequenceChannelSnapshot(
    std::shared_ptr<mmi::CameraInstance> camera) MMCORE_LEGACY_THROW(CMMError)
 {
    const unsigned n = camera->GetNumberOfChannels();
+   const unsigned expectedW = camera->GetImageWidth();
+   const unsigned expectedH = camera->GetImageHeight();
+   const unsigned expectedBPP = camera->GetImageBytesPerPixel();
+   const unsigned expectedNC = camera->GetNumberOfComponents();
+
    std::vector<mmi::SequenceAcquisition::ChannelInfo> channels;
    channels.reserve(n);
    for (unsigned i = 0; i < n; ++i) {
@@ -914,6 +919,27 @@ CMMCore::buildSequenceChannelSnapshot(
                   " is itself a multi-channel camera ('" +
                   physInstance->GetLabel() +
                   "'); nested multi-channel cameras are not supported",
+                  MMERR_DEVICE_GENERIC);
+            }
+            const unsigned pw = physInstance->GetImageWidth();
+            const unsigned ph = physInstance->GetImageHeight();
+            const unsigned pbpp = physInstance->GetImageBytesPerPixel();
+            const unsigned pnc = physInstance->GetNumberOfComponents();
+            if (pw != expectedW || ph != expectedH ||
+                pbpp != expectedBPP || pnc != expectedNC) {
+               throw CMMError(
+                  "Physical camera '" + physInstance->GetLabel() +
+                  "' has image geometry " +
+                  std::to_string(pw) + " x " + std::to_string(ph) +
+                  ", " + std::to_string(pbpp) + " byte(s)/pixel, " +
+                  std::to_string(pnc) + " component(s)" +
+                  ", which differs from composite camera '" +
+                  camera->GetLabel() + "' (" +
+                  std::to_string(expectedW) + " x " +
+                  std::to_string(expectedH) + ", " +
+                  std::to_string(expectedBPP) + " byte(s)/pixel, " +
+                  std::to_string(expectedNC) + " component(s))" +
+                  "; all channels must have identical image geometry",
                   MMERR_DEVICE_GENERIC);
             }
          }
