@@ -87,15 +87,18 @@ Sapphire::Sapphire(const char* name) :
    busy_(false),
    changedTime_(0.0),
 	queryToken_("?"),
-	powerSetpointToken_("P"),
+	powerSetpointToken_("SP"),
 	powerReadbackToken_("P"),
 	//CDRHToken_("CDRH"),  // if this is on, laser delays 5 SEC before turning on
    //CWToken_("CW"),
 	laserOnToken_("L"),
 	TECServoToken_("T"),
 	headSerialNoToken_("HID"),
-	headUsageHoursToken_("HH")
-	//wavelengthToken_("WAVE"),
+	headUsageHoursToken_("HH"),
+	laserDiodeCurrentToken_("C"),
+	basePlateTemperatureToken_("BT"),
+	maximumLaserPowerToken_("MAXLP"),
+	wavelengthToken_("WAVE")
 	//externalPowerControlToken_("EXT")
 
 
@@ -268,6 +271,17 @@ void Sapphire::GenerateReadOnlyIDProperties()
 {
 	CPropertyAction* pAct; 
  
+	pAct = new CPropertyAction(this, &Sapphire::OnHeadID);
+   CreateProperty("Head ID", "", MM::String, true, pAct);
+
+	pAct = new CPropertyAction(this, &Sapphire::OnHeadUsageHours);
+   CreateProperty("Head Usage Hours", "", MM::Float, true, pAct);
+
+	pAct = new CPropertyAction(this, &Sapphire::OnLaserDiodeCurrent);
+   CreateProperty("Laser Diode Current", "", MM::Float, true, pAct);
+
+	pAct = new CPropertyAction(this, &Sapphire::OnBasePlateTemperature);
+   CreateProperty("BasePlate Temperature", "", MM::Float, true, pAct);
 
    pAct = new CPropertyAction(this, &Sapphire::OnMinimumLaserPower);
    CreateProperty("Minimum Laser Power", "", MM::Float, false, pAct);
@@ -276,7 +290,7 @@ void Sapphire::GenerateReadOnlyIDProperties()
    CreateProperty("Maximum Laser Power", "", MM::Float, false, pAct);
 
 	pAct = new CPropertyAction(this, &Sapphire::OnWaveLength);
-   CreateProperty("Wavelength", "", MM::Float, false, pAct);
+   CreateProperty("Wavelength", "", MM::Float, true, pAct);
 
 
 }
@@ -386,14 +400,7 @@ int Sapphire::OnPowerSetpoint(MM::PropertyBase* pProp, MM::ActionType eAct, long
    else if (eAct == MM::AfterSet)
    {
       pProp->Get(powerSetpoint);
-		double achievedSetpoint;
-      SetPowerSetpoint(powerSetpoint, achievedSetpoint);
-		if( 0. != powerSetpoint)
-		{
-			double fractionError = fabs(achievedSetpoint - powerSetpoint) / powerSetpoint;
-			if (( 0.05 < fractionError ) && (fractionError  < 0.10))
-				pProp->Set(achievedSetpoint);
-		}
+      SetPowerSetpoint(powerSetpoint);
    }
    return HandleErrors();
 }
@@ -425,7 +432,9 @@ int Sapphire::OnHeadID(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
    {
-		pProp->Set((this->queryLaser(headSerialNoToken_)).c_str());
+		std::string svalue = this->queryLaser(headSerialNoToken_);
+		svalue = svalue.substr(0, svalue.find('.'));
+		pProp->Set(svalue.c_str());
    }
    else if (eAct == MM::AfterSet)
    {
@@ -446,6 +455,38 @@ int Sapphire::OnHeadUsageHours(MM::PropertyBase* pProp, MM::ActionType eAct)
    else if (eAct == MM::AfterSet)
    {
 			// never do anything!!
+   }
+   return HandleErrors();
+}
+
+
+int Sapphire::OnLaserDiodeCurrent(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      std::string svalue = this->queryLaser(laserDiodeCurrentToken_);
+      double dvalue = atof(svalue.c_str());
+      pProp->Set(dvalue);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      // read-only
+   }
+   return HandleErrors();
+}
+
+
+int Sapphire::OnBasePlateTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      std::string svalue = this->queryLaser(basePlateTemperatureToken_);
+      double dvalue = atof(svalue.c_str());
+      pProp->Set(dvalue);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      // read-only
    }
    return HandleErrors();
 }
@@ -526,11 +567,13 @@ int Sapphire::OnWaveLength(MM::PropertyBase* pProp, MM::ActionType eAct /* , lon
 {
    if (eAct == MM::BeforeGet)
    {
-		pProp->Set(wave_);
+		std::string svalue = this->queryLaser(wavelengthToken_);
+		double dvalue = atof(svalue.c_str());
+		pProp->Set(dvalue);
    }
    else if (eAct == MM::AfterSet)
    {
-	        pProp->Get(wave_);
+      // read-only
    }
    return HandleErrors();
 }
@@ -542,29 +585,16 @@ void Sapphire::GetPowerReadback(double& value)
 	value = atof(ans.c_str());
 }
 
-void Sapphire::SetPowerSetpoint(double requestedPowerSetpoint, double& achievedPowerSetpoint)
+void Sapphire::SetPowerSetpoint(double requestedPowerSetpoint)
 {
-	std::string result;
 	std::ostringstream setpointString;
+	std::stringstream msg;
 	// number like 100.00
 	setpointString << setprecision(5) << requestedPowerSetpoint;
-	result = this->setLaser("P", setpointString.str());
-	//compare quantized setpoint to requested setpoint
-	// the difference can be rather large
-
-	//if( 0. < requestedPowerSetpoint)
-	//{
-		achievedPowerSetpoint = atof( result.c_str());
-
-		// if device echos a setpoint more the 10% of full scale from requested setpoint, log a warning message
-		if ( this->maxlp()/10. < fabs( achievedPowerSetpoint-requestedPowerSetpoint))
-		{
-			std::ostringstream messs;
-			messs << "requested setpoint: " << requestedPowerSetpoint << " but echo setpoint is: " << achievedPowerSetpoint;
-			LogMessage(messs.str().c_str());
-		}
-	//}
-
+	msg << "P=" << setpointString.str();
+	Purge();
+	Send(msg.str());
+	CDeviceUtils::SleepMs(700);
 }
 
 void Sapphire::GetPowerSetpoint(double& value)
