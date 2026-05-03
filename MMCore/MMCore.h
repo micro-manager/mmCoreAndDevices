@@ -819,6 +819,10 @@ private:
    // Idempotent. Takes acquisitionsMutex_.
    void eraseCompletedAcquisition(const std::string& cameraLabel);
 
+   // True iff any entry in acquisitions_ still has at least one participant
+   // that has not called RecordFinish. Caller must hold acquisitionsMutex_.
+   bool hasInFlightAcquisitionLocked() const;
+
    void startSequenceAcquisitionImpl(
        std::shared_ptr<mmcore::internal::CameraInstance> camera,
        bool overwriteData,

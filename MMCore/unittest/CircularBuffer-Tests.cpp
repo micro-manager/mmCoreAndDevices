@@ -465,3 +465,100 @@ TEST_CASE("clearCircularBuffer resets overflow flag", "[CircularBuffer]") {
    CHECK(c.isBufferOverflowed() == false);
    c.stopSequenceAcquisition();
 }
+
+// Reinit guard: setCircularBufferMemoryFootprint and initializeCircularBuffer
+// must not race with a producer that may call CoreCallback::InsertImage.
+
+TEST_CASE("setCircularBufferMemoryFootprint throws while sequence running",
+          "[CircularBuffer]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(c.isSequenceRunning());
+
+   try {
+      c.setCircularBufferMemoryFootprint(64);
+      FAIL("expected CMMError");
+   } catch (CMMError& e) {
+      CHECK(e.getCode() == MMERR_NotAllowedDuringSequenceAcquisition);
+   }
+
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("initializeCircularBuffer throws while sequence running",
+          "[CircularBuffer]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(c.isSequenceRunning());
+
+   try {
+      c.initializeCircularBuffer();
+      FAIL("expected CMMError");
+   } catch (CMMError& e) {
+      CHECK(e.getCode() == MMERR_NotAllowedDuringSequenceAcquisition);
+   }
+
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("setCircularBufferMemoryFootprint succeeds after explicit stop",
+          "[CircularBuffer]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.startSequenceAcquisition(10, 0.0, true);
+   c.stopSequenceAcquisition();
+   CHECK_NOTHROW(c.setCircularBufferMemoryFootprint(64));
+}
+
+TEST_CASE("initializeCircularBuffer succeeds after explicit stop",
+          "[CircularBuffer]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.startSequenceAcquisition(10, 0.0, true);
+   c.stopSequenceAcquisition();
+   CHECK_NOTHROW(c.initializeCircularBuffer());
+}
+
+TEST_CASE("setCircularBufferMemoryFootprint succeeds after camera self-finish "
+          "without explicit stop",
+          "[CircularBuffer]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.startSequenceAcquisition(10, 0.0, true);
+   cam.TriggerSelfFinish();
+   REQUIRE(c.isSequenceRunning() == false);
+   // Acquisition entry lingers in acquisitions_ (no stopSequenceAcquisition
+   // call), but all participants have finished, so reinit must succeed.
+   CHECK_NOTHROW(c.setCircularBufferMemoryFootprint(64));
+}
+
+TEST_CASE("initializeCircularBuffer succeeds after camera self-finish "
+          "without explicit stop",
+          "[CircularBuffer]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.startSequenceAcquisition(10, 0.0, true);
+   cam.TriggerSelfFinish();
+   REQUIRE(c.isSequenceRunning() == false);
+   CHECK_NOTHROW(c.initializeCircularBuffer());
+}

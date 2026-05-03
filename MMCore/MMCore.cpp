@@ -1008,6 +1008,15 @@ void CMMCore::eraseCompletedAcquisition(const std::string& cameraLabel)
    acquisitions_.erase(cameraLabel);
 }
 
+bool CMMCore::hasInFlightAcquisitionLocked() const
+{
+   for (const auto& kv : acquisitions_) {
+      if (!kv.second->AllParticipantsFinished())
+         return true;
+   }
+   return false;
+}
+
 void CMMCore::markAcquisitionStopRequested(const std::string& cameraLabel)
 {
    std::shared_ptr<mmi::SequenceAcquisition> sa;
@@ -3424,6 +3433,12 @@ void CMMCore::prepareSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_
  */
 void CMMCore::initializeCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
 {
+   std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+   if (hasInFlightAcquisitionLocked())
+      throw CMMError(
+         getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
+         MMERR_NotAllowedDuringSequenceAcquisition);
+
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
    if (camera)
    {
@@ -3747,6 +3762,13 @@ void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB) MMCORE_LEGACY_TH
 {
    LOG_DEBUG(coreLogger_) << "Will set circular buffer size to " <<
       sizeMB << " MB";
+
+   std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+   if (hasInFlightAcquisitionLocked())
+      throw CMMError(
+         getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
+         MMERR_NotAllowedDuringSequenceAcquisition);
+
 	try
 	{
 		cbuf_ = std::make_unique<mmi::CircularBuffer>(sizeMB);
