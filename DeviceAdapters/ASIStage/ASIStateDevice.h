@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASISTATEDEVICE_H
-#define ASISTATEDEVICE_H
+#pragma once
 
 #include "ASIBase.h"
 
@@ -39,5 +38,3 @@ private:
 	long position_;
 	double answerTimeoutMs_;
 };
-
-#endif // ASISTATEDEVICE_H

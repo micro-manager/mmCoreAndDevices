@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASICRISP_H
-#define ASICRISP_H
+#pragma once
 
 #include "ASIBase.h"
 
@@ -106,5 +105,3 @@ private:
 	static constexpr int SIZE_OF_FC_ARRAY = 24;
 	std::string focusCurveData_[SIZE_OF_FC_ARRAY];
 };
-
-#endif // ASICRISP_H

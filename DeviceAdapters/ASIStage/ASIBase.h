@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASIBASE_H
-#define ASIBASE_H
+#pragma once
 
 #include "ASIStage.h"
 #include "MMDevice.h"
@@ -128,5 +127,3 @@ protected:
 	std::string commandPrefix_; // set to oldstagePrefix_ if oldstage_ is true, otherwise empty string
 	std::string serialTerm_; // changes if oldstage_ is true
 };
-
-#endif // ASIBASE_H

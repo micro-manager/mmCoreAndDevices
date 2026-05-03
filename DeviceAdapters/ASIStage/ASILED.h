@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASILED_H
-#define ASILED_H
+#pragma once
 
 #include "ASIBase.h"
 
@@ -48,5 +47,3 @@ private:
 	char channelAxisChar_;
 	bool hasDLED_;
 };
-
-#endif // ASILED_H

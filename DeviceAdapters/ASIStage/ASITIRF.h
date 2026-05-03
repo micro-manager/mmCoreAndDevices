@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASITIRF_H
-#define ASITIRF_H
+#pragma once
 
 #include "ASIBase.h"
 
@@ -43,5 +42,3 @@ private:
     double scaleFactor_;
     double unitFactor_;
 };
-
-#endif // ASITIRF_H

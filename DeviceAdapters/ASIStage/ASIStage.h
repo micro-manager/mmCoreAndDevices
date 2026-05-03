@@ -10,8 +10,7 @@
 // Modified by Nico Stuurman, 12/2007
 // Refactored by Brandon Simpson, 3/2022
 
-#ifndef ASISTAGE_H
-#define ASISTAGE_H
+#pragma once
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -82,4 +81,3 @@ const char* const g_CRISP_Unknown = "Unknown";
 MM::DeviceDetectionStatus ASIDetectDevice(MM::Device& device, MM::Core& core, const std::string& port, double answerTimeoutMs);
 void LogDeviceError(MM::Device& device, MM::Core& core, int errorCode);
 
-#endif // ASISTAGE_H

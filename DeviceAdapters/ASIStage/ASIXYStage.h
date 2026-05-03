@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASIXYSTAGE_H
-#define ASIXYSTAGE_H
+#pragma once
 
 #include "ASIBase.h"
 
@@ -114,5 +113,3 @@ private:
 	double finishError_;
 	double overShoot_;
 };
-
-#endif // ASIXYSTAGE_H

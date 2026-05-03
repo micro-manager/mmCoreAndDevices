@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASIMAGNIFIER_H
-#define ASIMAGNIFIER_H
+#pragma once
 
 #include "ASIBase.h"
 
@@ -41,5 +40,3 @@ private:
     std::string axis_;
     int answerTimeoutMs_;
 };
-
-#endif // ASIMAGNIFIER_H

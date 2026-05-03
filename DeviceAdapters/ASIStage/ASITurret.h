@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASITURRET_H
-#define ASITURRET_H
+#pragma once
 
 #include "ASIBase.h"
 
@@ -32,5 +31,3 @@ private:
 	long numPos_;
 	long position_;
 };
-
-#endif // ASITURRET_H
