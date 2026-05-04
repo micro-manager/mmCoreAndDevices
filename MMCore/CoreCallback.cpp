@@ -497,59 +497,76 @@ int CoreCallback::PrepareForAcq(const MM::Device* caller)
       break;
    }
 
-   bool openOk = true;
-   if (core_->autoShutter_)
-   {
-      std::shared_ptr<ShutterInstance> shutter =
-         core_->currentShutterDevice_.lock();
-      if (shutter)
+   // Exceptions must not escape back into the adapter that called this
+   // callback. The OpenerGuard releases parked CV waiters on the throw path.
+   try {
+      struct OpenerGuard {
+         SequenceAcquisition* sa;
+         bool finished = false;
+         ~OpenerGuard() { if (!finished) sa->FinishShutterOpen(false); }
+      } guard{ sa.get() };
+
+      bool openOk = true;
+      if (core_->autoShutter_)
       {
-         int sret = DEVICE_ERR;
-         bool deferred = false;
-         if (shutter->GetAdapterModule() ==
-               sa->Camera()->GetAdapterModule())
+         std::shared_ptr<ShutterInstance> shutter =
+            core_->currentShutterDevice_.lock();
+         if (shutter)
          {
-            // Shutter is in the same adapter module as the primary camera.
-            // startSequenceAcquisitionImpl() holds that module's lock; if
-            // PrepareForAcq is being invoked from a thread other than that
-            // caller, a blocking lock here would deadlock or contend
-            // unnecessarily. Use try_lock: same-thread re-entry on the
-            // recursive_mutex succeeds and we open inline; otherwise defer
-            // to startSequenceAcquisitionImpl(), which will open after
-            // releasing the module lock.
-            auto& mtx = shutter->GetAdapterModule()->GetLock();
-            if (mtx.try_lock()) {
-               std::lock_guard<std::recursive_mutex> g(mtx, std::adopt_lock);
+            int sret = DEVICE_ERR;
+            bool deferred = false;
+            if (shutter->GetAdapterModule() ==
+                  sa->Camera()->GetAdapterModule())
+            {
+               // Shutter is in the same adapter module as the primary camera.
+               // startSequenceAcquisitionImpl() holds that module's lock; if
+               // PrepareForAcq is being invoked from a thread other than that
+               // caller, a blocking lock here would deadlock or contend
+               // unnecessarily. Use try_lock: same-thread re-entry on the
+               // recursive_mutex succeeds and we open inline; otherwise defer
+               // to startSequenceAcquisitionImpl(), which will open after
+               // releasing the module lock.
+               auto& mtx = shutter->GetAdapterModule()->GetLock();
+               if (mtx.try_lock()) {
+                  std::lock_guard<std::recursive_mutex> g(mtx, std::adopt_lock);
+                  sret = shutter->SetOpen(true);
+               } else {
+                  sa->DeferShutterOpen();
+                  deferred = true;
+               }
+            }
+            else
+            {
+               DeviceModuleLockGuard g(shutter);
                sret = shutter->SetOpen(true);
+            }
+            if (deferred) {
+               // Opener role transferred to the deferred opener; that thread
+               // now owns the FinishShutterOpen contract.
+               guard.finished = true;
+               return sa->WaitForShutterOpened() ? DEVICE_OK : DEVICE_ERR;
+            }
+            if (sret == DEVICE_OK) {
+               core_->postNotification(notif::ShutterOpenChanged{
+                  shutter->GetLabel(), true});
+               core_->waitForDevice(shutter);
             } else {
-               sa->DeferShutterOpen();
-               deferred = true;
+               openOk = false;
             }
          }
-         else
-         {
-            DeviceModuleLockGuard g(shutter);
-            sret = shutter->SetOpen(true);
-         }
-         if (deferred) {
-            return sa->WaitForShutterOpened() ? DEVICE_OK : DEVICE_ERR;
-         }
-         if (sret == DEVICE_OK) {
-            core_->postNotification(notif::ShutterOpenChanged{
-               shutter->GetLabel(), true});
-            core_->waitForDevice(shutter);
-         } else {
-            openOk = false;
-         }
       }
+
+      if (openOk)
+         core_->postNotification(notif::SequenceAcquisitionStarted{sa->CameraLabel()});
+
+      sa->FinishShutterOpen(openOk);
+      guard.finished = true;
+
+      return openOk ? DEVICE_OK : DEVICE_ERR;
+   } catch (CMMError& e) {
+      core_->logError("PrepareForAcq", e.getMsg().c_str());
+      return DEVICE_ERR;
    }
-
-   if (openOk)
-      core_->postNotification(notif::SequenceAcquisitionStarted{sa->CameraLabel()});
-
-   sa->FinishShutterOpen(openOk);
-
-   return openOk ? DEVICE_OK : DEVICE_ERR;
 }
 
 /**

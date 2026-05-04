@@ -1054,6 +1054,15 @@ void CMMCore::closeDeferredAutoShutter()
 void CMMCore::openDeferredAutoShutter(
    const std::shared_ptr<mmi::SequenceAcquisition>& sa)
 {
+   // Release CV waiters with OpenFailed if we exit via exception before
+   // reaching the explicit FinishShutterOpen below. WaitForShutterOpened
+   // is a bare cv.wait by design, so the opener must always finish.
+   struct OpenerGuard {
+      mmi::SequenceAcquisition* sa;
+      bool finished = false;
+      ~OpenerGuard() { if (!finished) sa->FinishShutterOpen(false); }
+   } guard{ sa.get() };
+
    bool openOk = true;
    if (autoShutter_)
    {
@@ -1079,6 +1088,7 @@ void CMMCore::openDeferredAutoShutter(
       postNotification(
          notif::SequenceAcquisitionStarted{sa->CameraLabel()});
    sa->FinishShutterOpen(openOk);
+   guard.finished = true;
 }
 
 void CMMCore::stopAndClearAllSequenceAcquisitions()
