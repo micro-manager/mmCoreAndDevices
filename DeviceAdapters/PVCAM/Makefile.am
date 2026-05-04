@@ -15,10 +15,6 @@ libmmgr_dal_PVCAM_la_SOURCES = \
                             AcqThread.h \
                             Event.cpp \
                             Event.h \
-                            NotificationEntry.cpp \
-                            NotificationEntry.h \
-                            NotificationThread.cpp \
-                            NotificationThread.h \
                             PollingThread.cpp \
                             PollingThread.h \
                             PpParam.cpp \
