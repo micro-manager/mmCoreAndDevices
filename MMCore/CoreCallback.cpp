@@ -29,6 +29,7 @@
 #include "CoreCallback.h"
 #include "DeviceManager.h"
 #include "Notification.h"
+#include "SequenceAcquisition.h"
 #include "SerializedMetadata.h"
 #include "SynchronizedConfiguration.h"
 
@@ -219,7 +220,7 @@ CoreCallback::Sleep(const MM::Device*, double intervalMs)
 
 
 /**
- * Append the metadata tags attached to device caller to md.
+ * Append the camera-label metadata tag to md.
  */
 void
 CoreCallback::AddCameraMetadata(const MM::Device* caller,
@@ -231,18 +232,6 @@ CoreCallback::AddCameraMetadata(const MM::Device* caller,
 
    std::string label = camera->GetLabel();
    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, label);
-
-   std::string serializedMD;
-   try
-   {
-      serializedMD = camera->GetTags();
-   }
-   catch (const CMMError&)
-   {
-      return;
-   }
-
-   md.AppendSerialized(serializedMD.c_str());
 }
 
 int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf,
@@ -307,10 +296,67 @@ int CoreCallback::InsertImage(const MM::Device* caller, const unsigned char* buf
    unsigned width, unsigned height, unsigned bytesPerPixel, unsigned nComponents,
    const char* serializedMetadata)
 {
+   auto sa = core_->findAcquisitionByCaller(caller);
+   if (!sa) {
+      LOG_ERROR(core_->coreLogger_) <<
+         "InsertImage() from device that is not a participant of any "
+         "active sequence acquisition; if this device is a physical "
+         "sub-camera of a multi-channel camera, the multi-channel camera "
+         "must override GetChannelCameraPtr()";
+      return DEVICE_ERR;
+   }
+   const auto pi = sa->LookupParticipant(caller);
+
    try
    {
       SerializedMetadata md = BuildSequenceImageMetadata(
          caller, width, height, bytesPerPixel, nComponents, serializedMetadata);
+
+      using Kind = SequenceAcquisition::ParticipantInfo::Kind;
+      const std::string prefix = sa->CameraLabel() + '-';
+      const std::string prefixedIndexKey =
+         prefix + MM::g_Keyword_CameraChannelIndex;
+      const std::string prefixedNameKey =
+         prefix + MM::g_Keyword_CameraChannelName;
+
+      if (pi.kind == Kind::CompositeChannel) {
+         md.AddTag(prefixedIndexKey, std::to_string(pi.index));
+         md.AddTag(prefixedNameKey, sa->Channel(pi.index).channelName);
+      } else if (pi.kind == Kind::IntrinsicPrimary) {
+         auto idxTag = md.GetTag(prefixedIndexKey.c_str());
+         if (!idxTag)
+            idxTag = md.GetTag(MM::g_Keyword_CameraChannelIndex);
+
+         if (!idxTag) {
+            if (sa->NumChannels() != 1) {
+               LOG_ERROR(core_->coreLogger_) <<
+                  "Intrinsic multi-channel camera image missing required "
+                  "CameraChannelIndex tag from " << sa->CameraLabel();
+               return DEVICE_INCOMPATIBLE_IMAGE;
+            }
+            // Plain single-channel camera, no opt-in: no stamping.
+         } else {
+            long parsedIdx = -1;
+            try {
+               parsedIdx = std::stol(std::string(*idxTag));
+            } catch (...) {
+               LOG_ERROR(core_->coreLogger_) <<
+                  "CameraChannelIndex not parseable in image from "
+                  << sa->CameraLabel();
+               return DEVICE_INCOMPATIBLE_IMAGE;
+            }
+            if (parsedIdx < 0 ||
+                static_cast<unsigned>(parsedIdx) >= sa->NumChannels()) {
+               LOG_ERROR(core_->coreLogger_) <<
+                  "CameraChannelIndex out of range (" << parsedIdx
+                  << ") in image from " << sa->CameraLabel();
+               return DEVICE_INCOMPATIBLE_IMAGE;
+            }
+            md.AddTag(prefixedIndexKey, std::to_string(parsedIdx));
+            md.AddTag(prefixedNameKey,
+               sa->Channel(static_cast<unsigned>(parsedIdx)).channelName);
+         }
+      }
 
       MM::ImageProcessor* ip = GetImageProcessor(caller);
       if (ip != nullptr)
@@ -358,8 +404,20 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
       return DEVICE_ERR;
    }
 
-   std::shared_ptr<DeviceInstance> currentCamera =
-      core_->currentCameraDevice_.lock();
+   auto sa = core_->findAcquisitionByCaller(caller);
+   if (!sa) {
+      LOG_ERROR(core_->coreLogger_) <<
+         "AcqFinished() from device '" << camera->GetLabel() <<
+         "' that is not a participant of any active sequence acquisition"
+         "; if this device is a physical sub-camera of a multi-channel "
+         "camera, the multi-channel camera must override "
+         "GetChannelCameraPtr()";
+      return DEVICE_ERR;
+   }
+
+   const bool isLast = sa->RecordFinish(caller);
+   if (!isLast)
+      return DEVICE_OK;
 
    if (core_->autoShutter_)
    {
@@ -367,41 +425,29 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
          core_->currentShutterDevice_.lock();
       if (shutter)
       {
-         // We need to lock the shutter's module for thread safety, but there's
-         // a case where deadlock would result.
          int sret = DEVICE_ERR;
-         if (camera->GetAdapterModule() == shutter->GetAdapterModule())
+         if (shutter->GetAdapterModule() ==
+               sa->Camera()->GetAdapterModule())
          {
-            // This is a nasty hack to allow the case where the shutter and
-            // camera live in the same module. It is not safe, but this is how
-            // _all_ cases used to be implemented, and I can't immediately
-            // think of a fully safe fix that is reasonably simple.
-            sret = shutter->SetOpen(false);
-         }
-         else if (currentCamera && currentCamera->GetAdapterModule() ==
-               shutter->GetAdapterModule())
-         {
-            // Likewise, we might be called as a result of a call to
-            // StopSequenceAcquisition() on a virtual wrapper camera device
-            // (such as Multi Camera), in which case we would get a deadlock if
-            // the shutter is in the same module as the virtual camera.
-            // This is an even nastier hack in that it ignores the possibility
-            // of StopSequenceAcquisition() being called on a camera other than
-            // currentCamera, but such cases are rare.
-            sret = shutter->SetOpen(false);
+            // Shutter is in the same adapter module as the primary camera.
+            // stopSequenceAcquisition() may be holding that module's lock
+            // (on a different thread, waiting for this thread to exit via
+            // join), so a blocking lock would deadlock. Use try_lock: if
+            // the lock is free, close immediately; otherwise defer to
+            // stopSequenceAcquisition(), which will close after releasing
+            // the module lock.
+            auto& mtx = shutter->GetAdapterModule()->GetLock();
+            if (mtx.try_lock()) {
+               std::lock_guard<std::recursive_mutex> g(mtx, std::adopt_lock);
+               sret = shutter->SetOpen(false);
+            } else {
+               sa->DeferShutterClose();
+            }
          }
          else
          {
-            // If the shutter is in a different device adapter, it is safe to
-            // lock that adapter.
             DeviceModuleLockGuard g(shutter);
             sret = shutter->SetOpen(false);
-
-            // We could wait for the shutter to close here, but the
-            // implementation has always returned without waiting. The camera
-            // doesn't care, so let's keep the behavior. Thus,
-            // stopSequenceAcquisition() does not wait for the shutter before
-            // returning.
          }
          if (sret == DEVICE_OK)
             core_->postNotification(notif::ShutterOpenChanged{
@@ -410,36 +456,117 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
    }
 
    core_->postNotification(
-      notif::SequenceAcquisitionStopped{camera->GetLabel()});
+      notif::SequenceAcquisitionStopped{sa->CameraLabel()});
+
+   if (sa->IsComplete())
+      core_->eraseCompletedAcquisition(sa->CameraLabel());
 
    return DEVICE_OK;
 }
 
 int CoreCallback::PrepareForAcq(const MM::Device* caller)
 {
-   if (core_->autoShutter_)
-   {
-      std::shared_ptr<ShutterInstance> shutter =
-         core_->currentShutterDevice_.lock();
-      if (shutter)
-      {
-         int sret;
-         {
-            DeviceModuleLockGuard g(shutter);
-            sret = shutter->SetOpen(true);
-         }
-         if (sret == DEVICE_OK)
-            core_->postNotification(notif::ShutterOpenChanged{
-               shutter->GetLabel(), true});
-         core_->waitForDevice(shutter);
-      }
+   auto sa = core_->findAcquisitionByCaller(caller);
+   if (!sa) {
+      char label[MM::MaxStrLength];
+      caller->GetLabel(label);
+      LOG_ERROR(core_->coreLogger_) <<
+         "PrepareForAcq() from device '" << label <<
+         "' that is not a participant of any active sequence acquisition"
+         "; if this device is a physical sub-camera of a multi-channel "
+         "camera, the multi-channel camera must override "
+         "GetChannelCameraPtr()";
+      return DEVICE_ERR;
    }
 
-   char label[MM::MaxStrLength];
-   caller->GetLabel(label);
-   core_->postNotification(notif::SequenceAcquisitionStarted{label});
+   const auto disp = sa->BeginPrepare(caller);
+   using PD = SequenceAcquisition::PrepareDisposition;
+   switch (disp) {
+   case PD::NotParticipant:
+      // Should not happen — findAcquisitionByCaller already verified.
+      return DEVICE_ERR;
+   case PD::AlreadyPrepared:
+      return DEVICE_OK;
+   case PD::AlreadyOpened:
+      return DEVICE_OK;
+   case PD::OpenFailed:
+      return DEVICE_ERR;
+   case PD::WaitForOpener:
+      return sa->WaitForShutterOpened() ? DEVICE_OK : DEVICE_ERR;
+   case PD::FirstOpener:
+      break;
+   }
 
-   return DEVICE_OK;
+   // Exceptions must not escape back into the adapter that called this
+   // callback. The OpenerGuard releases parked CV waiters on the throw path.
+   try {
+      struct OpenerGuard {
+         SequenceAcquisition* sa;
+         bool finished = false;
+         ~OpenerGuard() { if (!finished) sa->FinishShutterOpen(false); }
+      } guard{ sa.get() };
+
+      bool openOk = true;
+      if (core_->autoShutter_)
+      {
+         std::shared_ptr<ShutterInstance> shutter =
+            core_->currentShutterDevice_.lock();
+         if (shutter)
+         {
+            int sret = DEVICE_ERR;
+            bool deferred = false;
+            if (shutter->GetAdapterModule() ==
+                  sa->Camera()->GetAdapterModule())
+            {
+               // Shutter is in the same adapter module as the primary camera.
+               // startSequenceAcquisitionImpl() holds that module's lock; if
+               // PrepareForAcq is being invoked from a thread other than that
+               // caller, a blocking lock here would deadlock or contend
+               // unnecessarily. Use try_lock: same-thread re-entry on the
+               // recursive_mutex succeeds and we open inline; otherwise defer
+               // to startSequenceAcquisitionImpl(), which will open after
+               // releasing the module lock.
+               auto& mtx = shutter->GetAdapterModule()->GetLock();
+               if (mtx.try_lock()) {
+                  std::lock_guard<std::recursive_mutex> g(mtx, std::adopt_lock);
+                  sret = shutter->SetOpen(true);
+               } else {
+                  sa->DeferShutterOpen();
+                  deferred = true;
+               }
+            }
+            else
+            {
+               DeviceModuleLockGuard g(shutter);
+               sret = shutter->SetOpen(true);
+            }
+            if (deferred) {
+               // Opener role transferred to the deferred opener; that thread
+               // now owns the FinishShutterOpen contract.
+               guard.finished = true;
+               return sa->WaitForShutterOpened() ? DEVICE_OK : DEVICE_ERR;
+            }
+            if (sret == DEVICE_OK) {
+               core_->postNotification(notif::ShutterOpenChanged{
+                  shutter->GetLabel(), true});
+               core_->waitForDevice(shutter);
+            } else {
+               openOk = false;
+            }
+         }
+      }
+
+      if (openOk)
+         core_->postNotification(notif::SequenceAcquisitionStarted{sa->CameraLabel()});
+
+      sa->FinishShutterOpen(openOk);
+      guard.finished = true;
+
+      return openOk ? DEVICE_OK : DEVICE_ERR;
+   } catch (CMMError& e) {
+      core_->logError("PrepareForAcq", e.getMsg().c_str());
+      return DEVICE_ERR;
+   }
 }
 
 /**

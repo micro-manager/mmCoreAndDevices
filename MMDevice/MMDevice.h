@@ -26,7 +26,7 @@
 
 // Device Interface Version — see README.md for the full versioning policy.
 // Must be incremented for any binary-incompatible change.
-#define DEVICE_INTERFACE_VERSION 75
+#define DEVICE_INTERFACE_VERSION 76
 
 // N.B. Method parameters and return values in Device and its derived
 // classes must be POD types or pointers (no std::string, etc.) to
@@ -379,6 +379,28 @@ namespace MM {
        * An implementation of this function is provided in DeviceBase.h.  It will return an empty string
        */
       virtual int GetChannelName(unsigned channel, char* name) = 0;
+
+      /**
+       * @brief Return the physical camera responsible for channel `n`, or nullptr.
+       *
+       * For a composite multi-channel camera (such as Multi Camera), each
+       * channel is backed by a distinct physical Camera; this returns the
+       * MM::Camera* of the device assigned to channel `n`. For an intrinsic
+       * multi-channel camera (a single device emitting multiple channels) and
+       * for ordinary single-channel cameras, this returns nullptr.
+       *
+       * Mixed devices (some channels composite, others intrinsic) are
+       * permitted: channels with non-null pointers are treated as composite,
+       * channels with null pointers are treated as intrinsic and are
+       * MMCore-tagged accordingly via verification of CameraChannelIndex /
+       * CameraChannelName in the device-supplied image metadata.
+       *
+       * Required: 0 <= n < GetNumberOfChannels(); behavior outside that range
+       * is undefined except that the default CCameraBase implementation
+       * returns nullptr for any in-range n and logs+returns nullptr for
+       * out-of-range n.
+       */
+      virtual MM::Camera* GetChannelCameraPtr(unsigned n) = 0;
       /**
        * @brief Return the size in bytes of the image buffer.
        *
@@ -463,6 +485,9 @@ namespace MM {
       /**
        * @brief Start sequence acquisition.
        *
+       * Implementations must call `Core::PrepareForAcq()` before inserting
+       * any images.
+       *
        * @param numImages       Number of images to acquire.
        * @param unused          Has no effect. Implementations **must** ignore
        *                        this parameter. Previously named `intervalMs` /
@@ -485,40 +510,24 @@ namespace MM {
       virtual int StartSequenceAcquisition(double unused) = 0;
       /**
        * @brief Stop an ongoing sequence acquisition.
+       *
+       * Must be synchronous: must not return until the acquisition has
+       * actually stopped (acquisition thread joined or equivalent). After
+       * return, `IsCapturing()` must return false.
+       *
+       * Must be a no-op when no acquisition is running.
+       *
+       * Should not call `Core::AcqFinished()` directly — see
+       * `Core::AcqFinished()` for the rationale.
        */
       virtual int StopSequenceAcquisition() = 0;
       /**
        * @brief Indicate whether sequence acquisition is currently running.
        *
-       * Returns true when sequence acquisition is active, false otherwise.
+       * Must return false after `StopSequenceAcquisition()` returns and
+       * after an acquisition finishes on its own. Safe to call at any time.
        */
       virtual bool IsCapturing() = 0;
-
-      /**
-       * @brief Get the metadata tags stored in this device.
-       *
-       * These tags will automatically be add to the metadata of an image inserted
-       * into the circular buffer.
-       */
-      virtual void GetTags(char* serializedMetadata) = 0;
-
-      /**
-       * @brief Add new tag or modify the value of an existing one.
-       *
-       * These will automatically be added to images inserted into the circular buffer.
-       * Use this mechanism for tags that do not change often.  For metadata that
-       * change often, create an instance of metadata yourself and add to one of
-       * the versions of the InsertImage function.
-       */
-      virtual void AddTag(const char* key, const char* deviceLabel, const char* value) = 0;
-
-      /**
-       * @brief Remove an existing tag from the metadata associated with this device.
-       *
-       * These tags will automatically be add to the metadata of an image inserted
-       * into the circular buffer.
-       */
-      virtual void RemoveTag(const char* key) = 0;
 
       /**
        * @brief Return whether a camera's exposure time can be sequenced.
@@ -1689,8 +1698,55 @@ namespace MM {
       // Prefer std::chrono::steady_clock::now() in new code.
       virtual MM::MMTime GetCurrentMMTime() = 0;
 
-      // sequence acquisition
+      /**
+       * @brief Notify the Core that a sequence acquisition has finished.
+       *
+       * Must be called exactly once per acquisition, when the acquisition
+       * actually stops — whether it completed all requested images,
+       * encountered an error, or was told to stop via
+       * `Camera::StopSequenceAcquisition()`.
+       *
+       * Call from the acquisition thread as it exits (e.g., in an
+       * `OnThreadExiting()` override), not from
+       * `StopSequenceAcquisition()` itself. This ensures the callback
+       * fires both when the acquisition finishes on its own and when it is
+       * stopped externally. When `StopSequenceAcquisition()` joins the
+       * acquisition thread, `AcqFinished()` will be called during the
+       * join, before `StopSequenceAcquisition()` returns.
+       *
+       * For multi-channel cameras: each physical sub-camera calls
+       * `AcqFinished()` independently. The primary camera calls only if
+       * it has at least one intrinsic channel.
+       *
+       * @param caller      The calling device (pass `this`).
+       * @param statusCode  0 on success, or an error code.
+       */
       virtual int AcqFinished(const Device* caller, int statusCode) = 0;
+      /**
+       * @brief Prepare the Core for a sequence acquisition.
+       *
+       * Must be called during `Camera::StartSequenceAcquisition()`, before
+       * inserting any images.
+       *
+       * For multi-channel cameras: each physical sub-camera calls
+       * `PrepareForAcq()` independently. The primary camera calls only if
+       * it has at least one intrinsic channel.
+       *
+       * Threading: `PrepareForAcq()` may be called either synchronously on
+       * the thread that called `StartSequenceAcquisition()`, or
+       * asynchronously from a worker thread spawned by the camera adapter.
+       * If it is called from a worker thread, then
+       * `StartSequenceAcquisition()` must not block synchronously waiting
+       * for that thread's `PrepareForAcq()` to return — otherwise deadlock
+       * is possible (the Core may need the calling thread of
+       * `StartSequenceAcquisition()` to release its adapter module lock
+       * before the asynchronous `PrepareForAcq()` can complete). This is
+       * the open-side analogue of the requirement that `AcqFinished()` be
+       * called from the worker thread, not from `StopSequenceAcquisition()`
+       * itself.
+       *
+       * @param caller  The calling device (pass `this`).
+       */
       virtual int PrepareForAcq(const Device* caller) = 0;
 
       /**

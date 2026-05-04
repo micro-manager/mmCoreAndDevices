@@ -7,142 +7,21 @@
 #include "MockDeviceUtils.h"
 #include "StubDevices.h"
 
+#include <chrono>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
 namespace {
 
-// Minimal mock of a composite multi-channel camera (in the style of the
-// Multi Camera (Utilities) adapter, where multiple physical cameras are
-// presented as channels of a single device — as opposed to an intrinsic
-// multi-channel camera, which is a single device that itself emits multiple
-// channels). Holds its physical cameras as direct pointers given at
-// construction.
-// Mirrors the real adapter's behaviors that matter for MMCore-side testing:
-//   - Reports GetNumberOfChannels() == number of physicals.
-//   - Calls AddTag on each physical with its own label as deviceLabel.
-//   - Forwards Start/StopSequenceAcquisition to each physical.
-//   - IsCapturing() reflects whether any physical is capturing.
-struct MockCompositeCamera : CCameraBase<MockCompositeCamera> {
-   std::string name = "MockCompositeCamera";
-   std::vector<SyncCamera*> physicals;
-
-   explicit MockCompositeCamera(std::vector<SyncCamera*> p)
-      : physicals(std::move(p)) {}
-
-   int Initialize() override {
-      char myLabel[MM::MaxStrLength];
-      GetLabel(myLabel);
-      for (size_t i = 0; i < physicals.size(); ++i) {
-         physicals[i]->AddTag(MM::g_Keyword_CameraChannelName,
-            myLabel, physicals[i]->name.c_str());
-         physicals[i]->AddTag(MM::g_Keyword_CameraChannelIndex,
-            myLabel, std::to_string(i).c_str());
-      }
-      return DEVICE_OK;
-   }
-   int Shutdown() override { return DEVICE_OK; }
-   bool Busy() override { return false; }
-   void GetName(char* buf) const override {
-      CDeviceUtils::CopyLimitedString(buf, name.c_str());
-   }
-
-   int SnapImage() override { return DEVICE_OK; }
-   const unsigned char* GetImageBuffer() override {
-      return physicals.empty() ? nullptr : physicals[0]->GetImageBuffer();
-   }
-   long GetImageBufferSize() const override {
-      return physicals.empty() ? 0 : physicals[0]->GetImageBufferSize();
-   }
-   unsigned GetImageWidth() const override {
-      return physicals.empty() ? 0 : physicals[0]->GetImageWidth();
-   }
-   unsigned GetImageHeight() const override {
-      return physicals.empty() ? 0 : physicals[0]->GetImageHeight();
-   }
-   unsigned GetImageBytesPerPixel() const override {
-      return physicals.empty() ? 0 : physicals[0]->GetImageBytesPerPixel();
-   }
-   unsigned GetNumberOfComponents() const override { return 1; }
-   unsigned GetNumberOfChannels() const override {
-      return static_cast<unsigned>(physicals.size());
-   }
-   int GetChannelName(unsigned channel, char* chName) override {
-      if (channel < physicals.size()) {
-         CDeviceUtils::CopyLimitedString(chName,
-            physicals[channel]->name.c_str());
-      } else {
-         CDeviceUtils::CopyLimitedString(chName, "");
-      }
-      return DEVICE_OK;
-   }
-   unsigned GetBitDepth() const override {
-      return physicals.empty() ? 8 : physicals[0]->GetBitDepth();
-   }
-   int GetBinning() const override {
-      return physicals.empty() ? 1 : physicals[0]->GetBinning();
-   }
-   int SetBinning(int b) override {
-      for (auto* p : physicals) p->SetBinning(b);
-      return DEVICE_OK;
-   }
-   void SetExposure(double e) override {
-      for (auto* p : physicals) p->SetExposure(e);
-   }
-   double GetExposure() const override {
-      return physicals.empty() ? 0.0 : physicals[0]->GetExposure();
-   }
-   int SetROI(unsigned, unsigned, unsigned, unsigned) override {
-      return DEVICE_OK;
-   }
-   int GetROI(unsigned& x, unsigned& y, unsigned& w, unsigned& h) override {
-      x = 0; y = 0;
-      w = GetImageWidth();
-      h = GetImageHeight();
-      return DEVICE_OK;
-   }
-   int ClearROI() override { return DEVICE_OK; }
-   int IsExposureSequenceable(bool& seq) const override {
-      seq = false;
-      return DEVICE_OK;
-   }
-
-   int StartSequenceAcquisition(long n, double i, bool s) override {
-      for (auto* p : physicals) {
-         int ret = p->StartSequenceAcquisition(n, i, s);
-         if (ret != DEVICE_OK) return ret;
-      }
-      return DEVICE_OK;
-   }
-   int StartSequenceAcquisition(double i) override {
-      for (auto* p : physicals) {
-         int ret = p->StartSequenceAcquisition(i);
-         if (ret != DEVICE_OK) return ret;
-      }
-      return DEVICE_OK;
-   }
-   int StopSequenceAcquisition() override {
-      for (auto* p : physicals) {
-         int ret = p->StopSequenceAcquisition();
-         if (ret != DEVICE_OK) return ret;
-      }
-      return DEVICE_OK;
-   }
-   bool IsCapturing() override {
-      for (auto* p : physicals) {
-         if (p->IsCapturing()) return true;
-      }
-      return false;
-   }
-};
-
 // Minimal mock of an intrinsic multi-channel camera (in the style of the
-// TwoPhoton adapter): a single device that itself emits N channels by calling
-// InsertImage once per channel per frame. Channel-identifying tags are
-// embedded in the serialized metadata passed to InsertImage, not stored on
-// the device via AddTag (which is the composite pattern). Tests drive
-// InsertTestFrame() manually after StartSequenceAcquisition.
+// TwoPhoton adapter): a single device that itself emits N channels by
+// calling InsertImage once per channel per frame, embedding only
+// CameraChannelIndex in the serialized metadata. (CameraChannelName is
+// stamped by MMCore from its start-time snapshot of GetChannelName, so
+// intrinsic devices do not — and should not — emit it.) Tests drive
+// InsertTestImage() manually after StartSequenceAcquisition.
 struct MockIntrinsicMultiChannelCamera :
    CCameraBase<MockIntrinsicMultiChannelCamera> {
    std::string name = "MockIntrinsicMultiChannelCamera";
@@ -227,28 +106,17 @@ struct MockIntrinsicMultiChannelCamera :
    // completion or error path).
    void TriggerSelfFinish() { Finish(); }
 
-   // Inserts a single channel of a multi-channel frame, with channel-
-   // identifying tags in the serialized metadata. Tests call this once per
-   // channel per frame; the order is up to the test (real intrinsic adapters
-   // may interleave channels).
-   //
-   // The dual unprefixed + label-prefixed tag format mirrors the current
-   // behavior of the only in-tree intrinsic multi-chan camera (TwoPhoton,
-   // which is unmaintained) and may need updating if/when the tag rules are
-   // clarified.
+   // Inserts a single channel of a multi-channel frame, with the channel
+   // index embedded in the serialized metadata. (No channel name: MMCore
+   // stamps it from its start-time snapshot.) Tests call this once per
+   // channel per frame; the order is up to the test (real intrinsic
+   // adapters may interleave channels).
    int InsertTestImage(unsigned channel) {
-      char label[MM::MaxStrLength];
-      GetLabel(label);
-      const std::string labelStr = label;
       std::vector<unsigned char> buf(
          static_cast<size_t>(width) * height * bytesPerPixel, 0);
       MM::CameraImageMetadata md;
-      const std::string idx = std::to_string(channel);
-      md.AddTag(MM::g_Keyword_CameraChannelIndex, idx);
-      md.AddTag(labelStr + '-' + MM::g_Keyword_CameraChannelIndex, idx);
-      md.AddTag(MM::g_Keyword_CameraChannelName, channelNames[channel]);
-      md.AddTag(labelStr + '-' + MM::g_Keyword_CameraChannelName,
-         channelNames[channel]);
+      md.AddTag(MM::g_Keyword_CameraChannelIndex,
+         std::to_string(channel).c_str());
       return GetCoreCallback()->InsertImage(this, buf.data(),
          width, height, bytesPerPixel, md.Serialize());
    }
@@ -335,10 +203,10 @@ TEST_CASE("isSequenceRunning is true while composite camera is acquiring "
    CHECK_FALSE(c.isSequenceRunning());
 }
 
-// --- Tag attachment ---
+// --- Tag scoping ---
 
-TEST_CASE("Composite camera Initialize attaches CameraChannelName/Index tags "
-          "to physicals",
+TEST_CASE("Composite phys cam used standalone after composite acquisition has "
+          "no composite-prefixed channel tags",
           "[MultiChannelSequenceAcquisition]") {
    SyncCamera p0("p0");
    SyncCamera p1("p1");
@@ -347,24 +215,29 @@ TEST_CASE("Composite camera Initialize attaches CameraChannelName/Index tags "
       {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
    CMMCore c;
    adapter.LoadIntoCore(c);
+
    c.setCameraDevice("composite");
-   c.initializeCircularBuffer();
-
+   c.startSequenceAcquisition(2, 0.0, true);
    REQUIRE(p0.InsertTestImage() == DEVICE_OK);
-   {
+   REQUIRE(p1.InsertTestImage() == DEVICE_OK);
+   c.stopSequenceAcquisition();
+   // Drain composite frames.
+   while (c.getRemainingImageCount() > 0) {
       Metadata md;
       c.popNextImageMD(md);
-      CHECK(md.GetSingleTag("composite-CameraChannelName").GetValue() == "p0");
-      CHECK(md.GetSingleTag("composite-CameraChannelIndex").GetValue() == "0");
    }
 
-   REQUIRE(p1.InsertTestImage() == DEVICE_OK);
-   {
-      Metadata md;
-      c.popNextImageMD(md);
-      CHECK(md.GetSingleTag("composite-CameraChannelName").GetValue() == "p1");
-      CHECK(md.GetSingleTag("composite-CameraChannelIndex").GetValue() == "1");
-   }
+   // Now use p0 standalone — frames should not carry composite tags.
+   c.setCameraDevice("p0");
+   c.startSequenceAcquisition(1, 0.0, true);
+   REQUIRE(p0.InsertTestImage() == DEVICE_OK);
+   c.stopSequenceAcquisition();
+
+   REQUIRE(c.getRemainingImageCount() == 1);
+   Metadata md;
+   c.popNextImageMD(md);
+   CHECK_THROWS(md.GetSingleTag("composite-CameraChannelIndex"));
+   CHECK_THROWS(md.GetSingleTag("composite-CameraChannelName"));
 }
 
 TEST_CASE("Composite circular buffer holds frames-times-channels",
@@ -465,7 +338,8 @@ TEST_CASE("Named-camera startSequenceAcquisition on composite camera "
 
 // --- Cleanup ---
 
-TEST_CASE("Composite: each physical's AcqFinished re-closes the auto-shutter",
+TEST_CASE("Composite: only the last physical's AcqFinished closes the "
+          "auto-shutter",
           "[MultiChannelSequenceAcquisition]") {
    SyncCamera p0("p0");
    SyncCamera p1("p1");
@@ -484,14 +358,11 @@ TEST_CASE("Composite: each physical's AcqFinished re-closes the auto-shutter",
    REQUIRE(shutter.open == true);
 
    p0.TriggerSelfFinish();
-   CHECK(shutter.open == false);
+   // First physical to finish should not close the shutter.
+   CHECK(shutter.open == true);
 
-   // This might be a little over-constraining; the important thing is that the
-   // shutter gets closed at least once. But we can't easily write the correct
-   // test until we have the correct behavior (close shutter when the _last_
-   // phys cam finishes).
-   shutter.open = true;
    p1.TriggerSelfFinish();
+   // Last physical to finish closes it.
    CHECK(shutter.open == false);
 
    c.stopSequenceAcquisition();
@@ -521,6 +392,78 @@ TEST_CASE("Composite: physical's AcqFinished does not touch shutter "
    CHECK(shutter.open == true);
 
    c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Composite with async physicals: same-module shutter closes on stop "
+          "without deadlock",
+          "[MultiChannelSequenceAcquisition]") {
+   AsyncCamera p0;
+   p0.name = "p0";
+   AsyncCamera p1;
+   p1.name = "p1";
+   MockCompositeCamera composite({&p0, &p1});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.open == true);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Composite in separate module from phys cam and shutter: shutter "
+          "closes via blocking lock without deadlock",
+          "[MultiChannelSequenceAcquisition]") {
+   AsyncCamera p0;
+   p0.name = "p0";
+   MockCompositeCamera composite({&p0});
+   StubShutter shutter;
+   MockAdapterWithDevices compositeAdapter{"composite_adapter",
+      {{"composite", &composite}}};
+   MockAdapterWithDevices physAdapter{"phys_adapter",
+      {{"p0", &p0}, {"shutter", &shutter}}};
+   CMMCore c;
+   compositeAdapter.LoadIntoCore(c);
+   physAdapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.open == true);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Composite with async physicals: same-module shutter not touched "
+          "when autoShutter is off",
+          "[MultiChannelSequenceAcquisition]") {
+   AsyncCamera p0;
+   p0.name = "p0";
+   AsyncCamera p1;
+   p1.name = "p1";
+   MockCompositeCamera composite({&p0, &p1});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(false);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   shutter.open = true;
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == true);
 }
 
 TEST_CASE("Composite: startSequenceAcquisition after all physicals self-finish "
@@ -585,14 +528,12 @@ TEST_CASE("Sequence acquisition with 2-channel intrinsic camera tags each "
       c.popNextImageMD(md);
       CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue() ==
             "intrinsic");
-      CHECK(md.GetSingleTag(MM::g_Keyword_CameraChannelName).GetValue() ==
-            e.channelName);
-      CHECK(md.GetSingleTag(MM::g_Keyword_CameraChannelIndex).GetValue() ==
-            e.channelIndex);
-      CHECK(md.GetSingleTag("intrinsic-CameraChannelName").GetValue() ==
-            e.channelName);
       CHECK(md.GetSingleTag("intrinsic-CameraChannelIndex").GetValue() ==
             e.channelIndex);
+      // CameraChannelName is stamped by MMCore from its start-time snapshot
+      // even though the device only emits CameraChannelIndex.
+      CHECK(md.GetSingleTag("intrinsic-CameraChannelName").GetValue() ==
+            e.channelName);
    }
 }
 
@@ -1033,4 +974,147 @@ TEST_CASE("Mid-frame buffer overflow with stopOnOverflow=false overwrites "
       CHECK(cam.InsertTestImage(1) == DEVICE_OK);
       c.stopSequenceAcquisition();
    }
+}
+
+// --- Nested-multi-channel rejection ---
+
+TEST_CASE("Composite camera whose phys cam is itself multi-channel is "
+          "rejected at start time",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   MockCompositeCamera inner({&p0, &p1});
+   MockCompositeCamera outer({&inner});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"inner", &inner}, {"outer", &outer}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("outer");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(10, 0.0, true), CMMError);
+   CHECK_FALSE(inner.IsCapturing());
+}
+
+// --- Single-channel composite ---
+
+TEST_CASE("Single-channel composite (one phys cam) tags its frames with "
+          "channel index 0 and the phys cam's channel name",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   MockCompositeCamera composite({&p0});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   c.startSequenceAcquisition(1, 0.0, true);
+   REQUIRE(p0.InsertTestImage() == DEVICE_OK);
+   c.stopSequenceAcquisition();
+
+   REQUIRE(c.getRemainingImageCount() == 1);
+   Metadata md;
+   c.popNextImageMD(md);
+   CHECK(md.GetSingleTag("composite-CameraChannelIndex").GetValue() == "0");
+   CHECK(md.GetSingleTag("composite-CameraChannelName").GetValue() == "p0");
+}
+
+// --- Plain single-channel camera, no opt-in ---
+
+TEST_CASE("Plain single-channel camera without CameraChannelIndex tag in "
+          "device metadata gets no composite-prefixed tags",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera cam("cam");
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   c.startSequenceAcquisition(1, 0.0, true);
+   REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   c.stopSequenceAcquisition();
+
+   REQUIRE(c.getRemainingImageCount() == 1);
+   Metadata md;
+   c.popNextImageMD(md);
+   CHECK_THROWS(md.GetSingleTag("cam-CameraChannelIndex"));
+   CHECK_THROWS(md.GetSingleTag("cam-CameraChannelName"));
+}
+
+// --- Intrinsic emits invalid index ---
+
+TEST_CASE("Intrinsic multi-channel device emitting out-of-range "
+          "CameraChannelIndex has its image rejected",
+          "[MultiChannelSequenceAcquisition]") {
+   MockIntrinsicMultiChannelCamera cam({"chA", "chB"});
+   MockAdapterWithDevices adapter{{"intrinsic", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("intrinsic");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(cam.InsertTestImage(99) == DEVICE_INCOMPATIBLE_IMAGE);
+   c.stopSequenceAcquisition();
+}
+
+// --- Image geometry validation ---
+
+TEST_CASE("Composite seq acq rejects mismatched width",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   p1.width = 128;
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(1, 0.0, true), CMMError);
+}
+
+TEST_CASE("Composite seq acq rejects mismatched height",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   p1.height = 128;
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(1, 0.0, true), CMMError);
+}
+
+TEST_CASE("Composite seq acq rejects mismatched bytesPerPixel",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   p1.bytesPerPixel = 2;
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(1, 0.0, true), CMMError);
+}
+
+TEST_CASE("Composite seq acq rejects mismatched numberOfComponents",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   p1.nComponents = 4;
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(1, 0.0, true), CMMError);
 }

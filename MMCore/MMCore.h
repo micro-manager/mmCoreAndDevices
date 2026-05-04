@@ -53,12 +53,14 @@
 #include "Logging/Logger.h"
 #include "MockDeviceAdapter.h"
 #include "Notification.h"
+#include "SequenceAcquisition.h"
 
 #include "MMDevice.h"
 #include "MMDeviceConstants.h"
 
 #include <cstring>
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -95,6 +97,7 @@ namespace internal {
    class DeviceManager;
    class LogManager;
    class NotificationQueue;
+   class SequenceAcquisition;
 } // namespace internal
 } // namespace mmcore
 
@@ -732,6 +735,17 @@ private:
    std::unique_ptr<mmcore::internal::CircularBuffer> cbuf_;
    std::unique_ptr<mmcore::internal::CoreCallback> callback_;
 
+   // Active sequence acquisitions keyed by logical-camera label. At most
+   // one entry per camera, but multiple cameras may have concurrent
+   // acquisitions because the labelled start/stop API is per-camera (sort of).
+   // Both the user thread and device-callback threads access this map; all
+   // access is protected by acquisitionsMutex_.
+   std::map<std::string,
+            std::shared_ptr<mmcore::internal::SequenceAcquisition>>
+       acquisitions_;
+
+   mutable std::mutex acquisitionsMutex_;
+
    std::shared_ptr<mmcore::internal::CPluginManager> pluginManager_;
    std::shared_ptr<mmcore::internal::DeviceManager> deviceManager_;
    std::map<int, std::string> errorText_;
@@ -772,6 +786,54 @@ private:
    void removeDeviceRole(std::shared_ptr<mmcore::internal::DeviceInstance> pDev);
    void removeAllDeviceRoles();
    void loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_THROW(CMMError);
+
+   // Stop all in-flight sequence acquisitions and clear the acquisitions_
+   // map. Called before unloading any device: acquisitions_ holds strong
+   // references to CameraInstance, which would otherwise outlive the
+   // unload and leave a zombie wrapper around a shut-down adapter.
+   // Stops every acquisition (not just one for the unloaded camera)
+   // because Core (for now) does not know which logical cameras a given
+   // physical device participates in (e.g. via Multi Camera).
+   void stopAndClearAllSequenceAcquisitions();
+
+   // Build the per-channel snapshot for `camera`, throwing CMMError if any
+   // composite channel references a multi-channel phys cam (nested
+   // multi-channel cameras are unsupported). Caller must hold the camera's
+   // DeviceModuleLockGuard.
+   std::vector<
+      mmcore::internal::SequenceAcquisition::ChannelInfo>
+      buildSequenceChannelSnapshot(
+         std::shared_ptr<mmcore::internal::CameraInstance> camera)
+         MMCORE_LEGACY_THROW(CMMError);
+
+   // Look up the SA whose participant set contains `caller`. Returns nullptr
+   // if none. Takes acquisitionsMutex_.
+   std::shared_ptr<mmcore::internal::SequenceAcquisition>
+   findAcquisitionByCaller(const MM::Device* caller);
+
+   // Look up SA by primary camera label. Returns nullptr if none.
+   std::shared_ptr<mmcore::internal::SequenceAcquisition>
+   findAcquisitionByCamera(const std::string& cameraLabel);
+
+   // Erase a completed SA from `acquisitions_` (if present, by label).
+   // Idempotent. Takes acquisitionsMutex_.
+   void eraseCompletedAcquisition(const std::string& cameraLabel);
+
+   // True iff any entry in acquisitions_ still has at least one participant
+   // that has not called RecordFinish. Caller must hold acquisitionsMutex_.
+   bool hasInFlightAcquisitionLocked() const;
+
+   void startSequenceAcquisitionImpl(
+       std::shared_ptr<mmcore::internal::CameraInstance> camera,
+       bool overwriteData,
+       std::function<int()> startDevice);
+
+   void markAcquisitionStopRequested(const std::string& cameraLabel);
+
+   void closeDeferredAutoShutter();
+
+   void openDeferredAutoShutter(
+      const std::shared_ptr<mmcore::internal::SequenceAcquisition>& sa);
 
    void setCameraInternal(const std::string& label);
    void setShutterInternal(const std::string& label);
