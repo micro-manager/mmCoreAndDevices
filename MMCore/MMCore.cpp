@@ -1020,6 +1020,36 @@ void CMMCore::closeDeferredAutoShutter()
       shutter->GetLabel(), false});
 }
 
+void CMMCore::openDeferredAutoShutter(
+   const std::shared_ptr<mmi::SequenceAcquisition>& sa)
+{
+   bool openOk = true;
+   if (autoShutter_)
+   {
+      std::shared_ptr<mmi::ShutterInstance> shutter =
+         currentShutterDevice_.lock();
+      if (shutter)
+      {
+         int sret;
+         {
+            mmi::DeviceModuleLockGuard g(shutter);
+            sret = shutter->SetOpen(true);
+         }
+         if (sret == DEVICE_OK) {
+            postNotification(notif::ShutterOpenChanged{
+               shutter->GetLabel(), true});
+            waitForDevice(shutter);
+         } else {
+            openOk = false;
+         }
+      }
+   }
+   if (openOk)
+      postNotification(
+         notif::SequenceAcquisitionStarted{sa->CameraLabel()});
+   sa->FinishShutterOpen(openOk);
+}
+
 void CMMCore::stopAndClearAllSequenceAcquisitions()
 {
    std::map<std::string,
@@ -3191,89 +3221,107 @@ void CMMCore::startSequenceAcquisitionImpl(
     bool overwriteData,
     std::function<int()> startDevice)
 {
-   mmi::DeviceModuleLockGuard guard(camera);
-   if (camera->IsCapturing()) {
-      throw CMMError(
-         getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
-         MMERR_NotAllowedDuringSequenceAcquisition);
-   }
-
-   if (!cbuf_->Initialize(
-         static_cast<std::size_t>(camera->GetImageWidth()) *
-         camera->GetImageHeight() *
-         camera->GetImageBytesPerPixel()))
+   std::shared_ptr<mmi::SequenceAcquisition> sa;
    {
-      logError(getDeviceName(camera).c_str(),
-         getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
-      throw CMMError(
-         getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(),
-         MMERR_CircularBufferFailedToInitialize);
-   }
-   cbuf_->Clear();
-   callback_->ResetImageInsertionState();
-   cbuf_->SetOverwriteData(overwriteData);
-
-   auto channels = buildSequenceChannelSnapshot(camera);
-   auto newSa = mmcore::internal::SequenceAcquisition::Create(
-      camera, std::move(channels));
-   {
-      std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
-
-      {
-         auto it = acquisitions_.find(camera->GetLabel());
-         if (it != acquisitions_.end() &&
-             !it->second->AllParticipantsFinished()) {
-            throw CMMError(
-               "Sequence acquisition on '" + camera->GetLabel() +
-               "' is already running",
-               MMERR_NotAllowedDuringSequenceAcquisition);
-         }
+      mmi::DeviceModuleLockGuard guard(camera);
+      if (camera->IsCapturing()) {
+         throw CMMError(
+            getCoreErrorText(MMERR_NotAllowedDuringSequenceAcquisition).c_str(),
+            MMERR_NotAllowedDuringSequenceAcquisition);
       }
 
-      for (const auto& [existingLabel, existingSa] : acquisitions_) {
-         if (existingSa->AllParticipantsFinished())
-            continue;
-         if (existingSa->HasParticipant(camera->GetRawPtr())) {
-            throw CMMError(
-               "Camera '" + camera->GetLabel() +
-               "' is already participating in a sequence acquisition on '" +
-               existingLabel + "'",
-               MMERR_NotAllowedDuringSequenceAcquisition);
-         }
-         for (const auto& ch : newSa->Channels()) {
-            if (ch.physCamDevice &&
-                existingSa->HasParticipant(ch.physCamDevice)) {
+      if (!cbuf_->Initialize(
+            static_cast<std::size_t>(camera->GetImageWidth()) *
+            camera->GetImageHeight() *
+            camera->GetImageBytesPerPixel()))
+      {
+         logError(getDeviceName(camera).c_str(),
+            getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str());
+         throw CMMError(
+            getCoreErrorText(MMERR_CircularBufferFailedToInitialize).c_str(),
+            MMERR_CircularBufferFailedToInitialize);
+      }
+      cbuf_->Clear();
+      callback_->ResetImageInsertionState();
+      cbuf_->SetOverwriteData(overwriteData);
+
+      auto channels = buildSequenceChannelSnapshot(camera);
+      auto newSa = mmcore::internal::SequenceAcquisition::Create(
+         camera, std::move(channels));
+      {
+         std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+
+         {
+            auto it = acquisitions_.find(camera->GetLabel());
+            if (it != acquisitions_.end() &&
+                !it->second->AllParticipantsFinished()) {
                throw CMMError(
-                  "Camera '" + ch.physCamLabel +
+                  "Sequence acquisition on '" + camera->GetLabel() +
+                  "' is already running",
+                  MMERR_NotAllowedDuringSequenceAcquisition);
+            }
+         }
+
+         for (const auto& [existingLabel, existingSa] : acquisitions_) {
+            if (existingSa->AllParticipantsFinished())
+               continue;
+            if (existingSa->HasParticipant(camera->GetRawPtr())) {
+               throw CMMError(
+                  "Camera '" + camera->GetLabel() +
                   "' is already participating in a sequence acquisition on '" +
                   existingLabel + "'",
                   MMERR_NotAllowedDuringSequenceAcquisition);
             }
+            for (const auto& ch : newSa->Channels()) {
+               if (ch.physCamDevice &&
+                   existingSa->HasParticipant(ch.physCamDevice)) {
+                  throw CMMError(
+                     "Camera '" + ch.physCamLabel +
+                     "' is already participating in a sequence acquisition on '" +
+                     existingLabel + "'",
+                     MMERR_NotAllowedDuringSequenceAcquisition);
+               }
+            }
          }
+
+         sa = newSa;
+         acquisitions_[camera->GetLabel()] = std::move(newSa);
       }
 
-      acquisitions_[camera->GetLabel()] = std::move(newSa);
+      int nRet = startDevice();
+      if (nRet != DEVICE_OK) {
+         std::shared_ptr<mmcore::internal::SequenceAcquisition> failedSa;
+         {
+            std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
+            auto it = acquisitions_.find(camera->GetLabel());
+            if (it != acquisitions_.end()) {
+               failedSa = std::move(it->second);
+               acquisitions_.erase(it);
+            }
+         }
+         if (failedSa) {
+            // If a participant deferred the shutter open and parked on the
+            // CV, the deferred open will not be executed; release the
+            // parked waiters with OpenFailed.
+            if (failedSa->TakeDeferredShutterOpen())
+               failedSa->FinishShutterOpen(false);
+            if (failedSa->NeedsStartRollback()) {
+               closeDeferredAutoShutter();
+               postNotification(
+                  notif::SequenceAcquisitionStopped{failedSa->CameraLabel()});
+            }
+         }
+         throw CMMError(getDeviceErrorText(nRet, camera).c_str(),
+            MMERR_DEVICE_GENERIC);
+      }
    }
 
-   int nRet = startDevice();
-   if (nRet != DEVICE_OK) {
-      std::shared_ptr<mmcore::internal::SequenceAcquisition> sa;
-      {
-         std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
-         auto it = acquisitions_.find(camera->GetLabel());
-         if (it != acquisitions_.end()) {
-            sa = std::move(it->second);
-            acquisitions_.erase(it);
-         }
-      }
-      if (sa && sa->NeedsStartRollback()) {
-         closeDeferredAutoShutter();
-         postNotification(
-            notif::SequenceAcquisitionStopped{sa->CameraLabel()});
-      }
-      throw CMMError(getDeviceErrorText(nRet, camera).c_str(),
-         MMERR_DEVICE_GENERIC);
-   }
+   // Camera adapter module lock is released here. If a participant's
+   // PrepareForAcq deferred the shutter open (because it ran on a thread
+   // other than this one and could not acquire the shared module lock),
+   // execute it now.
+   if (sa && sa->TakeDeferredShutterOpen())
+      openDeferredAutoShutter(sa);
 }
 
 /**

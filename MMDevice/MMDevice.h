@@ -1732,6 +1732,19 @@ namespace MM {
        * `PrepareForAcq()` independently. The primary camera calls only if
        * it has at least one intrinsic channel.
        *
+       * Threading: `PrepareForAcq()` may be called either synchronously on
+       * the thread that called `StartSequenceAcquisition()`, or
+       * asynchronously from a worker thread spawned by the camera adapter.
+       * If it is called from a worker thread, then
+       * `StartSequenceAcquisition()` must not block synchronously waiting
+       * for that thread's `PrepareForAcq()` to return — otherwise deadlock
+       * is possible (the Core may need the calling thread of
+       * `StartSequenceAcquisition()` to release its adapter module lock
+       * before the asynchronous `PrepareForAcq()` can complete). This is
+       * the open-side analogue of the requirement that `AcqFinished()` be
+       * called from the worker thread, not from `StopSequenceAcquisition()`
+       * itself.
+       *
        * @param caller  The calling device (pass `this`).
        */
       virtual int PrepareForAcq(const Device* caller) = 0;

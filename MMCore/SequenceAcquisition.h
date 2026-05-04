@@ -131,6 +131,9 @@ public:
    void DeferShutterClose();
    bool TakeDeferredShutterClose();
 
+   void DeferShutterOpen();
+   bool TakeDeferredShutterOpen();
+
 private:
    SequenceAcquisition(std::shared_ptr<CameraInstance> camera,
                        std::vector<ChannelInfo> channels);
@@ -147,6 +150,7 @@ private:
    ShutterState shutterState_ = ShutterState::NotOpened;
    bool stopRequested_ = false;
    bool shutterCloseDeferred_ = false;
+   bool shutterOpenDeferred_ = false;
    std::set<const MM::Device*> readyParticipants_;
    std::set<const MM::Device*> finishedParticipants_;
 };
