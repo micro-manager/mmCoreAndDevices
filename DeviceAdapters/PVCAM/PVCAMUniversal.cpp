@@ -3974,8 +3974,7 @@ int Universal::FrameAcquired()
 int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo& frameNfo)
 {
     // Ignore inserts if we already have all images inserted.
-    // This may happen if the notification queue still contains some acquired frames
-    // due to excessive buffering
+    // This should never happen but stay on safe side.
     if ( imagesInserted_ >= imagesToAcquire_ )
         return DEVICE_OK;
 
