@@ -588,3 +588,261 @@ TEST_CASE("startSequenceAcquisition after camera self-finish without "
    CHECK(c.popNextImage() != nullptr);
    c.stopSequenceAcquisition();
 }
+
+// --- Open-side autoshutter: inline (synchronous) PrepareForAcq ---
+
+TEST_CASE("Inline open: shutter opens before startSequenceAcquisition returns "
+          "(same adapter as camera)",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+   REQUIRE(shutter.open == false);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Inline open: shutter opens when shutter is in a different adapter",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices camAdapter{"cam_adapter", {{"cam", &cam}}};
+   MockAdapterWithDevices shutterAdapter{"shutter_adapter",
+      {{"shutter", &shutter}}};
+   CMMCore c;
+   camAdapter.LoadIntoCore(c);
+   shutterAdapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+// --- Open-side autoshutter: deferred (async) PrepareForAcq ---
+
+TEST_CASE("Deferred open: shutter opens before worker's PrepareForAcq returns "
+          "(same adapter as camera)",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+   REQUIRE(shutter.open == false);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   // After startSequenceAcquisition returns, the deferred open must have
+   // executed and the shutter is open.
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+
+   // The worker thread's PrepareForAcq returned with DEVICE_OK after the
+   // shutter was opened.
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(cam.PrepareReturnValue() == DEVICE_OK);
+
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Deferred open: ShutterOpenChanged + SequenceAcquisitionStarted "
+          "fire exactly once",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(shutter.setOpenTrueCount == 1);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.setOpenTrueCount == 1);
+}
+
+// --- Composite autoshutter ---
+
+TEST_CASE("Composite (sync physicals): only the FirstOpener calls SetOpen(true)",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+   c.stopSequenceAcquisition("composite");
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Composite (async physicals): exactly one SetOpen(true), all "
+          "participants released",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera p1("p1");
+   WorkerThreadCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(p1.WaitForPrepareReturned());
+   REQUIRE(p2.WaitForPrepareReturned());
+   CHECK(p1.PrepareReturnValue() == DEVICE_OK);
+   CHECK(p2.PrepareReturnValue() == DEVICE_OK);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+
+   c.stopSequenceAcquisition("composite");
+}
+
+TEST_CASE("Composite (mixed sync + async): inline FirstOpener wins, async "
+          "sibling sees AlreadyOpened",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera pSync("pSync");
+   WorkerThreadCamera pAsync("pAsync");
+   // Composite starts physicals in order; pSync first ensures inline
+   // FirstOpener opens the shutter on the calling thread before pAsync's
+   // worker reaches PrepareForAcq.
+   MockCompositeCamera composite({&pSync, &pAsync});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"pSync", &pSync}, {"pAsync", &pAsync},
+      {"composite", &composite}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(pAsync.WaitForPrepareReturned());
+   CHECK(pAsync.PrepareReturnValue() == DEVICE_OK);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+
+   c.stopSequenceAcquisition("composite");
+}
+
+// --- Failure paths ---
+
+TEST_CASE("Inline open: SetOpen failure propagates as start error",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   StubShutter shutter;
+   shutter.setOpenTrueReturnValue = DEVICE_ERR;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(10, 0.0, true), CMMError);
+   CHECK(shutter.open == false);
+   CHECK(shutter.setOpenTrueCount == 1);
+   CHECK(shutter.setOpenFalseCount == 0);
+}
+
+TEST_CASE("Deferred open: startDevice failure releases parked worker without "
+          "opening shutter",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   cam.startReturnValue = DEVICE_ERR;
+   cam.waitForPrepareCalledBeforeStartReturns = true;
+   // Give the worker time to enter PrepareForAcq, defer, and park on the CV
+   // before StartSequenceAcquisition returns failure.
+   cam.extraSleepBeforeStartReturns = std::chrono::milliseconds(50);
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(10, 0.0, true), CMMError);
+   // Worker must have been released; PrepareForAcq returned DEVICE_ERR.
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(cam.PrepareReturnValue() == DEVICE_ERR);
+   // Shutter never opened, so neither SetOpen(true) nor SetOpen(false) ran.
+   CHECK(shutter.open == false);
+   CHECK(shutter.setOpenTrueCount == 0);
+   CHECK(shutter.setOpenFalseCount == 0);
+
+   // Drive the worker thread to exit. cam dtor would also do this, but be
+   // explicit.
+   cam.StopSequenceAcquisition();
+}
+
+// --- Negative cases (no autoshutter, no shutter) ---
+
+TEST_CASE("Deferred-open machinery is inert when autoShutter is off",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(false);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(cam.PrepareReturnValue() == DEVICE_OK);
+   CHECK(shutter.open == false);
+   CHECK(shutter.setOpenTrueCount == 0);
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Deferred-open machinery is inert when no shutter is set",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(cam.PrepareReturnValue() == DEVICE_OK);
+   c.stopSequenceAcquisition();
+}

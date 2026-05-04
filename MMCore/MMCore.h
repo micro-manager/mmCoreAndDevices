@@ -832,6 +832,9 @@ private:
 
    void closeDeferredAutoShutter();
 
+   void openDeferredAutoShutter(
+      const std::shared_ptr<mmcore::internal::SequenceAcquisition>& sa);
+
    void setCameraInternal(const std::string& label);
    void setShutterInternal(const std::string& label);
    void setFocusInternal(const std::string& label);

@@ -204,5 +204,17 @@ bool SequenceAcquisition::TakeDeferredShutterClose()
    return std::exchange(shutterCloseDeferred_, false);
 }
 
+void SequenceAcquisition::DeferShutterOpen()
+{
+   std::lock_guard<std::mutex> g(mu_);
+   shutterOpenDeferred_ = true;
+}
+
+bool SequenceAcquisition::TakeDeferredShutterOpen()
+{
+   std::lock_guard<std::mutex> g(mu_);
+   return std::exchange(shutterOpenDeferred_, false);
+}
+
 } // namespace internal
 } // namespace mmcore
