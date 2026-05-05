@@ -5216,14 +5216,15 @@ int Universal::abortAcquisitionInternal()
                 }
             }
             sequenceModeReady_ = false;
-            // Inform the core that the acquisition has finished
-            // (this also closes the shutter if used)
-            GetCoreCallback()->AcqFinished(this, nRet);
         }
         else
         {
             acqThd_->Pause();
         }
+
+        // Inform the core that the acquisition has finished
+        // (this also closes the shutter if used)
+        GetCoreCallback()->AcqFinished(this, nRet);
 
         customDiskWriter_->Stop();
         customDiskWriterActive_ = false;
