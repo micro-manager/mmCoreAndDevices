@@ -145,7 +145,6 @@ enum PvCameraModel
 //=============================================================================
 //======================================================== FORWARD DECLARATIONS
 
-class PollingThread;
 class AcqThread;
 class StreamWriter;
 template<class T> class PvParam;
@@ -502,11 +501,6 @@ public: // Action handlers
     int OnDiskStreamingCoreSkipRatio(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     /**
-    * Switches between Callbacks or Polling acquisition type.
-    */
-    int OnAcquisitionMethod(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-    /**
     * Post processing parameter handler. Post processing features and parameters are
     * read out from the camera dynamically. Based on the camera provided information
     * a list of MM properties is automatically generated.
@@ -621,19 +615,13 @@ public: // Other published methods
 
 protected:
     /**
-    * This method is called from the static PVCAM callback or polling thread.
-    * The method should finish as fast as possible to avoid blocking the PVCAM.
-    * If the execution of this method takes longer than frame readout + exposure,
-    * the FrameAcquired for the next frame may not be called.
+    * This method is called from the static PVCAM callback.
     */
     int FrameAcquired();
     /**
     * Called from FrameAcquired(), inserts the frame to the MMCore.
     */
     int ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo& frameNfo);
-
-    int  PollingThreadRun(void);
-    void PollingThreadExiting() throw();
 
 private:
     // Make object non-copyable
@@ -691,9 +679,6 @@ private:
     * acquisition thread.
     */
     int waitForFrameSeq();
-    int waitForFrameSeqPolling(const MM::MMTime& timeout);
-    int waitForFrameSeqCallbacks(const MM::MMTime& timeout);
-    int waitForFrameConPolling(const MM::MMTime& timeout);
 
     int PrepareSeqAcq(); // Note: no longer a device interface function
 
@@ -849,10 +834,8 @@ private:
 
     std::map<int32, std::pair<uns32, uns32>> expTimeResLimits_{}; // [expTimeRes]={min,max}
 
-    friend class    PollingThread;
-    std::unique_ptr<PollingThread>      pollingThd_{}; // Pointer to the sequencing thread
     friend class    AcqThread;
-    std::unique_ptr<AcqThread>          acqThd_{}; // Non-CB live thread
+    std::unique_ptr<AcqThread>          acqThd_{}; // Non-circular buffer "live" acq. thread
 
     std::unique_ptr<StreamWriter>       customDiskWriter_{}; // Writer for custom disk streaming feature
     bool                                customDiskWriterActive_{ false }; // Cached value updated after writer->Start

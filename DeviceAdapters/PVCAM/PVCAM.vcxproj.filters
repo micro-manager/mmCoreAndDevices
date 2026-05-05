@@ -33,9 +33,6 @@
     <ClCompile Include="PvFrameInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PollingThread.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PpParam.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -87,9 +84,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PVCAMIncludes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PollingThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PpParam.h">

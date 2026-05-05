@@ -44,7 +44,7 @@ int AcqThread::svc()
 {
     camera_->LogAdapterMessage("AcqThead loop started");
     int nRet = DEVICE_OK;
-    while(!requestStop_)
+    while (!requestStop_)
     {
         resumeEvent_.Wait();
         if (requestStop_)
@@ -57,10 +57,8 @@ int AcqThread::svc()
         if (nRet != DEVICE_OK)
             continue; // Error logged, ignore and try again
 
-        // Frame successfully arrived and ready in the buffer. If we are
-        // not using callbacks we need to manually push it to the core.
-        if (!camera_->acqCfgCur_.CallbacksEnabled)
-            camera_->FrameAcquired();
+        // Frame successfully arrived and ready in the buffer.
+        // Frame pushed to the MM core from PVCAM callback handler.
     }
     camera_->LogAdapterMessage("AcqThead loop exited");
     return nRet;
