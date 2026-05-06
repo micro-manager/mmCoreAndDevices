@@ -40,6 +40,9 @@
 #include <cstdio>
 #include <ctime>
 #include <string>
+#include <system_error>
+#include <thread>
+#include <utility>
 #include <vector>
 #include <algorithm>
 
@@ -433,15 +436,49 @@ int CoreCallback::AcqFinished(const MM::Device* caller, int /*statusCode*/)
             // stopSequenceAcquisition() may be holding that module's lock
             // (on a different thread, waiting for this thread to exit via
             // join), so a blocking lock would deadlock. Use try_lock: if
-            // the lock is free, close immediately; otherwise defer to
-            // stopSequenceAcquisition(), which will close after releasing
-            // the module lock.
+            // the lock is free, close immediately; otherwise atomically
+            // either defer to an in-flight stopSequenceAcquisition or
+            // spawn a worker that takes the lock blockingly.
             auto& mtx = shutter->GetAdapterModule()->GetLock();
             if (mtx.try_lock()) {
                std::lock_guard<std::recursive_mutex> g(mtx, std::adopt_lock);
                sret = shutter->SetOpen(false);
             } else {
-               sa->DeferShutterClose();
+               // Same-module camera adapter lock is held by another thread
+               // (typically stopSequenceAcquisition mid-execution, or an
+               // unrelated caller such as isSequenceRunning). Atomically:
+               // if stop has been requested, record a deferred-close for
+               // the in-flight stop to pick up via TakeDeferredShutterClose;
+               // otherwise spawn a worker that takes the module lock
+               // blockingly and closes the shutter.
+               try {
+                  CMMCore* core = core_;
+                  sa->SpawnOrDeferShutterClose([core, shutter]() {
+                     return std::thread([core, shutter] {
+                        int wret;
+                        {
+                           DeviceModuleLockGuard g(shutter);
+                           wret = shutter->SetOpen(false);
+                        }
+                        if (wret == DEVICE_OK) {
+                           core->postNotification(notif::ShutterOpenChanged{
+                              shutter->GetLabel(), false});
+                        } else {
+                           LOG_ERROR(core->coreLogger_) <<
+                              "Deferred autoshutter close worker: "
+                              "SetOpen(false) on '" << shutter->GetLabel()
+                              << "' returned " << wret;
+                        }
+                     });
+                  });
+               } catch (const std::system_error&) {
+                  LOG_ERROR(core_->coreLogger_) <<
+                     "Failed to spawn deferred autoshutter close worker for '"
+                     << sa->CameraLabel() <<
+                     "'; shutter close deferred to next stop";
+                  // SpawnOrDeferShutterClose has already set
+                  // shutterCloseDeferred_.
+               }
             }
          }
          else

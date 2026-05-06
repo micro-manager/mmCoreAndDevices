@@ -20,10 +20,12 @@
 #include "MMDevice.h"
 
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace mmcore {
@@ -92,10 +94,17 @@ public:
    const ChannelInfo& Channel(unsigned n) const { return channels_.at(n); }
 
    // Mutable state (mutex-protected):
-   bool WasStopRequested() const noexcept;
-
    // Mark stop requested. Returns true iff this call caused a transition to
    // "complete" (i.e., stopRequested && all participants have finished).
+   //
+   // Load-bearing ordering: stopSequenceAcquisition() calls this BEFORE
+   // taking the camera adapter module lock. AcqFinished checks
+   // stopRequested_ under SequenceAcquisition::mu_ inside
+   // SpawnOrDeferShutterClose; setting the flag first ensures that an
+   // AcqFinished arriving while the stop path holds the module lock takes
+   // the deferred-close path (drained by the stopper) rather than spawning
+   // a worker that the stopper would race to join. Do not move
+   // MarkStopRequested inside the module-lock scope.
    bool MarkStopRequested() noexcept;
 
    // Returns disposition; see enum. On FirstOpener, caller must invoke
@@ -128,11 +137,36 @@ public:
    // (regardless of whether stop was requested).
    bool AllParticipantsFinished() const noexcept;
 
-   void DeferShutterClose();
    bool TakeDeferredShutterClose();
 
    void DeferShutterOpen();
    bool TakeDeferredShutterOpen();
+
+   enum class ShutterCloseSpawnResult {
+      Spawned,   // factory was invoked; worker stored as deferred-close worker
+      Deferred,  // stopRequested already set; shutterCloseDeferred_ raised
+   };
+
+   // Atomic spawn-or-defer for the deferred autoshutter close on the
+   // same-module path of CoreCallback::AcqFinished. Held under mu_:
+   //
+   //  - If stopRequested_ is true, sets shutterCloseDeferred_=true and
+   //    returns Deferred without invoking factory().
+   //  - Otherwise invokes factory() and stores the resulting std::thread
+   //    as shutterCloseWorker_; returns Spawned.
+   //
+   // If factory() throws (e.g. std::system_error from std::thread
+   // construction), shutterCloseDeferred_ is set to true and the exception
+   // propagates to the caller. Must be called at most once per
+   // SequenceAcquisition; the caller is responsible for any logging on the
+   // exception path.
+   ShutterCloseSpawnResult SpawnOrDeferShutterClose(
+      std::function<std::thread()> factory);
+
+   // Join the deferred-shutter-close worker if one was adopted; no-op
+   // otherwise. Idempotent. Safe to call from any thread other than the
+   // worker itself.
+   void JoinDeferredShutterCloseWorker();
 
 private:
    SequenceAcquisition(std::shared_ptr<CameraInstance> camera,
@@ -153,6 +187,7 @@ private:
    bool shutterOpenDeferred_ = false;
    std::set<const MM::Device*> readyParticipants_;
    std::set<const MM::Device*> finishedParticipants_;
+   std::thread shutterCloseWorker_;
 };
 
 } // namespace internal

@@ -1017,22 +1017,6 @@ bool CMMCore::hasInFlightAcquisitionLocked() const
    return false;
 }
 
-void CMMCore::markAcquisitionStopRequested(const std::string& cameraLabel)
-{
-   std::shared_ptr<mmi::SequenceAcquisition> sa;
-   {
-      std::lock_guard<std::mutex> aqg(acquisitionsMutex_);
-      auto it = acquisitions_.find(cameraLabel);
-      if (it != acquisitions_.end())
-         sa = it->second;
-   }
-   if (sa) {
-      const bool causedComplete = sa->MarkStopRequested();
-      if (causedComplete)
-         eraseCompletedAcquisition(sa->CameraLabel());
-   }
-}
-
 void CMMCore::closeDeferredAutoShutter()
 {
    if (!autoShutter_)
@@ -1100,10 +1084,21 @@ void CMMCore::stopAndClearAllSequenceAcquisitions()
       toStop.swap(acquisitions_);
    }
    for (auto& kv : toStop) {
-      auto& cam = kv.second->Camera();
-      mmi::DeviceModuleLockGuard guard(cam);
-      if (cam->IsCapturing())
-         cam->StopSequenceAcquisition();
+      auto& sa = kv.second;
+      // Same ordering rationale as stopSequenceAcquisition: set
+      // stopRequested_ before taking the camera adapter module lock so a
+      // concurrent AcqFinished takes the deferred-close path (drained
+      // below) rather than spawning a worker we would race to join.
+      (void)sa->MarkStopRequested();
+      auto& cam = sa->Camera();
+      {
+         mmi::DeviceModuleLockGuard guard(cam);
+         if (cam->IsCapturing())
+            cam->StopSequenceAcquisition();
+      }
+      if (sa->TakeDeferredShutterClose())
+         closeDeferredAutoShutter();
+      sa->JoinDeferredShutterCloseWorker();
    }
 }
 
@@ -3529,6 +3524,14 @@ void CMMCore::stopSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THR
       deviceManager_->GetDeviceOfType<mmi::CameraInstance>(cameraLabel);
 
    auto sa = findAcquisitionByCamera(pCam->GetLabel());
+   if (sa) {
+      // Set stopRequested_ before taking the camera adapter module lock
+      // so that any AcqFinished that fires from the camera's thread while
+      // we hold the lock observes it under SequenceAcquisition::mu_ and
+      // takes the deferred-close path (which we drain below) rather than
+      // racing the spawn-and-adopt path with our join.
+      (void)sa->MarkStopRequested();
+   }
 
    {
       mmi::DeviceModuleLockGuard guard(pCam);
@@ -3543,10 +3546,14 @@ void CMMCore::stopSequenceAcquisition(const char* cameraLabel) MMCORE_LEGACY_THR
       }
    }
 
-   if (sa && sa->TakeDeferredShutterClose())
-      closeDeferredAutoShutter();
+   if (sa) {
+      if (sa->TakeDeferredShutterClose())
+         closeDeferredAutoShutter();
+      sa->JoinDeferredShutterCloseWorker();
+      if (sa->IsComplete())
+         eraseCompletedAcquisition(sa->CameraLabel());
+   }
 
-   markAcquisitionStopRequested(pCam->GetLabel());
    LOG_DEBUG(coreLogger_) <<
       "Did stop sequence acquisition from camera " << cameraLabel;
 }
@@ -3590,6 +3597,10 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
    }
 
    auto sa = findAcquisitionByCamera(camera->GetLabel());
+   if (sa) {
+      // See same-named overload above for ordering rationale.
+      (void)sa->MarkStopRequested();
+   }
 
    {
       mmi::DeviceModuleLockGuard guard(camera);
@@ -3604,10 +3615,14 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
       }
    }
 
-   if (sa && sa->TakeDeferredShutterClose())
-      closeDeferredAutoShutter();
+   if (sa) {
+      if (sa->TakeDeferredShutterClose())
+         closeDeferredAutoShutter();
+      sa->JoinDeferredShutterCloseWorker();
+      if (sa->IsComplete())
+         eraseCompletedAcquisition(sa->CameraLabel());
+   }
 
-   markAcquisitionStopRequested(camera->GetLabel());
    LOG_DEBUG(coreLogger_) <<
       "Did stop sequence acquisition from current camera";
 }

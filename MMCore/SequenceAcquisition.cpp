@@ -19,6 +19,8 @@
 
 #include "Devices/CameraInstance.h"
 
+#include <cassert>
+#include <functional>
 #include <utility>
 
 namespace mmcore {
@@ -71,7 +73,10 @@ SequenceAcquisition::SequenceAcquisition(
 {
 }
 
-SequenceAcquisition::~SequenceAcquisition() = default;
+SequenceAcquisition::~SequenceAcquisition()
+{
+   JoinDeferredShutterCloseWorker();
+}
 
 SequenceAcquisition::ParticipantInfo
 SequenceAcquisition::LookupParticipant(const MM::Device* caller) const noexcept
@@ -96,12 +101,6 @@ SequenceAcquisition::LookupParticipant(const MM::Device* caller) const noexcept
 bool SequenceAcquisition::HasParticipant(
       const MM::Device* caller) const noexcept {
    return caller && expectedParticipants_.count(caller);
-}
-
-bool SequenceAcquisition::WasStopRequested() const noexcept
-{
-   std::lock_guard<std::mutex> g(mu_);
-   return stopRequested_;
 }
 
 bool SequenceAcquisition::MarkStopRequested() noexcept
@@ -192,12 +191,6 @@ bool SequenceAcquisition::AllParticipantsFinished() const noexcept
    return finishedParticipants_.size() == expectedParticipants_.size();
 }
 
-void SequenceAcquisition::DeferShutterClose()
-{
-   std::lock_guard<std::mutex> g(mu_);
-   shutterCloseDeferred_ = true;
-}
-
 bool SequenceAcquisition::TakeDeferredShutterClose()
 {
    std::lock_guard<std::mutex> g(mu_);
@@ -214,6 +207,36 @@ bool SequenceAcquisition::TakeDeferredShutterOpen()
 {
    std::lock_guard<std::mutex> g(mu_);
    return std::exchange(shutterOpenDeferred_, false);
+}
+
+SequenceAcquisition::ShutterCloseSpawnResult
+SequenceAcquisition::SpawnOrDeferShutterClose(
+      std::function<std::thread()> factory)
+{
+   std::lock_guard<std::mutex> g(mu_);
+   if (stopRequested_) {
+      shutterCloseDeferred_ = true;
+      return ShutterCloseSpawnResult::Deferred;
+   }
+   assert(!shutterCloseWorker_.joinable());
+   try {
+      shutterCloseWorker_ = factory();
+   } catch (...) {
+      shutterCloseDeferred_ = true;
+      throw;
+   }
+   return ShutterCloseSpawnResult::Spawned;
+}
+
+void SequenceAcquisition::JoinDeferredShutterCloseWorker()
+{
+   std::thread w;
+   {
+      std::lock_guard<std::mutex> g(mu_);
+      w = std::move(shutterCloseWorker_);
+   }
+   if (w.joinable())
+      w.join();
 }
 
 } // namespace internal

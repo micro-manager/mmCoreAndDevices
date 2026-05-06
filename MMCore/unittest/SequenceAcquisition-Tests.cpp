@@ -568,6 +568,98 @@ TEST_CASE("Async different-module shutter closes on stopSequenceAcquisition "
    CHECK(shutter.open == false);
 }
 
+TEST_CASE("Natural completion with contended same-module lock closes shutter "
+          "via worker (no stop ever called)",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   ConcurrentStubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(shutter.GetOpenSync() == true);
+
+   // Hold the camera adapter module lock from another thread, by parking
+   // it inside IsCapturing() (called via c.isSequenceRunning() under the
+   // module lock). Once WaitForIsCapturingBlocked returns, the holder
+   // provably holds the module lock until UnblockIsCapturing.
+   cam.blockIsCapturing = true;
+   std::thread holder([&] { (void)c.isSequenceRunning(); });
+   REQUIRE(cam.WaitForIsCapturingBlocked());
+
+   // Drive natural completion. AcqFinished's try_lock fails (holder owns
+   // the module lock); stop was not requested, so AcqFinished spawns the
+   // worker, which then blocks waiting for the module lock.
+   cam.TriggerSelfFinish();
+
+   cam.UnblockIsCapturing();
+   holder.join();
+
+   // Worker may now acquire the lock and close the shutter. Synchronize on
+   // the SetOpen(false) call; this provides happens-before for the
+   // subsequent open/count reads.
+   REQUIRE(shutter.WaitForSetOpenFalse(1));
+   CHECK(shutter.GetOpenSync() == false);
+   CHECK(shutter.GetSetOpenFalseCount() == 1);
+}
+
+TEST_CASE("stopSequenceAcquisition holds module lock; concurrent AcqFinished "
+          "defers and stopper drains the deferred shutter close",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   ConcurrentStubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.GetOpenSync() == true);
+
+   // Force the stopper to park inside camera->StopSequenceAcquisition
+   // while holding the camera adapter module lock. MarkStopRequested
+   // has already run on the stopper (it precedes the module-lock scope
+   // in CMMCore::stopSequenceAcquisition), so stopRequested_ is true
+   // and observable to a concurrent AcqFinished.
+   cam.blockStopSeqAcq = true;
+   std::thread stopper([&] { c.stopSequenceAcquisition(); });
+   const auto stopperTid = stopper.get_id();
+   REQUIRE(cam.WaitForStopBlocked());
+
+   // Fire AcqFinished from a different thread. try_lock on the module
+   // lock fails (stopper holds it). SpawnOrDeferShutterClose observes
+   // stopRequested_ == true and takes the defer branch: it sets
+   // shutterCloseDeferred_ and returns Deferred without spawning a
+   // worker. AcqFinished returns; the shutter is not yet closed.
+   std::thread acqFin([&] { cam.TriggerSelfFinish(); });
+   acqFin.join();
+
+   // Stopper is still parked; the deferred close has not yet been
+   // drained.
+   CHECK(shutter.GetSetOpenFalseCount() == 0);
+   CHECK(shutter.GetOpenSync() == true);
+
+   // Release the stopper. It exits the module-lock scope, calls
+   // TakeDeferredShutterClose (returns true), and closes the shutter
+   // on its own thread.
+   cam.ReleaseStopBlocked();
+   stopper.join();
+
+   CHECK(shutter.GetOpenSync() == false);
+   CHECK(shutter.GetSetOpenFalseCount() == 1);
+   // The close ran on the stopper thread. This is what proves the defer
+   // branch was actually taken: a spawn-branch close would happen on
+   // the worker thread spawned inside SpawnOrDeferShutterClose, not on
+   // the stopper.
+   CHECK(shutter.GetSetOpenFalseThreadId() == stopperTid);
+}
+
 TEST_CASE("startSequenceAcquisition after camera self-finish without "
           "intervening stop succeeds",
           "[SequenceAcquisition]") {
