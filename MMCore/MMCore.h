@@ -828,8 +828,6 @@ private:
        bool overwriteData,
        std::function<int()> startDevice);
 
-   void markAcquisitionStopRequested(const std::string& cameraLabel);
-
    void closeDeferredAutoShutter();
 
    void openDeferredAutoShutter(

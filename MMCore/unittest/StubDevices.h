@@ -134,6 +134,17 @@ struct SyncCamera : CCameraBase<SyncCamera> {
    bool capturing = false;
    bool reportCapturing = true;
 
+   // When true, IsCapturing() blocks until UnblockIsCapturing() is called.
+   // Tests use this to hold the camera adapter module lock from a thread
+   // that calls c.isSequenceRunning().
+   bool blockIsCapturing = false;
+
+   // When true, StopSequenceAcquisition() blocks until ReleaseStopBlocked()
+   // is called. While blocked, the calling thread typically holds the
+   // camera adapter module lock (since CMMCore::stopSequenceAcquisition
+   // invokes camera->StopSequenceAcquisition under that lock).
+   bool blockStopSeqAcq = false;
+
    explicit SyncCamera(std::string n = "SyncCamera") : name(std::move(n)) {}
 
    int Initialize() override { return DEVICE_OK; }
@@ -183,12 +194,65 @@ struct SyncCamera : CCameraBase<SyncCamera> {
       return GetCoreCallback()->PrepareForAcq(this);
    }
    int StopSequenceAcquisition() override {
+      if (blockStopSeqAcq) {
+         std::unique_lock<std::mutex> lk(stopBlockMu_);
+         inStopBlock_ = true;
+         stopBlockCv_.notify_all();
+         stopBlockCv_.wait(lk, [this] { return stopReleased_; });
+         inStopBlock_ = false;
+         // Note: do NOT call Finish() here. The test fires AcqFinished
+         // from a separate thread while we are parked, so that AcqFinished
+         // races against this thread's module-lock hold (the desired
+         // scenario). Calling Finish() would fire AcqFinished on this
+         // thread, which holds the module lock recursively — try_lock
+         // would succeed and SpawnOrDeferShutterClose would never run.
+         return DEVICE_OK;
+      }
       Finish();
       return DEVICE_OK;
    }
-   bool IsCapturing() override { return capturing && reportCapturing; }
+   bool IsCapturing() override {
+      if (blockIsCapturing) {
+         std::unique_lock<std::mutex> lk(blockMu_);
+         inIsCapturingBlock_ = true;
+         blockCv_.notify_all();
+         blockCv_.wait(lk, [this] { return isCapturingReleased_; });
+         inIsCapturingBlock_ = false;
+      }
+      return capturing && reportCapturing;
+   }
 
    void TriggerSelfFinish() { Finish(); }
+
+   bool WaitForIsCapturingBlocked(
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(blockMu_);
+      return blockCv_.wait_for(lk, timeout,
+         [this] { return inIsCapturingBlock_; });
+   }
+   void UnblockIsCapturing() {
+      {
+         std::lock_guard<std::mutex> lk(blockMu_);
+         isCapturingReleased_ = true;
+      }
+      blockCv_.notify_all();
+   }
+
+   bool WaitForStopBlocked(
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(stopBlockMu_);
+      return stopBlockCv_.wait_for(lk, timeout,
+         [this] { return inStopBlock_; });
+   }
+   void ReleaseStopBlocked() {
+      {
+         std::lock_guard<std::mutex> lk(stopBlockMu_);
+         stopReleased_ = true;
+      }
+      stopBlockCv_.notify_all();
+   }
 
    int InsertTestImage(const unsigned char* pixels = nullptr) {
       std::vector<unsigned char> defaultBuf;
@@ -211,6 +275,16 @@ private:
    }
 
    std::vector<unsigned char> imgBuf_;
+
+   std::mutex blockMu_;
+   std::condition_variable blockCv_;
+   bool inIsCapturingBlock_ = false;
+   bool isCapturingReleased_ = false;
+
+   std::mutex stopBlockMu_;
+   std::condition_variable stopBlockCv_;
+   bool inStopBlock_ = false;
+   bool stopReleased_ = false;
 };
 
 // A camera that produces images asynchronously on its own thread.
@@ -665,6 +739,86 @@ struct StubShutter : CShutterBase<StubShutter> {
    }
    int GetOpen(bool& o) override { o = open; return DEVICE_OK; }
    int Fire(double) override { return DEVICE_OK; }
+};
+
+// Mock shutter for multi-threaded tests. State changes are mutex-
+// synchronized; reads must go through the GetOpenSync / GetSet*Count
+// accessors. WaitForSetOpenTrue / WaitForSetOpenFalse provide an
+// observable synchronization point for tests that need to wait for a
+// worker thread to reach SetOpen.
+struct ConcurrentStubShutter : CShutterBase<ConcurrentStubShutter> {
+   std::string name = "ConcurrentStubShutter";
+   using CShutterBase::GetCoreCallback;
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SetOpen(bool o) override {
+      {
+         std::lock_guard<std::mutex> lk(stateMu_);
+         if (o) {
+            ++setOpenTrueCount_;
+         } else {
+            ++setOpenFalseCount_;
+            setOpenFalseThreadId_ = std::this_thread::get_id();
+         }
+         open_ = o;
+      }
+      stateCv_.notify_all();
+      return DEVICE_OK;
+   }
+   int GetOpen(bool& o) override {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      o = open_;
+      return DEVICE_OK;
+   }
+   int Fire(double) override { return DEVICE_OK; }
+
+   bool WaitForSetOpenTrue(
+         int count = 1,
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(stateMu_);
+      return stateCv_.wait_for(lk, timeout,
+         [this, count] { return setOpenTrueCount_ >= count; });
+   }
+   bool WaitForSetOpenFalse(
+         int count = 1,
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(stateMu_);
+      return stateCv_.wait_for(lk, timeout,
+         [this, count] { return setOpenFalseCount_ >= count; });
+   }
+
+   bool GetOpenSync() {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      return open_;
+   }
+   int GetSetOpenTrueCount() {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      return setOpenTrueCount_;
+   }
+   int GetSetOpenFalseCount() {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      return setOpenFalseCount_;
+   }
+   std::thread::id GetSetOpenFalseThreadId() {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      return setOpenFalseThreadId_;
+   }
+
+private:
+   std::mutex stateMu_;
+   std::condition_variable stateCv_;
+   bool open_ = false;
+   int setOpenTrueCount_ = 0;
+   int setOpenFalseCount_ = 0;
+   std::thread::id setOpenFalseThreadId_;
 };
 
 struct StubMagnifier : CMagnifierBase<StubMagnifier> {
