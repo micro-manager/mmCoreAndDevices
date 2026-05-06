@@ -3779,125 +3779,121 @@ int Universal::FrameAcquired()
     if (!isAcquiring_)
         return DEVICE_OK;
 
-    rs_bool     rsbRet = FALSE;
-    void*       pCurrFramePtr = nullptr;
+    int ret = DEVICE_OK;
+    void* pCurrFramePtr = nullptr;
     PvFrameInfo currFrameNfo;
     currFrameNfo.SetTimestampMsec(GetCurrentMMTime().getMsec());
 
     {
         std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-        rsbRet = pl_exp_get_latest_frame_ex(hPVCAM_, &pCurrFramePtr, pFrameInfo_ );
-        if (rsbRet != PV_OK)
-            LogPvcamError(__LINE__, "pl_exp_get_latest_frame_ex() failed");
+        if (!pl_exp_get_latest_frame_ex(hPVCAM_, &pCurrFramePtr, pFrameInfo_))
+            ret = LogPvcamError(__LINE__, "pl_exp_get_latest_frame_ex() failed");
     }
-    if (rsbRet == PV_OK)
+    if (ret != DEVICE_OK)
     {
-        currFrameNfo.SetPvHCam(pFrameInfo_->hCam);
-        currFrameNfo.SetPvFrameNr(pFrameInfo_->FrameNr);
-        currFrameNfo.SetPvReadoutTime(pFrameInfo_->ReadoutTime);
-        currFrameNfo.SetPvTimeStamp(pFrameInfo_->TimeStamp);
-        currFrameNfo.SetPvTimeStampBOF(pFrameInfo_->TimeStampBOF);
+        abortAcquisitionInternal();
+        return ret;
+    }
 
-        if (acqCfgCur_.CircBufEnabled)
+    currFrameNfo.SetPvHCam(pFrameInfo_->hCam);
+    currFrameNfo.SetPvFrameNr(pFrameInfo_->FrameNr);
+    currFrameNfo.SetPvReadoutTime(pFrameInfo_->ReadoutTime);
+    currFrameNfo.SetPvTimeStamp(pFrameInfo_->TimeStamp);
+    currFrameNfo.SetPvTimeStampBOF(pFrameInfo_->TimeStampBOF);
+
+    if (acqCfgCur_.CircBufEnabled)
+    {
+        const int currFrameNr = currFrameNfo.PvFrameNr();
+        const int prevFrameNr = lastPvFrameNr_;
+        if (currFrameNr == prevFrameNr)
         {
-            const int currFrameNr = currFrameNfo.PvFrameNr();
-            const int prevFrameNr = lastPvFrameNr_;
-            if (currFrameNr == prevFrameNr)
-            {
-                // Received a duplicate callback? This seems like a bug in PVCAM,
-                // it occurs for optiMos at high frame rates. For now just silently ignore it,
-                // because the next one will correctly arrive right after that.
-                return DEVICE_OK;
-            }
+            // Received a duplicate callback? This seems like a bug in PVCAM,
+            // it occurs for optiMos at high frame rates. For now just silently ignore it,
+            // because the next one will correctly arrive right after that.
+            return DEVICE_OK;
+        }
 
-            // Check whether we haven't missed a callback
-            if (currFrameNr > prevFrameNr + 1)
-            {
-                const int missedCbCount = currFrameNr - prevFrameNr - 1;
+        // Check whether we haven't missed a callback
+        if (currFrameNr > prevFrameNr + 1)
+        {
+            const int missedCbCount = currFrameNr - prevFrameNr - 1;
 
-                if (circBufFrameRecoveryEnabled_)
+            if (circBufFrameRecoveryEnabled_)
+            {
+                // Get the last known frame index in the CB
+                const int lastFrIdx = circBuf_.LatestFrameIndex();
+                if (lastFrIdx < 0)
                 {
-                    // Get the last known frame index in the CB
-                    const int lastFrIdx = circBuf_.LatestFrameIndex();
-                    if (lastFrIdx < 0)
-                    {
-                        // We cannot perform frame recovery because we don't have a frame in the buffer yet
-                        // so we cannot recover the metadata. This mostly happens with Polling acquisition
-                        // because it can easily miss several frames when starting acquisition.
-                    }
-                    else
-                    {
-                        const PvFrameInfo& lastFrNfo = circBuf_.FrameInfo(lastFrIdx);
-
-                        // We need to re-create the FRAME_INFOs by averaging the known frame infos.
-                        // This is not really nice way of fixing things but since the camera is running on
-                        // constant rate the recovered data will be accurate enough. Plus, we mark the frame as recovered
-                        // so the user will be aware of this.
-                        const int recReadoutTm = static_cast<int>((lastFrNfo.PvReadoutTime() + currFrameNfo.PvReadoutTime()) / 2);
-                        const long long lastPvTimestampBOF   = lastFrNfo.PvTimeStampBOF();
-                        const long long lastPvTimestampEOF   = lastFrNfo.PvTimeStamp();
-                        const double    lastApTimestampMsec  = lastFrNfo.TimeStampMsec();
-                        const double div = missedCbCount + 1;
-                        const double avgBofDiff = (currFrameNfo.PvTimeStampBOF()  - lastPvTimestampBOF) / div;
-                        const double avgEofDiff = (currFrameNfo.PvTimeStamp()  - lastPvTimestampEOF) / div;
-                        const double avgAppDiff = (currFrameNfo.TimeStampMsec() - lastApTimestampMsec) / div;
-
-                        for (int i = 0; i < missedCbCount; ++i)
-                        {
-                            // Get the index of the next frame in the CB. The data for this frame has been
-                            // correctly delivered by the driver, however since we missed a callback we also
-                            // missed the FRAME_INFO. Thus we need to recreate the FRAME_INFO ourselves.
-                            // This can be removed once PVCAM implements better way of retrieving particular frames.
-                            const unsigned int nextFrIdx = (lastFrIdx + i + 1) % circBuf_.Capacity();
-
-                            // Retrieve the data pointer for the skipped callback
-                            void* pRecFrameData = circBuf_.FrameData(nextFrIdx);
-
-                            // Re-create the FRAME_INFO
-                            const short int recHCam = lastFrNfo.PvHCam();
-                            const int       recFrameNr = prevFrameNr + i + 1;
-                            const long long recTimeStampBOF = static_cast<long long>(lastPvTimestampBOF + ((i + 1)*avgBofDiff));
-                            const long long recTimeStampEOF = static_cast<long long>(lastPvTimestampEOF + ((i + 1)*avgEofDiff));
-                            const double    recAppTimeStampEOF = lastApTimestampMsec + ((i + 1)*avgAppDiff);
-
-                            PvFrameInfo recFrNfo;
-                            recFrNfo.SetPvHCam(recHCam);
-                            recFrNfo.SetPvFrameNr(recFrameNr);
-                            recFrNfo.SetPvReadoutTime(recReadoutTm);
-                            recFrNfo.SetPvTimeStamp(recTimeStampEOF);
-                            recFrNfo.SetPvTimeStampBOF(recTimeStampBOF);
-                            recFrNfo.SetTimestampMsec(recAppTimeStampEOF);
-                            recFrNfo.SetRecovered(true);
-
-                            imagesAcquired_++;
-
-                            // Notify our CB wrapper that a new frame has "arrived",
-                            // it will increase its internal counters and indexes.
-                            circBuf_.ReportFrameArrived(recFrNfo, pRecFrameData);
-                            // Process the new frame the same way as the frame
-                            // would arrive correctly with a callback.
-                            ProcessFrame(pRecFrameData, circBuf_.FrameSize(), recFrNfo);
-
-                            imagesInserted_++;
-                            imagesRecovered_++;
-                        }
-                    }
+                    // We cannot perform frame recovery because we don't have a frame in the buffer yet
+                    // so we cannot recover the metadata. This mostly happens with Polling acquisition
+                    // because it can easily miss several frames when starting acquisition.
                 }
                 else
-                {  // Frame recovery is disabled
-                    // TODO: Again, should we report an error?
+                {
+                    const PvFrameInfo& lastFrNfo = circBuf_.FrameInfo(lastFrIdx);
+
+                    // We need to re-create the FRAME_INFOs by averaging the known frame infos.
+                    // This is not really nice way of fixing things but since the camera is running on
+                    // constant rate the recovered data will be accurate enough. Plus, we mark the frame as recovered
+                    // so the user will be aware of this.
+                    const int recReadoutTm = static_cast<int>((lastFrNfo.PvReadoutTime() + currFrameNfo.PvReadoutTime()) / 2);
+                    const long long lastPvTimestampBOF   = lastFrNfo.PvTimeStampBOF();
+                    const long long lastPvTimestampEOF   = lastFrNfo.PvTimeStamp();
+                    const double    lastApTimestampMsec  = lastFrNfo.TimeStampMsec();
+                    const double div = missedCbCount + 1;
+                    const double avgBofDiff = (currFrameNfo.PvTimeStampBOF()  - lastPvTimestampBOF) / div;
+                    const double avgEofDiff = (currFrameNfo.PvTimeStamp()  - lastPvTimestampEOF) / div;
+                    const double avgAppDiff = (currFrameNfo.TimeStampMsec() - lastApTimestampMsec) / div;
+
+                    for (int i = 0; i < missedCbCount; ++i)
+                    {
+                        // Get the index of the next frame in the CB. The data for this frame has been
+                        // correctly delivered by the driver, however since we missed a callback we also
+                        // missed the FRAME_INFO. Thus we need to recreate the FRAME_INFO ourselves.
+                        // This can be removed once PVCAM implements better way of retrieving particular frames.
+                        const unsigned int nextFrIdx = (lastFrIdx + i + 1) % circBuf_.Capacity();
+
+                        // Retrieve the data pointer for the skipped callback
+                        void* pRecFrameData = circBuf_.FrameData(nextFrIdx);
+
+                        // Re-create the FRAME_INFO
+                        const short int recHCam = lastFrNfo.PvHCam();
+                        const int       recFrameNr = prevFrameNr + i + 1;
+                        const long long recTimeStampBOF = static_cast<long long>(lastPvTimestampBOF + ((i + 1)*avgBofDiff));
+                        const long long recTimeStampEOF = static_cast<long long>(lastPvTimestampEOF + ((i + 1)*avgEofDiff));
+                        const double    recAppTimeStampEOF = lastApTimestampMsec + ((i + 1)*avgAppDiff);
+
+                        PvFrameInfo recFrNfo;
+                        recFrNfo.SetPvHCam(recHCam);
+                        recFrNfo.SetPvFrameNr(recFrameNr);
+                        recFrNfo.SetPvReadoutTime(recReadoutTm);
+                        recFrNfo.SetPvTimeStamp(recTimeStampEOF);
+                        recFrNfo.SetPvTimeStampBOF(recTimeStampBOF);
+                        recFrNfo.SetTimestampMsec(recAppTimeStampEOF);
+                        recFrNfo.SetRecovered(true);
+
+                        imagesAcquired_++;
+
+                        // Process the new frame the same way as the frame
+                        // would arrive correctly with a callback.
+                        ret = ProcessFrame(pRecFrameData, recFrNfo);
+                        if (ret != DEVICE_OK)
+                        {
+                            abortAcquisitionInternal();
+                            return ret;
+                        }
+
+                        imagesInserted_++;
+                        imagesRecovered_++;
+                    }
                 }
             }
-            lastPvFrameNr_ = currFrameNr;
+            else
+            {  // Frame recovery is disabled
+                // TODO: Again, should we report an error?
+            }
         }
-    }
-
-    if ( rsbRet != PV_OK )
-    {
-        std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-        if (pl_exp_abort( hPVCAM_, CCS_CLEAR ) != PV_OK)
-            LogPvcamError(__LINE__, "pl_exp_abort() failed");
-        return DEVICE_ERR;
+        lastPvFrameNr_ = currFrameNr;
     }
 
     imagesAcquired_++; // A new frame has been successfully retrieved from the camera
@@ -3906,15 +3902,14 @@ int Universal::FrameAcquired()
     // so we have to check. In case of SnapImage the singleFrameBufRaw_ already
     // contains the data (since it's passed to pl_start_seq() and no PushImage()
     // is done - the single image is retrieved with GetImageBuffer().
-    if ( !snappingSingleFrame_ )
+    if (!snappingSingleFrame_)
     {
-        size_t currFrameSize = singleFrameBufRawSz_;
-        if (acqCfgCur_.CircBufEnabled)
+        ret = ProcessFrame(pCurrFramePtr, currFrameNfo);
+        if (ret != DEVICE_OK)
         {
-            currFrameSize = circBuf_.FrameSize();
-            circBuf_.ReportFrameArrived(currFrameNfo, pCurrFramePtr);
+            abortAcquisitionInternal();
+            return ret;
         }
-        ProcessFrame(pCurrFramePtr, currFrameSize, currFrameNfo);
     }
 
     imagesInserted_++;
@@ -3923,7 +3918,7 @@ int Universal::FrameAcquired()
     return DEVICE_OK;
 }
 
-int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo& frameNfo)
+int Universal::ProcessFrame(const void* pData, const PvFrameInfo& frameNfo)
 {
     // Ignore inserts if we already have all images inserted.
     // This should never happen but stay on safe side.
@@ -3934,15 +3929,18 @@ int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo&
     if (!isAcquiring_) // Cannot guard it with acqLock_
         return DEVICE_OK;
 
+    if (acqCfgCur_.CircBufEnabled)
+    {
+        // Notify our CB wrapper that a new frame has "arrived",
+        // it will increase its internal counters and indexes.
+        circBuf_.ReportFrameArrived(frameNfo, pData);
+    }
+
     int ret = DEVICE_OK;
 
     ret = customDiskWriter_->WriteFrame(pData, frameNfo.PvFrameNr());
     if (ret != DEVICE_OK)
-    {
-        StopSequenceAcquisition();
-        // TODO: Display an error message?
         return ret;
-    }
 
     // Send the frame to MMCore if custom streaming to disk is not active,
     // otherwise send only every Nth frame to reduce unnecessary CPU/memory load
@@ -3977,13 +3975,11 @@ int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo&
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval));
 
         unsigned char* pOutBuf = nullptr;
+        const size_t dataSz = (acqCfgCur_.CircBufEnabled)
+            ? circBuf_.FrameSize() : singleFrameBufRawSz_;
         ret = postProcessSingleFrame(&pOutBuf, (unsigned char*)pData, dataSz);
         if (ret != DEVICE_OK)
-        {
-            StopSequenceAcquisition();
-            // TODO: Display an error message?
             return ret;
-        }
 
         // The post-processing done above also decodes the frame metadata if supported
         if (acqCfgCur_.FrameMetadataEnabled)
@@ -4123,17 +4119,12 @@ int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo&
         ret = GetCoreCallback()->InsertImage(this, pOutBuf, GetImageWidth(),
                 GetImageHeight(), GetImageBytesPerPixel(), md.Serialize());
         if (ret != DEVICE_OK)
-        {
-            StopSequenceAcquisition();
-            // TODO: Display an error message?
             return ret;
-        }
     }
 
     // If we already have all frames inserted tell the camera to stop
     if (imagesInserted_ + 1 >= imagesToAcquire_)
     {
-        // TODO: Can we replace this last occurrence with StopSequenceAcquisition()?
         abortAcquisitionInternal();
     }
 

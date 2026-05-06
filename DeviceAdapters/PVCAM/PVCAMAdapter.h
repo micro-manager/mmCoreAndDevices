@@ -621,7 +621,7 @@ protected:
     /**
     * Called from FrameAcquired(), inserts the frame to the MMCore.
     */
-    int ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo& frameNfo);
+    int ProcessFrame(const void* pData, const PvFrameInfo& frameNfo);
 
 private:
     // Make object non-copyable
