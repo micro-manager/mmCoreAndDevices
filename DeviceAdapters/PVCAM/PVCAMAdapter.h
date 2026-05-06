@@ -622,6 +622,10 @@ protected:
     * Called from FrameAcquired(), inserts the frame to the MMCore.
     */
     int ProcessFrame(const void* pData, const PvFrameInfo& frameNfo);
+    /**
+    * Called from ProcessFrame(), composes metadata for the MMCore.
+    */
+    void BuildMetadata(MM::CameraImageMetadata& md, const PvFrameInfo& frameNfo);
 
 private:
     // Make object non-copyable
