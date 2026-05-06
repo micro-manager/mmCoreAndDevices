@@ -96,8 +96,6 @@
     <ClCompile Include="AcqConfig.cpp" />
     <ClCompile Include="AcqThread.cpp" />
     <ClCompile Include="Event.cpp" />
-    <ClCompile Include="NotificationEntry.cpp" />
-    <ClCompile Include="NotificationThread.cpp" />
     <ClCompile Include="PollingThread.cpp" />
     <ClCompile Include="PpParam.cpp" />
     <ClCompile Include="PvCircularBuffer.cpp" />
@@ -118,8 +116,6 @@
     <ClInclude Include="AcqConfig.h" />
     <ClInclude Include="AcqThread.h" />
     <ClInclude Include="Event.h" />
-    <ClInclude Include="NotificationEntry.h" />
-    <ClInclude Include="NotificationThread.h" />
     <ClInclude Include="PollingThread.h" />
     <ClInclude Include="PpParam.h" />
     <ClInclude Include="PVCAMIncludes.h" />
