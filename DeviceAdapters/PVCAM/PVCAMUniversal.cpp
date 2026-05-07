@@ -1896,8 +1896,6 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     // initially start with the exposure time as the actual interval estimate
     SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(acqCfgCur_.ExposureMs));
 
-    // Cache the current device label so we don't have to copy it for every frame
-    GetLabel(deviceLabel_);
     eofEvent_.Reset(); // Reset the EOF event, we will wait for it to become signalled
     if (acqCfgCur_.CircBufEnabled)
     {
@@ -1926,7 +1924,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     isAcquiring_ = true;
 
     std::ostringstream os;
-    os << "Started sequence on " << deviceLabel_ << ", at " << startTime_.toString()
+    os << "Started sequence on " << deviceName_ << ", at " << startTime_.toString()
         << ", with " << numImages << " frames, " << interval_ms << " ms interval and "
         << (stopOnOverflow ? "" : "don't ") << "stop on overflow" << std::endl;
     LogAdapterMessage(os.str().c_str());
@@ -3986,7 +3984,6 @@ int Universal::ProcessFrame(const void* pData, const PvFrameInfo& frameNfo)
 
 void Universal::BuildMetadata(MM::CameraImageMetadata& md, const PvFrameInfo& frameNfo)
 {
-    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
     md.AddTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
 
     md.AddTag<int32>("PVCAM-CameraHandle",  frameNfo.PvHCam());

@@ -822,7 +822,6 @@ private:
     MM::MMTime      startTime_;            // Acquisition start time
 
     PvCameraModel   cameraModel_{ PvCameraModel_Generic };
-    char            deviceLabel_[MM::MaxStrLength]{ '\0' }; // Cached device label used when inserting metadata
 
     int             circBufFrameCount_{ 10 }; // number of frames to allocate the buffer for
     bool            circBufFrameRecoveryEnabled_{ false }; // True if we perform recovery from lost callbacks
