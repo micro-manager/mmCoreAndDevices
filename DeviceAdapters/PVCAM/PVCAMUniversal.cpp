@@ -41,7 +41,6 @@
 
 // Local
 #include "AcqThread.h"
-#include "PollingThread.h"
 #include "PVCAMParam.h"
 #include "StreamWriter.h"
 #include "Version.h"
@@ -141,9 +140,6 @@ const char* g_Keyword_Replication     = "Nearest Neighbor Replication";
 const char* g_Keyword_Bilinear        = "Bilinear";
 const char* g_Keyword_SmoothHue       = "Smooth Hue";
 const char* g_Keyword_AdaptiveSmoothHue = "Adaptive Smooth Hue (edge detecting)";
-const char* g_Keyword_AcqMethod           = "AcquisitionMethod";             // Callbacks/Polling
-const char* g_Keyword_AcqMethod_Callbacks = "Callbacks";
-const char* g_Keyword_AcqMethod_Polling   = "Polling";
 const char* g_Keyword_CircBufFrameCnt      = "CircularBufferFrameCount";
 const char* g_Keyword_CircBufSizeAuto      = "CircularBufferAutoSize";       // ON/OFF
 const char* g_Keyword_CircBufFrameRecovery = "CircularBufferFrameRecovery";  // ON/OFF
@@ -230,7 +226,6 @@ Universal::Universal(short cameraId, const char* deviceName)
     deviceName_(deviceName),
     // Sizes larger than 3 caused image tearing in ICX-674. Reason unknown.
     circBufFrameCount_(CIRC_BUF_FRAME_CNT_DEF),
-    pollingThd_(std::make_unique<PollingThread>(this)),
     acqThd_(std::make_unique<AcqThread>(this)),
     customDiskWriter_(std::make_unique<StreamWriter>(this))
 {
@@ -262,11 +257,6 @@ Universal::~Universal()
         // release resources
         if (initialized_)
             Shutdown();
-    }
-    if (!pollingThd_->GetStop())
-    {
-        pollingThd_->SetStop(true);
-        pollingThd_->wait();
     }
 
     if (metaFrameStruct_)
@@ -1123,28 +1113,15 @@ int Universal::Initialize()
 
     // CALLBACKS
     // Check if we can use PVCAM callbacks. This is recommended way to get notified when the frame
-    // readout is finished. Otherwise we will fall back to old polling method.
-    acqCfgNew_.CallbacksEnabled = false;
-    if ( pl_cam_register_callback_ex3( hPVCAM_, PL_CALLBACK_EOF, (void*)&Universal::PvcamCallbackEofEx3, this ) == PV_OK )
-    {
-        pAct = new CPropertyAction(this, &Universal::OnAcquisitionMethod);
-        nRet = CreateProperty(g_Keyword_AcqMethod, g_Keyword_AcqMethod_Polling, MM::String, false, pAct );
-        AddAllowedValue(g_Keyword_AcqMethod, g_Keyword_AcqMethod_Polling);
-        AddAllowedValue(g_Keyword_AcqMethod, g_Keyword_AcqMethod_Callbacks);
-        LogAdapterMessage( "Using callbacks for frame acquisition" );
-        acqCfgNew_.CallbacksEnabled = true;
-    }
-    else
-    {
-        LogAdapterMessage( "pl_cam_register_callback_ex3 failed! Using polling for frame acquisition" );
-    }
+    // readout is finished.
+    if (!pl_cam_register_callback_ex3(
+                hPVCAM_, PL_CALLBACK_EOF, &Universal::PvcamCallbackEofEx3, this))
+        return LogPvcamError(__LINE__, "Failed to register EOF callback handler");
 
     // FRAME_INFO SUPPORT
     // Initialize the FRAME_INFO structure, this will contain the frame metadata provided by PVCAM
-    if ( !pl_create_frame_info_struct( &pFrameInfo_ ) )
-    {
+    if (!pl_create_frame_info_struct(&pFrameInfo_))
         return LogPvcamError(__LINE__, "Failed to initialize the FRAME_INFO structure");
-    }
 
     // TRIGGER TABLE
     // We will create a property for every TrigTab and LastMuxed combination so we will end up with something similar
@@ -1445,16 +1422,12 @@ int Universal::Shutdown()
 {
     if (initialized_)
     {
-        rs_bool ret;
+        if (!pl_cam_deregister_callback( hPVCAM_, PL_CALLBACK_EOF ))
+            LogPvcamError(__LINE__, "pl_cam_deregister_callback EOF");
 
-        if ( acqCfgCur_.CallbacksEnabled )
-        {
-            pl_cam_deregister_callback( hPVCAM_, PL_CALLBACK_EOF );
-        }
-        ret = pl_cam_close(hPVCAM_);
-        if (!ret)
+        if (!pl_cam_close(hPVCAM_))
             LogPvcamError(__LINE__, "pl_cam_close");
-        assert(ret);
+
         refCount_--;
         if (PVCAM_initialized_ && refCount_ <= 0)
         {
@@ -1463,11 +1436,13 @@ int Universal::Shutdown()
                 LogPvcamError(__LINE__, "pl_pvcam_uninit");
             PVCAM_initialized_ = false;
         }
+
         if ( pFrameInfo_ )
         {
             pl_release_frame_info_struct( pFrameInfo_ );
             pFrameInfo_ = nullptr;
         }
+
         initialized_ = false;
     }
     return DEVICE_OK;
@@ -1507,7 +1482,9 @@ bool Universal::GetErrorText(int errorCode, char* text) const
 int Universal::SnapImage()
 {
     int nRet = DEVICE_ERR;
-    MM::MMTime startTs = GetCurrentMMTime();
+    MM::MMTime startTs;
+    MM::MMTime endTs;
+
     {
         std::lock_guard<std::mutex> acqGuard(acqLock_);
         START_METHOD("Universal::SnapImage");
@@ -1585,12 +1562,14 @@ int Universal::SnapImage()
             singleFrameModeReady_ = false;
         }
 
-        const MM::MMTime endTs = GetCurrentMMTime();
-        LogTimeDiff(startTs, endTs, "SnapImage() took: ", true);
-
         isAcquiring_ = false;
-        return nRet;
+
+        endTs = GetCurrentMMTime();
     }
+
+    LogTimeDiff(startTs, endTs, "SnapImage() took: ", true);
+
+    return nRet;
 }
 
 const unsigned char* Universal::GetImageBuffer()
@@ -1944,10 +1923,6 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     // the callbacks will start coming pretty fast. Do not waste time here, what can be done
     // before start_cont() should be done there.
 
-    if ( !acqCfgCur_.CallbacksEnabled && acqCfgCur_.CircBufEnabled )
-    {
-        pollingThd_->Start();
-    }
     isAcquiring_ = true;
 
     std::ostringstream os;
@@ -3281,24 +3256,6 @@ int Universal::OnDiskStreamingCoreSkipRatio(MM::PropertyBase* pProp, MM::ActionT
     return DEVICE_OK;
 }
 
-int Universal::OnAcquisitionMethod(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-    START_ONPROPERTY("Universal::OnAcquisitionMethod", eAct);
-    if (eAct == MM::AfterSet)
-    {
-        std::string val;
-        pProp->Get(val);
-
-        acqCfgNew_.CallbacksEnabled = (val.compare(g_Keyword_AcqMethod_Callbacks) == 0);
-        applyAcqConfig();
-    }
-    else if (eAct == MM::BeforeGet)
-    {
-        pProp->Set(acqCfgCur_.CallbacksEnabled ? g_Keyword_AcqMethod_Callbacks : g_Keyword_AcqMethod_Polling);
-    }
-    return DEVICE_OK;
-}
-
 int Universal::OnPostProcProperties(MM::PropertyBase* pProp, MM::ActionType eAct, long index)
 {
     START_ONPROPERTY("Universal::OnPostProcProperties", eAct);
@@ -3826,123 +3783,122 @@ int Universal::FrameAcquired()
     if (!isAcquiring_)
         return DEVICE_OK;
 
-    rs_bool     rsbRet = FALSE;
-    void*       pCurrFramePtr = nullptr;
-    PvFrameInfo currFrameNfo;
-    currFrameNfo.SetTimestampMsec(GetCurrentMMTime().getMsec());
+    int ret = DEVICE_OK;
+    void* pCurrFramePtr = nullptr;
+    const MM::MMTime frameTs = GetCurrentMMTime();
 
     {
         std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-        rsbRet = pl_exp_get_latest_frame_ex(hPVCAM_, &pCurrFramePtr, pFrameInfo_ );
-        if (rsbRet != PV_OK)
-            LogPvcamError(__LINE__, "pl_exp_get_latest_frame_ex() failed");
+        if (!pl_exp_get_latest_frame_ex(hPVCAM_, &pCurrFramePtr, pFrameInfo_))
+            ret = LogPvcamError(__LINE__, "pl_exp_get_latest_frame_ex() failed");
     }
-    if (rsbRet == PV_OK)
+    if (ret != DEVICE_OK)
     {
-        currFrameNfo.SetPvHCam(pFrameInfo_->hCam);
-        currFrameNfo.SetPvFrameNr(pFrameInfo_->FrameNr);
-        currFrameNfo.SetPvReadoutTime(pFrameInfo_->ReadoutTime);
-        currFrameNfo.SetPvTimeStamp(pFrameInfo_->TimeStamp);
-        currFrameNfo.SetPvTimeStampBOF(pFrameInfo_->TimeStampBOF);
+        abortAcquisitionInternal();
+        return ret;
+    }
 
-        if (acqCfgCur_.CircBufEnabled)
+    PvFrameInfo currFrameNfo;
+    currFrameNfo.SetTimestampMsec(frameTs.getMsec());
+    currFrameNfo.SetPvHCam(pFrameInfo_->hCam);
+    currFrameNfo.SetPvFrameNr(pFrameInfo_->FrameNr);
+    currFrameNfo.SetPvReadoutTime(pFrameInfo_->ReadoutTime);
+    currFrameNfo.SetPvTimeStamp(pFrameInfo_->TimeStamp);
+    currFrameNfo.SetPvTimeStampBOF(pFrameInfo_->TimeStampBOF);
+
+    if (acqCfgCur_.CircBufEnabled)
+    {
+        const int currFrameNr = currFrameNfo.PvFrameNr();
+        const int prevFrameNr = lastPvFrameNr_;
+        if (currFrameNr == prevFrameNr)
         {
-            const int currFrameNr = currFrameNfo.PvFrameNr();
-            const int prevFrameNr = lastPvFrameNr_;
-            if (currFrameNr == prevFrameNr)
-            {
-                // Received a duplicate callback? This seems like a bug in PVCAM,
-                // it occurs for optiMos at high frame rates. For now just silently ignore it,
-                // because the next one will correctly arrive right after that.
-                return DEVICE_OK;
-            }
+            // Received a duplicate callback? This seems like a bug in PVCAM,
+            // it occurs for optiMos at high frame rates. For now just silently ignore it,
+            // because the next one will correctly arrive right after that.
+            return DEVICE_OK;
+        }
 
-            // Check whether we haven't missed a callback
-            if (currFrameNr > prevFrameNr + 1)
-            {
-                const int missedCbCount = currFrameNr - prevFrameNr - 1;
+        // Check whether we haven't missed a callback
+        if (currFrameNr > prevFrameNr + 1)
+        {
+            const int missedCbCount = currFrameNr - prevFrameNr - 1;
 
-                if (circBufFrameRecoveryEnabled_)
+            if (circBufFrameRecoveryEnabled_)
+            {
+                // Get the last known frame index in the CB
+                const int lastFrIdx = circBuf_.LatestFrameIndex();
+                if (lastFrIdx < 0)
                 {
-                    // Get the last known frame index in the CB
-                    const int lastFrIdx = circBuf_.LatestFrameIndex();
-                    if (lastFrIdx < 0)
-                    {
-                        // We cannot perform frame recovery because we don't have a frame in the buffer yet
-                        // so we cannot recover the metadata. This mostly happens with Polling acquisition
-                        // because it can easily miss several frames when starting acquisition.
-                    }
-                    else
-                    {
-                        const PvFrameInfo& lastFrNfo = circBuf_.FrameInfo(lastFrIdx);
-
-                        // We need to re-create the FRAME_INFOs by averaging the known frame infos.
-                        // This is not really nice way of fixing things but since the camera is running on
-                        // constant rate the recovered data will be accurate enough. Plus, we mark the frame as recovered
-                        // so the user will be aware of this.
-                        const int recReadoutTm = static_cast<int>((lastFrNfo.PvReadoutTime() + currFrameNfo.PvReadoutTime()) / 2);
-                        const long long lastPvTimestampBOF   = lastFrNfo.PvTimeStampBOF();
-                        const long long lastPvTimestampEOF   = lastFrNfo.PvTimeStamp();
-                        const double    lastApTimestampMsec  = lastFrNfo.TimeStampMsec();
-                        const double div = missedCbCount + 1;
-                        const double avgBofDiff = (currFrameNfo.PvTimeStampBOF()  - lastPvTimestampBOF) / div;
-                        const double avgEofDiff = (currFrameNfo.PvTimeStamp()  - lastPvTimestampEOF) / div;
-                        const double avgAppDiff = (currFrameNfo.TimeStampMsec() - lastApTimestampMsec) / div;
-
-                        for (int i = 0; i < missedCbCount; ++i)
-                        {
-                            // Get the index of the next frame in the CB. The data for this frame has been
-                            // correctly delivered by the driver, however since we missed a callback we also
-                            // missed the FRAME_INFO. Thus we need to recreate the FRAME_INFO ourselves.
-                            // This can be removed once PVCAM implements better way of retrieving particular frames.
-                            const unsigned int nextFrIdx = (lastFrIdx + i + 1) % circBuf_.Capacity();
-
-                            // Retrieve the data pointer for the skipped callback
-                            void* pRecFrameData = circBuf_.FrameData(nextFrIdx);
-
-                            // Re-create the FRAME_INFO
-                            const short int recHCam = lastFrNfo.PvHCam();
-                            const int       recFrameNr = prevFrameNr + i + 1;
-                            const long long recTimeStampBOF = static_cast<long long>(lastPvTimestampBOF + ((i + 1)*avgBofDiff));
-                            const long long recTimeStampEOF = static_cast<long long>(lastPvTimestampEOF + ((i + 1)*avgEofDiff));
-                            const double    recAppTimeStampEOF = lastApTimestampMsec + ((i + 1)*avgAppDiff);
-
-                            PvFrameInfo recFrNfo;
-                            recFrNfo.SetPvHCam(recHCam);
-                            recFrNfo.SetPvFrameNr(recFrameNr);
-                            recFrNfo.SetPvReadoutTime(recReadoutTm);
-                            recFrNfo.SetPvTimeStamp(recTimeStampEOF);
-                            recFrNfo.SetPvTimeStampBOF(recTimeStampBOF);
-                            recFrNfo.SetTimestampMsec(recAppTimeStampEOF);
-                            recFrNfo.SetRecovered(true);
-
-                            // Notify our CB wrapper that a new frame has "arrived", it will increase
-                            // its internal counters and indexes.
-                            circBuf_.ReportFrameArrived(recFrNfo, pRecFrameData);
-
-                            // Process the new frame the same way as the frame
-                            // would arrive correctly with a callback.
-                            ProcessFrame(pRecFrameData, circBuf_.FrameSize(), recFrNfo);
-                            imagesAcquired_++;
-                            imagesRecovered_++;
-                        }
-                    }
+                    // We cannot perform frame recovery because we don't have a frame in the buffer yet
+                    // so we cannot recover the metadata. This mostly happens with Polling acquisition
+                    // because it can easily miss several frames when starting acquisition.
                 }
                 else
-                {  // Frame recovery is disabled
-                    // TODO: Again, should we report an error?
+                {
+                    const PvFrameInfo& lastFrNfo = circBuf_.FrameInfo(lastFrIdx);
+
+                    // We need to re-create the FRAME_INFOs by averaging the known frame infos.
+                    // This is not really nice way of fixing things but since the camera is running on
+                    // constant rate the recovered data will be accurate enough. Plus, we mark the frame as recovered
+                    // so the user will be aware of this.
+                    const int recReadoutTm = static_cast<int>((lastFrNfo.PvReadoutTime() + currFrameNfo.PvReadoutTime()) / 2);
+                    const long long lastPvTimestampBOF   = lastFrNfo.PvTimeStampBOF();
+                    const long long lastPvTimestampEOF   = lastFrNfo.PvTimeStamp();
+                    const double    lastApTimestampMsec  = lastFrNfo.TimeStampMsec();
+                    const double div = missedCbCount + 1;
+                    const double avgBofDiff = (currFrameNfo.PvTimeStampBOF()  - lastPvTimestampBOF) / div;
+                    const double avgEofDiff = (currFrameNfo.PvTimeStamp()  - lastPvTimestampEOF) / div;
+                    const double avgAppDiff = (currFrameNfo.TimeStampMsec() - lastApTimestampMsec) / div;
+
+                    for (int i = 0; i < missedCbCount; ++i)
+                    {
+                        // Get the index of the next frame in the CB. The data for this frame has been
+                        // correctly delivered by the driver, however since we missed a callback we also
+                        // missed the FRAME_INFO. Thus we need to recreate the FRAME_INFO ourselves.
+                        // This can be removed once PVCAM implements better way of retrieving particular frames.
+                        const unsigned int nextFrIdx = (lastFrIdx + i + 1) % circBuf_.Capacity();
+
+                        // Retrieve the data pointer for the skipped callback
+                        void* pRecFrameData = circBuf_.FrameData(nextFrIdx);
+
+                        // Re-create the FRAME_INFO
+                        const short int recHCam = lastFrNfo.PvHCam();
+                        const int       recFrameNr = prevFrameNr + i + 1;
+                        const long long recTimeStampBOF = static_cast<long long>(lastPvTimestampBOF + ((i + 1)*avgBofDiff));
+                        const long long recTimeStampEOF = static_cast<long long>(lastPvTimestampEOF + ((i + 1)*avgEofDiff));
+                        const double    recAppTimeStampEOF = lastApTimestampMsec + ((i + 1)*avgAppDiff);
+
+                        PvFrameInfo recFrNfo;
+                        recFrNfo.SetPvHCam(recHCam);
+                        recFrNfo.SetPvFrameNr(recFrameNr);
+                        recFrNfo.SetPvReadoutTime(recReadoutTm);
+                        recFrNfo.SetPvTimeStamp(recTimeStampEOF);
+                        recFrNfo.SetPvTimeStampBOF(recTimeStampBOF);
+                        recFrNfo.SetTimestampMsec(recAppTimeStampEOF);
+                        recFrNfo.SetRecovered(true);
+
+                        imagesAcquired_++;
+
+                        // Process the new frame the same way as the frame
+                        // would arrive correctly with a callback.
+                        ret = ProcessFrame(pRecFrameData, recFrNfo);
+                        if (ret != DEVICE_OK)
+                        {
+                            abortAcquisitionInternal();
+                            return ret;
+                        }
+
+                        imagesInserted_++;
+                        imagesRecovered_++;
+                    }
                 }
             }
-            lastPvFrameNr_ = currFrameNr;
+            else
+            {  // Frame recovery is disabled
+                // TODO: Again, should we report an error?
+            }
         }
-    }
-
-    if ( rsbRet != PV_OK )
-    {
-        std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-        if (pl_exp_abort( hPVCAM_, CCS_CLEAR ) != PV_OK)
-            LogPvcamError(__LINE__, "pl_exp_abort() failed");
-        return DEVICE_ERR;
+        lastPvFrameNr_ = currFrameNr;
     }
 
     imagesAcquired_++; // A new frame has been successfully retrieved from the camera
@@ -3951,27 +3907,23 @@ int Universal::FrameAcquired()
     // so we have to check. In case of SnapImage the singleFrameBufRaw_ already
     // contains the data (since it's passed to pl_start_seq() and no PushImage()
     // is done - the single image is retrieved with GetImageBuffer().
-    if ( !snappingSingleFrame_ )
+    if (!snappingSingleFrame_)
     {
-        size_t currFrameSize = singleFrameBufRawSz_;
-        if (acqCfgCur_.CircBufEnabled)
+        ret = ProcessFrame(pCurrFramePtr, currFrameNfo);
+        if (ret != DEVICE_OK)
         {
-            currFrameSize = circBuf_.FrameSize();
-            circBuf_.ReportFrameArrived(currFrameNfo, pCurrFramePtr);
+            abortAcquisitionInternal();
+            return ret;
         }
-        ProcessFrame(pCurrFramePtr, currFrameSize, currFrameNfo);
     }
-    else
-    {
-        // Single snap: just increase the number of actually acquired frames.
-        imagesInserted_++;
-    }
+
+    imagesInserted_++;
 
     eofEvent_.Set();
     return DEVICE_OK;
 }
 
-int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo& frameNfo)
+int Universal::ProcessFrame(const void* pData, const PvFrameInfo& frameNfo)
 {
     // Ignore inserts if we already have all images inserted.
     // This should never happen but stay on safe side.
@@ -3982,15 +3934,18 @@ int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo&
     if (!isAcquiring_) // Cannot guard it with acqLock_
         return DEVICE_OK;
 
+    if (acqCfgCur_.CircBufEnabled)
+    {
+        // Notify our CB wrapper that a new frame has "arrived",
+        // it will increase its internal counters and indexes.
+        circBuf_.ReportFrameArrived(frameNfo, pData);
+    }
+
     int ret = DEVICE_OK;
 
     ret = customDiskWriter_->WriteFrame(pData, frameNfo.PvFrameNr());
     if (ret != DEVICE_OK)
-    {
-        StopSequenceAcquisition();
-        // TODO: Display an error message?
         return ret;
-    }
 
     // Send the frame to MMCore if custom streaming to disk is not active,
     // otherwise send only every Nth frame to reduce unnecessary CPU/memory load
@@ -3998,281 +3953,185 @@ int Universal::ProcessFrame(const void* pData, size_t dataSz, const PvFrameInfo&
         || (imagesInserted_ % acqCfgCur_.DiskStreamingCoreSkipRatio == 0);
     if (sendFrameToCore)
     {
-        // Build the metadata
-        MM::CameraImageMetadata md;
-        md.AddTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
-        md.AddTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
-
-        md.AddTag<int32>( "PVCAM-CameraHandle",  frameNfo.PvHCam() );
-        md.AddTag<int32>( "PVCAM-FrameNr",       frameNfo.PvFrameNr() );
-        md.AddTag<int32>( "PVCAM-ReadoutTime",   frameNfo.PvReadoutTime() );
-        md.AddTag<long64>( "PVCAM-TimeStamp",    frameNfo.PvTimeStamp() );
-        md.AddTag<long64>( "PVCAM-TimeStampBOF", frameNfo.PvTimeStampBOF() );
-        if (circBufFrameRecoveryEnabled_)
-        {
-            md.AddTag<bool>( "PVCAM-FrameRecovered", frameNfo.IsRecovered() );
-            md.AddTag<int32>( "PVCAM-FramesRecoveredTotal", imagesRecovered_ );
-        }
-
-        const double startTimeMsec   = startTime_.getMsec();
+        const double startTimeMsec = startTime_.getMsec();
         const double elapsedTimeMsec = frameNfo.TimeStampMsec() - startTimeMsec;
-
-        // The time elapsed since start of the acquisition until current frame readout
-        // Now added by MM automatically, no need to do it here.
-        // md.AddTag(MM::g_Keyword_Elapsed_Time_ms, CDeviceUtils::ConvertToString(elapsedTimeMsec));
-
         const double actualInterval = elapsedTimeMsec / imagesInserted_;
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval));
 
         unsigned char* pOutBuf = nullptr;
+        const size_t dataSz = (acqCfgCur_.CircBufEnabled)
+            ? circBuf_.FrameSize() : singleFrameBufRawSz_;
         ret = postProcessSingleFrame(&pOutBuf, (unsigned char*)pData, dataSz);
         if (ret != DEVICE_OK)
-        {
-            StopSequenceAcquisition();
-            // TODO: Display an error message?
             return ret;
-        }
 
-        // The post-processing done above also decodes the frame metadata if supported
-        if (acqCfgCur_.FrameMetadataEnabled)
-        {
-            // FMD stands for Frame-MetaData, we should somehow distinguish the embedded
-            // metadata from other metadata and keep them grouped or close together.
-            const md_frame_header* fHdr = metaFrameStruct_->header;
-            // Selected metadata from the frame header
-            md.AddTag<uns16>("PVCAM-FMD-Version", fHdr->version); // Need to use uns16 because uns8 is displayed as char
-            md.AddTag<uns32>("PVCAM-FMD-FrameNr", fHdr->frameNr);
-            md.AddTag<uns16>("PVCAM-FMD-RoiCount", fHdr->roiCount);
-            md.AddTag<uns16>("PVCAM-FMD-BitDepth", fHdr->bitDepth); // Need to use uns16 because uns8 is displayed as char
-            const char* cKeywordColorMask = "PVCAM-FMD-ColorMask";
-            switch (fHdr->colorMask)
-            {
-            case COLOR_NONE:
-                md.AddTag(cKeywordColorMask, "None");
-                break;
-            case COLOR_RGGB:
-                md.AddTag(cKeywordColorMask, "RGGB");
-                break;
-            case COLOR_GRBG:
-                md.AddTag(cKeywordColorMask, "GRBG");
-                break;
-            case COLOR_GBRG:
-                md.AddTag(cKeywordColorMask, "GBRG");
-                break;
-            case COLOR_BGGR:
-                md.AddTag(cKeywordColorMask, "BGGR");
-                break;
-            default:
-                md.AddTag(cKeywordColorMask, "Unknown");
-                break;
-            }
-            md.AddTag<uns16>("PVCAM-FMD-Flags",  fHdr->flags); // Need to use uns16 because uns8 is displayed as char
-            if (fHdr->version >= 2)
-            {
-                md.AddTag("PVCAM-FMD-ImageFormat", getPvcamImageFormatString(fHdr->imageFormat));
-                md.AddTag("PVCAM-FMD-ImageCompression", getPvcamImageCompressionString(fHdr->imageCompression));
-            }
-            if (fHdr->version < 3)
-            {
-                md.AddTag<ulong64>( "PVCAM-FMD-ExposureTimeNs",
-                    (ulong64)fHdr->exposureTime * fHdr->exposureTimeResNs );
-                md.AddTag<ulong64>( "PVCAM-FMD-TimestampBofNs",
-                    (ulong64)fHdr->timestampBOF * fHdr->timestampResNs );
-                md.AddTag<ulong64>( "PVCAM-FMD-TimestampEofNs",
-                    (ulong64)fHdr->timestampEOF * fHdr->timestampResNs );
-            }
-            else
-            {
-                const md_frame_header_v3* fHdr3 =
-                    reinterpret_cast<const md_frame_header_v3*>(metaFrameStruct_->header);
-                // Version 3 of the metadata transfers the timestamps in picoseconds.
-                md.AddTag<ulong64>( "PVCAM-FMD-ExposureTimePs",
-                    (ulong64)fHdr3->exposureTime );
-                md.AddTag<ulong64>( "PVCAM-FMD-TimestampBofPs",
-                    (ulong64)fHdr3->timestampBOF );
-                md.AddTag<ulong64>( "PVCAM-FMD-TimestampEofPs",
-                    (ulong64)fHdr3->timestampEOF );
-            }
-            // Implied ROI
-            const rgn_type& iRoi = metaFrameStruct_->impliedRoi;
-            snprintf(metaRoiStr_, sizeof(metaRoiStr_), "[%u,%u,%u,%u,%u,%u]",
-                    iRoi.s1, iRoi.s2, iRoi.sbin, iRoi.p1, iRoi.p2, iRoi.pbin);
-            md.AddTag<std::string>("PVCAM-FMD-ImpliedRoi", metaRoiStr_);
-            // Per-ROI metadata
-            metaAllRoisStr_ = "[";
-            for (int i = 0; i < metaFrameStruct_->roiCount; ++i)
-            {
-                // Since we cannot add per-ROI metadata we will format the MD to a simple JSON array
-                // and add it as a per-Frame metadata TAG. Example:
-                // "[{"nr":1,"coords":[0,0,0,0,0,0]},{"nr":2,"coords":[0,0,0,0,0,0]}]"
-                const md_frame_roi& pRoi = metaFrameStruct_->roiArray[i];
-                const md_frame_roi_header* rHdr = pRoi.header;
-                if (rHdr->flags & PL_MD_ROI_FLAG_INVALID)
-                    continue; // Skip invalid regions
-                if (i > 0)
-                    metaAllRoisStr_.append(",");
-                metaAllRoisStr_.append("{");
-                snprintf(metaRoiStr_, sizeof(metaRoiStr_),
-                        "\"nr\":%u,\"coords\":[%u,%u,%u,%u,%u,%u],\"flags\":%u",
-                        rHdr->roiNr,
-                        rHdr->roi.s1, rHdr->roi.s2, rHdr->roi.sbin,
-                        rHdr->roi.p1, rHdr->roi.p2, rHdr->roi.pbin,
-                        rHdr->flags);
-                metaAllRoisStr_.append(metaRoiStr_);
-                if (fHdr->flags & PL_MD_FRAME_FLAG_ROI_TS_SUPPORTED)
-                {
-                    if (fHdr->version < 3)
-                    {
-                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
-                                ",\"borNs\":%llu,\"eorNs\":%llu",
-                                (ulong64)rHdr->timestampBOR * fHdr->roiTimestampResNs,
-                                (ulong64)rHdr->timestampEOR * fHdr->roiTimestampResNs);
-                    }
-                    else
-                    {
-                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
-                                ",\"bor\":%u,\"eor\":%u",
-                                rHdr->timestampBOR, rHdr->timestampEOR);
-                    }
-                    metaAllRoisStr_.append(metaRoiStr_);
-                }
-                if (/*(rHdr->flags & PL_MD_ROI_FLAG_HEADER_ONLY) && */pRoi.extMdDataSize > 0)
-                {
-                    const md_ext_item_collection& collection = metaFrameExtData_.at(rHdr->roiNr);
-                    const md_ext_item* item_id = collection.map[PL_MD_EXT_TAG_PARTICLE_ID];
-                    if (item_id)
-                    {
-                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
-                                ",\"tagParticleId\":%u", *((uint32_t*)item_id->value));
-                        metaAllRoisStr_.append(metaRoiStr_);
-                    }
-                    const md_ext_item* item_m0 = collection.map[PL_MD_EXT_TAG_PARTICLE_M0];
-                    if (item_m0)
-                    {
-                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
-                                ",\"tagParticleM0\":%u", *((uint32_t*)item_m0->value));
-                        metaAllRoisStr_.append(metaRoiStr_);
-                    }
-                    const md_ext_item* item_m2 = collection.map[PL_MD_EXT_TAG_PARTICLE_M2];
-                    if (item_m2)
-                    {
-                        snprintf(metaRoiStr_, sizeof(metaRoiStr_),
-                                ",\"tagParticleM2\":%u", *((uint32_t*)item_m2->value));
-                        metaAllRoisStr_.append(metaRoiStr_);
-                    }
-                }
-                metaAllRoisStr_.append("}");
-            }
-            metaAllRoisStr_.append("]");
-            md.AddTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
-        }
+        MM::CameraImageMetadata md;
+        BuildMetadata(md, frameNfo);
 
         // This method inserts a new image into the circular buffer (residing in MMCore)
         ret = GetCoreCallback()->InsertImage(this, pOutBuf, GetImageWidth(),
                 GetImageHeight(), GetImageBytesPerPixel(), md.Serialize());
         if (ret != DEVICE_OK)
-        {
-            StopSequenceAcquisition();
-            // TODO: Display an error message?
             return ret;
-        }
     }
 
-    imagesInserted_++;
-
     // If we already have all frames inserted tell the camera to stop
-    if (acqCfgCur_.CallbacksEnabled && imagesInserted_ >= imagesToAcquire_)
+    if (imagesInserted_ + 1 >= imagesToAcquire_)
     {
-        // TODO: Can we replace this last occurrence with StopSequenceAcquisition()?
         abortAcquisitionInternal();
     }
 
     return ret;
 }
 
-/*
-* Do actual capture
-* Called from the acquisition thread function
-*/
-int Universal::PollingThreadRun(void)
+void Universal::BuildMetadata(MM::CameraImageMetadata& md, const PvFrameInfo& frameNfo)
 {
-    START_METHOD(">>>Universal::PollingThreadRun");
+    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
+    md.AddTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
 
-    int  ret = DEVICE_ERR;
-    char dbgBuf[128]; // Debug log buffer
-    pollingThd_->SetStop(false); // make sure this thread's status is updated properly.
+    md.AddTag<int32>("PVCAM-CameraHandle",  frameNfo.PvHCam());
+    md.AddTag<int32>("PVCAM-FrameNr",       frameNfo.PvFrameNr());
+    md.AddTag<int32>("PVCAM-ReadoutTime",   frameNfo.PvReadoutTime());
+    md.AddTag<long64>("PVCAM-TimeStamp",    frameNfo.PvTimeStamp());
+    md.AddTag<long64>("PVCAM-TimeStampBOF", frameNfo.PvTimeStampBOF());
 
-    try
+    if (circBufFrameRecoveryEnabled_)
     {
-        const long long usec = triggerTimeout_ * 1000000LL
-            + getEstimatedMaxReadoutTimeMs() * 1000LL
-            + (long long)(4 * GetExposure() * 1000.0);
+        md.AddTag<bool>("PVCAM-FrameRecovered", frameNfo.IsRecovered());
+        md.AddTag<int32>("PVCAM-FramesRecoveredTotal", imagesRecovered_);
+    }
 
-        const MM::MMTime timeout((long)(usec / 1000000L), (long)(usec % 1000000L));
-
-        do
+    // The post-processing done above also decodes the frame metadata if supported
+    if (acqCfgCur_.FrameMetadataEnabled)
+    {
+        // FMD stands for Frame-MetaData, we should somehow distinguish the embedded
+        // metadata from other metadata and keep them grouped or close together.
+        const md_frame_header* fHdr = metaFrameStruct_->header;
+        // Selected metadata from the frame header
+        md.AddTag<uns16>("PVCAM-FMD-Version", fHdr->version); // Use uns16, uns8 is displayed as char
+        md.AddTag<uns32>("PVCAM-FMD-FrameNr", fHdr->frameNr);
+        md.AddTag<uns16>("PVCAM-FMD-RoiCount", fHdr->roiCount);
+        md.AddTag<uns16>("PVCAM-FMD-BitDepth", fHdr->bitDepth); // Use uns16, uns8 is displayed as char
+        const char* cKeywordColorMask = "PVCAM-FMD-ColorMask";
+        switch (fHdr->colorMask)
         {
-            ret = waitForFrameConPolling(timeout);
-            if (ret == DEVICE_OK)
-            {
-                ret = FrameAcquired();
-            }
-            else
-            {
-                break;
-            }
+        case COLOR_NONE:
+            md.AddTag(cKeywordColorMask, "None");
+            break;
+        case COLOR_RGGB:
+            md.AddTag(cKeywordColorMask, "RGGB");
+            break;
+        case COLOR_GRBG:
+            md.AddTag(cKeywordColorMask, "GRBG");
+            break;
+        case COLOR_GBRG:
+            md.AddTag(cKeywordColorMask, "GBRG");
+            break;
+        case COLOR_BGGR:
+            md.AddTag(cKeywordColorMask, "BGGR");
+            break;
+        default:
+            md.AddTag(cKeywordColorMask, "Unknown");
+            break;
         }
-        while (DEVICE_OK == ret && !pollingThd_->GetStop() && imagesInserted_ < imagesToAcquire_);
-
-        snprintf( dbgBuf, sizeof(dbgBuf),
-                "ACQ LOOP FINISHED: thdGetStop:%u, ret:%u, imagesInserted_: %lu, imagesToAcquire_: %lu",
-                pollingThd_->GetStop(), ret, imagesInserted_, imagesToAcquire_);
-        LogAdapterMessage( __LINE__, dbgBuf );
-
-        if (imagesInserted_ >= imagesToAcquire_)
-            imagesInserted_ = 0;
-        PollingThreadExiting();
-        pollingThd_->SetStop(true);
-
-        START_METHOD("<<<Universal::PollingThreadRun");
-        return ret;
-    }
-    catch(...)
-    {
-        LogAdapterMessage(g_Msg_EXCEPTION_IN_THREAD, false);
-        // TODO: Can it ever be null?
-        auto *core = GetCoreCallback();
-        if (core)
-           core->AcqFinished(this, DEVICE_OK);
-        pollingThd_->SetStop(true);
-        return ret;
-    }
-}
-
-void Universal::PollingThreadExiting() throw ()
-{
-    try
-    {
+        md.AddTag<uns16>("PVCAM-FMD-Flags", fHdr->flags); // Use uns16, uns8 is displayed as char
+        if (fHdr->version >= 2)
         {
-            std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-            if (!pl_exp_stop_cont(hPVCAM_, CCS_HALT))
-                LogPvcamError(__LINE__, "pl_exp_stop_cont");
-            if (!pl_exp_finish_seq(hPVCAM_, circBuf_.Data(), 0))
-                LogPvcamError(__LINE__, "pl_exp_finish_seq");
+            md.AddTag("PVCAM-FMD-ImageFormat",
+                    getPvcamImageFormatString(fHdr->imageFormat));
+            md.AddTag("PVCAM-FMD-ImageCompression",
+                    getPvcamImageCompressionString(fHdr->imageCompression));
         }
-
-        sequenceModeReady_ = false;
-        isAcquiring_       = false;
-
-        LogAdapterMessage(g_Msg_SEQUENCE_ACQUISITION_THREAD_EXITING);
-        // TODO: Can it ever be null?
-        auto *core = GetCoreCallback();
-        if (core)
-            core->AcqFinished(this, DEVICE_OK);
-    }
-    catch (...)
-    {
-        LogAdapterMessage(__LINE__, g_Msg_EXCEPTION_IN_ON_THREAD_EXITING);
+        if (fHdr->version < 3)
+        {
+            md.AddTag<ulong64>("PVCAM-FMD-ExposureTimeNs",
+                    (ulong64)fHdr->exposureTime * fHdr->exposureTimeResNs);
+            md.AddTag<ulong64>("PVCAM-FMD-TimestampBofNs",
+                    (ulong64)fHdr->timestampBOF * fHdr->timestampResNs);
+            md.AddTag<ulong64>("PVCAM-FMD-TimestampEofNs",
+                    (ulong64)fHdr->timestampEOF * fHdr->timestampResNs);
+        }
+        else
+        {
+            const md_frame_header_v3* fHdr3 =
+                reinterpret_cast<const md_frame_header_v3*>(metaFrameStruct_->header);
+            // Version 3 of the metadata transfers the timestamps in picoseconds.
+            md.AddTag<ulong64>("PVCAM-FMD-ExposureTimePs", fHdr3->exposureTime);
+            md.AddTag<ulong64>("PVCAM-FMD-TimestampBofPs", fHdr3->timestampBOF);
+            md.AddTag<ulong64>("PVCAM-FMD-TimestampEofPs", fHdr3->timestampEOF);
+        }
+        // Implied ROI
+        const rgn_type& iRoi = metaFrameStruct_->impliedRoi;
+        snprintf(metaRoiStr_, sizeof(metaRoiStr_), "[%u,%u,%u,%u,%u,%u]",
+                iRoi.s1, iRoi.s2, iRoi.sbin, iRoi.p1, iRoi.p2, iRoi.pbin);
+        md.AddTag<std::string>("PVCAM-FMD-ImpliedRoi", metaRoiStr_);
+        // Per-ROI metadata
+        metaAllRoisStr_ = "[";
+        for (int i = 0; i < metaFrameStruct_->roiCount; ++i)
+        {
+            // Since we cannot add per-ROI metadata we will format the MD to a simple
+            // JSON array and add it as a per-Frame metadata TAG. Example:
+            // "[{"nr":1,"coords":[0,0,0,0,0,0]},{"nr":2,"coords":[0,0,0,0,0,0]}]"
+            const md_frame_roi& pRoi = metaFrameStruct_->roiArray[i];
+            const md_frame_roi_header* rHdr = pRoi.header;
+            if (rHdr->flags & PL_MD_ROI_FLAG_INVALID)
+                continue; // Skip invalid regions
+            if (i > 0)
+                metaAllRoisStr_.append(",");
+            metaAllRoisStr_.append("{");
+            snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                    "\"nr\":%u,\"coords\":[%u,%u,%u,%u,%u,%u],\"flags\":%u",
+                    rHdr->roiNr,
+                    rHdr->roi.s1, rHdr->roi.s2, rHdr->roi.sbin,
+                    rHdr->roi.p1, rHdr->roi.p2, rHdr->roi.pbin,
+                    rHdr->flags);
+            metaAllRoisStr_.append(metaRoiStr_);
+            if (fHdr->flags & PL_MD_FRAME_FLAG_ROI_TS_SUPPORTED)
+            {
+                if (fHdr->version < 3)
+                {
+                    snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                            ",\"borNs\":%llu,\"eorNs\":%llu",
+                            (ulong64)rHdr->timestampBOR * fHdr->roiTimestampResNs,
+                            (ulong64)rHdr->timestampEOR * fHdr->roiTimestampResNs);
+                }
+                else
+                {
+                    snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                            ",\"bor\":%u,\"eor\":%u",
+                            rHdr->timestampBOR, rHdr->timestampEOR);
+                }
+                metaAllRoisStr_.append(metaRoiStr_);
+            }
+            if (/*(rHdr->flags & PL_MD_ROI_FLAG_HEADER_ONLY) && */pRoi.extMdDataSize > 0)
+            {
+                const md_ext_item_collection& collection = metaFrameExtData_.at(rHdr->roiNr);
+                const md_ext_item* item_id = collection.map[PL_MD_EXT_TAG_PARTICLE_ID];
+                if (item_id)
+                {
+                    snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                            ",\"tagParticleId\":%u", *((uint32_t*)item_id->value));
+                    metaAllRoisStr_.append(metaRoiStr_);
+                }
+                const md_ext_item* item_m0 = collection.map[PL_MD_EXT_TAG_PARTICLE_M0];
+                if (item_m0)
+                {
+                    snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                            ",\"tagParticleM0\":%u", *((uint32_t*)item_m0->value));
+                    metaAllRoisStr_.append(metaRoiStr_);
+                }
+                const md_ext_item* item_m2 = collection.map[PL_MD_EXT_TAG_PARTICLE_M2];
+                if (item_m2)
+                {
+                    snprintf(metaRoiStr_, sizeof(metaRoiStr_),
+                            ",\"tagParticleM2\":%u", *((uint32_t*)item_m2->value));
+                    metaAllRoisStr_.append(metaRoiStr_);
+                }
+            }
+            metaAllRoisStr_.append("}");
+        }
+        metaAllRoisStr_.append("]");
+        md.AddTag<std::string>("PVCAM-FMD-RoiMD", metaAllRoisStr_);
     }
 }
 
@@ -5185,87 +5044,12 @@ int Universal::waitForFrameSeq()
 {
     START_METHOD("Universal::waitForFrameSeq");
 
-    int nRet = DEVICE_OK;
+    const unsigned int msec =
+        static_cast<unsigned int>(triggerTimeout_) * 1000U
+        + getEstimatedMaxReadoutTimeMs()
+        + static_cast<unsigned int>(4 * GetExposure());
 
-    const long long usec = triggerTimeout_ * 1000000LL
-        + getEstimatedMaxReadoutTimeMs() * 1000LL
-        + (long long)(4 * GetExposure() * 1000.0);
-
-    const MM::MMTime timeout((long)(usec / 1000000L), (long)(usec % 1000000L));
-
-    if (!acqCfgCur_.CallbacksEnabled)
-    {
-        nRet = waitForFrameSeqPolling(timeout);
-    }
-    else
-    {
-        nRet = waitForFrameSeqCallbacks(timeout);
-    }
-
-    return nRet;
-}
-
-int Universal::waitForFrameSeqPolling(const MM::MMTime& timeout)
-{
-    // This function can be called very often so avoid any frequent
-    // logging or other expensive calls.
-    rs_bool pvRet    = FALSE;
-    int16   pvErr    = 0;
-    int16   pvStatus = READOUT_NOT_ACTIVE;
-    uns32   pvBytesArrived = 0;
-
-    MM::MMTime       timeElapsed(0,0);
-    const MM::MMTime startTime = GetCurrentMMTime();
-
-    // Poll PVCAM for status changes. If we miss the EXPOSURE_IN_PROGRESS we
-    // silently skip to check READOUT_IN_PROGRESS, after that we assume that
-    // the frame is ready.
-    do
-    {
-        CDeviceUtils::SleepMs(1);
-        {
-            std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-            pvRet = pl_exp_check_status(hPVCAM_, &pvStatus, &pvBytesArrived);
-            if (pvRet != PV_OK)
-                pvErr = pl_error_code();
-        }
-        timeElapsed = GetCurrentMMTime() - startTime;
-    }
-    while (pvRet == TRUE && pvStatus == EXPOSURE_IN_PROGRESS && timeElapsed < timeout);
-
-    while (pvRet == TRUE && pvStatus == READOUT_IN_PROGRESS && timeElapsed < timeout)
-    {
-        CDeviceUtils::SleepMs(1);
-        {
-            std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-            pvRet = pl_exp_check_status(hPVCAM_, &pvStatus, &pvBytesArrived);
-            if (pvRet != PV_OK)
-                pvErr = pl_error_code();
-        }
-        timeElapsed = GetCurrentMMTime() - startTime;
-    }
-
-    if (pvRet == TRUE && pvStatus != READOUT_FAILED && timeElapsed < timeout)
-        return DEVICE_OK;
-
-    {
-        std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-        // Abort the acquisition (ignore error if abort fails, just log it)
-        if (!pl_exp_abort(hPVCAM_, CCS_HALT))
-            LogPvcamError(__LINE__, "waitForFrameSeqPolling(): pl_exp_abort() failed");
-    }
-    if (pvRet == FALSE)
-        return LogPvcamError(__LINE__, "waitForFrameSeqPolling(): pl_exp_check_status() failed", pvErr);
-    if (pvStatus == READOUT_FAILED)
-        return LogAdapterError(ERR_FRAME_READOUT_FAILED, __LINE__, "waitForFrameSeqPolling(): pvStatus == READOUT_FAILED");
-    if (timeElapsed > timeout)
-        return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeqPolling(): timeElapsed > timeout");
-    return DEVICE_ERR;
-}
-
-int Universal::waitForFrameSeqCallbacks(const MM::MMTime& timeout)
-{
-    const bool arrivedInTime = eofEvent_.Wait(static_cast<unsigned int>(timeout.getMsec()));
+    const bool arrivedInTime = eofEvent_.Wait(msec);
     if (arrivedInTime)
         return DEVICE_OK;
 
@@ -5273,78 +5057,9 @@ int Universal::waitForFrameSeqCallbacks(const MM::MMTime& timeout)
         std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
         // Abort the acquisition (ignore error if abort fails, just log it)
         if (!pl_exp_abort(hPVCAM_, CCS_HALT))
-            LogPvcamError(__LINE__, "waitForFrameSeqCallbacks(): pl_exp_abort() failed");
+            LogPvcamError(__LINE__, "waitForFrameSeq(): pl_exp_abort() failed");
     }
-    return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeqCallbacks(): Readout has timed out");
-}
-
-int Universal::waitForFrameConPolling(const MM::MMTime& timeout)
-{
-    rs_bool pvRet    = FALSE;
-    int16   pvErr    = 0;
-    int16   pvStatus = READOUT_NOT_ACTIVE;
-    uns32   pvBytesArrived = 0;
-    uns32   pvBufferCnt    = 0;
-
-    MM::MMTime       timeElapsed(0,0);
-    const MM::MMTime startTime = GetCurrentMMTime();
-
-    bool bStop = false;
-
-    do
-    {
-        CDeviceUtils::SleepMs(1);
-        {
-            std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-            pvRet = pl_exp_check_cont_status(hPVCAM_, &pvStatus, &pvBytesArrived, &pvBufferCnt);
-            if (pvRet != PV_OK)
-                pvErr = pl_error_code();
-        }
-        timeElapsed = GetCurrentMMTime() - startTime;
-        bStop = pollingThd_->GetStop();
-    }
-    while (pvRet && (pvStatus == EXPOSURE_IN_PROGRESS || pvStatus == READOUT_NOT_ACTIVE) && timeElapsed < timeout && !bStop);
-
-    while (pvRet && (pvStatus == READOUT_IN_PROGRESS) && timeElapsed < timeout && !bStop)
-    {
-        CDeviceUtils::SleepMs(1);
-        {
-            std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-            pvRet = pl_exp_check_cont_status(hPVCAM_, &pvStatus, &pvBytesArrived, &pvBufferCnt);
-            if (pvRet != PV_OK)
-                pvErr = pl_error_code();
-        }
-        timeElapsed = GetCurrentMMTime()  - startTime;
-        bStop = pollingThd_->GetStop();
-    }
-
-    if (bStop)
-    {
-        LogAdapterMessage( "waitForFrameConPolling(): Stop called - breaking the loop", true);
-        return DEVICE_ERR;
-    }
-    if (pvRet == TRUE && timeElapsed < timeout && pvStatus != READOUT_FAILED)
-    {
-        // Because we could miss the FRAME_AVAILABLE and the camera could of gone back
-        // to EXPOSURE_IN_PROGRESS and so on depending on how long we could of been stalled
-        // in this thread we only check for READOUT_FAILED and assume that because we got here
-        // we have one or more frames ready.
-        return DEVICE_OK;
-    }
-
-    {
-        std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-        // Abort the acquisition (ignore error if abort fails, just log it)
-        if (!pl_exp_abort(hPVCAM_, CCS_HALT))
-            LogPvcamError(__LINE__, "waitForFrameConPolling(): pl_exp_abort() failed");
-    }
-    if (pvRet == FALSE)
-        return LogPvcamError(__LINE__, "waitForFrameConPolling(): pl_exp_check_cont_status() failed", pvErr);
-    if (pvStatus == READOUT_FAILED)
-        return LogAdapterError(ERR_FRAME_READOUT_FAILED, __LINE__, "waitForFrameConPolling(): pvStatus == READOUT_FAILED");
-    if (timeElapsed > timeout)
-        return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameConPolling(): timeElapsed > timeout");
-    return DEVICE_ERR;
+    return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeq(): Readout has timed out");
 }
 
 int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pInBuf, size_t inBufSz)
@@ -5483,37 +5198,28 @@ int Universal::abortAcquisitionInternal()
     START_METHOD("Universal::abortAcquisitionInternal");
     int nRet = DEVICE_OK;
 
-    // removed redundant calls to pl_exp_stop_cont &
-    //  pl_exp_finish_seq because they get called automatically when the thread exits.
-    if(isAcquiring_)
+    if (isAcquiring_)
     {
         if (acqCfgCur_.CircBufEnabled)
         {
-            if (acqCfgCur_.CallbacksEnabled)
             {
+                std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
+                if (!pl_exp_stop_cont( hPVCAM_, CCS_CLEAR ))
                 {
-                    std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-                    if (!pl_exp_stop_cont( hPVCAM_, CCS_CLEAR ))
-                    {
-                        nRet = DEVICE_ERR;
-                        LogPvcamError( __LINE__, "pl_exp_stop_cont() failed" );
-                    }
+                    nRet = DEVICE_ERR;
+                    LogPvcamError( __LINE__, "pl_exp_stop_cont() failed" );
                 }
-                sequenceModeReady_ = false;
-                // Inform the core that the acquisition has finished
-                // (this also closes the shutter if used)
-                GetCoreCallback()->AcqFinished(this, nRet);
             }
-            else
-            {
-                pollingThd_->SetStop(true);
-                pollingThd_->wait();
-            }
+            sequenceModeReady_ = false;
         }
         else
         {
             acqThd_->Pause();
         }
+
+        // Inform the core that the acquisition has finished
+        // (this also closes the shutter if used)
+        GetCoreCallback()->AcqFinished(this, nRet);
 
         customDiskWriter_->Stop();
         customDiskWriterActive_ = false;
@@ -6627,31 +6333,6 @@ int Universal::applyAcqConfig(bool forceSetup)
     {
         configChanged = true;
         setupRequired = true;
-    }
-
-    if (acqCfgNew_.CallbacksEnabled != acqCfgCur_.CallbacksEnabled)
-    {
-        configChanged = true;
-        setupRequired = true;
-        std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-        if (acqCfgNew_.CallbacksEnabled)
-        {
-            if (pl_cam_register_callback_ex3(hPVCAM_, PL_CALLBACK_EOF, (void*)&Universal::PvcamCallbackEofEx3, this) != PV_OK)
-            {
-                acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-                nRet = LogPvcamError(__LINE__, "pl_cam_register_callback_ex3() failed");
-                return nRet;
-            }
-        }
-        else
-        {
-            if (pl_cam_deregister_callback(hPVCAM_, PL_CALLBACK_EOF) != PV_OK)
-            {
-                acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
-                nRet = LogPvcamError(__LINE__, "pl_cam_deregister_callback() failed");
-                return nRet;
-            }
-        }
     }
 
     if (acqCfgNew_.DiskStreamingEnabled != acqCfgCur_.DiskStreamingEnabled)
