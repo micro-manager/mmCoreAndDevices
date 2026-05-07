@@ -4206,7 +4206,7 @@ int Universal::initializeStaticCameraParams()
         nRet = CreateProperty(g_Keyword_CCDSerSize, CDeviceUtils::ConvertToString(camSerSize_), MM::Integer, true);
         assert(nRet == DEVICE_OK);
     }
-    if (!paramParSize.IsAvailable() || paramParSize.Current() == 0)
+    if (!paramSerSize.IsAvailable() || paramSerSize.Current() == 0)
     {   // This is a serious error, we cannot continue
         return LogPvcamError(__LINE__, "PARAM_SER_SIZE is not available or incorrect!");
     }
