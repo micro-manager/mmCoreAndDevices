@@ -815,6 +815,15 @@ private:
    std::shared_ptr<mmcore::internal::SequenceAcquisition>
    findAcquisitionByCamera(const std::string& cameraLabel);
 
+   // Look up an in-flight SA in which the named camera is the primary OR
+   // `device` is a participant. Returns nullptr if no such SA exists or if
+   // every match has AllParticipantsFinished() == true. Used by
+   // isSequenceRunning. Takes acquisitionsMutex_.
+   std::shared_ptr<mmcore::internal::SequenceAcquisition>
+   findAcquisitionInvolvingCamera(
+      const std::string& cameraLabel,
+      const MM::Device* device);
+
    // Erase a completed SA from `acquisitions_` (if present, by label).
    // Idempotent. Takes acquisitionsMutex_.
    void eraseCompletedAcquisition(const std::string& cameraLabel);
