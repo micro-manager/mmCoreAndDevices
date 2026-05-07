@@ -185,6 +185,92 @@ TEST_CASE("isSequenceRunning (by label) tracks acquisition lifecycle",
    CHECK(c.isSequenceRunning("cam") == false);
 }
 
+TEST_CASE("isSequenceRunning (by label) is true for a composite participant",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("composite", 10, 0.0, true);
+   CHECK(c.isSequenceRunning("composite"));
+   CHECK(c.isSequenceRunning("p1"));
+   CHECK(c.isSequenceRunning("p2"));
+   c.stopSequenceAcquisition("composite");
+   CHECK_FALSE(c.isSequenceRunning("p1"));
+   CHECK_FALSE(c.isSequenceRunning("p2"));
+}
+
+TEST_CASE("isSequenceRunning is true when tracking finished but device still "
+          "reports capturing",
+          "[SequenceAcquisition]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   cam.TriggerSelfFinish();  // RecordFinish runs; AllParticipantsFinished() true.
+   // Simulate a device that has not yet returned to !IsCapturing (e.g.
+   // post-AcqFinished cleanup window or out-of-band activity).
+   cam.capturing = true;
+   CHECK(c.isSequenceRunning("cam"));
+   CHECK(c.isSequenceRunning());
+   cam.capturing = false;
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("isSequenceRunning is true while in-flight even if device IsCapturing "
+          "transiently reports false",
+          "[SequenceAcquisition]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   // Tracking entry exists and has unfinished participant; tracking is
+   // authoritative even if the device reports !IsCapturing.
+   cam.reportCapturing = false;
+   CHECK(c.isSequenceRunning("cam"));
+   CHECK(c.isSequenceRunning());
+   cam.reportCapturing = true;
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("isSequenceRunning (default) is true when current camera is a "
+          "composite participant of another acquisition",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   // Set current camera to a physical, then start the composite acquisition
+   // by named label (so the current camera does not change).
+   c.setCameraDevice("p1");
+   c.startSequenceAcquisition("composite", 10, 0.0, true);
+   // Hide device-level capturing so only tracking can answer affirmatively.
+   p1.reportCapturing = false;
+   CHECK(c.isSequenceRunning());
+   p1.reportCapturing = true;
+   c.stopSequenceAcquisition("composite");
+}
+
+TEST_CASE("isSequenceRunning (by label) throws on unknown camera label",
+          "[SequenceAcquisition]") {
+   CMMCore c;
+   CHECK_THROWS_AS(c.isSequenceRunning("noSuchCamera"), CMMError);
+}
+
 // --- Buffer initialization side effects ---
 
 TEST_CASE("startSequenceAcquisition clears pre-existing images from buffer",
@@ -584,19 +670,19 @@ TEST_CASE("Natural completion with contended same-module lock closes shutter "
    REQUIRE(shutter.GetOpenSync() == true);
 
    // Hold the camera adapter module lock from another thread, by parking
-   // it inside IsCapturing() (called via c.isSequenceRunning() under the
-   // module lock). Once WaitForIsCapturingBlocked returns, the holder
-   // provably holds the module lock until UnblockIsCapturing.
-   cam.blockIsCapturing = true;
-   std::thread holder([&] { (void)c.isSequenceRunning(); });
-   REQUIRE(cam.WaitForIsCapturingBlocked());
+   // it inside SetExposure() (called via c.setExposure under the module
+   // lock). Once WaitForSetExposureBlocked returns, the holder provably
+   // holds the module lock until UnblockSetExposure.
+   cam.blockSetExposure = true;
+   std::thread holder([&] { c.setExposure("cam", 10.0); });
+   REQUIRE(cam.WaitForSetExposureBlocked());
 
    // Drive natural completion. AcqFinished's try_lock fails (holder owns
    // the module lock); stop was not requested, so AcqFinished spawns the
    // worker, which then blocks waiting for the module lock.
    cam.TriggerSelfFinish();
 
-   cam.UnblockIsCapturing();
+   cam.UnblockSetExposure();
    holder.join();
 
    // Worker may now acquire the lock and close the shutter. Synchronize on

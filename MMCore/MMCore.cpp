@@ -1002,6 +1002,23 @@ CMMCore::findAcquisitionByCamera(const std::string& cameraLabel)
    return it != acquisitions_.end() ? it->second : nullptr;
 }
 
+std::shared_ptr<mmi::SequenceAcquisition>
+CMMCore::findAcquisitionInvolvingCamera(
+   const std::string& cameraLabel, const MM::Device* device)
+{
+   std::lock_guard<std::mutex> g(acquisitionsMutex_);
+   for (const auto& kv : acquisitions_) {
+      const auto& sa = kv.second;
+      if (sa->AllParticipantsFinished())
+         continue;
+      if (sa->CameraLabel() == cameraLabel ||
+          (device && sa->HasParticipant(device))) {
+         return sa;
+      }
+   }
+   return nullptr;
+}
+
 void CMMCore::eraseCompletedAcquisition(const std::string& cameraLabel)
 {
    std::lock_guard<std::mutex> g(acquisitionsMutex_);
@@ -3634,17 +3651,19 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
 bool CMMCore::isSequenceRunning() MMCORE_NOEXCEPT
 {
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
-   if (camera)
+   if (!camera)
+      return false;
+   try
    {
-      try
-      {
-         mmi::DeviceModuleLockGuard guard(camera);
-         return camera->IsCapturing();
-      }
-      catch (const CMMError&) // Possibly uninitialized camera
-      {
-         // Fall through
-      }
+      if (findAcquisitionInvolvingCamera(camera->GetLabel(),
+                                         camera->GetRawPtr()))
+         return true;
+      mmi::DeviceModuleLockGuard guard(camera);
+      return camera->IsCapturing();
+   }
+   catch (const CMMError&) // Possibly uninitialized camera
+   {
+      // Fall through
    }
    return false;
 };
@@ -3659,6 +3678,9 @@ bool CMMCore::isSequenceRunning(const char* cameraLabel) MMCORE_LEGACY_THROW(CMM
 {
    std::shared_ptr<mmi::CameraInstance> pCam =
       deviceManager_->GetDeviceOfType<mmi::CameraInstance>(cameraLabel);
+
+   if (findAcquisitionInvolvingCamera(cameraLabel, pCam->GetRawPtr()))
+      return true;
 
    mmi::DeviceModuleLockGuard guard(pCam);
    return pCam->IsCapturing();

@@ -134,10 +134,10 @@ struct SyncCamera : CCameraBase<SyncCamera> {
    bool capturing = false;
    bool reportCapturing = true;
 
-   // When true, IsCapturing() blocks until UnblockIsCapturing() is called.
+   // When true, SetExposure() blocks until UnblockSetExposure() is called.
    // Tests use this to hold the camera adapter module lock from a thread
-   // that calls c.isSequenceRunning().
-   bool blockIsCapturing = false;
+   // that calls c.setExposure("cam", ...).
+   bool blockSetExposure = false;
 
    // When true, StopSequenceAcquisition() blocks until ReleaseStopBlocked()
    // is called. While blocked, the calling thread typically holds the
@@ -170,7 +170,16 @@ struct SyncCamera : CCameraBase<SyncCamera> {
    unsigned GetBitDepth() const override { return bitDepth; }
    int GetBinning() const override { return binning; }
    int SetBinning(int b) override { binning = b; return DEVICE_OK; }
-   void SetExposure(double e) override { exposure = e; }
+   void SetExposure(double e) override {
+      if (blockSetExposure) {
+         std::unique_lock<std::mutex> lk(setExpMu_);
+         inSetExposureBlock_ = true;
+         setExpCv_.notify_all();
+         setExpCv_.wait(lk, [this] { return setExposureReleased_; });
+         inSetExposureBlock_ = false;
+      }
+      exposure = e;
+   }
    double GetExposure() const override { return exposure; }
    int SetROI(unsigned, unsigned, unsigned, unsigned) override {
       return DEVICE_OK;
@@ -211,33 +220,9 @@ struct SyncCamera : CCameraBase<SyncCamera> {
       Finish();
       return DEVICE_OK;
    }
-   bool IsCapturing() override {
-      if (blockIsCapturing) {
-         std::unique_lock<std::mutex> lk(blockMu_);
-         inIsCapturingBlock_ = true;
-         blockCv_.notify_all();
-         blockCv_.wait(lk, [this] { return isCapturingReleased_; });
-         inIsCapturingBlock_ = false;
-      }
-      return capturing && reportCapturing;
-   }
+   bool IsCapturing() override { return capturing && reportCapturing; }
 
    void TriggerSelfFinish() { Finish(); }
-
-   bool WaitForIsCapturingBlocked(
-         std::chrono::milliseconds timeout =
-            std::chrono::milliseconds(5000)) {
-      std::unique_lock<std::mutex> lk(blockMu_);
-      return blockCv_.wait_for(lk, timeout,
-         [this] { return inIsCapturingBlock_; });
-   }
-   void UnblockIsCapturing() {
-      {
-         std::lock_guard<std::mutex> lk(blockMu_);
-         isCapturingReleased_ = true;
-      }
-      blockCv_.notify_all();
-   }
 
    bool WaitForStopBlocked(
          std::chrono::milliseconds timeout =
@@ -252,6 +237,21 @@ struct SyncCamera : CCameraBase<SyncCamera> {
          stopReleased_ = true;
       }
       stopBlockCv_.notify_all();
+   }
+
+   bool WaitForSetExposureBlocked(
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(setExpMu_);
+      return setExpCv_.wait_for(lk, timeout,
+         [this] { return inSetExposureBlock_; });
+   }
+   void UnblockSetExposure() {
+      {
+         std::lock_guard<std::mutex> lk(setExpMu_);
+         setExposureReleased_ = true;
+      }
+      setExpCv_.notify_all();
    }
 
    int InsertTestImage(const unsigned char* pixels = nullptr) {
@@ -276,15 +276,15 @@ private:
 
    std::vector<unsigned char> imgBuf_;
 
-   std::mutex blockMu_;
-   std::condition_variable blockCv_;
-   bool inIsCapturingBlock_ = false;
-   bool isCapturingReleased_ = false;
-
    std::mutex stopBlockMu_;
    std::condition_variable stopBlockCv_;
    bool inStopBlock_ = false;
    bool stopReleased_ = false;
+
+   std::mutex setExpMu_;
+   std::condition_variable setExpCv_;
+   bool inSetExposureBlock_ = false;
+   bool setExposureReleased_ = false;
 };
 
 // A camera that produces images asynchronously on its own thread.
