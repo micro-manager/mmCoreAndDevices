@@ -3349,6 +3349,25 @@ void CMMCore::startSequenceAcquisitionImpl(
 void CMMCore::stopSequenceAcquisitionImpl(
     std::shared_ptr<mmi::CameraInstance> camera)
 {
+   // Reject if the camera is a non-primary participant of an active SA.
+   // Stop must go through the primary so that MarkStopRequested is
+   // observed before the camera adapter module lock is taken (see
+   // SequenceAcquisition.h ordering note), the deferred shutter-close
+   // is drained, and eraseCompletedAcquisition runs coherently — and
+   // so the composite adapter can cascade-stop its physicals.
+   if (auto involving = findAcquisitionInvolvingCamera(
+          camera->GetLabel(), camera->GetRawPtr())) {
+      if (involving->CameraLabel() != camera->GetLabel()) {
+         throw CMMError(
+            "Camera '" + camera->GetLabel() +
+            "' is a participant of the sequence acquisition on '" +
+            involving->CameraLabel() +
+            "'; stop the primary camera ('" + involving->CameraLabel() +
+            "') instead",
+            MMERR_NotAllowedDuringSequenceAcquisition);
+      }
+   }
+
    auto sa = findAcquisitionByCamera(camera->GetLabel());
    if (sa) {
       // Set stopRequested_ before taking the camera adapter module lock

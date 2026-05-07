@@ -203,6 +203,68 @@ TEST_CASE("isSequenceRunning is true while composite camera is acquiring "
    CHECK_FALSE(c.isSequenceRunning());
 }
 
+TEST_CASE("Composite: stopSequenceAcquisition by phys-cam label is rejected "
+          "while composite SA is active",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK_THROWS_AS(c.stopSequenceAcquisition("p0"), CMMError);
+   CHECK(c.isSequenceRunning("composite"));
+   c.stopSequenceAcquisition("composite");
+   CHECK_FALSE(c.isSequenceRunning());
+}
+
+TEST_CASE("Composite: no-arg stopSequenceAcquisition is rejected when current "
+          "camera is a phys-cam participant",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   // Set current camera to p0 *before* the SA starts; setCameraDevice
+   // is rejected during an active SA, so this models the case where the
+   // user kicked off the SA on the composite by label and the current
+   // camera happens to be a participant.
+   c.setCameraDevice("p0");
+
+   c.startSequenceAcquisition("composite", 10, 0.0, true);
+   CHECK_THROWS_AS(c.stopSequenceAcquisition(), CMMError);
+   CHECK(c.isSequenceRunning("composite"));
+   c.stopSequenceAcquisition("composite");
+   CHECK_FALSE(c.isSequenceRunning());
+}
+
+TEST_CASE("Composite: stopSequenceAcquisition by phys-cam label is allowed "
+          "after all physicals self-finish",
+          "[MultiChannelSequenceAcquisition]") {
+   SyncCamera p0("p0");
+   SyncCamera p1("p1");
+   MockCompositeCamera composite({&p0, &p1});
+   MockAdapterWithDevices adapter{
+      {"p0", &p0}, {"p1", &p1}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   p0.TriggerSelfFinish();
+   p1.TriggerSelfFinish();
+   REQUIRE_FALSE(c.isSequenceRunning());
+
+   CHECK_NOTHROW(c.stopSequenceAcquisition("p0"));
+}
+
 // --- Tag scoping ---
 
 TEST_CASE("Composite phys cam used standalone after composite acquisition has "
