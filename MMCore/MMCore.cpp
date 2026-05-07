@@ -3346,6 +3346,39 @@ void CMMCore::startSequenceAcquisitionImpl(
       openDeferredAutoShutter(sa);
 }
 
+void CMMCore::stopSequenceAcquisitionImpl(
+    std::shared_ptr<mmi::CameraInstance> camera)
+{
+   auto sa = findAcquisitionByCamera(camera->GetLabel());
+   if (sa) {
+      // Set stopRequested_ before taking the camera adapter module lock
+      // so that any AcqFinished that fires from the camera's thread while
+      // we hold the lock observes it under SequenceAcquisition::mu_ and
+      // takes the deferred-close path (which we drain below) rather than
+      // racing the spawn-and-adopt path with our join.
+      (void)sa->MarkStopRequested();
+   }
+
+   {
+      mmi::DeviceModuleLockGuard guard(camera);
+      int nRet = camera->StopSequenceAcquisition();
+      if (nRet != DEVICE_OK) {
+         logError(getDeviceName(camera).c_str(),
+            getDeviceErrorText(nRet, camera).c_str());
+         throw CMMError(getDeviceErrorText(nRet, camera).c_str(),
+            MMERR_DEVICE_GENERIC);
+      }
+   }
+
+   if (sa) {
+      if (sa->TakeDeferredShutterClose())
+         closeDeferredAutoShutter();
+      sa->JoinDeferredShutterCloseWorker();
+      if (sa->IsComplete())
+         eraseCompletedAcquisition(sa->CameraLabel());
+   }
+}
+
 /**
  * Starts streaming camera sequence acquisition.
  * This command does not block the calling thread for the duration of the acquisition.
@@ -3468,38 +3501,9 @@ void CMMCore::stopSequenceAcquisition(const char* label) MMCORE_LEGACY_THROW(CMM
 {
    std::shared_ptr<mmi::CameraInstance> pCam =
       deviceManager_->GetDeviceOfType<mmi::CameraInstance>(label);
-
-   auto sa = findAcquisitionByCamera(pCam->GetLabel());
-   if (sa) {
-      // Set stopRequested_ before taking the camera adapter module lock
-      // so that any AcqFinished that fires from the camera's thread while
-      // we hold the lock observes it under SequenceAcquisition::mu_ and
-      // takes the deferred-close path (which we drain below) rather than
-      // racing the spawn-and-adopt path with our join.
-      (void)sa->MarkStopRequested();
-   }
-
-   {
-      mmi::DeviceModuleLockGuard guard(pCam);
-      LOG_DEBUG(coreLogger_) <<
-         "Will stop sequence acquisition from camera " << label;
-      int nRet = pCam->StopSequenceAcquisition();
-      if (nRet != DEVICE_OK)
-      {
-         logError(label, getDeviceErrorText(nRet, pCam).c_str());
-         throw CMMError(getDeviceErrorText(nRet, pCam).c_str(),
-            MMERR_DEVICE_GENERIC);
-      }
-   }
-
-   if (sa) {
-      if (sa->TakeDeferredShutterClose())
-         closeDeferredAutoShutter();
-      sa->JoinDeferredShutterCloseWorker();
-      if (sa->IsComplete())
-         eraseCompletedAcquisition(sa->CameraLabel());
-   }
-
+   LOG_DEBUG(coreLogger_) <<
+      "Will stop sequence acquisition from camera " << label;
+   stopSequenceAcquisitionImpl(pCam);
    LOG_DEBUG(coreLogger_) <<
       "Did stop sequence acquisition from camera " << label;
 }
@@ -3541,34 +3545,9 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
       throw CMMError(getCoreErrorText(MMERR_CameraNotAvailable).c_str(),
          MMERR_CameraNotAvailable);
    }
-
-   auto sa = findAcquisitionByCamera(camera->GetLabel());
-   if (sa) {
-      // See same-named overload above for ordering rationale.
-      (void)sa->MarkStopRequested();
-   }
-
-   {
-      mmi::DeviceModuleLockGuard guard(camera);
-      LOG_DEBUG(coreLogger_) <<
-         "Will stop sequence acquisition from current camera";
-      int nRet = camera->StopSequenceAcquisition();
-      if (nRet != DEVICE_OK) {
-         logError(getDeviceName(camera).c_str(),
-            getDeviceErrorText(nRet, camera).c_str());
-         throw CMMError(getDeviceErrorText(nRet, camera).c_str(),
-            MMERR_DEVICE_GENERIC);
-      }
-   }
-
-   if (sa) {
-      if (sa->TakeDeferredShutterClose())
-         closeDeferredAutoShutter();
-      sa->JoinDeferredShutterCloseWorker();
-      if (sa->IsComplete())
-         eraseCompletedAcquisition(sa->CameraLabel());
-   }
-
+   LOG_DEBUG(coreLogger_) <<
+      "Will stop sequence acquisition from current camera";
+   stopSequenceAcquisitionImpl(camera);
    LOG_DEBUG(coreLogger_) <<
       "Did stop sequence acquisition from current camera";
 }

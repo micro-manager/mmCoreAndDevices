@@ -837,6 +837,9 @@ private:
        bool overwriteData,
        std::function<int()> startDevice);
 
+   void stopSequenceAcquisitionImpl(
+       std::shared_ptr<mmcore::internal::CameraInstance> camera);
+
    void closeDeferredAutoShutter();
 
    void openDeferredAutoShutter(
