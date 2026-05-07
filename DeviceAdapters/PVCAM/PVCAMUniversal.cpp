@@ -1865,7 +1865,7 @@ int Universal::PrepareSeqAcq() // Note: no longer a device interface function
     return DEVICE_OK;
 }
 
-int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool stopOnOverflow)
 {
     std::lock_guard<std::mutex> acqGuard(acqLock_);
     START_METHOD("Universal::StartSequenceAcquisition");
@@ -1925,7 +1925,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
 
     std::ostringstream os;
     os << "Started sequence on " << deviceName_ << ", at " << startTime_.toString()
-        << ", with " << numImages << " frames, " << interval_ms << " ms interval and "
+        << ", with " << numImages << " frames and "
         << (stopOnOverflow ? "" : "don't ") << "stop on overflow" << std::endl;
     LogAdapterMessage(os.str().c_str());
 

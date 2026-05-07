@@ -204,12 +204,14 @@ public: // MM::Camera API
     virtual bool IsCapturing() override;
 
     /**
-    * Micro-manager calls the "live" acquisition a "sequence". PVCAM calls this "continuous - circular buffer" mode.
+    * Micro-manager calls the "live" acquisition a "sequence".
+    * PVCAM calls this "continuous - circular buffer" mode.
+    * See `MM::Camera::StartSequenceAcquisition` — `unused` has no effect.
     */
     virtual int StartSequenceAcquisition(
-            long numImages, double interval_ms, bool stopOnOverflow) override;
-    virtual int StartSequenceAcquisition(double interval_ms) override
-    { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
+            long numImages, double unused, bool stopOnOverflow) override;
+    virtual int StartSequenceAcquisition(double /*unused*/) override
+    { return StartSequenceAcquisition(LONG_MAX, 0.0, false); }
     virtual int StopSequenceAcquisition() override;
 
 public: // Action handlers
