@@ -4994,17 +4994,10 @@ int Universal::prepareSequenceAcquisition()
     if (isAcquiring_)
         return ERR_BUSY_ACQUIRING;
 
+    // Reconfigure anything that has to do with pl_exp_setup_cont by default
     bool& modeReadyFlag = sequenceModeReady_;
-    int (Universal::*resizeImageBufferFn)() = &Universal::resizeImageBufferContinuous;
-    //auto resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
-
-    if (acqCfgCur_.CircBufEnabled)
-    {
-        modeReadyFlag = sequenceModeReady_;
-        // Reconfigure anything that has to do with pl_exp_setup_cont
-        resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
-    }
-    else
+    auto resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
+    if (!acqCfgCur_.CircBufEnabled)
     {
         modeReadyFlag = singleFrameModeReady_;
         // For non-circular buffer acquisition we use the single frame buffer
@@ -5017,7 +5010,8 @@ int Universal::prepareSequenceAcquisition()
         int ret = (this->*resizeImageBufferFn)();
         if (ret != DEVICE_OK)
             return ret;
-        GetCoreCallback()->InitializeImageBuffer(1, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+        GetCoreCallback()->InitializeImageBuffer(1, 1,
+                GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
         modeReadyFlag = true;
         callPrepareForAcq_ = true;
     }
