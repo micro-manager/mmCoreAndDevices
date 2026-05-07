@@ -3044,48 +3044,30 @@ int Universal::OnAlgorithmCfaMask(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         std::string val;
         pProp->Get(val);
-        if (val == g_Keyword_RGGB)
-        {
-            acqCfgNew_.DebayerAlgMask = CFA_RGGB;
-        }
-        else if (val == g_Keyword_BGGR)
-        {
+        if (val == g_Keyword_BGGR)
             acqCfgNew_.DebayerAlgMask = CFA_BGGR;
-        }
         else if (val == g_Keyword_GRBG)
-        {
             acqCfgNew_.DebayerAlgMask = CFA_GRBG;
-        }
         else if (val == g_Keyword_GBRG)
-        {
             acqCfgNew_.DebayerAlgMask = CFA_GBRG;
-        }
-        else
-        {
+        else /* (val == g_Keyword_RGGB) */
             acqCfgNew_.DebayerAlgMask = CFA_RGGB;
-        }
         nRet = applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
     {
         switch (acqCfgCur_.DebayerAlgMask)
         {
-        case CFA_RGGB:
-            pProp->Set(g_Keyword_RGGB);
-            break;
-
         case CFA_BGGR:
             pProp->Set(g_Keyword_BGGR);
             break;
-
         case CFA_GRBG:
             pProp->Set(g_Keyword_GRBG);
             break;
-
         case CFA_GBRG:
             pProp->Set(g_Keyword_GBRG);
             break;
-
+        case CFA_RGGB:
         default:
             pProp->Set(g_Keyword_RGGB);
             break;
@@ -3126,15 +3108,13 @@ int Universal::OnInterpolationAlgorithm(MM::PropertyBase* pProp, MM::ActionType 
         std::string val;
         pProp->Get(val);
 
-        if (val == g_Keyword_Replication)
-            acqCfgNew_.DebayerAlgInterpolation = ALG_REPLICATION;
-        else if (val == g_Keyword_Bilinear)
+        if (val == g_Keyword_Bilinear)
             acqCfgNew_.DebayerAlgInterpolation = ALG_BILINEAR;
         else if (val == g_Keyword_SmoothHue)
             acqCfgNew_.DebayerAlgInterpolation =  ALG_SMOOTH_HUE;
         else if (val == g_Keyword_AdaptiveSmoothHue)
             acqCfgNew_.DebayerAlgInterpolation =  ALG_ADAPTIVE_SMOOTH_HUE;
-        else
+        else /* (val == g_Keyword_Replication) */
             acqCfgNew_.DebayerAlgInterpolation =  ALG_REPLICATION;
 
 
@@ -3144,22 +3124,16 @@ int Universal::OnInterpolationAlgorithm(MM::PropertyBase* pProp, MM::ActionType 
     {
         switch (acqCfgCur_.DebayerAlgInterpolation)
         {
-        case ALG_REPLICATION:
-            pProp->Set(g_Keyword_Replication);
-            break;
-
         case ALG_BILINEAR:
             pProp->Set(g_Keyword_Bilinear);
             break;
-
         case ALG_SMOOTH_HUE:
             pProp->Set(g_Keyword_SmoothHue);
             break;
-
         case ALG_ADAPTIVE_SMOOTH_HUE:
             pProp->Set(g_Keyword_AdaptiveSmoothHue);
             break;
-
+        case ALG_REPLICATION:
         default:
             pProp->Set(g_Keyword_Replication);
             break;
