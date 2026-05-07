@@ -221,6 +221,7 @@ constexpr int g_UniversalParamsCount = sizeof(g_UniversalParams) / sizeof(ParamN
 //=============================================================================
 //=================================================================== Universal
 
+
 Universal::Universal(short cameraId, const char* deviceName)
     : cameraId_(cameraId),
     deviceName_(deviceName),
@@ -255,8 +256,7 @@ Universal::~Universal()
     {
         refCount_ = 0; // having the refCount as uint caused underflow and incorrect behavior in Shutdown()
         // release resources
-        if (initialized_)
-            Shutdown();
+        Shutdown();
     }
 
     if (metaFrameStruct_)
