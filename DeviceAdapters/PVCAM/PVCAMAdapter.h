@@ -686,7 +686,10 @@ private:
     */
     int waitForFrameSeq();
 
-    int PrepareSeqAcq(); // Note: no longer a device interface function
+    /**
+    * Prepares the camera and buffers for a sequence acquisition.
+    */
+    int prepareSequenceAcquisition();
 
     /**
     * Prepares a raw PVCAM frame buffer for use in MM::Core

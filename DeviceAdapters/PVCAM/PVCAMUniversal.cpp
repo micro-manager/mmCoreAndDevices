@@ -1819,52 +1819,6 @@ bool Universal::IsCapturing()
     return isAcquiring_;
 }
 
-int Universal::PrepareSeqAcq() // Note: no longer a device interface function
-{
-    START_METHOD("Universal::PrepareSeqAcq");
-
-    if (isAcquiring_)
-        return ERR_BUSY_ACQUIRING;
-
-    bool& modeReadyFlag = sequenceModeReady_;
-    int (Universal::*resizeImageBufferFn)() = &Universal::resizeImageBufferContinuous;
-    //auto resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
-
-    if (acqCfgCur_.CircBufEnabled)
-    {
-        modeReadyFlag = sequenceModeReady_;
-        // Reconfigure anything that has to do with pl_exp_setup_cont
-        resizeImageBufferFn =  &Universal::resizeImageBufferContinuous;
-    }
-    else
-    {
-        modeReadyFlag = singleFrameModeReady_;
-        // For non-circular buffer acquisition we use the single frame buffer
-        // and all the single frame mode logic.
-        resizeImageBufferFn =  &Universal::resizeImageBufferSingle;
-    }
-
-    if (!modeReadyFlag)
-    {
-        int ret = (this->*resizeImageBufferFn)();
-        if (ret != DEVICE_OK)
-            return ret;
-        GetCoreCallback()->InitializeImageBuffer(1, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-        modeReadyFlag = true;
-        callPrepareForAcq_ = true;
-    }
-
-    if (callPrepareForAcq_)
-    {
-        int ret = GetCoreCallback()->PrepareForAcq(this);
-        if (ret != DEVICE_OK)
-            return ret;
-        callPrepareForAcq_ = false;
-    }
-
-    return DEVICE_OK;
-}
-
 int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool stopOnOverflow)
 {
     std::lock_guard<std::mutex> acqGuard(acqLock_);
@@ -1877,7 +1831,7 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
     if (ret != DEVICE_OK)
         return ret;
 
-    ret = PrepareSeqAcq();
+    ret = prepareSequenceAcquisition();
     if (ret != DEVICE_OK)
         return ret;
 
@@ -5031,6 +4985,52 @@ int Universal::waitForFrameSeq()
             LogPvcamError(__LINE__, "waitForFrameSeq(): pl_exp_abort() failed");
     }
     return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeq(): Readout has timed out");
+}
+
+int Universal::prepareSequenceAcquisition()
+{
+    START_METHOD("Universal::prepareSequenceAcquisition");
+
+    if (isAcquiring_)
+        return ERR_BUSY_ACQUIRING;
+
+    bool& modeReadyFlag = sequenceModeReady_;
+    int (Universal::*resizeImageBufferFn)() = &Universal::resizeImageBufferContinuous;
+    //auto resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
+
+    if (acqCfgCur_.CircBufEnabled)
+    {
+        modeReadyFlag = sequenceModeReady_;
+        // Reconfigure anything that has to do with pl_exp_setup_cont
+        resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
+    }
+    else
+    {
+        modeReadyFlag = singleFrameModeReady_;
+        // For non-circular buffer acquisition we use the single frame buffer
+        // and all the single frame mode logic.
+        resizeImageBufferFn = &Universal::resizeImageBufferSingle;
+    }
+
+    if (!modeReadyFlag)
+    {
+        int ret = (this->*resizeImageBufferFn)();
+        if (ret != DEVICE_OK)
+            return ret;
+        GetCoreCallback()->InitializeImageBuffer(1, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+        modeReadyFlag = true;
+        callPrepareForAcq_ = true;
+    }
+
+    if (callPrepareForAcq_)
+    {
+        int ret = GetCoreCallback()->PrepareForAcq(this);
+        if (ret != DEVICE_OK)
+            return ret;
+        callPrepareForAcq_ = false;
+    }
+
+    return DEVICE_OK;
 }
 
 int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pInBuf, size_t inBufSz)
