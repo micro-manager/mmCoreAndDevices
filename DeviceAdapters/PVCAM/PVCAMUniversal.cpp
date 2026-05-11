@@ -4833,6 +4833,8 @@ int Universal::resizeImageBufferSingle()
         LogAdapterMessage("Caught error in resizeImageBufferSingle", false);
     }
 
+    sequenceModeReady_ = false;
+    LogAdapterMessage(std::string("resizeImageBufferSingle sequenceModeReady_=false"), true);
     return nRet;
 }
 
