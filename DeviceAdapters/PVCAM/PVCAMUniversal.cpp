@@ -3592,7 +3592,7 @@ int Universal::OnHostFrameSummingFormat(MM::PropertyBase* pProp, MM::ActionType 
 //====================================================================== PUBLIC
 
 
-short Universal::Handle()
+short Universal::Handle() const
 {
     return hPVCAM_;
 }

@@ -567,7 +567,7 @@ public: // Other published methods
     * Returns the PVCAM camera handle.
     * Published to allow other classes access the camera.
     */
-    short Handle();
+    short Handle() const;
 
     // All the logging methods below prepend the message with a PVCAM Adapter
     // specific prefix. We use that to unify the logs and to clearly see which logs
