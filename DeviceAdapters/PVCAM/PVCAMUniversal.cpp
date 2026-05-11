@@ -6504,7 +6504,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // See postExpSetupInit()
         // We prepare the acquisition based on previous configuration. If user was snapping single
         // frames, we prepare the single frame, if user was running live, we prepare live.
-        if (acqCfgNew_.AcquisitionType == AcqType_Live)
+        if (acqCfgCur_.CircBufEnabled)
         {
             nRet = resizeImageBufferContinuous();
             sequenceModeReady_ = true;
