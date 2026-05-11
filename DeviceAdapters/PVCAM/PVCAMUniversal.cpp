@@ -1489,12 +1489,12 @@ int Universal::SnapImage()
         std::lock_guard<std::mutex> acqGuard(acqLock_);
         START_METHOD("Universal::SnapImage");
 
-        if(snappingSingleFrame_)
+        if (snappingSingleFrame_)
         {
             LogAdapterMessage("SnapImage() failed: GetImage() has not been done for previous frame", true);
             return DEVICE_ERR;
         }
-        if(isAcquiring_)
+        if (isAcquiring_)
         {
             LogAdapterMessage("SnapImage() failed: Camera already acquiring.", true);
             return DEVICE_CAMERA_BUSY_ACQUIRING;
@@ -1507,7 +1507,7 @@ int Universal::SnapImage()
         if (nRet != DEVICE_OK)
             return nRet;
 
-        if(!singleFrameModeReady_)
+        if (!singleFrameModeReady_)
         {
             // TODO: Do this at the end of previous snap.
             //       The live mode is always stopped by pl_exp_abort
@@ -1576,7 +1576,7 @@ const unsigned char* Universal::GetImageBuffer()
 {
     START_METHOD("Universal::GetImageBuffer");
 
-    if(!snappingSingleFrame_)
+    if (!snappingSingleFrame_)
     {
         LogAdapterMessage(__LINE__, "Warning: GetImageBuffer called before SnapImage()");
         return nullptr;
@@ -1591,7 +1591,7 @@ const unsigned int* Universal::GetImageBufferAsRGB32()
 {
     START_METHOD("Universal::GetImageBufferAsRGB32");
 
-    if(!snappingSingleFrame_)
+    if (!snappingSingleFrame_)
     {
         LogAdapterMessage(__LINE__, "Warning: GetImageBufferAsRGB32 called before SnapImage()");
         return nullptr;
@@ -1944,6 +1944,7 @@ int Universal::OnUniversalProperty(MM::PropertyBase* pProp, MM::ActionType eAct,
         param->Read();
 
         // Force the reinitialization of the acquisition
+        sequenceModeReady_ = false;
         singleFrameModeReady_ = false;
     }
     else if (eAct == MM::BeforeGet)
@@ -2020,67 +2021,57 @@ int Universal::OnBinningX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnBinningX", eAct);
 
-    int nRet = DEVICE_OK;
-
     if (eAct == MM::AfterSet)
     {
         long binX;
         pProp->Get(binX);
+
         if (binX < 1)
-        {
-            nRet = DEVICE_INVALID_PROPERTY_VALUE;
-            LogAdapterError( nRet, __LINE__, "Value of BinningX has to be positive" );
-        }
-        else
-        {
-            acqCfgNew_.Rois.SetBinningX(static_cast<uns16>(binX));
-            acqCfgNew_.Rois.AdjustCoords();
-            nRet = applyAcqConfig();
-        }
+            return LogAdapterError(DEVICE_INVALID_PROPERTY_VALUE, __LINE__,
+                    "Value of BinningX has to be positive");
+
+        acqCfgNew_.Rois.SetBinningX(static_cast<uns16>(binX));
+        acqCfgNew_.Rois.AdjustCoords();
+        return applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
     {
         pProp->Set((long)acqCfgNew_.Rois.BinX());
     }
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::OnBinningY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnBinningY", eAct);
 
-    int nRet = DEVICE_OK;
-
     if (eAct == MM::AfterSet)
     {
         long binY;
         pProp->Get(binY);
+
         if (binY < 1)
-        {
-            nRet = DEVICE_INVALID_PROPERTY_VALUE;
-            LogAdapterError( nRet, __LINE__, "Value of BinningY has to be positive" );
-        }
-        else
-        {
-            acqCfgNew_.Rois.SetBinningY(static_cast<uns16>(binY));
-            acqCfgNew_.Rois.AdjustCoords();
-            nRet = applyAcqConfig();
-        }
+            return LogAdapterError(DEVICE_INVALID_PROPERTY_VALUE, __LINE__,
+                    "Value of BinningY has to be positive");
+
+        acqCfgNew_.Rois.SetBinningY(static_cast<uns16>(binY));
+        acqCfgNew_.Rois.AdjustCoords();
+        return applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
     {
         pProp->Set((long)acqCfgNew_.Rois.BinY());
     }
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnExposure", eAct);
+
     // Micro manager passes the Exposure value in milliseconds, as double.
     // PVCAM exposure resolution is switchable, so we will need to convert
     // this value later on.
-    int nRet = DEVICE_OK;
     if (eAct == MM::BeforeGet)
     {
         pProp->Set(acqCfgCur_.ExposureMs);
@@ -2091,9 +2082,9 @@ int Universal::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get(newExposure);
 
         acqCfgNew_.ExposureMs = newExposure;
-        nRet = applyAcqConfig();
+        return applyAcqConfig();
     }
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -2114,7 +2105,6 @@ int Universal::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnGain", eAct);
 
-    int nRet = DEVICE_OK;
     if (eAct == MM::AfterSet)
     {
         std::string gainStr;
@@ -2122,15 +2112,9 @@ int Universal::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         // Convert the gain UI string to actual gain index and apply
         if (camCurrentSpeed_.gainNameMap.find(gainStr) == camCurrentSpeed_.gainNameMap.end())
-        {
-            nRet = DEVICE_CAN_NOT_SET_PROPERTY;
-            LogAdapterError(nRet, __LINE__, "Gain not supported");
-        }
-        else
-        {
-            const int16 gainIdx = camCurrentSpeed_.gainNameMap.at(gainStr);
-            acqCfgNew_.GainNum = gainIdx;
-        }
+            return LogAdapterError(DEVICE_CAN_NOT_SET_PROPERTY, __LINE__, "Gain not supported");
+
+        acqCfgNew_.GainNum = camCurrentSpeed_.gainNameMap.at(gainStr);
 
         singleFrameModeReady_ = false;
 
@@ -2143,7 +2127,7 @@ int Universal::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Set(gainStr.c_str());
     }
 
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::OnReadoutPort(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -2156,7 +2140,6 @@ int Universal::OnReadoutPort(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get( portStr );
 
         acqCfgNew_.PortId = prmReadoutPort_->GetEnumValue(portStr);
-
         return applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
@@ -3316,7 +3299,7 @@ int Universal::OnResetPostProcProperties(MM::PropertyBase* pProp, MM::ActionType
             if (IsCapturing())
                 StopSequenceAcquisition();
 
-            if(!pl_pp_reset(hPVCAM_))
+            if (!pl_pp_reset(hPVCAM_))
             {
                 LogPvcamError(__LINE__, "pl_pp_reset");
                 return DEVICE_CAN_NOT_SET_PROPERTY;
@@ -3620,7 +3603,7 @@ int Universal::LogPvcamError(int lineNr, const std::string& message, int16 pvErr
     try
     {
         char pvErrMsg[ERROR_MSG_LEN];
-        if(!pl_error_message (pvErrCode, pvErrMsg))
+        if (!pl_error_message (pvErrCode, pvErrMsg))
         {
             CDeviceUtils::CopyLimitedString(pvErrMsg, "[pl_error_message() FAILED!]");
         }
@@ -3831,7 +3814,7 @@ int Universal::FrameAcquired()
 
     // The FrameAcquired() is also called for SnapImage() when using callbacks,
     // so we have to check. In case of SnapImage the singleFrameBufRaw_ already
-    // contains the data (since it's passed to pl_start_seq() and no PushImage()
+    // contains the data (since it's passed to pl_exp_start_seq() and no PushImage()
     // is done - the single image is retrieved with GetImageBuffer().
     if (!snappingSingleFrame_)
     {
@@ -4341,7 +4324,7 @@ int Universal::initializePostProcessing()
     SetAllowedValues(resetNameStr.c_str(), boolValues);
 
     // Reset the post processing and reload all PP values
-    if(!pl_pp_reset(hPVCAM_))
+    if (!pl_pp_reset(hPVCAM_))
         return LogPvcamError(__LINE__, "pl_pp_reset");
     nRet = refreshPostProcValues();
     return nRet;
@@ -4682,7 +4665,7 @@ int Universal::resizeImageBufferContinuous()
         {
             SetBinning(1); // The error might have been caused by not supported BIN or ROI, so do a reset
             GetCoreCallback()->OnPropertiesChanged(this); // Notify the MM UI to update the BIN and ROI
-            SetErrorText( nRet, "Failed to setup the acquisition" );
+            SetErrorText(nRet, "Failed to setup the acquisition");
             return nRet;
         }
 
@@ -4798,7 +4781,7 @@ int Universal::resizeImageBufferSingle()
         {
             SetBinning(1); // The error might have been caused by not supported BIN or ROI, so do a reset
             GetCoreCallback()->OnPropertiesChanged(this); // Notify the MM UI to update the BIN and ROI
-            SetErrorText( nRet, "Failed to setup the acquisition" );
+            SetErrorText(nRet, "Failed to setup the acquisition");
             return nRet;
         }
 
@@ -4809,7 +4792,7 @@ int Universal::resizeImageBufferSingle()
             return nRet; // Message logged in the failing method
 
         // Reallocate the single frame buffer if needed. This is the raw buffer
-        // that is sent to PVCAM in start_seq(). We always need this buffer.
+        // that is sent to PVCAM in pl_exp_start_seq(). We always need this buffer.
         if (singleFrameBufRawSz_ != frameSize)
         {
             singleFrameBufRaw_.reset();
@@ -4960,7 +4943,7 @@ int Universal::acquireFrameSeq()
     int nRet = DEVICE_OK;
 
     if (pl_exp_start_seq(hPVCAM_, singleFrameBufRaw_.get()) != PV_OK)
-        nRet = LogPvcamError(__LINE__, "pl_exp_start_seq() FAILED");
+        nRet = LogPvcamError(__LINE__, "acquireFrameSeq: pl_exp_start_seq() FAILED");
 
     return nRet;
 }
@@ -4982,9 +4965,9 @@ int Universal::waitForFrameSeq()
         std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
         // Abort the acquisition (ignore error if abort fails, just log it)
         if (!pl_exp_abort(hPVCAM_, CCS_HALT))
-            LogPvcamError(__LINE__, "waitForFrameSeq(): pl_exp_abort() failed");
+            LogPvcamError(__LINE__, "waitForFrameSeq: pl_exp_abort() failed");
     }
-    return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeq(): Readout has timed out");
+    return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeq: Readout has timed out");
 }
 
 int Universal::prepareSequenceAcquisition()
@@ -5169,10 +5152,10 @@ int Universal::abortAcquisitionInternal()
         {
             {
                 std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-                if (!pl_exp_stop_cont( hPVCAM_, CCS_CLEAR ))
+                if (!pl_exp_abort(hPVCAM_, CCS_CLEAR))
                 {
                     nRet = DEVICE_ERR;
-                    LogPvcamError( __LINE__, "pl_exp_stop_cont() failed" );
+                    LogPvcamError(__LINE__, "pl_exp_abort() failed");
                 }
             }
             sequenceModeReady_ = false;
@@ -5629,9 +5612,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     // If we are capturing do not do anything, this function will be called
     // again once the acquisition is restarted.
     if (isAcquiring_)
-    {
         return DEVICE_OK;
-    }
 
     // If we are not acquiring, we can configure the camera right away
 
