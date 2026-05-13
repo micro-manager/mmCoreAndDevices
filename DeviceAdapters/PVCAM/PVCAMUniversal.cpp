@@ -1113,9 +1113,9 @@ int Universal::Initialize()
 
     // CALLBACKS
     // Check if we can use PVCAM callbacks. This is recommended way to get notified when the frame
-    // readout is finished.
+    // readout is finished. The (void*) cast must stay to make GCC happy.
     if (!pl_cam_register_callback_ex3(
-                hPVCAM_, PL_CALLBACK_EOF, &Universal::PvcamCallbackEofEx3, this))
+                hPVCAM_, PL_CALLBACK_EOF, (void*)&Universal::PvcamCallbackEofEx3, this))
         return LogPvcamError(__LINE__, "Failed to register EOF callback handler");
 
     // FRAME_INFO SUPPORT
