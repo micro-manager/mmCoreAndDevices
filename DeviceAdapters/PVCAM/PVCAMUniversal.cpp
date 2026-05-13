@@ -1491,12 +1491,12 @@ int Universal::SnapImage()
 
         if (snappingSingleFrame_)
         {
-            LogAdapterMessage("SnapImage() failed: GetImage() has not been done for previous frame", true);
+            LogAdapterMessage("SnapImage() failed: GetImage() has not been done for previous frame");
             return DEVICE_ERR;
         }
         if (isAcquiring_)
         {
-            LogAdapterMessage("SnapImage() failed: Camera already acquiring.", true);
+            LogAdapterMessage("SnapImage() failed: Camera already acquiring");
             return DEVICE_CAMERA_BUSY_ACQUIRING;
         }
 
@@ -1556,8 +1556,8 @@ int Universal::SnapImage()
         }
         else
         {
-            // Exposure was not done correctly. if application nevertheless
-            // tries to get (wrong) image by calling GetImage, the error will be reported
+            // Exposure was not done correctly. If application nevertheless tries
+            // to get (wrong) image by calling GetImage, the error will be reported.
             snappingSingleFrame_ = false;
             singleFrameModeReady_ = false;
         }
@@ -1568,7 +1568,6 @@ int Universal::SnapImage()
     }
 
     LogTimeDiff(startTs, endTs, "SnapImage() took: ", true);
-
     return nRet;
 }
 
@@ -1840,6 +1839,9 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
         return ret;
     customDiskWriterActive_ = customDiskWriter_->IsActive();
 
+    // Initially start with the exposure time as the actual interval estimate
+    SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(acqCfgCur_.ExposureMs));
+
     stopOnOverflow_  = stopOnOverflow;
     imagesToAcquire_ = numImages;
     imagesInserted_  = 0;
@@ -1847,16 +1849,14 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
     imagesRecovered_ = 0;
     lastPvFrameNr_   = 0;
 
-    // initially start with the exposure time as the actual interval estimate
-    SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(acqCfgCur_.ExposureMs));
+    eofEvent_.Reset(); // Reset the EOF event, w/o CB we will wait for it to become signalled
 
-    eofEvent_.Reset(); // Reset the EOF event, we will wait for it to become signalled
     if (acqCfgCur_.CircBufEnabled)
     {
         {
             std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-            if (!pl_exp_start_cont(hPVCAM_, circBuf_.Data(), static_cast<uns32>(circBuf_.Size())))
-                ret = LogPvcamError(__LINE__, "pl_exp_start_cont()");
+            if (!pl_exp_start_cont(hPVCAM_, circBuf_.Data(), (uns32)circBuf_.Size()))
+                ret = LogPvcamError(__LINE__, "pl_exp_start_cont() failed");
         }
         if (ret != DEVICE_OK)
         {
@@ -1869,12 +1869,12 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
         // Fire up the non-cb acquisition thread
         acqThd_->Resume();
     }
-    startTime_ = GetCurrentMMTime();
 
     // Once we call start_cont() we don't want to spend much time in this function because
     // the callbacks will start coming pretty fast. Do not waste time here, what can be done
     // before start_cont() should be done there.
 
+    startTime_ = GetCurrentMMTime();
     isAcquiring_ = true;
 
     std::ostringstream os;
@@ -1895,6 +1895,7 @@ int Universal::StopSequenceAcquisition()
 
         nRet = abortAcquisitionInternal();
     }
+
     // LW: Give the camera some time to stop acquiring. This reduces occasional
     //     crashes/hangs when frequently starting/stopping with some fast cameras.
     //     Please note this has to be called after the acqLock is unlocked, otherwise
@@ -1917,7 +1918,7 @@ int Universal::OnUniversalProperty(MM::PropertyBase* pProp, MM::ActionType eAct,
     {
         // Before sending any value to the camera we must disable the streaming.
         // If the streaming is active the MM will resume it automatically as soon as this method finishes.
-        if ( IsCapturing() )
+        if (IsCapturing())
             StopSequenceAcquisition();
 
         if ( param->IsEnum() )
@@ -3815,7 +3816,7 @@ int Universal::FrameAcquired()
     // The FrameAcquired() is also called for SnapImage() when using callbacks,
     // so we have to check. In case of SnapImage the singleFrameBufRaw_ already
     // contains the data (since it's passed to pl_exp_start_seq() and no PushImage()
-    // is done - the single image is retrieved with GetImageBuffer().
+    // is done - the single post-processed image is retrieved with GetImageBuffer().
     if (!snappingSingleFrame_)
     {
         ret = ProcessFrame(pCurrFramePtr, currFrameNfo);
@@ -3832,11 +3833,11 @@ int Universal::FrameAcquired()
     return DEVICE_OK;
 }
 
-int Universal::ProcessFrame(const void* pData, const PvFrameInfo& frameNfo)
+int Universal::ProcessFrame(void* pData, const PvFrameInfo& frameNfo)
 {
     // Ignore inserts if we already have all images inserted.
     // This should never happen but stay on safe side.
-    if ( imagesInserted_ >= imagesToAcquire_ )
+    if (imagesInserted_ >= imagesToAcquire_)
         return DEVICE_OK;
 
     // Ignore any callbacks that might be arriving after stopping the acquisition
@@ -3867,19 +3868,20 @@ int Universal::ProcessFrame(const void* pData, const PvFrameInfo& frameNfo)
         const double actualInterval = elapsedTimeMsec / imagesInserted_;
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval));
 
-        unsigned char* pOutBuf = nullptr;
+        void* pOutBuf = nullptr;
         const size_t dataSz = (acqCfgCur_.CircBufEnabled)
             ? circBuf_.FrameSize() : singleFrameBufRawSz_;
-        ret = postProcessSingleFrame(&pOutBuf, (unsigned char*)pData, dataSz);
+        ret = postProcessSingleFrame(&pOutBuf, pData, dataSz);
         if (ret != DEVICE_OK)
             return ret;
 
         MM::CameraImageMetadata md;
         BuildMetadata(md, frameNfo);
 
-        // This method inserts a new image into the circular buffer (residing in MMCore)
-        ret = GetCoreCallback()->InsertImage(this, pOutBuf, GetImageWidth(),
-                GetImageHeight(), GetImageBytesPerPixel(), md.Serialize());
+        // This method inserts a new image into the circular buffer in MMCore
+        ret = GetCoreCallback()->InsertImage(this, (unsigned char*)pOutBuf,
+                GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel(),
+                md.Serialize());
         if (ret != DEVICE_OK)
             return ret;
     }
@@ -4752,7 +4754,7 @@ int Universal::resizeImageBufferContinuous()
 
     singleFrameModeReady_ = false;
     LogAdapterMessage(std::string("resizeImageBufferContinuous singleFrameModeReady_=false, ")
-            + "circBufFrameCount_=" + CDeviceUtils::ConvertToString(circBufFrameCount_), true);
+            + "circBufFrameCount_=" + CDeviceUtils::ConvertToString(circBufFrameCount_));
     return nRet;
 }
 
@@ -4834,7 +4836,7 @@ int Universal::resizeImageBufferSingle()
     }
 
     sequenceModeReady_ = false;
-    LogAdapterMessage(std::string("resizeImageBufferSingle sequenceModeReady_=false"), true);
+    LogAdapterMessage(std::string("resizeImageBufferSingle sequenceModeReady_=false"));
     return nRet;
 }
 
@@ -4940,14 +4942,13 @@ int Universal::resizeImageProcessingBuffers()
 
 int Universal::acquireFrameSeq()
 {
+    START_METHOD("Universal::acquireFrameSeq");
+
     std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
+    if (!pl_exp_start_seq(hPVCAM_, singleFrameBufRaw_.get()))
+        return LogPvcamError(__LINE__, "acquireFrameSeq: pl_exp_start_seq() failed");
 
-    int nRet = DEVICE_OK;
-
-    if (pl_exp_start_seq(hPVCAM_, singleFrameBufRaw_.get()) != PV_OK)
-        nRet = LogPvcamError(__LINE__, "acquireFrameSeq: pl_exp_start_seq() FAILED");
-
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::waitForFrameSeq()
@@ -5012,9 +5013,9 @@ int Universal::prepareSequenceAcquisition()
     return DEVICE_OK;
 }
 
-int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pInBuf, size_t inBufSz)
+int Universal::postProcessSingleFrame(void** pOutBuf, void* pInBuf, size_t inBufSz)
 {
-    unsigned char* pixBuffer = pInBuf;
+    void* pixBuffer = pInBuf;
 
     metaFrameExtData_.clear();
     if (acqCfgCur_.FrameMetadataEnabled)
@@ -5092,20 +5093,13 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
                 LogPvcamError(__LINE__, "Unable to recompose the metadata-enabled frame");
                 return ERR_BUFFER_PROCESSING_FAILED;
             }
-            else
-            {
-                pixBuffer = metaBlackFilledBuf_.get();
-            }
+            pixBuffer = metaBlackFilledBuf_.get();
         }
         else
         {
             // In case of a single ROI we can use the ROI directly
-            pixBuffer = (unsigned char*)metaFrameStruct_->roiArray[0].data;
+            pixBuffer = metaFrameStruct_->roiArray[0].data;
         }
-    }
-    else
-    {
-        pixBuffer = pInBuf;
     }
 
     if (acqCfgCur_.ColorProcessingEnabled)
@@ -6523,7 +6517,8 @@ int Universal::applyAcqConfig(bool forceSetup)
             return nRet;
         }
 
-        GetCoreCallback()->InitializeImageBuffer(1, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+        GetCoreCallback()->InitializeImageBuffer(1, 1,
+                GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
         callPrepareForAcq_ = true;
     }
 

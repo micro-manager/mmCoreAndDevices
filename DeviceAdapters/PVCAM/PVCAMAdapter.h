@@ -623,7 +623,7 @@ protected:
     /**
     * Called from FrameAcquired(), inserts the frame to the MMCore.
     */
-    int ProcessFrame(const void* pData, const PvFrameInfo& frameNfo);
+    int ProcessFrame(void* pData, const PvFrameInfo& frameNfo);
     /**
     * Called from ProcessFrame(), composes metadata for the MMCore.
     */
@@ -693,13 +693,14 @@ private:
 
     /**
     * Prepares a raw PVCAM frame buffer for use in MM::Core
-    * @param [OUT] pOutBuf A pointer to the post processed image buffer. This will point
-    *              to one of the internal buffers that were already allocated in reinitProcessingBuffers()
+    * @param [OUT] pOutBuf A pointer to the post processed image buffer.
+    *              This will point to one of the internal buffers that were
+    *              already allocated in resizeImageProcessingBuffers()
     * @param [IN] pInBuf A raw PVCAM image buffer
     * @param [IN] inBufSz Size of the PVCAM image buffer in bytes
     * @return MM error code
     */
-    int postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pInBuf, size_t inBufSz);
+    int postProcessSingleFrame(void** pOutBuf, void* pInBuf, size_t inBufSz);
 
     /**
     * Internally aborts the ongoing acquisition. This method is lock free.
@@ -890,7 +891,7 @@ private:
     // in GetImageBuffer() and GetImageBufferAsRGB32().
     // This is a plain C-pointer that points to either RAW (singleFrameBufRaw_),
     // RGB (rgbImgBuf_->GetPixelsRW()) or Black-Filled (metaBlackFilledBuf_) buffer.
-    unsigned char*                      singleFrameBufFinal_{ nullptr };
+    void*                               singleFrameBufFinal_{ nullptr };
     // Circular buffer, used in setup_cont() only (live mode)
     PvCircularBuffer                    circBuf_{};
     // Color image buffer. Used in both single snap and live mode if needed.
