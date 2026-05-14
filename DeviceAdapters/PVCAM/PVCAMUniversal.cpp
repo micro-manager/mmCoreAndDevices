@@ -221,6 +221,7 @@ constexpr int g_UniversalParamsCount = sizeof(g_UniversalParams) / sizeof(ParamN
 //=============================================================================
 //=================================================================== Universal
 
+
 Universal::Universal(short cameraId, const char* deviceName)
     : cameraId_(cameraId),
     deviceName_(deviceName),
@@ -255,8 +256,7 @@ Universal::~Universal()
     {
         refCount_ = 0; // having the refCount as uint caused underflow and incorrect behavior in Shutdown()
         // release resources
-        if (initialized_)
-            Shutdown();
+        Shutdown();
     }
 
     if (metaFrameStruct_)
@@ -1113,9 +1113,9 @@ int Universal::Initialize()
 
     // CALLBACKS
     // Check if we can use PVCAM callbacks. This is recommended way to get notified when the frame
-    // readout is finished.
+    // readout is finished. The (void*) cast must stay to make GCC happy.
     if (!pl_cam_register_callback_ex3(
-                hPVCAM_, PL_CALLBACK_EOF, &Universal::PvcamCallbackEofEx3, this))
+                hPVCAM_, PL_CALLBACK_EOF, (void*)&Universal::PvcamCallbackEofEx3, this))
         return LogPvcamError(__LINE__, "Failed to register EOF callback handler");
 
     // FRAME_INFO SUPPORT
@@ -1489,14 +1489,14 @@ int Universal::SnapImage()
         std::lock_guard<std::mutex> acqGuard(acqLock_);
         START_METHOD("Universal::SnapImage");
 
-        if(snappingSingleFrame_)
+        if (snappingSingleFrame_)
         {
-            LogAdapterMessage("SnapImage() failed: GetImage() has not been done for previous frame", true);
+            LogAdapterMessage("SnapImage() failed: GetImage() has not been done for previous frame");
             return DEVICE_ERR;
         }
-        if(isAcquiring_)
+        if (isAcquiring_)
         {
-            LogAdapterMessage("SnapImage() failed: Camera already acquiring.", true);
+            LogAdapterMessage("SnapImage() failed: Camera already acquiring");
             return DEVICE_CAMERA_BUSY_ACQUIRING;
         }
 
@@ -1507,7 +1507,7 @@ int Universal::SnapImage()
         if (nRet != DEVICE_OK)
             return nRet;
 
-        if(!singleFrameModeReady_)
+        if (!singleFrameModeReady_)
         {
             // TODO: Do this at the end of previous snap.
             //       The live mode is always stopped by pl_exp_abort
@@ -1556,8 +1556,8 @@ int Universal::SnapImage()
         }
         else
         {
-            // Exposure was not done correctly. if application nevertheless
-            // tries to get (wrong) image by calling GetImage, the error will be reported
+            // Exposure was not done correctly. If application nevertheless tries
+            // to get (wrong) image by calling GetImage, the error will be reported.
             snappingSingleFrame_ = false;
             singleFrameModeReady_ = false;
         }
@@ -1568,7 +1568,6 @@ int Universal::SnapImage()
     }
 
     LogTimeDiff(startTs, endTs, "SnapImage() took: ", true);
-
     return nRet;
 }
 
@@ -1576,7 +1575,7 @@ const unsigned char* Universal::GetImageBuffer()
 {
     START_METHOD("Universal::GetImageBuffer");
 
-    if(!snappingSingleFrame_)
+    if (!snappingSingleFrame_)
     {
         LogAdapterMessage(__LINE__, "Warning: GetImageBuffer called before SnapImage()");
         return nullptr;
@@ -1591,7 +1590,7 @@ const unsigned int* Universal::GetImageBufferAsRGB32()
 {
     START_METHOD("Universal::GetImageBufferAsRGB32");
 
-    if(!snappingSingleFrame_)
+    if (!snappingSingleFrame_)
     {
         LogAdapterMessage(__LINE__, "Warning: GetImageBufferAsRGB32 called before SnapImage()");
         return nullptr;
@@ -1819,53 +1818,7 @@ bool Universal::IsCapturing()
     return isAcquiring_;
 }
 
-int Universal::PrepareSeqAcq() // Note: no longer a device interface function
-{
-    START_METHOD("Universal::PrepareSeqAcq");
-
-    if (isAcquiring_)
-        return ERR_BUSY_ACQUIRING;
-
-    bool& modeReadyFlag = sequenceModeReady_;
-    int (Universal::*resizeImageBufferFn)() = &Universal::resizeImageBufferContinuous;
-    //auto resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
-
-    if (acqCfgCur_.CircBufEnabled)
-    {
-        modeReadyFlag = sequenceModeReady_;
-        // Reconfigure anything that has to do with pl_exp_setup_cont
-        resizeImageBufferFn =  &Universal::resizeImageBufferContinuous;
-    }
-    else
-    {
-        modeReadyFlag = singleFrameModeReady_;
-        // For non-circular buffer acquisition we use the single frame buffer
-        // and all the single frame mode logic.
-        resizeImageBufferFn =  &Universal::resizeImageBufferSingle;
-    }
-
-    if (!modeReadyFlag)
-    {
-        int ret = (this->*resizeImageBufferFn)();
-        if (ret != DEVICE_OK)
-            return ret;
-        GetCoreCallback()->InitializeImageBuffer(1, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-        modeReadyFlag = true;
-        callPrepareForAcq_ = true;
-    }
-
-    if (callPrepareForAcq_)
-    {
-        int ret = GetCoreCallback()->PrepareForAcq(this);
-        if (ret != DEVICE_OK)
-            return ret;
-        callPrepareForAcq_ = false;
-    }
-
-    return DEVICE_OK;
-}
-
-int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
+int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool stopOnOverflow)
 {
     std::lock_guard<std::mutex> acqGuard(acqLock_);
     START_METHOD("Universal::StartSequenceAcquisition");
@@ -1877,7 +1830,7 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     if (ret != DEVICE_OK)
         return ret;
 
-    ret = PrepareSeqAcq();
+    ret = prepareSequenceAcquisition();
     if (ret != DEVICE_OK)
         return ret;
 
@@ -1886,6 +1839,9 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
         return ret;
     customDiskWriterActive_ = customDiskWriter_->IsActive();
 
+    // Initially start with the exposure time as the actual interval estimate
+    SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(acqCfgCur_.ExposureMs));
+
     stopOnOverflow_  = stopOnOverflow;
     imagesToAcquire_ = numImages;
     imagesInserted_  = 0;
@@ -1893,18 +1849,14 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
     imagesRecovered_ = 0;
     lastPvFrameNr_   = 0;
 
-    // initially start with the exposure time as the actual interval estimate
-    SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(acqCfgCur_.ExposureMs));
+    eofEvent_.Reset(); // Reset the EOF event, w/o CB we will wait for it to become signalled
 
-    // Cache the current device label so we don't have to copy it for every frame
-    GetLabel(deviceLabel_);
-    eofEvent_.Reset(); // Reset the EOF event, we will wait for it to become signalled
     if (acqCfgCur_.CircBufEnabled)
     {
         {
             std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-            if (!pl_exp_start_cont(hPVCAM_, circBuf_.Data(), static_cast<uns32>(circBuf_.Size())))
-                ret = LogPvcamError(__LINE__, "pl_exp_start_cont()");
+            if (!pl_exp_start_cont(hPVCAM_, circBuf_.Data(), (uns32)circBuf_.Size()))
+                ret = LogPvcamError(__LINE__, "pl_exp_start_cont() failed");
         }
         if (ret != DEVICE_OK)
         {
@@ -1917,17 +1869,17 @@ int Universal::StartSequenceAcquisition(long numImages, double interval_ms, bool
         // Fire up the non-cb acquisition thread
         acqThd_->Resume();
     }
-    startTime_ = GetCurrentMMTime();
 
     // Once we call start_cont() we don't want to spend much time in this function because
     // the callbacks will start coming pretty fast. Do not waste time here, what can be done
     // before start_cont() should be done there.
 
+    startTime_ = GetCurrentMMTime();
     isAcquiring_ = true;
 
     std::ostringstream os;
-    os << "Started sequence on " << deviceLabel_ << ", at " << startTime_.toString()
-        << ", with " << numImages << " frames, " << interval_ms << " ms interval and "
+    os << "Started sequence on " << deviceName_ << ", at " << startTime_.toString()
+        << ", with " << numImages << " frames and "
         << (stopOnOverflow ? "" : "don't ") << "stop on overflow" << std::endl;
     LogAdapterMessage(os.str().c_str());
 
@@ -1943,6 +1895,7 @@ int Universal::StopSequenceAcquisition()
 
         nRet = abortAcquisitionInternal();
     }
+
     // LW: Give the camera some time to stop acquiring. This reduces occasional
     //     crashes/hangs when frequently starting/stopping with some fast cameras.
     //     Please note this has to be called after the acqLock is unlocked, otherwise
@@ -1965,7 +1918,7 @@ int Universal::OnUniversalProperty(MM::PropertyBase* pProp, MM::ActionType eAct,
     {
         // Before sending any value to the camera we must disable the streaming.
         // If the streaming is active the MM will resume it automatically as soon as this method finishes.
-        if ( IsCapturing() )
+        if (IsCapturing())
             StopSequenceAcquisition();
 
         if ( param->IsEnum() )
@@ -1992,6 +1945,7 @@ int Universal::OnUniversalProperty(MM::PropertyBase* pProp, MM::ActionType eAct,
         param->Read();
 
         // Force the reinitialization of the acquisition
+        sequenceModeReady_ = false;
         singleFrameModeReady_ = false;
     }
     else if (eAct == MM::BeforeGet)
@@ -2068,67 +2022,57 @@ int Universal::OnBinningX(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnBinningX", eAct);
 
-    int nRet = DEVICE_OK;
-
     if (eAct == MM::AfterSet)
     {
         long binX;
         pProp->Get(binX);
+
         if (binX < 1)
-        {
-            nRet = DEVICE_INVALID_PROPERTY_VALUE;
-            LogAdapterError( nRet, __LINE__, "Value of BinningX has to be positive" );
-        }
-        else
-        {
-            acqCfgNew_.Rois.SetBinningX(static_cast<uns16>(binX));
-            acqCfgNew_.Rois.AdjustCoords();
-            nRet = applyAcqConfig();
-        }
+            return LogAdapterError(DEVICE_INVALID_PROPERTY_VALUE, __LINE__,
+                    "Value of BinningX has to be positive");
+
+        acqCfgNew_.Rois.SetBinningX(static_cast<uns16>(binX));
+        acqCfgNew_.Rois.AdjustCoords();
+        return applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
     {
         pProp->Set((long)acqCfgNew_.Rois.BinX());
     }
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::OnBinningY(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnBinningY", eAct);
 
-    int nRet = DEVICE_OK;
-
     if (eAct == MM::AfterSet)
     {
         long binY;
         pProp->Get(binY);
+
         if (binY < 1)
-        {
-            nRet = DEVICE_INVALID_PROPERTY_VALUE;
-            LogAdapterError( nRet, __LINE__, "Value of BinningY has to be positive" );
-        }
-        else
-        {
-            acqCfgNew_.Rois.SetBinningY(static_cast<uns16>(binY));
-            acqCfgNew_.Rois.AdjustCoords();
-            nRet = applyAcqConfig();
-        }
+            return LogAdapterError(DEVICE_INVALID_PROPERTY_VALUE, __LINE__,
+                    "Value of BinningY has to be positive");
+
+        acqCfgNew_.Rois.SetBinningY(static_cast<uns16>(binY));
+        acqCfgNew_.Rois.AdjustCoords();
+        return applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
     {
         pProp->Set((long)acqCfgNew_.Rois.BinY());
     }
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnExposure", eAct);
+
     // Micro manager passes the Exposure value in milliseconds, as double.
     // PVCAM exposure resolution is switchable, so we will need to convert
     // this value later on.
-    int nRet = DEVICE_OK;
     if (eAct == MM::BeforeGet)
     {
         pProp->Set(acqCfgCur_.ExposureMs);
@@ -2139,9 +2083,9 @@ int Universal::OnExposure(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get(newExposure);
 
         acqCfgNew_.ExposureMs = newExposure;
-        nRet = applyAcqConfig();
+        return applyAcqConfig();
     }
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -2162,7 +2106,6 @@ int Universal::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
     START_ONPROPERTY("Universal::OnGain", eAct);
 
-    int nRet = DEVICE_OK;
     if (eAct == MM::AfterSet)
     {
         std::string gainStr;
@@ -2170,15 +2113,9 @@ int Universal::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 
         // Convert the gain UI string to actual gain index and apply
         if (camCurrentSpeed_.gainNameMap.find(gainStr) == camCurrentSpeed_.gainNameMap.end())
-        {
-            nRet = DEVICE_CAN_NOT_SET_PROPERTY;
-            LogAdapterError(nRet, __LINE__, "Gain not supported");
-        }
-        else
-        {
-            const int16 gainIdx = camCurrentSpeed_.gainNameMap.at(gainStr);
-            acqCfgNew_.GainNum = gainIdx;
-        }
+            return LogAdapterError(DEVICE_CAN_NOT_SET_PROPERTY, __LINE__, "Gain not supported");
+
+        acqCfgNew_.GainNum = camCurrentSpeed_.gainNameMap.at(gainStr);
 
         singleFrameModeReady_ = false;
 
@@ -2191,7 +2128,7 @@ int Universal::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Set(gainStr.c_str());
     }
 
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::OnReadoutPort(MM::PropertyBase* pProp, MM::ActionType eAct)
@@ -2204,7 +2141,6 @@ int Universal::OnReadoutPort(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get( portStr );
 
         acqCfgNew_.PortId = prmReadoutPort_->GetEnumValue(portStr);
-
         return applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
@@ -3046,48 +2982,30 @@ int Universal::OnAlgorithmCfaMask(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         std::string val;
         pProp->Get(val);
-        if (val == g_Keyword_RGGB)
-        {
-            acqCfgNew_.DebayerAlgMask = CFA_RGGB;
-        }
-        else if (val == g_Keyword_BGGR)
-        {
+        if (val == g_Keyword_BGGR)
             acqCfgNew_.DebayerAlgMask = CFA_BGGR;
-        }
         else if (val == g_Keyword_GRBG)
-        {
             acqCfgNew_.DebayerAlgMask = CFA_GRBG;
-        }
         else if (val == g_Keyword_GBRG)
-        {
             acqCfgNew_.DebayerAlgMask = CFA_GBRG;
-        }
-        else
-        {
+        else /* (val == g_Keyword_RGGB) */
             acqCfgNew_.DebayerAlgMask = CFA_RGGB;
-        }
         nRet = applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
     {
         switch (acqCfgCur_.DebayerAlgMask)
         {
-        case CFA_RGGB:
-            pProp->Set(g_Keyword_RGGB);
-            break;
-
         case CFA_BGGR:
             pProp->Set(g_Keyword_BGGR);
             break;
-
         case CFA_GRBG:
             pProp->Set(g_Keyword_GRBG);
             break;
-
         case CFA_GBRG:
             pProp->Set(g_Keyword_GBRG);
             break;
-
+        case CFA_RGGB:
         default:
             pProp->Set(g_Keyword_RGGB);
             break;
@@ -3128,15 +3046,13 @@ int Universal::OnInterpolationAlgorithm(MM::PropertyBase* pProp, MM::ActionType 
         std::string val;
         pProp->Get(val);
 
-        if (val == g_Keyword_Replication)
-            acqCfgNew_.DebayerAlgInterpolation = ALG_REPLICATION;
-        else if (val == g_Keyword_Bilinear)
+        if (val == g_Keyword_Bilinear)
             acqCfgNew_.DebayerAlgInterpolation = ALG_BILINEAR;
         else if (val == g_Keyword_SmoothHue)
             acqCfgNew_.DebayerAlgInterpolation =  ALG_SMOOTH_HUE;
         else if (val == g_Keyword_AdaptiveSmoothHue)
             acqCfgNew_.DebayerAlgInterpolation =  ALG_ADAPTIVE_SMOOTH_HUE;
-        else
+        else /* (val == g_Keyword_Replication) */
             acqCfgNew_.DebayerAlgInterpolation =  ALG_REPLICATION;
 
 
@@ -3146,22 +3062,16 @@ int Universal::OnInterpolationAlgorithm(MM::PropertyBase* pProp, MM::ActionType 
     {
         switch (acqCfgCur_.DebayerAlgInterpolation)
         {
-        case ALG_REPLICATION:
-            pProp->Set(g_Keyword_Replication);
-            break;
-
         case ALG_BILINEAR:
             pProp->Set(g_Keyword_Bilinear);
             break;
-
         case ALG_SMOOTH_HUE:
             pProp->Set(g_Keyword_SmoothHue);
             break;
-
         case ALG_ADAPTIVE_SMOOTH_HUE:
             pProp->Set(g_Keyword_AdaptiveSmoothHue);
             break;
-
+        case ALG_REPLICATION:
         default:
             pProp->Set(g_Keyword_Replication);
             break;
@@ -3390,7 +3300,7 @@ int Universal::OnResetPostProcProperties(MM::PropertyBase* pProp, MM::ActionType
             if (IsCapturing())
                 StopSequenceAcquisition();
 
-            if(!pl_pp_reset(hPVCAM_))
+            if (!pl_pp_reset(hPVCAM_))
             {
                 LogPvcamError(__LINE__, "pl_pp_reset");
                 return DEVICE_CAN_NOT_SET_PROPERTY;
@@ -3683,7 +3593,7 @@ int Universal::OnHostFrameSummingFormat(MM::PropertyBase* pProp, MM::ActionType 
 //====================================================================== PUBLIC
 
 
-short Universal::Handle()
+short Universal::Handle() const
 {
     return hPVCAM_;
 }
@@ -3694,7 +3604,7 @@ int Universal::LogPvcamError(int lineNr, const std::string& message, int16 pvErr
     try
     {
         char pvErrMsg[ERROR_MSG_LEN];
-        if(!pl_error_message (pvErrCode, pvErrMsg))
+        if (!pl_error_message (pvErrCode, pvErrMsg))
         {
             CDeviceUtils::CopyLimitedString(pvErrMsg, "[pl_error_message() FAILED!]");
         }
@@ -3905,8 +3815,8 @@ int Universal::FrameAcquired()
 
     // The FrameAcquired() is also called for SnapImage() when using callbacks,
     // so we have to check. In case of SnapImage the singleFrameBufRaw_ already
-    // contains the data (since it's passed to pl_start_seq() and no PushImage()
-    // is done - the single image is retrieved with GetImageBuffer().
+    // contains the data (since it's passed to pl_exp_start_seq() and no PushImage()
+    // is done - the single post-processed image is retrieved with GetImageBuffer().
     if (!snappingSingleFrame_)
     {
         ret = ProcessFrame(pCurrFramePtr, currFrameNfo);
@@ -3923,11 +3833,11 @@ int Universal::FrameAcquired()
     return DEVICE_OK;
 }
 
-int Universal::ProcessFrame(const void* pData, const PvFrameInfo& frameNfo)
+int Universal::ProcessFrame(void* pData, const PvFrameInfo& frameNfo)
 {
     // Ignore inserts if we already have all images inserted.
     // This should never happen but stay on safe side.
-    if ( imagesInserted_ >= imagesToAcquire_ )
+    if (imagesInserted_ >= imagesToAcquire_)
         return DEVICE_OK;
 
     // Ignore any callbacks that might be arriving after stopping the acquisition
@@ -3958,19 +3868,20 @@ int Universal::ProcessFrame(const void* pData, const PvFrameInfo& frameNfo)
         const double actualInterval = elapsedTimeMsec / imagesInserted_;
         SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(actualInterval));
 
-        unsigned char* pOutBuf = nullptr;
+        void* pOutBuf = nullptr;
         const size_t dataSz = (acqCfgCur_.CircBufEnabled)
             ? circBuf_.FrameSize() : singleFrameBufRawSz_;
-        ret = postProcessSingleFrame(&pOutBuf, (unsigned char*)pData, dataSz);
+        ret = postProcessSingleFrame(&pOutBuf, pData, dataSz);
         if (ret != DEVICE_OK)
             return ret;
 
         MM::CameraImageMetadata md;
         BuildMetadata(md, frameNfo);
 
-        // This method inserts a new image into the circular buffer (residing in MMCore)
-        ret = GetCoreCallback()->InsertImage(this, pOutBuf, GetImageWidth(),
-                GetImageHeight(), GetImageBytesPerPixel(), md.Serialize());
+        // This method inserts a new image into the circular buffer in MMCore
+        ret = GetCoreCallback()->InsertImage(this, (unsigned char*)pOutBuf,
+                GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel(),
+                md.Serialize());
         if (ret != DEVICE_OK)
             return ret;
     }
@@ -3986,7 +3897,6 @@ int Universal::ProcessFrame(const void* pData, const PvFrameInfo& frameNfo)
 
 void Universal::BuildMetadata(MM::CameraImageMetadata& md, const PvFrameInfo& frameNfo)
 {
-    md.AddTag(MM::g_Keyword_Metadata_CameraLabel, deviceLabel_);
     md.AddTag("TimeStampMsec", CDeviceUtils::ConvertToString(frameNfo.TimeStampMsec()));
 
     md.AddTag<int32>("PVCAM-CameraHandle",  frameNfo.PvHCam());
@@ -4209,7 +4119,7 @@ int Universal::initializeStaticCameraParams()
         nRet = CreateProperty(g_Keyword_CCDSerSize, CDeviceUtils::ConvertToString(camSerSize_), MM::Integer, true);
         assert(nRet == DEVICE_OK);
     }
-    if (!paramParSize.IsAvailable() || paramParSize.Current() == 0)
+    if (!paramSerSize.IsAvailable() || paramSerSize.Current() == 0)
     {   // This is a serious error, we cannot continue
         return LogPvcamError(__LINE__, "PARAM_SER_SIZE is not available or incorrect!");
     }
@@ -4416,7 +4326,7 @@ int Universal::initializePostProcessing()
     SetAllowedValues(resetNameStr.c_str(), boolValues);
 
     // Reset the post processing and reload all PP values
-    if(!pl_pp_reset(hPVCAM_))
+    if (!pl_pp_reset(hPVCAM_))
         return LogPvcamError(__LINE__, "pl_pp_reset");
     nRet = refreshPostProcValues();
     return nRet;
@@ -4757,7 +4667,7 @@ int Universal::resizeImageBufferContinuous()
         {
             SetBinning(1); // The error might have been caused by not supported BIN or ROI, so do a reset
             GetCoreCallback()->OnPropertiesChanged(this); // Notify the MM UI to update the BIN and ROI
-            SetErrorText( nRet, "Failed to setup the acquisition" );
+            SetErrorText(nRet, "Failed to setup the acquisition");
             return nRet;
         }
 
@@ -4844,7 +4754,7 @@ int Universal::resizeImageBufferContinuous()
 
     singleFrameModeReady_ = false;
     LogAdapterMessage(std::string("resizeImageBufferContinuous singleFrameModeReady_=false, ")
-            + "circBufFrameCount_=" + CDeviceUtils::ConvertToString(circBufFrameCount_), true);
+            + "circBufFrameCount_=" + CDeviceUtils::ConvertToString(circBufFrameCount_));
     return nRet;
 }
 
@@ -4873,7 +4783,7 @@ int Universal::resizeImageBufferSingle()
         {
             SetBinning(1); // The error might have been caused by not supported BIN or ROI, so do a reset
             GetCoreCallback()->OnPropertiesChanged(this); // Notify the MM UI to update the BIN and ROI
-            SetErrorText( nRet, "Failed to setup the acquisition" );
+            SetErrorText(nRet, "Failed to setup the acquisition");
             return nRet;
         }
 
@@ -4884,7 +4794,7 @@ int Universal::resizeImageBufferSingle()
             return nRet; // Message logged in the failing method
 
         // Reallocate the single frame buffer if needed. This is the raw buffer
-        // that is sent to PVCAM in start_seq(). We always need this buffer.
+        // that is sent to PVCAM in pl_exp_start_seq(). We always need this buffer.
         if (singleFrameBufRawSz_ != frameSize)
         {
             singleFrameBufRaw_.reset();
@@ -4925,6 +4835,8 @@ int Universal::resizeImageBufferSingle()
         LogAdapterMessage("Caught error in resizeImageBufferSingle", false);
     }
 
+    sequenceModeReady_ = false;
+    LogAdapterMessage(std::string("resizeImageBufferSingle sequenceModeReady_=false"));
     return nRet;
 }
 
@@ -5030,14 +4942,13 @@ int Universal::resizeImageProcessingBuffers()
 
 int Universal::acquireFrameSeq()
 {
+    START_METHOD("Universal::acquireFrameSeq");
+
     std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
+    if (!pl_exp_start_seq(hPVCAM_, singleFrameBufRaw_.get()))
+        return LogPvcamError(__LINE__, "acquireFrameSeq: pl_exp_start_seq() failed");
 
-    int nRet = DEVICE_OK;
-
-    if (pl_exp_start_seq(hPVCAM_, singleFrameBufRaw_.get()) != PV_OK)
-        nRet = LogPvcamError(__LINE__, "pl_exp_start_seq() FAILED");
-
-    return nRet;
+    return DEVICE_OK;
 }
 
 int Universal::waitForFrameSeq()
@@ -5057,14 +4968,54 @@ int Universal::waitForFrameSeq()
         std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
         // Abort the acquisition (ignore error if abort fails, just log it)
         if (!pl_exp_abort(hPVCAM_, CCS_HALT))
-            LogPvcamError(__LINE__, "waitForFrameSeq(): pl_exp_abort() failed");
+            LogPvcamError(__LINE__, "waitForFrameSeq: pl_exp_abort() failed");
     }
-    return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeq(): Readout has timed out");
+    return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeq: Readout has timed out");
 }
 
-int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pInBuf, size_t inBufSz)
+int Universal::prepareSequenceAcquisition()
 {
-    unsigned char* pixBuffer = pInBuf;
+    START_METHOD("Universal::prepareSequenceAcquisition");
+
+    if (isAcquiring_)
+        return ERR_BUSY_ACQUIRING;
+
+    // Reconfigure anything that has to do with pl_exp_setup_cont by default
+    bool& modeReadyFlag = sequenceModeReady_;
+    auto resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
+    if (!acqCfgCur_.CircBufEnabled)
+    {
+        modeReadyFlag = singleFrameModeReady_;
+        // For non-circular buffer acquisition we use the single frame buffer
+        // and all the single frame mode logic.
+        resizeImageBufferFn = &Universal::resizeImageBufferSingle;
+    }
+
+    if (!modeReadyFlag)
+    {
+        int ret = (this->*resizeImageBufferFn)();
+        if (ret != DEVICE_OK)
+            return ret;
+        GetCoreCallback()->InitializeImageBuffer(1, 1,
+                GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+        modeReadyFlag = true;
+        callPrepareForAcq_ = true;
+    }
+
+    if (callPrepareForAcq_)
+    {
+        int ret = GetCoreCallback()->PrepareForAcq(this);
+        if (ret != DEVICE_OK)
+            return ret;
+        callPrepareForAcq_ = false;
+    }
+
+    return DEVICE_OK;
+}
+
+int Universal::postProcessSingleFrame(void** pOutBuf, void* pInBuf, size_t inBufSz)
+{
+    void* pixBuffer = pInBuf;
 
     metaFrameExtData_.clear();
     if (acqCfgCur_.FrameMetadataEnabled)
@@ -5142,20 +5093,13 @@ int Universal::postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pI
                 LogPvcamError(__LINE__, "Unable to recompose the metadata-enabled frame");
                 return ERR_BUFFER_PROCESSING_FAILED;
             }
-            else
-            {
-                pixBuffer = metaBlackFilledBuf_.get();
-            }
+            pixBuffer = metaBlackFilledBuf_.get();
         }
         else
         {
             // In case of a single ROI we can use the ROI directly
-            pixBuffer = (unsigned char*)metaFrameStruct_->roiArray[0].data;
+            pixBuffer = metaFrameStruct_->roiArray[0].data;
         }
-    }
-    else
-    {
-        pixBuffer = pInBuf;
     }
 
     if (acqCfgCur_.ColorProcessingEnabled)
@@ -5204,10 +5148,10 @@ int Universal::abortAcquisitionInternal()
         {
             {
                 std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-                if (!pl_exp_stop_cont( hPVCAM_, CCS_CLEAR ))
+                if (!pl_exp_abort(hPVCAM_, CCS_CLEAR))
                 {
                     nRet = DEVICE_ERR;
-                    LogPvcamError( __LINE__, "pl_exp_stop_cont() failed" );
+                    LogPvcamError(__LINE__, "pl_exp_abort() failed");
                 }
             }
             sequenceModeReady_ = false;
@@ -5664,9 +5608,7 @@ int Universal::applyAcqConfig(bool forceSetup)
     // If we are capturing do not do anything, this function will be called
     // again once the acquisition is restarted.
     if (isAcquiring_)
-    {
         return DEVICE_OK;
-    }
 
     // If we are not acquiring, we can configure the camera right away
 
@@ -6558,7 +6500,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // See postExpSetupInit()
         // We prepare the acquisition based on previous configuration. If user was snapping single
         // frames, we prepare the single frame, if user was running live, we prepare live.
-        if (acqCfgNew_.AcquisitionType == AcqType_Live)
+        if (acqCfgCur_.CircBufEnabled)
         {
             nRet = resizeImageBufferContinuous();
             sequenceModeReady_ = true;
@@ -6575,7 +6517,8 @@ int Universal::applyAcqConfig(bool forceSetup)
             return nRet;
         }
 
-        GetCoreCallback()->InitializeImageBuffer(1, 1, GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
+        GetCoreCallback()->InitializeImageBuffer(1, 1,
+                GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
         callPrepareForAcq_ = true;
     }
 

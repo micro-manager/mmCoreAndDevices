@@ -204,12 +204,14 @@ public: // MM::Camera API
     virtual bool IsCapturing() override;
 
     /**
-    * Micro-manager calls the "live" acquisition a "sequence". PVCAM calls this "continuous - circular buffer" mode.
+    * Micro-manager calls the "live" acquisition a "sequence".
+    * PVCAM calls this "continuous - circular buffer" mode.
+    * See `MM::Camera::StartSequenceAcquisition` - `unused` has no effect.
     */
     virtual int StartSequenceAcquisition(
-            long numImages, double interval_ms, bool stopOnOverflow) override;
-    virtual int StartSequenceAcquisition(double interval_ms) override
-    { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
+            long numImages, double unused, bool stopOnOverflow) override;
+    virtual int StartSequenceAcquisition(double /*unused*/) override
+    { return StartSequenceAcquisition(LONG_MAX, 0.0, false); }
     virtual int StopSequenceAcquisition() override;
 
 public: // Action handlers
@@ -565,7 +567,7 @@ public: // Other published methods
     * Returns the PVCAM camera handle.
     * Published to allow other classes access the camera.
     */
-    short Handle();
+    short Handle() const;
 
     // All the logging methods below prepend the message with a PVCAM Adapter
     // specific prefix. We use that to unify the logs and to clearly see which logs
@@ -621,7 +623,7 @@ protected:
     /**
     * Called from FrameAcquired(), inserts the frame to the MMCore.
     */
-    int ProcessFrame(const void* pData, const PvFrameInfo& frameNfo);
+    int ProcessFrame(void* pData, const PvFrameInfo& frameNfo);
     /**
     * Called from ProcessFrame(), composes metadata for the MMCore.
     */
@@ -684,17 +686,21 @@ private:
     */
     int waitForFrameSeq();
 
-    int PrepareSeqAcq(); // Note: no longer a device interface function
+    /**
+    * Prepares the camera and buffers for a sequence acquisition.
+    */
+    int prepareSequenceAcquisition();
 
     /**
     * Prepares a raw PVCAM frame buffer for use in MM::Core
-    * @param [OUT] pOutBuf A pointer to the post processed image buffer. This will point
-    *              to one of the internal buffers that were already allocated in reinitProcessingBuffers()
+    * @param [OUT] pOutBuf A pointer to the post processed image buffer.
+    *              This will point to one of the internal buffers that were
+    *              already allocated in resizeImageProcessingBuffers()
     * @param [IN] pInBuf A raw PVCAM image buffer
     * @param [IN] inBufSz Size of the PVCAM image buffer in bytes
     * @return MM error code
     */
-    int postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pInBuf, size_t inBufSz);
+    int postProcessSingleFrame(void** pOutBuf, void* pInBuf, size_t inBufSz);
 
     /**
     * Internally aborts the ongoing acquisition. This method is lock free.
@@ -822,7 +828,6 @@ private:
     MM::MMTime      startTime_;            // Acquisition start time
 
     PvCameraModel   cameraModel_{ PvCameraModel_Generic };
-    char            deviceLabel_[MM::MaxStrLength]{ '\0' }; // Cached device label used when inserting metadata
 
     int             circBufFrameCount_{ 10 }; // number of frames to allocate the buffer for
     bool            circBufFrameRecoveryEnabled_{ false }; // True if we perform recovery from lost callbacks
@@ -886,7 +891,7 @@ private:
     // in GetImageBuffer() and GetImageBufferAsRGB32().
     // This is a plain C-pointer that points to either RAW (singleFrameBufRaw_),
     // RGB (rgbImgBuf_->GetPixelsRW()) or Black-Filled (metaBlackFilledBuf_) buffer.
-    unsigned char*                      singleFrameBufFinal_{ nullptr };
+    void*                               singleFrameBufFinal_{ nullptr };
     // Circular buffer, used in setup_cont() only (live mode)
     PvCircularBuffer                    circBuf_{};
     // Color image buffer. Used in both single snap and live mode if needed.
