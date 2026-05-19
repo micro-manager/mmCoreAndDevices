@@ -109,6 +109,24 @@ public:
             logger_("[MockDAQ] clearTasks()");
     }
 
+    void writeStaticOutputs(
+        const std::vector<std::string>& channels,
+        const std::vector<double>& minVoltages,
+        const std::vector<double>& maxVoltages,
+        const std::vector<double>& values
+    ) override
+    {
+        (void)minVoltages;
+        (void)maxVoltages;
+        (void)values;
+        if (logger_)
+        {
+            std::ostringstream oss;
+            oss << "[MockDAQ] writeStaticOutputs: " << channels.size() << " channels";
+            logger_(oss.str());
+        }
+    }
+
     std::vector<std::string> getDeviceNames() const override
     {
         return {"MockDev1", "MockDev2"};

@@ -204,6 +204,7 @@ private:
 	int BuildAndWriteWaveforms();
 	int StartWaveformOutput();
 	int StopWaveformOutput();
+	void SetConfiguredOutputsToZero();
 
 	// State
 	bool initialized_;
