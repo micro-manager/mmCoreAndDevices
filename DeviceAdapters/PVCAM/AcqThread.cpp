@@ -56,14 +56,14 @@ int AcqThread::svc()
         if (requestStop_)
             break;
 
-        acqStatus_ = camera_->acquireFrameSeq();
+        acqStatus_ = camera_->startSingleFrameAcquisition();
         if (acqStatus_ != DEVICE_OK)
         {
             resumeEvent_.Reset(); // Pause on error
             continue;
         }
 
-        acqStatus_ = camera_->waitForFrameSeq();
+        acqStatus_ = camera_->waitForSingleFrame();
         if (acqStatus_ != DEVICE_OK)
         {
             resumeEvent_.Reset(); // Pause on error

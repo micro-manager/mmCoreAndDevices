@@ -1481,91 +1481,72 @@ bool Universal::GetErrorText(int errorCode, char* text) const
 
 int Universal::SnapImage()
 {
-    int nRet = DEVICE_ERR;
-    MM::MMTime startTs;
-    MM::MMTime endTs;
+    std::unique_lock<std::mutex> acqGuard(acqLock_);
+    START_METHOD("Universal::SnapImage");
 
+    if (snappingSingleFrame_)
     {
-        std::lock_guard<std::mutex> acqGuard(acqLock_);
-        START_METHOD("Universal::SnapImage");
-
-        if (snappingSingleFrame_)
-        {
-            LogAdapterMessage("SnapImage() failed: GetImage() has not been done for previous frame");
-            return DEVICE_ERR;
-        }
-        if (isAcquiring_)
-        {
-            LogAdapterMessage("SnapImage() failed: Camera already acquiring");
-            return DEVICE_CAMERA_BUSY_ACQUIRING;
-        }
-
-        startTs = GetCurrentMMTime();
-
-        acqCfgNew_.AcquisitionType = AcqType_Snap;
-        nRet = applyAcqConfig();
-        if (nRet != DEVICE_OK)
-            return nRet;
-
-        if (!singleFrameModeReady_)
-        {
-            // TODO: Do this at the end of previous snap.
-            //       The live mode is always stopped by pl_exp_abort
-            //       (which is the same as pl_exp_stop_cont)
-            //       and pl_exp_finish_seq should be called for sequence acquisitions only.
-            {
-                std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-                if (pl_exp_stop_cont(hPVCAM_, CCS_HALT) != PV_OK)
-                    LogPvcamError(__LINE__, "pl_exp_stop_cont() failed");
-                // Address the TODO above and this workaround won't be needed
-                if (circBuf_.Data())
-                {
-                    if (pl_exp_finish_seq(hPVCAM_, circBuf_.Data(), 0) != PV_OK)
-                        LogPvcamError(__LINE__, "pl_exp_finish_seq() failed");
-                }
-            }
-
-            nRet = resizeImageBufferSingle();
-            if (nRet != DEVICE_OK)
-                return LogAdapterError(nRet, __LINE__, "Failed to resize the image buffer");
-            singleFrameModeReady_ = true;
-        }
-
-        snappingSingleFrame_ = true;
-        imagesToAcquire_ = 1;
-        imagesInserted_ = 0;
-        lastPvFrameNr_ = 0;
-
-        eofEvent_.Reset();
-        nRet = acquireFrameSeq();
-        if (nRet != DEVICE_OK)
-            return nRet; // Error logged in previous call
-
-        isAcquiring_ = true;
+        LogAdapterMessage("SnapImage() failed: GetImage() has not been done for previous frame");
+        return DEVICE_ERR;
     }
 
-    nRet = waitForFrameSeq();
-
+    if (isAcquiring_)
     {
-        std::lock_guard<std::mutex> acqGuard(acqLock_);
-
-        if (nRet == DEVICE_OK)
-        {
-            nRet = postProcessSingleFrame(&singleFrameBufFinal_,
-                    singleFrameBufRaw_.get(), singleFrameBufRawSz_);
-        }
-        else
-        {
-            // Exposure was not done correctly. If application nevertheless tries
-            // to get (wrong) image by calling GetImage, the error will be reported.
-            snappingSingleFrame_ = false;
-            singleFrameModeReady_ = false;
-        }
-
-        isAcquiring_ = false;
-
-        endTs = GetCurrentMMTime();
+        LogAdapterMessage("SnapImage() failed: Camera already acquiring");
+        return DEVICE_CAMERA_BUSY_ACQUIRING;
     }
+
+    int nRet = DEVICE_OK;
+
+    acqCfgNew_.AcquisitionType = AcqType_Snap;
+    nRet = applyAcqConfig();
+    if (nRet != DEVICE_OK)
+        return nRet;
+
+    // Prepare single frame mode acquisition
+    if (!singleFrameModeReady_)
+    {
+        nRet = resizeImageBufferSingle();
+        if (nRet != DEVICE_OK)
+            return LogAdapterError(nRet, __LINE__, "Failed to resize the image buffer");
+        singleFrameModeReady_ = true;
+    }
+
+    snappingSingleFrame_ = true;
+    imagesToAcquire_ = 1;
+    imagesInserted_ = 0;
+    lastPvFrameNr_ = 0;
+
+    eofEvent_.Reset(); // Reset the EOF event, we will wait for it to become signalled
+    eofEventDueToError_ = false;
+
+    nRet = startSingleFrameAcquisition();
+    if (nRet != DEVICE_OK)
+        return nRet; // Error logged in previous call
+
+    const MM::MMTime startTs = GetCurrentMMTime();
+    isAcquiring_ = true;
+
+    acqGuard.unlock();
+    nRet = waitForSingleFrame();
+    acqGuard.lock();
+
+    // The pl_exp_finish_seq() is not necessary, but recommended.
+    // In a loop of single snaps it can significantly reduce the FPS with older
+    // cameras. Let's call it for SnapImage() only.
+    {
+        std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
+        if (!pl_exp_finish_seq(hPVCAM_, singleFrameBufRaw_.get(), 0))
+            LogPvcamError(__LINE__, "pl_exp_finish_seq() failed");
+    }
+
+    // If the exposure was not done correctly, we should ensure the application
+    // calling GetImage() will receive an error.
+    if (nRet != DEVICE_OK)
+        snappingSingleFrame_ = false;
+
+    isAcquiring_ = false;
+    const MM::MMTime endTs = GetCurrentMMTime();
 
     LogTimeDiff(startTs, endTs, "SnapImage() took: ", true);
     return nRet;
@@ -1823,6 +1804,12 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
     std::lock_guard<std::mutex> acqGuard(acqLock_);
     START_METHOD("Universal::StartSequenceAcquisition");
 
+    if (isAcquiring_)
+    {
+        LogAdapterMessage("StartSequenceAcquisition() failed: Camera already acquiring");
+        return DEVICE_CAMERA_BUSY_ACQUIRING;
+    }
+
     int ret = DEVICE_OK;
 
     acqCfgNew_.AcquisitionType = AcqType_Live;
@@ -1840,7 +1827,8 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
     customDiskWriterActive_ = customDiskWriter_->IsActive();
 
     // Initially start with the exposure time as the actual interval estimate
-    SetProperty(MM::g_Keyword_ActualInterval_ms, CDeviceUtils::ConvertToString(acqCfgCur_.ExposureMs));
+    SetProperty(MM::g_Keyword_ActualInterval_ms,
+            CDeviceUtils::ConvertToString(acqCfgCur_.ExposureMs));
 
     stopOnOverflow_  = stopOnOverflow;
     imagesToAcquire_ = numImages;
@@ -1850,6 +1838,7 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
     lastPvFrameNr_   = 0;
 
     eofEvent_.Reset(); // Reset the EOF event, w/o CB we will wait for it to become signalled
+    eofEventDueToError_ = false;
 
     if (acqCfgCur_.CircBufEnabled)
     {
@@ -1860,7 +1849,8 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
         }
         if (ret != DEVICE_OK)
         {
-            resizeImageBufferSingle();
+            customDiskWriter_->Stop();
+            customDiskWriterActive_ = false;
             return ret;
         }
     }
@@ -1870,9 +1860,8 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
         acqThd_->Resume();
     }
 
-    // Once we call start_cont() we don't want to spend much time in this function because
-    // the callbacks will start coming pretty fast. Do not waste time here, what can be done
-    // before start_cont() should be done there.
+    // Once we call pl_exp_start_cont() we don't want to spend much time in this
+    // function because the callbacks will start coming pretty fast.
 
     startTime_ = GetCurrentMMTime();
     isAcquiring_ = true;
@@ -1889,11 +1878,11 @@ int Universal::StartSequenceAcquisition(long numImages, double /*unused*/, bool 
 int Universal::StopSequenceAcquisition()
 {
     int nRet = DEVICE_OK;
+
     {
         std::lock_guard<std::mutex> acqGuard(acqLock_);
         START_METHOD("Universal::StopSequenceAcquisition");
-
-        nRet = abortAcquisitionInternal();
+        nRet = abortAcquisition(false);
     }
 
     // LW: Give the camera some time to stop acquiring. This reduces occasional
@@ -2116,9 +2105,6 @@ int Universal::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
             return LogAdapterError(DEVICE_CAN_NOT_SET_PROPERTY, __LINE__, "Gain not supported");
 
         acqCfgNew_.GainNum = camCurrentSpeed_.gainNameMap.at(gainStr);
-
-        singleFrameModeReady_ = false;
-
         return applyAcqConfig();
     }
     else if (eAct == MM::BeforeGet)
@@ -3704,7 +3690,7 @@ int Universal::FrameAcquired()
     }
     if (ret != DEVICE_OK)
     {
-        abortAcquisitionInternal();
+        abortAcquisition();
         return ret;
     }
 
@@ -3716,7 +3702,7 @@ int Universal::FrameAcquired()
     currFrameNfo.SetPvTimeStamp(pFrameInfo_->TimeStamp);
     currFrameNfo.SetPvTimeStampBOF(pFrameInfo_->TimeStampBOF);
 
-    if (acqCfgCur_.CircBufEnabled)
+    if (acqCfgCur_.AcquisitionType == AcqType_Live && acqCfgCur_.CircBufEnabled)
     {
         const int currFrameNr = currFrameNfo.PvFrameNr();
         const int prevFrameNr = lastPvFrameNr_;
@@ -3794,7 +3780,7 @@ int Universal::FrameAcquired()
                         ret = ProcessFrame(pRecFrameData, recFrNfo);
                         if (ret != DEVICE_OK)
                         {
-                            abortAcquisitionInternal();
+                            abortAcquisition();
                             return ret;
                         }
 
@@ -3817,14 +3803,15 @@ int Universal::FrameAcquired()
     // so we have to check. In case of SnapImage the singleFrameBufRaw_ already
     // contains the data (since it's passed to pl_exp_start_seq() and no PushImage()
     // is done - the single post-processed image is retrieved with GetImageBuffer().
-    if (!snappingSingleFrame_)
-    {
+    if (acqCfgCur_.AcquisitionType == AcqType_Live)
         ret = ProcessFrame(pCurrFramePtr, currFrameNfo);
-        if (ret != DEVICE_OK)
-        {
-            abortAcquisitionInternal();
-            return ret;
-        }
+    else
+        ret = postProcessSingleFrame(&singleFrameBufFinal_,
+                pCurrFramePtr, singleFrameBufRawSz_);
+    if (ret != DEVICE_OK)
+    {
+        abortAcquisition();
+        return ret;
     }
 
     imagesInserted_++;
@@ -3841,7 +3828,7 @@ int Universal::ProcessFrame(void* pData, const PvFrameInfo& frameNfo)
         return DEVICE_OK;
 
     // Ignore any callbacks that might be arriving after stopping the acquisition
-    if (!isAcquiring_) // Cannot guard it with acqLock_
+    if (!isAcquiring_)
         return DEVICE_OK;
 
     if (acqCfgCur_.CircBufEnabled)
@@ -3889,7 +3876,7 @@ int Universal::ProcessFrame(void* pData, const PvFrameInfo& frameNfo)
     // If we already have all frames inserted tell the camera to stop
     if (imagesInserted_ + 1 >= imagesToAcquire_)
     {
-        abortAcquisitionInternal();
+        ret = abortAcquisition(false);
     }
 
     return ret;
@@ -4940,20 +4927,20 @@ int Universal::resizeImageProcessingBuffers()
     return DEVICE_OK;
 }
 
-int Universal::acquireFrameSeq()
+int Universal::startSingleFrameAcquisition()
 {
-    START_METHOD("Universal::acquireFrameSeq");
+    START_METHOD("Universal::startSingleFrameAcquisition");
 
     std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
     if (!pl_exp_start_seq(hPVCAM_, singleFrameBufRaw_.get()))
-        return LogPvcamError(__LINE__, "acquireFrameSeq: pl_exp_start_seq() failed");
+        return LogPvcamError(__LINE__, "startSingleFrameAcquisition: pl_exp_start_seq() failed");
 
     return DEVICE_OK;
 }
 
-int Universal::waitForFrameSeq()
+int Universal::waitForSingleFrame()
 {
-    START_METHOD("Universal::waitForFrameSeq");
+    START_METHOD("Universal::waitForSingleFrame");
 
     const unsigned int msec =
         static_cast<unsigned int>(triggerTimeout_) * 1000U
@@ -4961,16 +4948,16 @@ int Universal::waitForFrameSeq()
         + static_cast<unsigned int>(4 * GetExposure());
 
     const bool arrivedInTime = eofEvent_.Wait(msec);
-    if (arrivedInTime)
+
+    if (arrivedInTime && !eofEventDueToError_)
         return DEVICE_OK;
 
-    {
-        std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-        // Abort the acquisition (ignore error if abort fails, just log it)
-        if (!pl_exp_abort(hPVCAM_, CCS_HALT))
-            LogPvcamError(__LINE__, "waitForFrameSeq: pl_exp_abort() failed");
-    }
-    return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__, "waitForFrameSeq: Readout has timed out");
+    if (eofEventDueToError_)
+        return LogAdapterError(DEVICE_ERR, __LINE__,
+                "waitForSingleFrame: Readout aborted due to error");
+
+    return LogAdapterError(ERR_OPERATION_TIMED_OUT, __LINE__,
+            "waitForSingleFrame: Readout has timed out");
 }
 
 int Universal::prepareSequenceAcquisition()
@@ -4980,25 +4967,34 @@ int Universal::prepareSequenceAcquisition()
     if (isAcquiring_)
         return ERR_BUSY_ACQUIRING;
 
-    // Reconfigure anything that has to do with pl_exp_setup_cont by default
-    bool& modeReadyFlag = sequenceModeReady_;
-    auto resizeImageBufferFn = &Universal::resizeImageBufferContinuous;
-    if (!acqCfgCur_.CircBufEnabled)
+    bool callInitBuffer = false;
+    if (acqCfgCur_.CircBufEnabled)
     {
-        modeReadyFlag = singleFrameModeReady_;
-        // For non-circular buffer acquisition we use the single frame buffer
-        // and all the single frame mode logic.
-        resizeImageBufferFn = &Universal::resizeImageBufferSingle;
+        if (!sequenceModeReady_)
+        {
+            int ret = resizeImageBufferContinuous();
+            if (ret != DEVICE_OK)
+                return ret;
+            sequenceModeReady_ = true;
+            callInitBuffer = true;
+        }
+    }
+    else
+    {
+        if (!singleFrameModeReady_)
+        {
+            int ret = resizeImageBufferSingle();
+            if (ret != DEVICE_OK)
+                return ret;
+            singleFrameModeReady_ = true;
+            callInitBuffer = true;
+        }
     }
 
-    if (!modeReadyFlag)
+    if (callInitBuffer)
     {
-        int ret = (this->*resizeImageBufferFn)();
-        if (ret != DEVICE_OK)
-            return ret;
         GetCoreCallback()->InitializeImageBuffer(1, 1,
                 GetImageWidth(), GetImageHeight(), GetImageBytesPerPixel());
-        modeReadyFlag = true;
         callPrepareForAcq_ = true;
     }
 
@@ -5137,40 +5133,48 @@ int Universal::postProcessSingleFrame(void** pOutBuf, void* pInBuf, size_t inBuf
     return DEVICE_OK;
 }
 
-int Universal::abortAcquisitionInternal()
+int Universal::abortAcquisition(bool dueToError)
 {
-    START_METHOD("Universal::abortAcquisitionInternal");
+    START_METHOD("Universal::abortAcquisition");
+
+    if (!isAcquiring_)
+        return DEVICE_OK;
+
     int nRet = DEVICE_OK;
 
-    if (isAcquiring_)
+    // Stop the acquisition, works for both single frame and sequence modes
     {
-        if (acqCfgCur_.CircBufEnabled)
-        {
-            {
-                std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
-                if (!pl_exp_abort(hPVCAM_, CCS_CLEAR))
-                {
-                    nRet = DEVICE_ERR;
-                    LogPvcamError(__LINE__, "pl_exp_abort() failed");
-                }
-            }
-            sequenceModeReady_ = false;
-        }
-        else
-        {
-            acqThd_->Pause();
-        }
-
-        // Inform the core that the acquisition has finished
-        // (this also closes the shutter if used)
-        GetCoreCallback()->AcqFinished(this, nRet);
-
-        customDiskWriter_->Stop();
-        customDiskWriterActive_ = false;
-
-        isAcquiring_ = false;
-        eofEvent_.Set();
+        std::lock_guard<std::mutex> pvcamGuard(g_pvcamLock);
+        if (!pl_exp_abort(hPVCAM_, CCS_HALT))
+            nRet = LogPvcamError(__LINE__, "pl_exp_abort() failed");
     }
+
+    if (acqCfgCur_.AcquisitionType == AcqType_Snap || !acqCfgCur_.CircBufEnabled)
+    {
+        acqThd_->Pause();
+        //nRet = acqThd_->AcqStatus();
+    }
+
+    // TODO: Is this necessary? Could it be done on error only?
+    //if (acqCfgCur_.AcquisitionType == AcqType_Live && acqCfgCur_.CircBufEnabled)
+    //    sequenceModeReady_ = false;
+    //else
+    //    singleFrameModeReady_ = false;
+
+    customDiskWriter_->Stop();
+    customDiskWriterActive_ = false;
+
+    // Inform the core that the acquisition has finished
+    // (this also closes the auto-shutter if used)
+    GetCoreCallback()->AcqFinished(this, nRet);
+
+    isAcquiring_ = false;
+    // Ensure next SnapImage() doesn't hang
+    snappingSingleFrame_ = false;
+
+    eofEventDueToError_ = dueToError;
+    eofEvent_.Set();
+
     return nRet;
 }
 
@@ -6500,7 +6504,7 @@ int Universal::applyAcqConfig(bool forceSetup)
         // See postExpSetupInit()
         // We prepare the acquisition based on previous configuration. If user was snapping single
         // frames, we prepare the single frame, if user was running live, we prepare live.
-        if (acqCfgCur_.CircBufEnabled)
+        if (acqCfgCur_.AcquisitionType == AcqType_Live && acqCfgCur_.CircBufEnabled)
         {
             nRet = resizeImageBufferContinuous();
             sequenceModeReady_ = true;
