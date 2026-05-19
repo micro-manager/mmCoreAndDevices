@@ -678,13 +678,13 @@ private:
     * Initiates an acquisition of sequence with a single frame.
     * Called from SnapImage() or the non-circular buffer acquisition thread.
     */
-    int acquireFrameSeq();
+    int startSingleFrameAcquisition();
     /**
     * Called from SnapImage(). Waits until the acquisition of single frame finishes.
     * This method is used for single frame acquisition or by the non-circular buffer
     * acquisition thread.
     */
-    int waitForFrameSeq();
+    int waitForSingleFrame();
 
     /**
     * Prepares the camera and buffers for a sequence acquisition.
@@ -705,7 +705,7 @@ private:
     /**
     * Internally aborts the ongoing acquisition. This method is lock free.
     */
-    int abortAcquisitionInternal();
+    int abortAcquisition(bool dueToError = true);
 
     /**
     * Sends the S.M.A.R.T streaming configuration to the camera.
@@ -849,7 +849,6 @@ private:
     std::unique_ptr<StreamWriter>       customDiskWriter_{}; // Writer for custom disk streaming feature
     bool                                customDiskWriterActive_{ false }; // Cached value updated after writer->Start
 
-    /// CAMERA PARAMETERS:
     uns16           camParSize_{ 0 }; // CCD parallel size
     uns16           camSerSize_{ 0 }; // CCD serial size
 
@@ -898,6 +897,7 @@ private:
     std::unique_ptr<ImgBuffer>          rgbImgBuf_{ nullptr };
 
     Event            eofEvent_{ false, false };
+    bool             eofEventDueToError_{ false };
     std::mutex       acqLock_{};
 
     // Must remain C-pointer for pl_create_frame_info_struct & pl_release_frame_info_struct
