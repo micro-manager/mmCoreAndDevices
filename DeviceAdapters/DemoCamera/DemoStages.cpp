@@ -306,15 +306,20 @@ int CDemoXYStage::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
+   pAct = new CPropertyAction(this, &CDemoXYStage::OnUsesCallbacks);
+   ret = CreateStringProperty("UsesCallbacks", "Yes", false, pAct);
+   if (ret != DEVICE_OK)
+      return ret;
+   AddAllowedValue("UsesCallbacks", "Yes");
+   AddAllowedValue("UsesCallbacks", "No");
+
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
 
    initialized_ = true;
 
-   stopPollingThread_ = false;
-   pollingThread_ = new PollingThread(this);
-   pollingThread_->activate();
+   StartPollingThread();
 
    return DEVICE_OK;
 }
@@ -323,14 +328,7 @@ int CDemoXYStage::Shutdown()
 {
    if (initialized_)
    {
-      stopPollingThread_ = true;
-      if (pollingThread_ != nullptr)
-      {
-         pollingThread_->NotifyMoveStarted();  // wake thread so it sees the stop flag immediately
-         pollingThread_->wait();
-         delete pollingThread_;
-         pollingThread_ = nullptr;
-      }
+      StopPollingThread();
       initialized_ = false;
    }
    return DEVICE_OK;
@@ -354,13 +352,20 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
    {
       MMThreadGuard guard(moveLock_);
 
-      // If a move is in progress, compute the intermediate position and cancel the old move.
-      if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
+      // Determine the current position to use as the start of the new move.
+      if (timeOutTimer_ != nullptr)
       {
-         double currentPosX, currentPosY;
-         ComputeIntermediatePosition(currentTime, currentPosX, currentPosY);
-         startPosX_um_ = currentPosX;
-         startPosY_um_ = currentPosY;
+         if (!timeOutTimer_->expired(currentTime))
+         {
+            // Move still in progress: interpolate current position.
+            ComputeIntermediatePosition(currentTime, startPosX_um_, startPosY_um_);
+         }
+         else
+         {
+            // Move completed but posX_um_/posY_um_ not yet updated (e.g. no polling).
+            startPosX_um_ = posX_um_ = targetPosX_um_;
+            startPosY_um_ = posY_um_ = targetPosY_um_;
+         }
          delete timeOutTimer_;
          timeOutTimer_ = nullptr;
       }
@@ -485,6 +490,47 @@ int CDemoXYStage::Stop()
    }
    // Call outside the lock to avoid re-entrancy issues with the core callback.
    (void)OnXYStagePositionChanged(posX, posY);
+   return DEVICE_OK;
+}
+
+void CDemoXYStage::StartPollingThread()
+{
+   stopPollingThread_ = false;
+   pollingThread_ = new PollingThread(this);
+   pollingThread_->activate();
+}
+
+void CDemoXYStage::StopPollingThread()
+{
+   if (pollingThread_ != nullptr)
+   {
+      stopPollingThread_ = true;
+      pollingThread_->NotifyMoveStarted();  // wake thread so it sees the stop flag immediately
+      pollingThread_->wait();
+      delete pollingThread_;
+      pollingThread_ = nullptr;
+   }
+}
+
+int CDemoXYStage::OnUsesCallbacks(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(usesCallbacks_ ? "Yes" : "No");
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string val;
+      pProp->Get(val);
+      bool enable = (val == "Yes");
+      if (enable == usesCallbacks_)
+         return DEVICE_OK;
+      usesCallbacks_ = enable;
+      if (enable)
+         StartPollingThread();
+      else
+         StopPollingThread();
+   }
    return DEVICE_OK;
 }
 

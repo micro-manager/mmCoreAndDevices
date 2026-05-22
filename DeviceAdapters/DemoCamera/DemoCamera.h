@@ -641,7 +641,7 @@ public:
 
    int IsXYStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
 
-   int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+   int UsesOnXYStagePositionChanged(bool& result) const { result = usesCallbacks_; return DEVICE_OK; }
 
    virtual int SetRelativePositionUm(double dx, double dy);
 
@@ -649,8 +649,11 @@ public:
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnUsesCallbacks(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+   void StartPollingThread();
+   void StopPollingThread();
    double stepSize_um_ = 0.015;
    double posX_um_ = 0.0;
    double posY_um_ = 0.0;
@@ -665,6 +668,7 @@ private:
    double upperLimit_ = 20000.0;
    MMThreadLock moveLock_;
    std::atomic<bool> stopPollingThread_ = false;
+   bool usesCallbacks_ = true;
 
    void ComputeIntermediatePosition(const MM::MMTime& currentTime,
       double& currentPosX,
