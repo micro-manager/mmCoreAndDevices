@@ -642,6 +642,8 @@ public:
 
    int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
 
+   virtual int SetRelativePositionUm(double dx, double dy);
+
    // action interface
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -660,11 +662,32 @@ private:
    bool initialized_ = false;
    double lowerLimit_ = 0.0;
    double upperLimit_ = 20000.0;
+   MMThreadLock moveLock_;
+   bool stopPollingThread_ = false;
 
-   void CommitCurrentIntermediatePosition_(const MM::MMTime& now);
    void ComputeIntermediatePosition(const MM::MMTime& currentTime,
       double& currentPosX,
       double& currentPosY);
+
+   class PollingThread : public MMDeviceThreadBase
+   {
+   public:
+      explicit PollingThread(CDemoXYStage* stage);
+      ~PollingThread();
+      int svc() override;
+      void NotifyMoveStarted();  // wake the thread immediately when a move begins
+   private:
+      CDemoXYStage* stage_;
+#ifdef _WIN32
+      HANDLE moveEvent_;
+#else
+      pthread_mutex_t eventMutex_;
+      pthread_cond_t  eventCond_;
+      bool            eventSignaled_ = false;
+#endif
+      void WaitForMoveOrTimeout(unsigned long timeoutMs);
+   };
+   PollingThread* pollingThread_ = nullptr;
 };
 
 //////////////////////////////////////////////////////////////////////////////
