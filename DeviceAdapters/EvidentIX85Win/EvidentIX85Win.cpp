@@ -957,6 +957,8 @@ int EvidentNosepiece::OnSetNearLimitValue(MM::PropertyBase* pProp, MM::ActionTyp
         long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
         if (nosepiecePos >= 1 && nosepiecePos <= (long)nearLimits_.size())
             pProp->Set(nearLimits_[nosepiecePos - 1] * FOCUS_STEP_SIZE_UM);
+        else
+            pProp->Set(0.0);
     }
     else if (eAct == MM::AfterSet)
     {
@@ -974,6 +976,7 @@ int EvidentNosepiece::OnSetNearLimitValue(MM::PropertyBase* pProp, MM::ActionTyp
         if (newLimit < FOCUS_MIN_POS) newLimit = FOCUS_MIN_POS;
         if (newLimit > FOCUS_MAX_POS) newLimit = FOCUS_MAX_POS;
 
+        long oldLimit = nearLimits_[nosepiecePos - 1];
         nearLimits_[nosepiecePos - 1] = newLimit;
 
         std::ostringstream cmd;
@@ -988,10 +991,20 @@ int EvidentNosepiece::OnSetNearLimitValue(MM::PropertyBase* pProp, MM::ActionTyp
         std::string response;
         int ret = hub->ExecuteCommand(cmd.str(), response);
         if (ret != DEVICE_OK)
+        {
+            nearLimits_[nosepiecePos - 1] = oldLimit;
+            pProp->Set(oldLimit * FOCUS_STEP_SIZE_UM);
             return ret;
+        }
 
         if (!IsPositiveAck(response, CMD_FOCUS_NEAR_LIMIT))
+        {
+            nearLimits_[nosepiecePos - 1] = oldLimit;
+            pProp->Set(oldLimit * FOCUS_STEP_SIZE_UM);
             return ERR_NEGATIVE_ACK;
+        }
+
+        pProp->Set(newLimit * FOCUS_STEP_SIZE_UM);
 
         std::ostringstream logMsg;
         logMsg << "Set near limit for objective " << nosepiecePos
@@ -4440,12 +4453,13 @@ int EvidentAutofocus::FindFocusWithOffset()
     long measuredZOffset = hub->GetModel()->GetMeasuredZOffset();
     long targetZPos = currentZPos + measuredZOffset;
 
-    // Clamp to hardware limits, then to user-set AF search limits so the
-    // offset move cannot drive the objective outside the safe search range.
-    if (targetZPos < FOCUS_MIN_POS) targetZPos = FOCUS_MIN_POS;
-    if (targetZPos > FOCUS_MAX_POS) targetZPos = FOCUS_MAX_POS;
+    // Clamp to user-set AF search limits first, then enforce hardware bounds
+    // last so hardware limits always win regardless of what farLimit_/nearLimit_
+    // contain.
     if (targetZPos < farLimit_)  targetZPos = farLimit_;
     if (targetZPos > nearLimit_) targetZPos = nearLimit_;
+    if (targetZPos < FOCUS_MIN_POS) targetZPos = FOCUS_MIN_POS;
+    if (targetZPos > FOCUS_MAX_POS) targetZPos = FOCUS_MAX_POS;
 
     std::ostringstream logMsg;
     logMsg << "Applying Z-offset: " << measuredZOffset <<
@@ -4542,7 +4556,11 @@ int EvidentAutofocus::OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(farLimit_));
             std::string response;
-            hub->ExecuteCommand(cmd, response);  // best-effort; InitializeZDC() will re-apply
+            int ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+                LogMessage("Warning: AFL command failed when setting near limit; will retry via InitializeZDC()");
+            else if (!IsPositiveAck(response, CMD_AF_LIMIT))
+                LogMessage("Warning: AFL negative ACK when setting near limit; will retry via InitializeZDC()");
         }
 
         // Mark that ZDC needs re-initialization (deferred until next AF operation)
@@ -4580,7 +4598,11 @@ int EvidentAutofocus::OnFarLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(farLimit_));
             std::string response;
-            hub->ExecuteCommand(cmd, response);  // best-effort; InitializeZDC() will re-apply
+            int ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+                LogMessage("Warning: AFL command failed when setting far limit; will retry via InitializeZDC()");
+            else if (!IsPositiveAck(response, CMD_AF_LIMIT))
+                LogMessage("Warning: AFL negative ACK when setting far limit; will retry via InitializeZDC()");
         }
 
         // Mark that ZDC needs re-initialization (deferred until next AF operation)
