@@ -261,6 +261,11 @@ CDemoXYStage::CDemoXYStage()
 
    // parent ID display
    CreateHubIDProperty();
+
+   CPropertyAction* pAct = new CPropertyAction(this, &CDemoXYStage::OnUsesCallbacks);
+   CreateStringProperty("UsesCallbacks", "Yes", false, pAct, true);
+   AddAllowedValue("UsesCallbacks", "Yes");
+   AddAllowedValue("UsesCallbacks", "No");
 }
 
 CDemoXYStage::~CDemoXYStage()
@@ -306,20 +311,14 @@ int CDemoXYStage::Initialize()
    if (ret != DEVICE_OK)
       return ret;
 
-   pAct = new CPropertyAction(this, &CDemoXYStage::OnUsesCallbacks);
-   ret = CreateStringProperty("UsesCallbacks", "Yes", false, pAct);
-   if (ret != DEVICE_OK)
-      return ret;
-   AddAllowedValue("UsesCallbacks", "Yes");
-   AddAllowedValue("UsesCallbacks", "No");
-
    ret = UpdateStatus();
    if (ret != DEVICE_OK)
       return ret;
 
    initialized_ = true;
 
-   StartPollingThread();
+   if (usesCallbacks_)
+      StartPollingThread();
 
    return DEVICE_OK;
 }
@@ -340,6 +339,13 @@ bool CDemoXYStage::Busy()
    if (timeOutTimer_ == nullptr)
       return false;
    return !timeOutTimer_->expired(GetCurrentMMTime());
+}
+
+std::pair<double, double> CDemoXYStage::ControllerUmToUserUm(double x_um, double y_um)
+{
+   long xSteps = (long)(x_um / stepSize_um_);
+   long ySteps = (long)(y_um / stepSize_um_);
+   return ConvertPositionStepsToUm(xSteps, ySteps);
 }
 
 int CDemoXYStage::SetPositionSteps(long x, long y)
@@ -395,8 +401,9 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
       startY = startPosY_um_;
    }
 
-   // Notify listeners of the starting position (as an acknowledgement).
-   int ret = OnXYStagePositionChanged(startX, startY);
+   // Notify listeners of the starting position in user/adapter coordinates.
+   auto userStart = ControllerUmToUserUm(startX, startY);
+   int ret = OnXYStagePositionChanged(userStart.first, userStart.second);
    if (ret != DEVICE_OK)
       return ret;
 
@@ -489,7 +496,8 @@ int CDemoXYStage::Stop()
       posY = posY_um_;
    }
    // Call outside the lock to avoid re-entrancy issues with the core callback.
-   (void)OnXYStagePositionChanged(posX, posY);
+   auto userPos = ControllerUmToUserUm(posX, posY);
+   (void)OnXYStagePositionChanged(userPos.first, userPos.second);
    return DEVICE_OK;
 }
 
@@ -509,6 +517,24 @@ void CDemoXYStage::StopPollingThread()
       pollingThread_->wait();
       delete pollingThread_;
       pollingThread_ = nullptr;
+   }
+   // Thread is gone; commit any in-flight or expired move so posX_um_/posY_um_
+   // are correct and the timer is not leaked.
+   {
+      MMThreadGuard guard(moveLock_);
+      if (timeOutTimer_ != nullptr)
+      {
+         MM::MMTime now = GetCurrentMMTime();
+         if (!timeOutTimer_->expired(now))
+            ComputeIntermediatePosition(now, posX_um_, posY_um_);
+         else
+         {
+            posX_um_ = targetPosX_um_;
+            posY_um_ = targetPosY_um_;
+         }
+         delete timeOutTimer_;
+         timeOutTimer_ = nullptr;
+      }
    }
 }
 
@@ -626,7 +652,10 @@ int CDemoXYStage::PollingThread::svc()
          }
 
          if (report)
-            (void)stage_->OnXYStagePositionChanged(posX, posY);
+         {
+            auto userPos = stage_->ControllerUmToUserUm(posX, posY);
+            (void)stage_->OnXYStagePositionChanged(userPos.first, userPos.second);
+         }
 
          if (!moving)
             break;  // move finished; go back to waiting for the next one

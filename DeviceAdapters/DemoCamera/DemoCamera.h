@@ -654,6 +654,9 @@ public:
 private:
    void StartPollingThread();
    void StopPollingThread();
+   // Convert internal controller-space um (steps * stepSize) to user-space um
+   // (with adapter origin and mirroring applied), suitable for callbacks.
+   std::pair<double, double> ControllerUmToUserUm(double x_um, double y_um);
    double stepSize_um_ = 0.015;
    double posX_um_ = 0.0;
    double posY_um_ = 0.0;
