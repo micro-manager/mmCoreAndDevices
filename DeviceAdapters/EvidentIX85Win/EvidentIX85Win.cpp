@@ -3583,18 +3583,12 @@ int EvidentAutofocus::Initialize()
         }
     }
 
-    // Query initial AF limits
-    cmd = BuildQuery(CMD_AF_LIMIT);
-    ret = hub->ExecuteCommand(cmd, response);
-    if (ret == DEVICE_OK)
-    {
-        std::vector<std::string> params = ParseParameters(response);
-        if (params.size() >= 2 && params[0] != "X" && params[1] != "X")
-        {
-            nearLimit_ = ParseIntParameter(params[0]);
-            farLimit_ = ParseIntParameter(params[1]);
-        }
-    }
+    // The hardware clears AFL limits when remote mode is exited, so we do not
+    // overwrite nearLimit_/farLimit_ from the hardware here.  Instead, mark
+    // zdcInitNeeded_ so InitializeZDC() will re-apply the adapter's stored
+    // limits (which include any values restored from a saved config file)
+    // before the first AF operation.
+    zdcInitNeeded_ = true;
 
     // Create AF Status property (read-only)
     CPropertyAction* pAct = new CPropertyAction(this, &EvidentAutofocus::OnAFStatus);
@@ -4384,6 +4378,13 @@ int EvidentAutofocus::FindFocusWithOffset()
     long measuredZOffset = hub->GetModel()->GetMeasuredZOffset();
     long targetZPos = currentZPos + measuredZOffset;
 
+    // Clamp to hardware limits, then to user-set AF search limits so the
+    // offset move cannot drive the objective outside the safe search range.
+    if (targetZPos < FOCUS_MIN_POS) targetZPos = FOCUS_MIN_POS;
+    if (targetZPos > FOCUS_MAX_POS) targetZPos = FOCUS_MAX_POS;
+    if (targetZPos < farLimit_)  targetZPos = farLimit_;
+    if (targetZPos > nearLimit_) targetZPos = nearLimit_;
+
     std::ostringstream logMsg;
     logMsg << "Applying Z-offset: " << measuredZOffset <<
               " steps (from " << currentZPos <<
@@ -4472,16 +4473,15 @@ int EvidentAutofocus::OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ERR_INVALID_PARAMETER;
         }
 
-        std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(newNear), static_cast<int>(farLimit_));
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-            return ret;
-
-        if (!IsPositiveAck(response, CMD_AF_LIMIT))
-            return ERR_NEGATIVE_ACK;
-
         nearLimit_ = newNear;
+
+        // AFL can only be set while AF is idle; if active, defer to InitializeZDC().
+        if (afStatus_ == 0)
+        {
+            std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(farLimit_));
+            std::string response;
+            hub->ExecuteCommand(cmd, response);  // best-effort; InitializeZDC() will re-apply
+        }
 
         // Mark that ZDC needs re-initialization (deferred until next AF operation)
         zdcInitNeeded_ = true;
@@ -4511,16 +4511,15 @@ int EvidentAutofocus::OnFarLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ERR_INVALID_PARAMETER;
         }
 
-        std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(newFar));
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-            return ret;
-
-        if (!IsPositiveAck(response, CMD_AF_LIMIT))
-            return ERR_NEGATIVE_ACK;
-
         farLimit_ = newFar;
+
+        // AFL can only be set while AF is idle; if active, defer to InitializeZDC().
+        if (afStatus_ == 0)
+        {
+            std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(farLimit_));
+            std::string response;
+            hub->ExecuteCommand(cmd, response);  // best-effort; InitializeZDC() will re-apply
+        }
 
         // Mark that ZDC needs re-initialization (deferred until next AF operation)
         zdcInitNeeded_ = true;
