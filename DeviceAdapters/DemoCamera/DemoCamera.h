@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <cstring>
 #include <stdint.h>
+#include <atomic>
 #include <future>
 #include <vector>
 
@@ -663,7 +664,7 @@ private:
    double lowerLimit_ = 0.0;
    double upperLimit_ = 20000.0;
    MMThreadLock moveLock_;
-   bool stopPollingThread_ = false;
+   std::atomic<bool> stopPollingThread_ = false;
 
    void ComputeIntermediatePosition(const MM::MMTime& currentTime,
       double& currentPosX,

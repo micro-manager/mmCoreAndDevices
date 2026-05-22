@@ -25,6 +25,9 @@
 #include <sstream>
 #include <cmath>
 #include <algorithm>
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
 
 // External names used by the rest of the system
 extern const char* g_StageDeviceName;
@@ -323,6 +326,7 @@ int CDemoXYStage::Shutdown()
       stopPollingThread_ = true;
       if (pollingThread_ != nullptr)
       {
+         pollingThread_->NotifyMoveStarted();  // wake thread so it sees the stop flag immediately
          pollingThread_->wait();
          delete pollingThread_;
          pollingThread_ = nullptr;
@@ -435,15 +439,14 @@ int CDemoXYStage::SetRelativePositionSteps(long x, long y)
 
 int CDemoXYStage::SetRelativePositionUm(double dx, double dy)
 {
-   // The base-class xPos_/yPos_ cache is set to the target immediately on
-   // SetPositionUm, so it cannot be used for relative moves during a move.
-   // Route through GetPositionSteps to get the true interpolated position.
-   long xSteps, ySteps;
-   int ret = GetPositionSteps(xSteps, ySteps);
+   // GetPositionUm routes through GetPositionSteps + ConvertPositionStepsToUm,
+   // so it returns the true interpolated position in adapter/user coordinates
+   // (with origin and mirroring applied), matching the coordinate space that
+   // SetPositionUm expects.
+   double currentX, currentY;
+   int ret = GetPositionUm(currentX, currentY);
    if (ret != DEVICE_OK)
       return ret;
-   double currentX = xSteps * stepSize_um_;
-   double currentY = ySteps * stepSize_um_;
    return SetPositionUm(currentX + dx, currentY + dy);
 }
 
@@ -465,10 +468,18 @@ int CDemoXYStage::Stop()
    {
       MMThreadGuard guard(moveLock_);
       MM::MMTime now = GetCurrentMMTime();
-      if (timeOutTimer_ && !timeOutTimer_->expired(now))
-         ComputeIntermediatePosition(now, posX_um_, posY_um_);
-      delete timeOutTimer_;
-      timeOutTimer_ = nullptr;
+      if (timeOutTimer_ != nullptr)
+      {
+         if (!timeOutTimer_->expired(now))
+            ComputeIntermediatePosition(now, posX_um_, posY_um_);
+         else
+         {
+            posX_um_ = targetPosX_um_;
+            posY_um_ = targetPosY_um_;
+         }
+         delete timeOutTimer_;
+         timeOutTimer_ = nullptr;
+      }
       posX = posX_um_;
       posY = posY_um_;
    }
