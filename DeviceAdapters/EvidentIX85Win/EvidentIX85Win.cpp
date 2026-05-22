@@ -497,6 +497,13 @@ int EvidentNosepiece::Initialize()
     AddAllowedValue("Set-Focus-Near-Limit", "Set");
     AddAllowedValue("Set-Focus-Near-Limit", "Clear");
 
+    // Create writable float property to set the near limit by typing a value
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnSetNearLimitValue);
+    ret = CreateProperty("Set-Focus-Near-Limit-um", "0.0", MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    SetPropertyLimits("Set-Focus-Near-Limit-um", 0.0, FOCUS_MAX_POS * FOCUS_STEP_SIZE_UM);
+
     // Query parfocal settings from microscope
     ret = QueryParfocalSettings();
     if (ret != DEVICE_OK)
@@ -935,6 +942,61 @@ int EvidentNosepiece::OnSetNearLimit(MM::PropertyBase* pProp, MM::ActionType eAc
             // Reset property to empty
             pProp->Set("");
         }
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnSetNearLimitValue(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+        if (nosepiecePos >= 1 && nosepiecePos <= (long)nearLimits_.size())
+            pProp->Set(nearLimits_[nosepiecePos - 1] * FOCUS_STEP_SIZE_UM);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+        if (nosepiecePos < 1 || nosepiecePos > (long)nearLimits_.size())
+            return ERR_INVALID_PARAMETER;
+
+        double val;
+        pProp->Get(val);
+        long newLimit = static_cast<long>(val / FOCUS_STEP_SIZE_UM);
+        if (newLimit < FOCUS_MIN_POS) newLimit = FOCUS_MIN_POS;
+        if (newLimit > FOCUS_MAX_POS) newLimit = FOCUS_MAX_POS;
+
+        nearLimits_[nosepiecePos - 1] = newLimit;
+
+        std::ostringstream cmd;
+        cmd << CMD_FOCUS_NEAR_LIMIT << TAG_DELIMITER;
+        for (size_t i = 0; i < nearLimits_.size(); i++)
+        {
+            if (i > 0)
+                cmd << DATA_DELIMITER;
+            cmd << nearLimits_[i];
+        }
+
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd.str(), response);
+        if (ret != DEVICE_OK)
+            return ret;
+
+        if (!IsPositiveAck(response, CMD_FOCUS_NEAR_LIMIT))
+            return ERR_NEGATIVE_ACK;
+
+        std::ostringstream logMsg;
+        logMsg << "Set near limit for objective " << nosepiecePos
+               << " to " << (newLimit * FOCUS_STEP_SIZE_UM) << " um";
+        LogMessage(logMsg.str().c_str());
     }
     return DEVICE_OK;
 }
