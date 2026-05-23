@@ -316,7 +316,7 @@ int CDemoXYStage::Initialize()
    initialized_ = true;
 
    if (usesCallbacks_)
-      StartPollingThread();
+      StartNotificationThread();
 
    return DEVICE_OK;
 }
@@ -325,7 +325,7 @@ int CDemoXYStage::Shutdown()
 {
    if (initialized_)
    {
-      StopPollingThread();
+      StopNotificationThread();
       initialized_ = false;
    }
    return DEVICE_OK;
@@ -406,8 +406,8 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
       return ret;
 
    // Wake the polling thread immediately so it starts reporting mid-move positions.
-   if (pollingThread_ != nullptr)
-      pollingThread_->NotifyMoveStarted();
+   if (notificationThread_ != nullptr)
+      notificationThread_->NotifyMoveStarted();
 
    return DEVICE_OK;
 }
@@ -499,24 +499,24 @@ int CDemoXYStage::Stop()
    return DEVICE_OK;
 }
 
-void CDemoXYStage::StartPollingThread()
+void CDemoXYStage::StartNotificationThread()
 {
-   if (pollingThread_ != nullptr)
+   if (notificationThread_ != nullptr)
       return;  // already running; don't leak a second thread
-   stopPollingThread_ = false;
-   pollingThread_ = new PollingThread(this);
-   pollingThread_->activate();
+   stopNotificationThread_ = false;
+   notificationThread_ = new NotificationThread(this);
+   notificationThread_->activate();
 }
 
-void CDemoXYStage::StopPollingThread()
+void CDemoXYStage::StopNotificationThread()
 {
-   if (pollingThread_ != nullptr)
+   if (notificationThread_ != nullptr)
    {
-      stopPollingThread_ = true;
-      pollingThread_->NotifyMoveStarted();  // wake thread so it sees the stop flag immediately
-      pollingThread_->wait();
-      delete pollingThread_;
-      pollingThread_ = nullptr;
+      stopNotificationThread_ = true;
+      notificationThread_->NotifyMoveStarted();  // wake thread so it sees the stop flag immediately
+      notificationThread_->wait();
+      delete notificationThread_;
+      notificationThread_ = nullptr;
    }
    // Thread is gone; commit any in-flight or expired move so posX_um_/posY_um_
    // are correct and the timer is not leaked.
@@ -555,15 +555,15 @@ int CDemoXYStage::OnUsesCallbacks(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-CDemoXYStage::PollingThread::PollingThread(CDemoXYStage* stage) : stage_(stage)
+CDemoXYStage::NotificationThread::NotificationThread(CDemoXYStage* stage) : stage_(stage)
 {
 }
 
-CDemoXYStage::PollingThread::~PollingThread()
+CDemoXYStage::NotificationThread::~NotificationThread()
 {
 }
 
-void CDemoXYStage::PollingThread::NotifyMoveStarted()
+void CDemoXYStage::NotificationThread::NotifyMoveStarted()
 {
    {
       std::lock_guard<std::mutex> lock(eventMutex_);
@@ -572,7 +572,7 @@ void CDemoXYStage::PollingThread::NotifyMoveStarted()
    eventCond_.notify_one();
 }
 
-void CDemoXYStage::PollingThread::WaitForMoveOrTimeout(unsigned long timeoutMs)
+void CDemoXYStage::NotificationThread::WaitForMoveOrTimeout(unsigned long timeoutMs)
 {
    std::unique_lock<std::mutex> lock(eventMutex_);
    eventCond_.wait_for(lock, std::chrono::milliseconds(timeoutMs),
@@ -580,15 +580,15 @@ void CDemoXYStage::PollingThread::WaitForMoveOrTimeout(unsigned long timeoutMs)
    eventSignaled_ = false;
 }
 
-int CDemoXYStage::PollingThread::svc()
+int CDemoXYStage::NotificationThread::svc()
 {
-   while (!stage_->stopPollingThread_)
+   while (!stage_->stopNotificationThread_)
    {
       // When idle, sleep up to 1 s — NotifyMoveStarted() wakes us immediately.
       WaitForMoveOrTimeout(1000);
 
       // Drive position callbacks for the duration of the move.
-      while (!stage_->stopPollingThread_)
+      while (!stage_->stopNotificationThread_)
       {
          double posX = 0.0, posY = 0.0;
          bool report = false;

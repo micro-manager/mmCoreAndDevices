@@ -654,8 +654,8 @@ public:
    int OnUsesCallbacks(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   void StartPollingThread();
-   void StopPollingThread();
+   void StartNotificationThread();
+   void StopNotificationThread();
    // Convert internal controller-space um (steps * stepSize) to user-space um
    // (with adapter origin and mirroring applied), suitable for callbacks.
    std::pair<double, double> ControllerUmToUserUm(double x_um, double y_um);
@@ -672,18 +672,18 @@ private:
    double lowerLimit_ = 0.0;
    double upperLimit_ = 20000.0;
    MMThreadLock moveLock_;
-   std::atomic<bool> stopPollingThread_ = false;
+   std::atomic<bool> stopNotificationThread_ = false;
    bool usesCallbacks_ = true;
 
    void ComputeIntermediatePosition(const MM::MMTime& currentTime,
       double& currentPosX,
       double& currentPosY);
 
-   class PollingThread : public MMDeviceThreadBase
+   class NotificationThread : public MMDeviceThreadBase
    {
    public:
-      explicit PollingThread(CDemoXYStage* stage);
-      ~PollingThread();
+      explicit NotificationThread(CDemoXYStage* stage);
+      ~NotificationThread();
       int svc() override;
       void NotifyMoveStarted();  // wake the thread immediately when a move begins
    private:
@@ -693,7 +693,7 @@ private:
       bool                    eventSignaled_ = false;
       void WaitForMoveOrTimeout(unsigned long timeoutMs);
    };
-   PollingThread* pollingThread_ = nullptr;
+   NotificationThread* notificationThread_ = nullptr;
 };
 
 //////////////////////////////////////////////////////////////////////////////
