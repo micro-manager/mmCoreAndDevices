@@ -25,9 +25,7 @@
 #include <sstream>
 #include <cmath>
 #include <algorithm>
-#ifndef _WIN32
-#include <sys/time.h>
-#endif
+#include <chrono>
 
 // External names used by the rest of the system
 extern const char* g_StageDeviceName;
@@ -559,55 +557,27 @@ int CDemoXYStage::OnUsesCallbacks(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 CDemoXYStage::PollingThread::PollingThread(CDemoXYStage* stage) : stage_(stage)
 {
-#ifdef _WIN32
-   moveEvent_ = CreateEvent(NULL, FALSE, FALSE, NULL); // auto-reset
-#else
-   pthread_mutex_init(&eventMutex_, NULL);
-   pthread_cond_init(&eventCond_, NULL);
-   eventSignaled_ = false;
-#endif
 }
 
 CDemoXYStage::PollingThread::~PollingThread()
 {
-#ifdef _WIN32
-   CloseHandle(moveEvent_);
-#else
-   pthread_cond_destroy(&eventCond_);
-   pthread_mutex_destroy(&eventMutex_);
-#endif
 }
 
 void CDemoXYStage::PollingThread::NotifyMoveStarted()
 {
-#ifdef _WIN32
-   SetEvent(moveEvent_);
-#else
-   pthread_mutex_lock(&eventMutex_);
-   eventSignaled_ = true;
-   pthread_cond_signal(&eventCond_);
-   pthread_mutex_unlock(&eventMutex_);
-#endif
+   {
+      std::lock_guard<std::mutex> lock(eventMutex_);
+      eventSignaled_ = true;
+   }
+   eventCond_.notify_one();
 }
 
 void CDemoXYStage::PollingThread::WaitForMoveOrTimeout(unsigned long timeoutMs)
 {
-#ifdef _WIN32
-   WaitForSingleObject(moveEvent_, timeoutMs);
-#else
-   struct timeval tv;
-   gettimeofday(&tv, NULL);
-   struct timespec ts;
-   ts.tv_sec  = tv.tv_sec + timeoutMs / 1000;
-   ts.tv_nsec = tv.tv_usec * 1000L + (timeoutMs % 1000) * 1000000L;
-   if (ts.tv_nsec >= 1000000000L) { ts.tv_sec++; ts.tv_nsec -= 1000000000L; }
-   pthread_mutex_lock(&eventMutex_);
-   while (!eventSignaled_)
-      if (pthread_cond_timedwait(&eventCond_, &eventMutex_, &ts) != 0)
-         break;
+   std::unique_lock<std::mutex> lock(eventMutex_);
+   eventCond_.wait_for(lock, std::chrono::milliseconds(timeoutMs),
+                       [this] { return eventSignaled_; });
    eventSignaled_ = false;
-   pthread_mutex_unlock(&eventMutex_);
-#endif
 }
 
 int CDemoXYStage::PollingThread::svc()

@@ -38,7 +38,9 @@
 #include <cstring>
 #include <stdint.h>
 #include <atomic>
+#include <condition_variable>
 #include <future>
+#include <mutex>
 #include <vector>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -685,14 +687,10 @@ private:
       int svc() override;
       void NotifyMoveStarted();  // wake the thread immediately when a move begins
    private:
-      CDemoXYStage* stage_;
-#ifdef _WIN32
-      HANDLE moveEvent_;
-#else
-      pthread_mutex_t eventMutex_;
-      pthread_cond_t  eventCond_;
-      bool            eventSignaled_ = false;
-#endif
+      CDemoXYStage*           stage_;
+      std::mutex              eventMutex_;
+      std::condition_variable eventCond_;
+      bool                    eventSignaled_ = false;
       void WaitForMoveOrTimeout(unsigned long timeoutMs);
    };
    PollingThread* pollingThread_ = nullptr;
