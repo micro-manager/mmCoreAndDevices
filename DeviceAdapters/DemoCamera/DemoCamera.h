@@ -37,7 +37,10 @@
 #include <algorithm>
 #include <cstring>
 #include <stdint.h>
+#include <atomic>
+#include <condition_variable>
 #include <future>
+#include <mutex>
 #include <vector>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -640,14 +643,22 @@ public:
 
    int IsXYStageSequenceable(bool& isSequenceable) const {isSequenceable = false; return DEVICE_OK;}
 
-   int UsesOnXYStagePositionChanged(bool& result) const { result = true; return DEVICE_OK; }
+   int UsesOnXYStagePositionChanged(bool& result) const { result = usesCallbacks_; return DEVICE_OK; }
+
+   virtual int SetRelativePositionUm(double dx, double dy);
 
    // action interface
    // ----------------
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnVelocity(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnUsesCallbacks(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
+   void StartNotificationThread();
+   void StopNotificationThread();
+   // Convert internal controller-space um (steps * stepSize) to user-space um
+   // (with adapter origin and mirroring applied), suitable for callbacks.
+   std::pair<double, double> ControllerUmToUserUm(double x_um, double y_um);
    double stepSize_um_ = 0.015;
    double posX_um_ = 0.0;
    double posY_um_ = 0.0;
@@ -660,11 +671,29 @@ private:
    bool initialized_ = false;
    double lowerLimit_ = 0.0;
    double upperLimit_ = 20000.0;
+   MMThreadLock moveLock_;
+   std::atomic<bool> stopNotificationThread_ = false;
+   bool usesCallbacks_ = true;
 
-   void CommitCurrentIntermediatePosition_(const MM::MMTime& now);
    void ComputeIntermediatePosition(const MM::MMTime& currentTime,
       double& currentPosX,
       double& currentPosY);
+
+   class NotificationThread : public MMDeviceThreadBase
+   {
+   public:
+      explicit NotificationThread(CDemoXYStage* stage);
+      ~NotificationThread();
+      int svc() override;
+      void NotifyMoveStarted();  // wake the thread immediately when a move begins
+   private:
+      CDemoXYStage*           stage_;
+      std::mutex              eventMutex_;
+      std::condition_variable eventCond_;
+      bool                    eventSignaled_ = false;
+      void WaitForMoveOrTimeout(unsigned long timeoutMs);
+   };
+   NotificationThread* notificationThread_ = nullptr;
 };
 
 //////////////////////////////////////////////////////////////////////////////
