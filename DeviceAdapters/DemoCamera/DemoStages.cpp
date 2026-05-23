@@ -503,6 +503,8 @@ int CDemoXYStage::Stop()
 
 void CDemoXYStage::StartPollingThread()
 {
+   if (pollingThread_ != nullptr)
+      return;  // already running; don't leak a second thread
    stopPollingThread_ = false;
    pollingThread_ = new PollingThread(this);
    pollingThread_->activate();
@@ -546,16 +548,11 @@ int CDemoXYStage::OnUsesCallbacks(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
    else if (eAct == MM::AfterSet)
    {
+      if (initialized_)
+         return DEVICE_ERR;  // strictly pre-init; reject changes after initialization
       std::string val;
       pProp->Get(val);
-      bool enable = (val == "Yes");
-      if (enable == usesCallbacks_)
-         return DEVICE_OK;
-      usesCallbacks_ = enable;
-      if (enable)
-         StartPollingThread();
-      else
-         StopPollingThread();
+      usesCallbacks_ = (val == "Yes");
    }
    return DEVICE_OK;
 }
