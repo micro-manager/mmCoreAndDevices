@@ -42,12 +42,14 @@ public:
     int Initialize();
     int Shutdown();
 
-    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnStage(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnSlot(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct);
-
 private:
+    // pre-init
+    void CreatePortProperty();
+    // properties
+    void CreateStageProperty();
+    void CreateSlotProperty();
+    void CreateCommandProperty();
+
     bool initialized_ = false;
     long stage_ = 1;
     long slot_ = 1;

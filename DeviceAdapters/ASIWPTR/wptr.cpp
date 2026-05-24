@@ -83,8 +83,7 @@ WPTRobot::WPTRobot() {
     CreateProperty(MM::g_Keyword_Description, "Wellplate Transfer Robot", MM::String, true);
 
     // Port
-    CPropertyAction* pAct = new CPropertyAction(this, &WPTRobot::OnPort);
-    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+    CreatePortProperty();
 }
 
 WPTRobot::~WPTRobot() {
@@ -96,20 +95,17 @@ void WPTRobot::GetName(char* name) const {
 }
 
 int WPTRobot::Initialize() {
-    // empty the Rx serial buffer before sending command
+    // empty the serial rx buffer before sending command
     ClearPort(*this, *GetCoreCallback(), port_.c_str());
 
-    // Stage and Slot passed as properties
-    CPropertyAction* pAct = new CPropertyAction(this, &WPTRobot::OnStage);
-    CreateProperty("Stage", "1", MM::Integer, false, pAct);
-
-    pAct = new CPropertyAction(this, &WPTRobot::OnSlot);
-    CreateProperty("Slot", "1", MM::Integer, false, pAct);
+    // stage and slot are passed as properties
+    CreateStageProperty();
+    CreateSlotProperty();
 
     // setting this property to different keywords leads to a command
-    pAct = new CPropertyAction(this, &WPTRobot::OnCommand);
-    CreateProperty("Command", "Undefined", MM::String, false, pAct);
+    CreateCommandProperty();
 
+    // update all properties
     if (const int status = UpdateStatus(); status != DEVICE_OK) {
         return status;
     }
@@ -129,158 +125,175 @@ bool WPTRobot::Busy() {
     return false; // reply is only given after move is completed, so Busy() not necessary
 }
 
-int WPTRobot::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(port_.c_str());
-    } else if (eAct == MM::AfterSet) {
-        if (initialized_) {
-            // revert
-            pProp->Set(port_.c_str());
-            return ERR_PORT_CHANGE_FORBIDDEN;
-        }
-        pProp->Get(port_);
-    }
-    return DEVICE_OK;
+void WPTRobot::CreatePortProperty() {
+    CreateStringProperty(MM::g_Keyword_Port, "Undefined", false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(port_.c_str());
+            } else if (eAct == MM::AfterSet) {
+                if (initialized_) {
+                    // revert
+                    pProp->Set(port_.c_str());
+                    return ERR_PORT_CHANGE_FORBIDDEN;
+                }
+                pProp->Get(port_);
+            }
+            return DEVICE_OK;
+        }),
+        true // pre-init property
+    );
 }
 
 // Just reading and writing to the stage variable
-int WPTRobot::OnStage(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(stage_);
-    } else if (eAct == MM::AfterSet) {
-        pProp->Get(stage_);
-    }
-    return DEVICE_OK;
+void WPTRobot::CreateStageProperty() {
+    CreateIntegerProperty("Stage", 1, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(stage_);
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(stage_);
+            }
+            return DEVICE_OK;
+        })
+    );
 }
 
 // Just reading and writing to the slot variable
-int WPTRobot::OnSlot(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(slot_);
-    } else if (eAct == MM::AfterSet) {
-        pProp->Get(slot_);
-    }
-    return DEVICE_OK;
+void WPTRobot::CreateSlotProperty() {
+    CreateIntegerProperty("Slot", 1, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(slot_);
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(slot_);
+            }
+            return DEVICE_OK;
+        })
+    );
 }
 
-int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(command_.c_str());
-    } else if (eAct == MM::AfterSet) {
-        // Read what keyword the user issued, and send the corresponding command
-        pProp->Get(command_);
+void WPTRobot::CreateCommandProperty() {
+    CreateStringProperty("Command", "Undefined", false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(command_.c_str());
+            } else if (eAct == MM::AfterSet) {
+                // Read what keyword the user issued, and send the corresponding command
+                pProp->Get(command_);
 
-        std::ostringstream os;
-        std::string answer;
-        int ret;
+                std::ostringstream os;
+                std::string answer;
+                int ret;
 
-        if (command_.compare(0, 3, "ORG") == 0) {
-            // user issued ORG command
-            os << "ORG";
+                if (command_.compare(0, 3, "ORG") == 0) {
+                    // user issued ORG command
+                    os << "ORG";
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = SendSerialCommand(port_.c_str(), "ORG", gSerialTerm);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            // checking if the answer is what is expected,
-            // if not just give an error and quit
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "ORG") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        } else if (command_.compare(0, 3, "GET") == 0) {
-            // user issued GET command
-            os << "GET " << stage_ << "," << slot_;
+                    // checking if the answer is what is expected,
+                    // if not just give an error and quit
+                    if (answer.length() != 3) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                    if (answer.compare(0, 3, "ORG") != 0) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                } else if (command_.compare(0, 3, "GET") == 0) {
+                    // user issued GET command
+                    os << "GET " << stage_ << "," << slot_;
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "GET") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        } else if (command_.substr(0, 3) == "PUT") {
-            // user issued PUT command
-            os << "PUT " << stage_ << "," << slot_;
+                    if (answer.length() != 3) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                    if (answer.compare(0, 3, "GET") != 0) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                } else if (command_.compare(0, 3, "PUT") == 0) {
+                    // user issued PUT command
+                    os << "PUT " << stage_ << "," << slot_;
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "PUT") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        } else if (command_.compare(0, 3, "AES") == 0) {
-            // used issued STOP command
+                    if (answer.length() != 3) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                    if (answer.compare(0, 3, "PUT") != 0) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                } else if (command_.compare(0, 3, "AES") == 0) {
+                    // used issued STOP command
 
-            // AES is command for emergency stop, stops the robot cold, issue DRT command to enable again
-            os << "AES";
+                    // AES is command for emergency stop, stops the robot cold, issue DRT command to enable again
+                    os << "AES";
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "AES") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        } else if (command_.compare(0, 3, "DRT") == 0) {
-            // user issued DRT command
+                    if (answer.length() != 3) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                    if (answer.compare(0, 3, "AES") != 0) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                } else if (command_.compare(0, 3, "DRT") == 0) {
+                    // user issued DRT command
 
-            // override errors
-            os << "DRT";
+                    // override errors
+                    os << "DRT";
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                    ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
+                    if (ret != DEVICE_OK) {
+                        return ret;
+                    }
 
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
+                    if (answer.length() != 3) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                    if (answer.compare(0, 3, "DRT") != 0) {
+                        return ERR_UNRECOGNIZED_ANSWER;
+                    }
+                }
             }
-            if (answer.compare(0, 3, "DRT") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        }
-    }
-    return DEVICE_OK;
+            return DEVICE_OK;
+        })
+    );
 }
