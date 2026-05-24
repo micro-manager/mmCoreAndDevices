@@ -28,14 +28,12 @@
 #include <sstream>
 #include <string>
 
-#include "DeviceUtils.h"
-#include "ModuleInterface.h"
-
-const char* g_WPTRobotName = "WPTRobot";
+const char* gWPTRobotName = "WPTRobot";
+const char* gSerialTerm = "\r\n";
 
 // Exported MMDevice API
 MODULE_API void InitializeModuleData() {
-    RegisterDevice(g_WPTRobotName, MM::GenericDevice, "WPTRobot");
+    RegisterDevice(gWPTRobotName, MM::GenericDevice, "WPTRobot");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName) {
@@ -43,7 +41,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName) {
         return nullptr;
     }
 
-    if (std::string(deviceName) == g_WPTRobotName) {
+    if (std::string(deviceName) == gWPTRobotName) {
         return new WPTRobot();
     }
 
@@ -54,8 +52,12 @@ MODULE_API void DeleteDevice(MM::Device* pDevice) {
     delete pDevice;
 }
 
+// Error codes
+static constexpr int ERR_PORT_CHANGE_FORBIDDEN = 10004;
+static constexpr int ERR_UNRECOGNIZED_ANSWER = 10009;
+
 // Clear contents of serial port
-int ClearPort(MM::Device& device, MM::Core& core, const std::string& port) {
+static int ClearPort(const MM::Device& device, MM::Core& core, const std::string& port) {
     constexpr size_t bufferSize = 255;
     unsigned char clear[bufferSize];
     unsigned long read = bufferSize;
@@ -69,20 +71,13 @@ int ClearPort(MM::Device& device, MM::Core& core, const std::string& port) {
     return DEVICE_OK;
 }
 
-WPTRobot::WPTRobot() :
-    initialized_(false),
-    numPos_(0),
-    port_(""),
-    command_(""),
-    stage_(1),
-    slot_(1) {
-
+WPTRobot::WPTRobot() {
     InitializeDefaultErrorMessages();
 
-    // Create Preinitialization Properties
+    // Create Pre-init Properties
 
     // Name
-    CreateProperty(MM::g_Keyword_Name, g_WPTRobotName, MM::String, true);
+    CreateProperty(MM::g_Keyword_Name, gWPTRobotName, MM::String, true);
 
     // Description
     CreateProperty(MM::g_Keyword_Description, "Wellplate Transfer Robot", MM::String, true);
@@ -97,7 +92,7 @@ WPTRobot::~WPTRobot() {
 }
 
 void WPTRobot::GetName(char* name) const {
-    CDeviceUtils::CopyLimitedString(name, g_WPTRobotName);
+    CDeviceUtils::CopyLimitedString(name, gWPTRobotName);
 }
 
 int WPTRobot::Initialize() {
@@ -107,19 +102,16 @@ int WPTRobot::Initialize() {
     // Stage and Slot passed as properties
     CPropertyAction* pAct = new CPropertyAction(this, &WPTRobot::OnStage);
     CreateProperty("Stage", "1", MM::Integer, false, pAct);
-    // SetPropertyLimits("Stage", 1, 3); // setting limits must be edited again, if set up changed
 
     pAct = new CPropertyAction(this, &WPTRobot::OnSlot);
     CreateProperty("Slot", "1", MM::Integer, false, pAct);
-    // SetPropertyLimits("Slot", 1, 10);
 
     // setting this property to different keywords leads to a command
     pAct = new CPropertyAction(this, &WPTRobot::OnCommand);
     CreateProperty("Command", "Undefined", MM::String, false, pAct);
 
-    int ret = UpdateStatus();
-    if (ret != DEVICE_OK) {
-        return ret;
+    if (const int status = UpdateStatus(); status != DEVICE_OK) {
+        return status;
     }
 
     initialized_ = true;
@@ -186,12 +178,12 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             // user issued ORG command
             os << "ORG";
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
+            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
             if (ret != DEVICE_OK) {
                 return ret;
             }
 
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
             if (ret != DEVICE_OK) {
                 return ret;
             }
@@ -208,12 +200,12 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             // user issued GET command
             os << "GET " << stage_ << "," << slot_;
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
+            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
             if (ret != DEVICE_OK) {
                 return ret;
             }
 
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
             if (ret != DEVICE_OK) {
                 return ret;
             }
@@ -228,12 +220,12 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             // user issued PUT command
             os << "PUT " << stage_ << "," << slot_;
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
+            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
             if (ret != DEVICE_OK) {
                 return ret;
             }
 
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
             if (ret != DEVICE_OK) {
                 return ret;
             }
@@ -250,12 +242,12 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             // AES is command for emergency stop, stops the robot cold, issue DRT command to enable again
             os << "AES";
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
+            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
             if (ret != DEVICE_OK) {
                 return ret;
             }
 
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
             if (ret != DEVICE_OK) {
                 return ret;
             }
@@ -272,12 +264,12 @@ int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
             // override errors
             os << "DRT";
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
+            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), gSerialTerm);
             if (ret != DEVICE_OK) {
                 return ret;
             }
 
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+            ret = GetSerialAnswer(port_.c_str(), gSerialTerm, answer);
             if (ret != DEVICE_OK) {
                 return ret;
             }

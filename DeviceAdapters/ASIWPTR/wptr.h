@@ -20,28 +20,14 @@
 //                CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-// AUTHOR:         Vikram Kopuri, based on Code by Nenad Amodaj Nico Stuurman and Jizhen Zhao
+// AUTHOR:        Vikram Kopuri, based on Code by Nenad Amodaj Nico Stuurman and Jizhen Zhao
 //
 
-#ifndef ASIWPTR_H
-#define ASIWPTR_H
+#pragma once
 
 #include <string>
 
 #include "DeviceBase.h"
-#include "MMDevice.h"
-
-// Error codes
-// constexpr int ERR_UNKNOWN_POSITION = 10002;
-constexpr int ERR_PORT_CHANGE_FORBIDDEN = 10004;
-constexpr int ERR_INVALID_STEP_SIZE = 10006;
-constexpr int ERR_INVALID_MODE = 10008;
-constexpr int ERR_UNRECOGNIZED_ANSWER = 10009;
-constexpr int ERR_UNSPECIFIED_ERROR = 10010;
-
-constexpr int ERR_OFFSET = 10100;
-
-int ClearPort(MM::Device& device, MM::Core& core, const std::string& port);
 
 class WPTRobot : public CGenericBase<WPTRobot> {
 public:
@@ -51,7 +37,7 @@ public:
     // MMDevice API
     bool Busy();
     void GetName(char* name) const;
-    unsigned long GetNumberOfPositions() const { return numPos_; }
+    unsigned long GetNumberOfPositions() const { return 0; }
 
     int Initialize();
     int Shutdown();
@@ -62,12 +48,11 @@ public:
     int OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-    bool initialized_;
-    unsigned int numPos_;
-    std::string port_;    // MMCore name of serial port
-    std::string command_; // Command exchange with MMCore
-    long stage_;
-    long slot_;
-};
+    bool initialized_ = false;
+    long stage_ = 1;
+    long slot_ = 1;
 
-#endif // ASIWPTR_H
+    // serial communication
+    std::string port_;
+    std::string command_;
+};
