@@ -93,6 +93,7 @@ public:
     int OnObjectiveWD(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSetNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSetNearLimitValue(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnParfocalPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSetParfocalPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnParfocalEnabled(MM::PropertyBase* pProp, MM::ActionType eAct);

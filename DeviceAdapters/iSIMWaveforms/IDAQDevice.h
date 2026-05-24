@@ -92,6 +92,22 @@ public:
     /// setting up a new waveform configuration.
     virtual void clearTasks() = 0;
 
+    /// Write a single constant value to each specified channel (on-demand, no timing required).
+    ///
+    /// Intended for setting outputs to a known static state (e.g., zeroing after a task stops).
+    /// Each parallel vector must have the same length.
+    ///
+    /// @param channels  Hardware channel names (e.g., "Dev1/ao0")
+    /// @param minVoltages  Per-channel minimum voltage
+    /// @param maxVoltages  Per-channel maximum voltage
+    /// @param values  Per-channel output values to write
+    virtual void writeStaticOutputs(
+        const std::vector<std::string>& channels,
+        const std::vector<double>& minVoltages,
+        const std::vector<double>& maxVoltages,
+        const std::vector<double>& values
+    ) = 0;
+
     // =========================================================================
     // Discovery methods
     // =========================================================================

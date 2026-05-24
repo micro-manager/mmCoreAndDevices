@@ -76,7 +76,8 @@ void PvCircularBuffer::Resize(size_t frameSize, int count)
     Reset();
 }
 
-void PvCircularBuffer::ReportFrameArrived(const PvFrameInfo& frameNfo, void* pFrameData)
+void PvCircularBuffer::ReportFrameArrived(
+        const PvFrameInfo& frameNfo, const void* pFrameData)
 {
     // Calculate the index of the received frame in our circular buffer
     const int curFrameIdx = static_cast<const int>

@@ -1094,10 +1094,14 @@ void NikonKsCam::SetExposure(double exp)
 /**
 * Returns the current binning factor.
 * Required by the MM::Camera API.
+* It appears that some of the NikonKs cameras support binning,
+* but not in a freely setable way, so better not support it now.
+* Note: this function previously returned 0, which leads to problems in 
+* the pixel size related code in MMCore.
 */
 int NikonKsCam::GetBinning() const
 {
-    return DEVICE_OK;
+    return 1;
 }
 
 /**

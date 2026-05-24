@@ -40,10 +40,10 @@
 // Local
 #include "AcqConfig.h"
 #include "Event.h"
-#include "NotificationEntry.h"
 #include "PVCAMIncludes.h"
 #include "PvCircularBuffer.h"
 #include "PvDebayer.h"
+#include "PvFrameInfo.h"
 #include "PpParam.h"
 
 // System
@@ -145,8 +145,6 @@ enum PvCameraModel
 //=============================================================================
 //======================================================== FORWARD DECLARATIONS
 
-class PollingThread;
-class NotificationThread;
 class AcqThread;
 class StreamWriter;
 template<class T> class PvParam;
@@ -206,12 +204,14 @@ public: // MM::Camera API
     virtual bool IsCapturing() override;
 
     /**
-    * Micro-manager calls the "live" acquisition a "sequence". PVCAM calls this "continuous - circular buffer" mode.
+    * Micro-manager calls the "live" acquisition a "sequence".
+    * PVCAM calls this "continuous - circular buffer" mode.
+    * See `MM::Camera::StartSequenceAcquisition` - `unused` has no effect.
     */
     virtual int StartSequenceAcquisition(
-            long numImages, double interval_ms, bool stopOnOverflow) override;
-    virtual int StartSequenceAcquisition(double interval_ms) override
-    { return StartSequenceAcquisition(LONG_MAX, interval_ms, false); }
+            long numImages, double unused, bool stopOnOverflow) override;
+    virtual int StartSequenceAcquisition(double /*unused*/) override
+    { return StartSequenceAcquisition(LONG_MAX, 0.0, false); }
     virtual int StopSequenceAcquisition() override;
 
 public: // Action handlers
@@ -503,11 +503,6 @@ public: // Action handlers
     int OnDiskStreamingCoreSkipRatio(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     /**
-    * Switches between Callbacks or Polling acquisition type.
-    */
-    int OnAcquisitionMethod(MM::PropertyBase* pProp, MM::ActionType eAct);
-
-    /**
     * Post processing parameter handler. Post processing features and parameters are
     * read out from the camera dynamically. Based on the camera provided information
     * a list of MM properties is automatically generated.
@@ -572,7 +567,7 @@ public: // Other published methods
     * Returns the PVCAM camera handle.
     * Published to allow other classes access the camera.
     */
-    short Handle();
+    short Handle() const;
 
     // All the logging methods below prepend the message with a PVCAM Adapter
     // specific prefix. We use that to unify the logs and to clearly see which logs
@@ -622,23 +617,17 @@ public: // Other published methods
 
 protected:
     /**
-    * This method is called from the static PVCAM callback or polling thread.
-    * The method should finish as fast as possible to avoid blocking the PVCAM.
-    * If the execution of this method takes longer than frame readout + exposure,
-    * the FrameAcquired for the next frame may not be called.
+    * This method is called from the static PVCAM callback.
     */
     int FrameAcquired();
-    /*
-    * Pushes a final image with its metadata to the MMCore
-    */
-    int PushImageToMmCore(const unsigned char* pixBuffer, MM::CameraImageMetadata* pMd);
     /**
-    * Called from the Notification Thread. Prepares the frame for insertion to the MMCore.
+    * Called from FrameAcquired(), inserts the frame to the MMCore.
     */
-    int ProcessNotification(const NotificationEntry& entry);
-
-    int  PollingThreadRun(void);
-    void PollingThreadExiting() throw();
+    int ProcessFrame(void* pData, const PvFrameInfo& frameNfo);
+    /**
+    * Called from ProcessFrame(), composes metadata for the MMCore.
+    */
+    void BuildMetadata(MM::CameraImageMetadata& md, const PvFrameInfo& frameNfo);
 
 private:
     // Make object non-copyable
@@ -689,33 +678,34 @@ private:
     * Initiates an acquisition of sequence with a single frame.
     * Called from SnapImage() or the non-circular buffer acquisition thread.
     */
-    int acquireFrameSeq();
+    int startSingleFrameAcquisition();
     /**
     * Called from SnapImage(). Waits until the acquisition of single frame finishes.
     * This method is used for single frame acquisition or by the non-circular buffer
     * acquisition thread.
     */
-    int waitForFrameSeq();
-    int waitForFrameSeqPolling(const MM::MMTime& timeout);
-    int waitForFrameSeqCallbacks(const MM::MMTime& timeout);
-    int waitForFrameConPolling(const MM::MMTime& timeout);
+    int waitForSingleFrame();
 
-    int PrepareSeqAcq(); // Note: no longer a device interface function
+    /**
+    * Prepares the camera and buffers for a sequence acquisition.
+    */
+    int prepareSequenceAcquisition();
 
     /**
     * Prepares a raw PVCAM frame buffer for use in MM::Core
-    * @param [OUT] pOutBuf A pointer to the post processed image buffer. This will point
-    *              to one of the internal buffers that were already allocated in reinitProcessingBuffers()
+    * @param [OUT] pOutBuf A pointer to the post processed image buffer.
+    *              This will point to one of the internal buffers that were
+    *              already allocated in resizeImageProcessingBuffers()
     * @param [IN] pInBuf A raw PVCAM image buffer
     * @param [IN] inBufSz Size of the PVCAM image buffer in bytes
     * @return MM error code
     */
-    int postProcessSingleFrame(unsigned char** pOutBuf, unsigned char* pInBuf, size_t inBufSz);
+    int postProcessSingleFrame(void** pOutBuf, void* pInBuf, size_t inBufSz);
 
     /**
     * Internally aborts the ongoing acquisition. This method is lock free.
     */
-    int abortAcquisitionInternal();
+    int abortAcquisition(bool dueToError = true);
 
     /**
     * Sends the S.M.A.R.T streaming configuration to the camera.
@@ -838,7 +828,6 @@ private:
     MM::MMTime      startTime_;            // Acquisition start time
 
     PvCameraModel   cameraModel_{ PvCameraModel_Generic };
-    char            deviceLabel_[MM::MaxStrLength]{ '\0' }; // Cached device label used when inserting metadata
 
     int             circBufFrameCount_{ 10 }; // number of frames to allocate the buffer for
     bool            circBufFrameRecoveryEnabled_{ false }; // True if we perform recovery from lost callbacks
@@ -854,17 +843,12 @@ private:
 
     std::map<int32, std::pair<uns32, uns32>> expTimeResLimits_{}; // [expTimeRes]={min,max}
 
-    friend class    PollingThread;
-    std::unique_ptr<PollingThread>      pollingThd_{}; // Pointer to the sequencing thread
-    friend class    NotificationThread;
-    std::unique_ptr<NotificationThread> notificationThd_{}; // Frame notification thread
     friend class    AcqThread;
-    std::unique_ptr<AcqThread>          acqThd_{}; // Non-CB live thread
+    std::unique_ptr<AcqThread>          acqThd_{}; // Non-circular buffer "live" acq. thread
 
     std::unique_ptr<StreamWriter>       customDiskWriter_{}; // Writer for custom disk streaming feature
     bool                                customDiskWriterActive_{ false }; // Cached value updated after writer->Start
 
-    /// CAMERA PARAMETERS:
     uns16           camParSize_{ 0 }; // CCD parallel size
     uns16           camSerSize_{ 0 }; // CCD serial size
 
@@ -906,13 +890,14 @@ private:
     // in GetImageBuffer() and GetImageBufferAsRGB32().
     // This is a plain C-pointer that points to either RAW (singleFrameBufRaw_),
     // RGB (rgbImgBuf_->GetPixelsRW()) or Black-Filled (metaBlackFilledBuf_) buffer.
-    unsigned char*                      singleFrameBufFinal_{ nullptr };
+    void*                               singleFrameBufFinal_{ nullptr };
     // Circular buffer, used in setup_cont() only (live mode)
     PvCircularBuffer                    circBuf_{};
     // Color image buffer. Used in both single snap and live mode if needed.
     std::unique_ptr<ImgBuffer>          rgbImgBuf_{ nullptr };
 
     Event            eofEvent_{ false, false };
+    bool             eofEventDueToError_{ false };
     std::mutex       acqLock_{};
 
     // Must remain C-pointer for pl_create_frame_info_struct & pl_release_frame_info_struct

@@ -77,7 +77,7 @@ public:
     * This function notifies the buffer that a new frame has arrived and assigns
     * the frame metadata to correct location.
     */
-    void ReportFrameArrived(const PvFrameInfo& frameNfo, void* pFrameData);
+    void ReportFrameArrived(const PvFrameInfo& frameNfo, const void* pFrameData);
 
 private:
     std::unique_ptr<unsigned char[]> pBuffer_{ nullptr };
