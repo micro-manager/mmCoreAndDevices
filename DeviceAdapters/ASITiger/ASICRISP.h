@@ -125,7 +125,7 @@ private:
     void CreateSetLockOffsetProperty();
 
     std::string axisLetter_ = g_EmptyAxisLetterStr; // value determined by extended name
-    std::string focusState_ = g_CRISP_Unknown; // read from controller
+    std::string focusState_ = g_CRISP_Unknown; // will read actual focus state
     long waitAfterLock_ = 1000;
 
     // The CommandTable is created in Initialize() once we know the card address and firmware version.

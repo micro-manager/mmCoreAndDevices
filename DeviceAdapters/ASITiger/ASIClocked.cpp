@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp and others
-//
 
 #include "ASITiger.h"
 #include "ASIClocked.h"

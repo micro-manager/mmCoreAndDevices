@@ -19,8 +19,7 @@
 //
 // AUTHOR:        Brandon Simpson (brandon@asiimaging.com) 2/2022
 //
-// BASED ON:      ASIStage.cpp and others
-//
+
 
 #include "ASIDacXYStage.h"
 #include "ASITiger.h"

@@ -55,9 +55,11 @@ private:
     int SelectWheel();
     void ForcePropertyRefresh();
 
-   unsigned int numPositions_;
-   unsigned int curPosition_;
-   bool spinning_;
-   std::string wheelNumber_;
-   static std::string selectedWheel_; // which wheel is currently selected, shared among all instances of this class
+    // currently selected wheel, shared among all instances of this class
+    inline static std::string selectedWheel_ = g_EmptyAxisLetterStr;
+
+    std::string wheelNumber_ = g_EmptyAxisLetterStr; // 0..9 for filter wheels instead of A..Z
+    unsigned int numPositions_ = 0; // will read actual number of positions
+    unsigned int curPosition_ = 0;  // will read actual position
+    bool spinning_ = false;
 };
