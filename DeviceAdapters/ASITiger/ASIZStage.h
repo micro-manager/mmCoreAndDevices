@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASIZSTAGE_H
-#define ASIZSTAGE_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -138,5 +137,3 @@ private:
    unsigned int axisIndex_;
    std::vector<double> sequence_;
 };
-
-#endif // ASIZSTAGE_H

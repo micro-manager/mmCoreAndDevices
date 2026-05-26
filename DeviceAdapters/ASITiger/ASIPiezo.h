@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASIPIEZO_H
-#define ASIPIEZO_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -127,5 +126,3 @@ private:
    bool runningFastSequence_;
    std::vector<double> sequence_;
 };
-
-#endif // ASIPIEZO_H

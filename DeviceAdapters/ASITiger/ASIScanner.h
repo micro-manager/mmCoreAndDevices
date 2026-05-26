@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASISCANNER_H
-#define ASISCANNER_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -199,5 +198,3 @@ private:
    bool dac4ch_;
    bool signalDAC_;
 };
-
-#endif // ASISCANNER_H

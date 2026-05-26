@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASIXYSTAGE_H
-#define ASIXYSTAGE_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -155,8 +154,10 @@ public:
    int OnVectorX(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterX_); }
    int OnVectorY(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterY_); }
 
-
 private:
+    int OnSaveJoystickSettings();
+    int getMinMaxSpeed(const std::string& axisLetter, double& minSpeed, double& maxSpeed);
+
    double unitMultX_;
    double unitMultY_;
    double stepSizeXUm_;
@@ -173,9 +174,4 @@ private:
    bool ttl_trigger_enabled_;
    std::vector<double> sequenceX_;
    std::vector<double> sequenceY_;
-
-   int OnSaveJoystickSettings();
-   int getMinMaxSpeed(const std::string& axisLetter, double& minSpeed, double& maxSpeed);
 };
-
-#endif // ASIXYSTAGE_H

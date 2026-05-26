@@ -20,8 +20,7 @@
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 08/2019
 //
 
-#ifndef ASIDAC_H
-#define ASIDAC_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -109,5 +108,3 @@ private:
 	bool ttl_trigger_enabled_;
 	std::vector<double> sequence_; // carries data in volts
 };
-
-#endif // ASIDAC_H

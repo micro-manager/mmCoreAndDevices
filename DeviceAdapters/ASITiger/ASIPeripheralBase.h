@@ -20,16 +20,13 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASIPERIPHERALBASE_H
-#define ASIPERIPHERALBASE_H
+#pragma once
 
 #include "ASITiger.h"
 #include "ASIBase.h"
 #include "ASIHub.h"
 
-
 // See ASIBase.h for an explanation of how this class works.
-
 
 template <template <typename> class TDeviceBase, class UConcreteDevice>
 class ASIPeripheralBase : public ASIBase<TDeviceBase, UConcreteDevice>
@@ -242,6 +239,3 @@ private:
    }
 
 };
-
-
-#endif // ASIPERIPHERALBASE_H

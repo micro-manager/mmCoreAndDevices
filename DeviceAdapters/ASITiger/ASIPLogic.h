@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 05/2014
 //
 
-#ifndef ASIPLOGIC_H
-#define ASIPLOGIC_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -104,5 +103,3 @@ private:
    int RefreshCurrentPosition();
    int RefreshEditCellPropertyValues();
 };
-
-#endif // ASIPLOGIC_H

@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASICLOCKED_H
-#define ASICLOCKED_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -76,5 +75,3 @@ public:
 
    int Initialize();
 };
-
-#endif // ASICLOCKED_H

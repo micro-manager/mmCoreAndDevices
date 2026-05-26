@@ -20,8 +20,7 @@
 // AUTHOR:        Brandon Simpson (brandon@asiimaging.com) 2/2022
 //
 
-#ifndef ASIDACXYSTAGE_H
-#define ASIDACXYSTAGE_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -166,5 +165,3 @@ private:
 	std::vector<double> sequenceX_;
 	std::vector<double> sequenceY_;
 };
-
-#endif // ASIDACXYSTAGE_H

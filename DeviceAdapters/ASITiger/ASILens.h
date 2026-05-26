@@ -21,8 +21,7 @@
 //                Modified for Tunable lens by Vik (vik@asiimaging.com)	05/2017
 //
 
-#ifndef ASILENS_H
-#define ASILENS_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -118,5 +117,3 @@ private:
    bool ttl_trigger_enabled_;
    std::vector<double> sequence_;
 };
-
-#endif // ASILENS_H

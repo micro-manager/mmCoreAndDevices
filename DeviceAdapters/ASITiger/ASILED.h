@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 05/2014
 //
 
-#ifndef ASILED_H
-#define ASILED_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -57,5 +56,3 @@ private:
    bool stablight_;
    int UpdateOpenIntensity();
 };
-
-#endif // ASILED_H

@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASIBASE_H
-#define ASIBASE_H
+#pragma once
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -125,5 +124,3 @@ protected:
       this->SetErrorText(ERR_INVALID_ADDRESS, g_Msg_ERR_INVALID_ADDRESS);
    }
 };
-
-#endif // ASIBASE_H

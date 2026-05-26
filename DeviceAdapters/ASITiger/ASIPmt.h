@@ -20,8 +20,7 @@
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 04/2016
 //
 
-#ifndef ASIPMT_H
-#define ASIPMT_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -66,5 +65,3 @@ private:
    int UpdateGain();
    int UpdateAvg();
  };
-
-#endif // ASIPMT_H

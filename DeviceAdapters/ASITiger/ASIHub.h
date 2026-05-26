@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASIHUB_H
-#define ASIHUB_H
+#pragma once
 
 #include "ASIBase.h"
 #include "MMDevice.h"
@@ -169,7 +168,3 @@ private:
    std::map<std::string, std::string> deviceMap_;  // to implement properties shared between devices
         // key is the device name, value is the Tiger address (normally a single character, see note about addressChar_ in ASIPeripheralBase
 };
-
-
-
-#endif // ASIHUB_H

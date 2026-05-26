@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASIFWHEEL_H
-#define ASIFWHEEL_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -62,5 +61,3 @@ private:
    std::string wheelNumber_;
    static std::string selectedWheel_; // which wheel is currently selected, shared among all instances of this class
 };
-
-#endif // ASIFWHEEL_H

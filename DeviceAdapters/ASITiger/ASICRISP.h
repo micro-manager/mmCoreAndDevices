@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASICRISP_H
-#define ASICRISP_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -135,5 +134,3 @@ private:
     // std::optional allows the table to be late-initialized while keeping its members const for immutability.
     std::optional<CommandTable> commands_;
 };
-
-#endif // ASICRISP_H

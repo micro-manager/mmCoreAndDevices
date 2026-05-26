@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASITIGERCOMM_H
-#define ASITIGERCOMM_H
+#pragma once
 
 #include "ASIHub.h"
 #include "MMDevice.h"
@@ -42,23 +41,20 @@
 // HubBase in DeviceBase.h, at which point it would have to be merged
 // with TigerComm to work.  So that refactoring path was abandoned for now.
 // - Jon (14-May-2014)
-class CTigerCommHub : public ASIHub
-{
+class CTigerCommHub : public ASIHub {
 public:
-    explicit CTigerCommHub();
+    CTigerCommHub();
     ~CTigerCommHub() = default;
 
-   // Device API
-   int Initialize();
-   bool Busy();
+    // Device API
+    int Initialize();
+    bool Busy();
 
-   // Hub API
-   bool SupportsDeviceDetection();
-   MM::DeviceDetectionStatus DetectDevice();
-   int DetectInstalledDevices();
+    // Hub API
+    bool SupportsDeviceDetection();
+    MM::DeviceDetectionStatus DetectDevice();
+    int DetectInstalledDevices();
 
 private:
-   int TalkToTiger();
+    int TalkToTiger();
 };
-
-#endif // ASITIGERCOMM_H

@@ -22,8 +22,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASITIGER_H
-#define ASITIGER_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -770,4 +769,3 @@ struct FirmwareBuild
 // define names
 const char* const g_Define_SINGLEAXIS_FUNCTION = "SINGLEAXIS_FUNCTION";
 
-#endif // ASITIGER_H
