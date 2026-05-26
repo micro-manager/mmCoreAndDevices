@@ -27,7 +27,6 @@
 #include "DeviceBase.h"
 #include "MMDevice.h"
 
-
 // shared properties not implemented for CRISP because as of mid-2017 only can have one per card
 
 namespace {
@@ -65,11 +64,8 @@ constexpr char SetLockOffset[] = "Set Lock Offset (Advanced Users Only)";
 namespace Props = Properties;
 } // namespace
 
-
 CCRISP::CCRISP(const char* name) :
-    ASIPeripheralBase<::CAutoFocusBase, CCRISP>(name),
-    axisLetter_(g_EmptyAxisLetterStr), // value determined by extended name
-    waitAfterLock_(1000) {
+    ASIPeripheralBase<::CAutoFocusBase, CCRISP>(name) {
 
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {

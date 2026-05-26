@@ -29,7 +29,6 @@
 #include <string>
 #include <string_view>
 
-
 // The serial command set for a device property.
 struct Command {
     const std::string get;      // read from hardware (e.g. "2LR Z?")
@@ -97,7 +96,6 @@ public:
     int OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnLogAmpAGC(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct);
 
@@ -126,9 +124,9 @@ private:
     void CreateSetLogAmpAGCProperty();
     void CreateSetLockOffsetProperty();
 
-    std::string axisLetter_;
-    std::string focusState_;
-    long waitAfterLock_;
+    std::string axisLetter_ = g_EmptyAxisLetterStr; // value determined by extended name
+    std::string focusState_ = g_CRISP_Unknown; // read from controller
+    long waitAfterLock_ = 1000;
 
     // The CommandTable is created in Initialize() once we know the card address and firmware version.
     // std::optional allows the table to be late-initialized while keeping its members const for immutability.

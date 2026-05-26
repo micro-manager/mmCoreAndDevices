@@ -53,14 +53,11 @@
 template <template <typename> class TDeviceBase, class UConcreteDevice>
 class ASIBase : public TDeviceBase<UConcreteDevice> {
 public:
-    explicit ASIBase(const char* name) :
-        initialized_(false),
-        firmwareVersion_(0.0) {
-
+    explicit ASIBase(const char* name) {
         this->InitializeDefaultErrorMessages();
         InitializeASIErrorMessages();
 
-        // note that this name is different from the label that MM uses in e.g. SetProperty()
+        // Note: this name is different from the label that MM uses in e.g. SetProperty()
 
         // name property will be used to re-create the object by calling CreateDevice again with this parameter
         // if name isn't specified then skip this step (=> method for parent objects to delay setting name until child created)
@@ -71,21 +68,20 @@ public:
 
     virtual ~ASIBase() = default;
 
-   int Shutdown()
-   {
-      initialized_ = false;
-      return DEVICE_OK;
-   }
+    int Shutdown() {
+        initialized_ = false;
+        return DEVICE_OK;
+    }
 
-   void GetName(char* pszName) const
-   {
-      char name[MM::MaxStrLength];
-      if (this->HasProperty(MM::g_Keyword_Name))
-         this->GetProperty(MM::g_Keyword_Name, name);
-      else
-         strcpy(name, "Undefined");
-      CDeviceUtils::CopyLimitedString(pszName, name);
-   }
+    void GetName(char* pszName) const {
+        char name[MM::MaxStrLength];
+        if (this->HasProperty(MM::g_Keyword_Name)) {
+            this->GetProperty(MM::g_Keyword_Name, name);
+        } else {
+            strcpy(name, "Undefined");
+        }
+        CDeviceUtils::CopyLimitedString(pszName, name);
+    }
 
     bool Busy() { 
         // default: hardware is always ready; override in derived class if the hardware requires it
@@ -98,29 +94,28 @@ public:
     }
 
 protected:
-   bool initialized_;      // used to signal that device properties have been read from controller
-   double firmwareVersion_; // firmware version
-   std::string firmwareDate_;    // firmware compile date
-   std::string firmwareBuild_;   // firmware build name
+    void InitializeASIErrorMessages() {
+        this->SetErrorText(ERR_UNRECOGNIZED_ANSWER, g_Msg_ERR_UNRECOGNIZED_ANSWER);
+        this->SetErrorText(ERR_FILTER_WHEEL_NOT_READY, g_Msg_ERR_FILTER_WHEEL_NOT_READY);
+        this->SetErrorText(ERR_FILTER_WHEEL_SPINNING, g_Msg_ERR_FILTER_WHEEL_SPINNING);
+        this->SetErrorText(ERR_NOT_ENOUGH_AXES, g_Msg_ERR_NOT_ENOUGH_AXES);
+        this->SetErrorText(ERR_TOO_LARGE_ADDRESSES, g_Msg_ERR_TOO_LARGE_ADDRESSES);
+        this->SetErrorText(ERR_INFO_COMMAND_NOT_SUPPORTED, g_Msg_ERR_INFO_COMMAND_NOT_SUPPORTED);
+        this->SetErrorText(ERR_TIGER_PAIR_NOT_PRESENT, g_Msg_ERR_TIGER_PAIR_NOT_PRESENT);
+        this->SetErrorText(ERR_TIGER_DEV_NOT_SUPPORTED, g_Msg_ERR_TIGER_DEV_NOT_SUPPORTED);
+        this->SetErrorText(ERR_CRISP_NOT_CALIBRATED, g_Msg_ERR_CRISP_NOT_CALIBRATED);
+        this->SetErrorText(ERR_CRISP_NOT_LOCKED, g_Msg_ERR_CRISP_NOT_LOCKED);
+        this->SetErrorText(ERR_UNKNOWN_COMMAND, g_Msg_ERR_UNKNOWN_COMMAND);
+        this->SetErrorText(ERR_UNKNOWN_AXIS, g_Msg_ERR_UNKNOWN_AXIS);
+        this->SetErrorText(ERR_MISSING_PARAM, g_Msg_ERR_MISSING_PARAM);
+        this->SetErrorText(ERR_PARAM_OUT_OF_RANGE, g_Msg_ERR_PARAM_OUT_OF_RANGE);
+        this->SetErrorText(ERR_OPERATION_FAILED, g_Msg_ERR_OPERATION_FAILED);
+        this->SetErrorText(ERR_UNDEFINED_ERROR, g_Msg_ERR_UNDEFINED_ERROR);
+        this->SetErrorText(ERR_INVALID_ADDRESS, g_Msg_ERR_INVALID_ADDRESS);
+    }
 
-   void InitializeASIErrorMessages()
-   {
-      this->SetErrorText(ERR_UNRECOGNIZED_ANSWER, g_Msg_ERR_UNRECOGNIZED_ANSWER);
-      this->SetErrorText(ERR_FILTER_WHEEL_NOT_READY, g_Msg_ERR_FILTER_WHEEL_NOT_READY);
-      this->SetErrorText(ERR_FILTER_WHEEL_SPINNING, g_Msg_ERR_FILTER_WHEEL_SPINNING);
-      this->SetErrorText(ERR_NOT_ENOUGH_AXES, g_Msg_ERR_NOT_ENOUGH_AXES);
-      this->SetErrorText(ERR_TOO_LARGE_ADDRESSES, g_Msg_ERR_TOO_LARGE_ADDRESSES);
-      this->SetErrorText(ERR_INFO_COMMAND_NOT_SUPPORTED, g_Msg_ERR_INFO_COMMAND_NOT_SUPPORTED);
-      this->SetErrorText(ERR_TIGER_PAIR_NOT_PRESENT, g_Msg_ERR_TIGER_PAIR_NOT_PRESENT);
-      this->SetErrorText(ERR_TIGER_DEV_NOT_SUPPORTED, g_Msg_ERR_TIGER_DEV_NOT_SUPPORTED);
-      this->SetErrorText(ERR_CRISP_NOT_CALIBRATED, g_Msg_ERR_CRISP_NOT_CALIBRATED);
-      this->SetErrorText(ERR_CRISP_NOT_LOCKED, g_Msg_ERR_CRISP_NOT_LOCKED);
-      this->SetErrorText(ERR_UNKNOWN_COMMAND, g_Msg_ERR_UNKNOWN_COMMAND);
-      this->SetErrorText(ERR_UNKNOWN_AXIS, g_Msg_ERR_UNKNOWN_AXIS);
-      this->SetErrorText(ERR_MISSING_PARAM, g_Msg_ERR_MISSING_PARAM);
-      this->SetErrorText(ERR_PARAM_OUT_OF_RANGE, g_Msg_ERR_PARAM_OUT_OF_RANGE);
-      this->SetErrorText(ERR_OPERATION_FAILED, g_Msg_ERR_OPERATION_FAILED);
-      this->SetErrorText(ERR_UNDEFINED_ERROR, g_Msg_ERR_UNDEFINED_ERROR);
-      this->SetErrorText(ERR_INVALID_ADDRESS, g_Msg_ERR_INVALID_ADDRESS);
-   }
+    bool initialized_ = false;
+    double firmwareVersion_ = 0.0; // firmware version
+    std::string firmwareDate_;     // firmware compile date
+    std::string firmwareBuild_;    // firmware build name
 };
