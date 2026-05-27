@@ -33,6 +33,7 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <functional>
 #include <future>
 #include <thread>
 #include <atomic>
@@ -42,6 +43,7 @@ struct CommandTask
 {
    std::string command;
    std::promise<std::pair<int, std::string>> responsePromise;
+   std::function<void(int, const std::string&)> completionCallback;  // optional fire-and-forget path
 
    CommandTask(std::string cmd) : command(std::move(cmd)) {}
 
@@ -84,6 +86,8 @@ public:
     // Command execution (thread-safe with worker thread queue)
     std::future<std::pair<int, std::string>> ExecuteCommandAsync(const std::string& command);
     int ExecuteCommand(const std::string& command, std::string& response);
+    void ExecuteCommandFireAndForget(const std::string& command,
+                                     std::function<void(int, const std::string&)> callback);
     int SendCommand(const std::string& command);
     int GetResponse(std::string& response, long timeoutMs = -1);
 
@@ -149,7 +153,9 @@ private:
     int QueryCorrectionCollar();
     int QueryManualControl();
     int QueryOffsetLens();
-    int QueryOffsetLensRange(int nosepiecePos);
+    int QueryOffsetLensRange(int nosepiecePos);       // blocking — call only from non-callback context
+    void QueryOffsetLensRangeAsync(int nosepiecePos); // non-blocking — safe from SDK callback thread
+    void ApplyOffsetLensRange(int nosepiecePos, int ret, const std::string& response);
 
     // Manual Control Unit (MCU) helpers
     int UpdateNosepieceIndicator(int position);
