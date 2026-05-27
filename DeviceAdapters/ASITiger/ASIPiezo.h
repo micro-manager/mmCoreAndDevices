@@ -26,8 +26,7 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CPiezo : public ASIPeripheralBase<CStageBase, CPiezo>
-{
+class CPiezo : public ASIPeripheralBase<CStageBase, CPiezo> {
 public:
     explicit CPiezo(const char* name);
     ~CPiezo() = default;
@@ -116,13 +115,13 @@ private:
     // Properties
     void CreateSingleAxisRiseTimeProperty();
 
-    std::string axisLetter_;
-   double unitMult_;
-   double stepSizeUm_;
-   bool ring_buffer_supported_;
-   long ring_buffer_capacity_;
-   bool ttl_trigger_supported_;
-   bool ttl_trigger_enabled_;
-   bool runningFastSequence_;
-   std::vector<double> sequence_;
+    std::string axisLetter_ = g_EmptyAxisLetterStr; // value determined by extended name
+    double unitMult_ = g_StageDefaultUnitMult; // later will try to read actual setting
+    double stepSizeUm_ = g_StageMinStepSize;
+    long ring_buffer_capacity_ = 0;
+    bool ring_buffer_supported_ = false;
+    bool ttl_trigger_supported_ = false;
+    bool ttl_trigger_enabled_ = false;
+    bool runningFastSequence_ = false;
+    std::vector<double> sequence_;
 };

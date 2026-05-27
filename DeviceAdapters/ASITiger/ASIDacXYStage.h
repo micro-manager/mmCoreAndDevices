@@ -26,8 +26,7 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CDACXYStage : public ASIPeripheralBase<CXYStageBase, CDACXYStage>
-{
+class CDACXYStage : public ASIPeripheralBase<CXYStageBase, CDACXYStage> {
 public:
     explicit CDACXYStage(const char* name);
     ~CDACXYStage() = default;
@@ -150,18 +149,18 @@ private:
 	// Properties
 	void CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter);
 
-	std::string axisLetterX_;
-	std::string axisLetterY_;
-	double maxvoltsX_; // X axis limits
-	double minvoltsX_;
-	double maxvoltsY_; // Y axis limits
-	double minvoltsY_;
-	bool ring_buffer_supported_;
-	long ring_buffer_capacity_;
-	bool ttl_trigger_supported_;
-	bool ttl_trigger_enabled_;
-	long umToMvX_; // microns to millivolts conversion factors
-	long umToMvY_;
+	std::string axisLetterX_ = g_EmptyAxisLetterStr; // value determined by extended name
+	std::string axisLetterY_ = g_EmptyAxisLetterStr; // value determined by extended name
+	double maxvoltsX_ = 0.0; // X axis limits
+	double minvoltsX_ = 0.0;
+	double maxvoltsY_ = 0.0; // Y axis limits
+	double minvoltsY_ = 0.0;
+	long ring_buffer_capacity_ = 0;
+	bool ring_buffer_supported_ = false;
+	bool ttl_trigger_supported_ = false;
+	bool ttl_trigger_enabled_ = false;
+	long umToMvX_ = 1; // microns to millivolts conversion factors
+	long umToMvY_ = 1;
 	std::vector<double> sequenceX_;
 	std::vector<double> sequenceY_;
 };

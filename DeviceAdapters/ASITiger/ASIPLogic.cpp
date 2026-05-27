@@ -19,17 +19,14 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 10/2014
 //
-// BASED ON:      ASIStage.cpp and others
-//
-
 
 #include "ASIPLogic.h"
 #include "ASITiger.h"
 #include "ASIHub.h"
-#include "../../MMDevice/ModuleInterface.h"
-#include "../../MMDevice/DeviceUtils.h"
-#include "../../MMDevice/DeviceBase.h"
-#include "../../MMDevice/MMDevice.h"
+#include "ModuleInterface.h"
+#include "DeviceUtils.h"
+#include "DeviceBase.h"
+#include "MMDevice.h"
 #include <iostream>
 #include <cmath>
 #include <sstream>
@@ -50,30 +47,18 @@ constexpr unsigned int PLOGIC_PHYSICAL_IO_NUM = PLOGIC_PHYSICAL_IO_END_ADDRESS -
 
 // ASI Tiger Programmable Logic Card
 CPLogic::CPLogic(const char* name) :
-   ASIPeripheralBase< ::CShutterBase, CPLogic >(name),
-   axisLetter_(g_EmptyAxisLetterStr),    // value determined by extended name
-   numCells_(16),
-   currentPosition_(1),
-   useAsdiSPIMShutter_(false),
-   useAs4ChShutter_(false),
-   useAs7ChShutter_(false),
-   shutterOpen_(false),
-   advancedPropsEnabled_(false),
-   editCellUpdates_(true)
-{
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetter_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
-   }
-
-   CPropertyAction* pAct;
+    ASIPeripheralBase< ::CShutterBase, CPLogic >(name) {
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        axisLetter_ = GetAxisLetterFromExtName(name);
+        CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
+    }
 
    // pre-init property to say how PLogic card is used
    // diSPIM shutter has shutter functionality for diSPIM (laser controls on BNCs 5-8)
    // 7-channel shutter has laser controls on BNCs 1-7
    // 7-channel TTL shutter has laser controls on BNCs 1-7 and single camera control on BNC 8
-   pAct = new CPropertyAction (this, &CPLogic::OnPLogicMode);
+   CPropertyAction* pAct = new CPropertyAction(this, &CPLogic::OnPLogicMode);
    CreateProperty(g_PLogicModePropertyName, g_PLogicModeNone, MM::String, false, pAct, true);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicModeNone);
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicModediSPIMShutter);

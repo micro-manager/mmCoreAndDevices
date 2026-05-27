@@ -32,30 +32,13 @@
 #include <sstream>
 #include <string>
 
-
-///////////////////////////////////////////////////////////////////////////////
-// CZStage
-//
 CZStage::CZStage(const char* name) :
-   ASIPeripheralBase< ::CStageBase, CZStage >(name),
-   axisLetter_(g_EmptyAxisLetterStr),   // value determined by extended name
-   unitMult_(g_StageDefaultUnitMult),  // later will try to read actual setting
-   stepSizeUm_(g_StageMinStepSize),    // we'll use 1 nm as our smallest possible step size, this is somewhat arbitrary and doesn't change during the program
-   advancedPropsEnabled_(false),
-   speedTruth_(false),
-   lastSpeed_(1.0),
-   ring_buffer_supported_(false),
-   ring_buffer_capacity_(0),
-   ttl_trigger_supported_(false),
-   ttl_trigger_enabled_(false),
-   runningFastSequence_(false),
-   axisIndex_(0)
-{
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetter_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
-   }
+    ASIPeripheralBase< ::CStageBase, CZStage >(name) {
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name))  {
+        axisLetter_ = GetAxisLetterFromExtName(name);
+        CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
+    }
 }
 
 int CZStage::Initialize()

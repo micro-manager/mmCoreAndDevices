@@ -33,30 +33,17 @@
 #include <string>
 #include <vector>
 
-
 // Shared properties not implemented for piezo because as of mid-2017 any piezo
 //   occupies an entire card and so never would have another device sharing the same card.
 //   Exception is save settings b/c focus device could be on the same card but they won't share any properties.
 
-///////////////////////////////////////////////////////////////////////////////
-// CPiezo
-//
 CPiezo::CPiezo(const char* name) :
-   ASIPeripheralBase< ::CStageBase, CPiezo >(name),
-   axisLetter_(g_EmptyAxisLetterStr),  // value determined by extended name
-   unitMult_(g_StageDefaultUnitMult),  // later will try to read actual setting
-   stepSizeUm_(g_StageMinStepSize),    // we'll use 1 nm as our smallest possible step size, this is somewhat arbitrary and doesn't change during the program
-   ring_buffer_supported_(false),
-   ring_buffer_capacity_(0),
-   ttl_trigger_supported_(false),
-   ttl_trigger_enabled_(false),
-   runningFastSequence_(false)
-{
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetter_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
-   }
+    ASIPeripheralBase< ::CStageBase, CPiezo >(name) {
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        axisLetter_ = GetAxisLetterFromExtName(name);
+        CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
+    }
 }
 
 int CPiezo::Initialize()

@@ -66,7 +66,6 @@ namespace Props = Properties;
 
 CCRISP::CCRISP(const char* name) :
     ASIPeripheralBase<::CAutoFocusBase, CCRISP>(name) {
-
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetter_ = GetAxisLetterFromExtName(name);

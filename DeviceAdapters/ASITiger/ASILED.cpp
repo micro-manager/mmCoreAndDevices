@@ -19,9 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 05/2014
 //
-// BASED ON:      ASIStage.cpp and others
-//
-
 
 #include "ASILED.h"
 #include "ASITiger.h"
@@ -36,25 +33,14 @@
 #include <string>
 #include <vector>
 
-
-///////////////////////////////////////////////////////////////////////////////
-// CLED
-//
 CLED::CLED(const char* name) :
-   ASIPeripheralBase< ::CShutterBase, CLED >(name),
-   open_(false),
-   intensity_(50),
-   channel_(0),  // 0 for LED on 2-axis card
-   channelAxisChar_('X'),
-   stablight_(false)
-{
-   //Figure out what channel we are on
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      channel_= GetChannelFromExtName(name);
-   }
+    ASIPeripheralBase< ::CShutterBase, CLED >(name) {
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        channel_= GetChannelFromExtName(name); // figure out what channel we are on
+    }
 
-   //Pick AxisChar to use.
+    // select axis character
    switch(channel_)
    {
    case 2:

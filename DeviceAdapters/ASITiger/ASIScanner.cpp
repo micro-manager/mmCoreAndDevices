@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      MicroPoint.cpp and others
-//
 
 #include "ASIScanner.h"
 #include "ASITiger.h"
@@ -36,55 +34,21 @@
 
 // as of mid-2017 assume that have only single (two-axis) mmTarget device per Tiger card
 
-///////////////////////////////////////////////////////////////////////////////
-// CScanner
-//
 CScanner::CScanner(const char* name) :
-   ASIPeripheralBase< ::CGalvoBase, CScanner >(name),
-   axisLetterX_(g_EmptyAxisLetterStr),    // value determined by extended name
-   axisLetterY_(g_EmptyAxisLetterStr),    // value determined by extended name
-   unitMultX_(g_ScannerDefaultUnitMult),  // later will try to read actual setting
-   unitMultY_(g_ScannerDefaultUnitMult),  // later will try to read actual setting
-   upperLimitX_(0),   // later will try to read actual setting
-   upperLimitY_(0),   // later will try to read actual setting
-   lowerLimitX_(0),   // later will try to read actual setting
-   lowerLimitY_(0),   // later will try to read actual setting
-   shutterX_(0), // home position, used to turn beam off
-   shutterY_(0), // home position, used to turn beam off
-   lastX_(0),    // cached position before blanking, used for SetIlluminationState
-   lastY_(0),    // cached position before blanking, used for SetIlluminationState
-   illuminationState_(true),
-   saStateX_(),
-   saStateY_(),
-   polygonRepetitions_(0),
-   ring_buffer_supported_(false),
-   laser_side_(0),   // will be set to 1 or 2 if used
-   laserTTLenabled_(false),
-   mmTarget_(false),
-   mmFastCircles_(false),
-   laserTriggerPLogic_(false),
-   targetExposure_(0),
-   targetSettling_(5),
-   axisIndexX_(0),
-   axisIndexY_(1),
-   fastCirclesOn_(false),
-   dac4ch_(false),
-   signalDAC_(false)
-{
+    ASIPeripheralBase< ::CGalvoBase, CScanner >(name) {
+    // initialize single axis states
+    saStateX_.mode = -1;
+    saStateX_.pattern = -1;
+    saStateY_.mode = -1;
+    saStateY_.pattern = -1;
 
-   // initialize these structs
-   saStateX_.mode = -1;
-   saStateX_.pattern = -1;
-   saStateY_.mode = -1;
-   saStateY_.pattern = -1;
-
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetterX_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterXPropertyName, axisLetterX_.c_str(), MM::String, true);
-      axisLetterY_ = GetAxisLetterFromExtName(name,1);
-      CreateProperty(g_AxisLetterYPropertyName, axisLetterY_.c_str(), MM::String, true);
-   }
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        axisLetterX_ = GetAxisLetterFromExtName(name);
+        CreateProperty(g_AxisLetterXPropertyName, axisLetterX_.c_str(), MM::String, true);
+        axisLetterY_ = GetAxisLetterFromExtName(name, 1);
+        CreateProperty(g_AxisLetterYPropertyName, axisLetterY_.c_str(), MM::String, true);
+    }
 }
 
 int CScanner::Initialize()

@@ -123,17 +123,17 @@ private:
     // Properties
     void CreateSingleAxisRiseTimeProperty();
 
-    std::string axisLetter_;
-   double unitMult_;
-   double stepSizeUm_;
-   bool advancedPropsEnabled_;
-   bool speedTruth_;
-   double lastSpeed_;
-   bool ring_buffer_supported_;
-   long ring_buffer_capacity_;
-   bool ttl_trigger_supported_;
-   bool ttl_trigger_enabled_;
-   bool runningFastSequence_;
-   unsigned int axisIndex_;
-   std::vector<double> sequence_;
+    std::string axisLetter_ = g_EmptyAxisLetterStr; // value determined by extended name
+    double unitMult_ = g_StageDefaultUnitMult; // later will try to read actual setting
+    double stepSizeUm_ = g_StageMinStepSize; // we'll use 1 nm as our smallest possible step size, this is somewhat arbitrary and doesn't change during the program
+    double lastSpeed_ = 1.0;
+    unsigned int axisIndex_ = 0;
+    long ring_buffer_capacity_ = 0;
+    bool ring_buffer_supported_ = false;
+    bool ttl_trigger_supported_ = false;
+    bool ttl_trigger_enabled_ = false;
+    bool runningFastSequence_ = false;
+    bool advancedPropsEnabled_ = false;
+    bool speedTruth_ = false;
+    std::vector<double> sequence_;
 };

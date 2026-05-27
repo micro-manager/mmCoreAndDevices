@@ -29,29 +29,20 @@
 // See ASIBase.h for an explanation of how this class works.
 
 template <template <typename> class TDeviceBase, class UConcreteDevice>
-class ASIPeripheralBase : public ASIBase<TDeviceBase, UConcreteDevice>
-{
+class ASIPeripheralBase : public ASIBase<TDeviceBase, UConcreteDevice> {
 public:
     explicit ASIPeripheralBase(const char* name) :
-      ASIBase<TDeviceBase, UConcreteDevice>(name),
-      hub_(nullptr),
-      addressString_(g_EmptyCardAddressStr),
-      addressChar_(g_EmptyCardAddressChar),
-      refreshProps_(false),
-      refreshOverride_(false)
-   {
-      // sometimes constructor gets called without the full name like in the case of the hub
-      //   so only set up these properties if we have the required information
-      if (IsExtendedName(name))
-      {
-         addressString_ = GetHexAddrFromExtName(name);
-         if (addressString_ != g_EmptyCardAddressStr)
-         {
-            this->CreateProperty(g_TigerHexAddrPropertyName, addressString_.c_str(), MM::String, true);
-            addressChar_ = ConvertToTigerRawAddress(addressString_);
-         }
-      }
-   }
+        ASIBase<TDeviceBase, UConcreteDevice>(name) {
+        // sometimes constructor gets called without the full name like in the case of the hub
+        //   so only set up these properties if we have the required information
+        if (IsExtendedName(name)) {
+            addressString_ = GetHexAddrFromExtName(name);
+            if (addressString_ != g_EmptyCardAddressStr) {
+                this->CreateProperty(g_TigerHexAddrPropertyName, addressString_.c_str(), MM::String, true);
+                addressChar_ = ConvertToTigerRawAddress(addressString_);
+            }
+        }
+    }
 
    int Shutdown()
    {
@@ -129,11 +120,11 @@ public:
    }
 
 protected:
-   ASIHub *hub_;           // pointer to hub object used for serial communication
-   std::string addressString_;  // address within hub, in hex format, should be two characters (e.g. '31')
-   std::string addressChar_;    // address within hub, in single character (allowed to be extended ASCII so use string to store)
-   bool refreshProps_;     // true when property values should be read anew from controller each time
-   bool refreshOverride_;  // true when device wants to manually force refreshes temporarily
+   ASIHub *hub_ = nullptr; // pointer to hub object used for serial communication
+   std::string addressString_ = g_EmptyCardAddressStr; // address within hub, in hex format, should be two characters (e.g. '31')
+   std::string addressChar_ = g_EmptyCardAddressChar;  // address within hub, in single character (allowed to be extended ASCII so use string to store)
+   bool refreshProps_ = false;    // true when property values should be read anew from controller each time
+   bool refreshOverride_ = false; // true when device wants to manually force refreshes temporarily
 
    // related to creating "extended" names containing address and axis letters
    static bool IsExtendedName(const char* name)

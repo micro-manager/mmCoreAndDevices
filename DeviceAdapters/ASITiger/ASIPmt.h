@@ -57,11 +57,12 @@ public:
    int OnOverloadReset        (MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   int channel_; 
-   char channelAxisChar_;
-   std::string axisLetter_;
-   int gain_;
-   int avg_length_;
-   int UpdateGain();
-   int UpdateAvg();
+    int UpdateGain();
+    int UpdateAvg();
+
+    std::string axisLetter_ = g_EmptyAxisLetterStr; // value determined by extended name
+    int channel_ = 1;
+    char channelAxisChar_ = 'X';
+    int gain_ = 0;
+    int avgLength_ = 0;
  };

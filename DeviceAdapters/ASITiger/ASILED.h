@@ -26,33 +26,33 @@
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CLED : public ASIPeripheralBase<CShutterBase, CLED>
-{
+class CLED : public ASIPeripheralBase<CShutterBase, CLED> {
 public:
     explicit CLED(const char* name);
     ~CLED() = default;
 
-   // Device API
-   int Initialize();
-   bool Busy() { return false; }
+    // Device API
+    int Initialize();
+    bool Busy() { return false; }
 
-   // Shutter API
-   int SetOpen(bool open = true);
-   int GetOpen(bool& open);
-   int Fire(double /*deltaT*/) { return DEVICE_UNSUPPORTED_COMMAND;  }
+    // Shutter API
+    int SetOpen(bool open = true);
+    int GetOpen(bool& open);
+    int Fire(double /*deltaT*/) { return DEVICE_UNSUPPORTED_COMMAND;  }
 
-   // action interface
-   int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnIntensity            (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnState                (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnCurrentLimit         (MM::PropertyBase* pProp, MM::ActionType eAct);
+    // action interface
+    int OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnIntensity(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnCurrentLimit(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-   bool open_;       // true when LED turned on
-   int intensity_;   // intensity from 1 to 100 (controller reports 0 intensity if off, we use that to set open_)
-   int channel_;     // 0 for LED on 2-axis card, 1-4 for TGLED card
-   char channelAxisChar_;
-   bool stablight_;
-   int UpdateOpenIntensity();
+    int UpdateOpenIntensity();
+
+    bool open_ = false;  // true when LED turned on
+    int intensity_ = 50; // intensity from 1 to 100 (controller reports 0 intensity if off, we use that to set open_)
+    int channel_ = 0;    // 0 for LED on 2-axis card, 1-4 for TGLED card
+    char channelAxisChar_ = 'X';
+    bool stablight_ = false;
 };
