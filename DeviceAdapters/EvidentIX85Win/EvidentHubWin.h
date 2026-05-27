@@ -149,6 +149,7 @@ private:
     int QueryCorrectionCollar();
     int QueryManualControl();
     int QueryOffsetLens();
+    int QueryOffsetLensRange(int nosepiecePos);
 
     // Manual Control Unit (MCU) helpers
     int UpdateNosepieceIndicator(int position);
