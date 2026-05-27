@@ -43,6 +43,8 @@ public:
     int Shutdown();
 
 private:
+    int SendCommand(const std::string& command);
+
     // pre-init
     void CreatePortProperty();
     // properties
