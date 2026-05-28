@@ -403,12 +403,11 @@ int CRISP::SetFocusState(const std::string& focusState) {
 		return DEVICE_OK;
 	}
 
-	if (const int error = ForceSetFocusState(focusState)) {
-		return error;
+	if (const int status = ForceSetFocusState(focusState); status != DEVICE_OK) {
+		return status;
 	}
 
 	focusState_ = focusState;
-
 	return DEVICE_OK;
 }
 
@@ -497,8 +496,8 @@ int CRISP::SetContinuousFocusing(bool state)
 
 // Update focusState_ from the controller and check if focus is locked or trying to lock ('F' or 'K' state).
 int CRISP::GetContinuousFocusing(bool& state) {
-	if (const int error = UpdateFocusState()) {
-		return error;
+	if (const int status = UpdateFocusState(); status != DEVICE_OK) {
+		return status;
 	}
 	state = (focusState_ == g_CRISP_K) || (focusState_ == g_CRISP_F);
 	return DEVICE_OK;
@@ -558,8 +557,8 @@ int CRISP::GetCurrentFocusScore(double& score) {
 
 int CRISP::GetValue(const std::string& command, double& value) {
 	std::string answer;
-	if (const int error = QueryCommand(command.c_str(), answer)) {
-		return error;
+	if (const int status = QueryCommand(command.c_str(), answer); status != DEVICE_OK) {
+		return status;
 	}
 
 	if (answer.length() > 2 && answer.compare(0, 2, ":N") == 0) {
@@ -584,8 +583,8 @@ int CRISP::GetValue(const std::string& command, double& value) {
 
 int CRISP::SetCommand(const std::string& command) {
 	std::string answer;
-	if (const int error = QueryCommand(command.c_str(), answer)) {
-		return error;
+	if (const int status = QueryCommand(command.c_str(), answer); status != DEVICE_OK) {
+		return status;
 	}
 	if (answer.compare(0, 2, ":A") == 0) {
 		return DEVICE_OK;
@@ -621,14 +620,14 @@ int CRISP::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 int CRISP::OnFocus(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
 	if (eAct == MM::BeforeGet) {
-		if (const int error = UpdateFocusState()) {
-			return error;
+		if (const int status = UpdateFocusState(); status != DEVICE_OK) {
+			return status;
 		}
 		pProp->Set(focusState_.c_str());
 	} else if (eAct == MM::AfterSet) {
 		pProp->Get(focusState_);
-		if (const int error = SetFocusState(focusState_)) {
-			return error;
+		if (const int status = SetFocusState(focusState_); status != DEVICE_OK) {
+			return status;
 		}
 	}
 	return DEVICE_OK;
@@ -1016,8 +1015,8 @@ void CRISP::CreateStateProperty() {
 		new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 			if (eAct == MM::BeforeGet) {
 				std::string answer;
-				if (const int error = QueryCommand("LK X?", answer)) {
-					return error;
+				if (const int status = QueryCommand("LK X?", answer); status != DEVICE_OK) {
+					return status;
 				}
 				const char* state = &answer[answer.size() - 1];
 				if (!pProp->Set(state)) {
@@ -1056,8 +1055,8 @@ void CRISP::CreateLockOffsetProperty() {
 		new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 			if (eAct == MM::BeforeGet) {
 				double offset; // Note: autofocus API requires double
-				if (const int error = GetOffset(offset)) {
-					return error;
+				if (const int status = GetOffset(offset); status != DEVICE_OK) {
+					return status;
 				}
 				// cast to long to match integer property
 				if (!pProp->Set(static_cast<long>(offset))) {
@@ -1174,8 +1173,8 @@ void CRISP::CreateLogAmpAGCProperty() {
 		new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
 			if (eAct == MM::BeforeGet) {
 				double tmp{}; // Note: response is ":A X=1.000000", parse as double
-				if (const int error = GetValue("AL X?", tmp)) {
-					return error;
+				if (const int status = GetValue("AL X?", tmp); status != DEVICE_OK) {
+					return status;
 				}
 				// cast to long to match integer property
 				pProp->Set(static_cast<long>(tmp));

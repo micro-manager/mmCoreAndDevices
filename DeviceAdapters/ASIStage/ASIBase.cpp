@@ -105,8 +105,8 @@ int ASIBase::CheckDeviceStatus() {
 
 int ASIBase::GetVersion(std::string& version) const {
     std::string answer;
-    if (const int error = QueryCommand("V", answer)) {
-        return error;
+	if (const int status = QueryCommand("V", answer); status != DEVICE_OK) {
+        return status;
     }
     if (answer.size() > 16 && answer.compare(0, 2, ":A") == 0) {
         const size_t start = 16; // dash position
