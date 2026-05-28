@@ -977,6 +977,19 @@ int EvidentHubWin::ExecuteCommand(const std::string& command, std::string& respo
    return ret;
 }
 
+void EvidentHubWin::ExecuteCommandFireAndForget(const std::string& command,
+                                                 std::function<void(int, const std::string&)> callback)
+{
+   CommandTask task(command);
+   task.completionCallback = std::move(callback);
+
+   {
+      std::lock_guard<std::mutex> lock(queueMutex_);
+      commandQueue_.push(std::move(task));
+   }
+   queueCV_.notify_one();
+}
+
 void EvidentHubWin::CommandWorkerThread()
 {
    while (workerRunning_)
@@ -1008,16 +1021,25 @@ void EvidentHubWin::CommandWorkerThread()
 
       // Execute command (outside queue lock to allow new submissions)
       std::string response;
+      int ret = DEVICE_ERR;
 
       try
       {
-         int ret = ExecuteCommandInternal(task.command, response);
-         task.responsePromise.set_value(std::make_pair(ret, response));
+         ret = ExecuteCommandInternal(task.command, response);
       }
       catch (...)
       {
-         task.responsePromise.set_exception(std::current_exception());
+         if (task.completionCallback)
+            task.completionCallback(DEVICE_ERR, "");
+         else
+            task.responsePromise.set_exception(std::current_exception());
+         continue;
       }
+
+      if (task.completionCallback)
+         task.completionCallback(ret, response);
+      else
+         task.responsePromise.set_value(std::make_pair(ret, response));
    }
 }
 
@@ -1259,8 +1281,9 @@ int EvidentHubWin::DoDeviceDetection()
         model_.SetDevicePresent(DeviceType_OffsetLens, true);
         availableDevices_.push_back(DeviceType_OffsetLens);
         detectedDevicesByName_.push_back(g_OffsetLensDeviceName);
+        model_.SetLimits(DeviceType_OffsetLens, OFFSET_LENS_MIN_POS, OFFSET_LENS_MAX_POS);
 
-        // Query initial offset lens position
+        // Query initial offset lens position and hardware range
         QueryOffsetLens();
     }
 
@@ -1874,10 +1897,79 @@ int EvidentHubWin::QueryOffsetLens()
     {
         int pos = ParseIntParameter(params[0]);
         model_.SetPosition(DeviceType_OffsetLens, pos);
+
+        long nosepiecePos = model_.GetPosition(DeviceType_Nosepiece);
+        if (nosepiecePos >= 1 && nosepiecePos <= NOSEPIECE_MAX_POS)
+            QueryOffsetLensRange(static_cast<int>(nosepiecePos));
+        else
+            model_.SetLimits(DeviceType_OffsetLens, OFFSET_LENS_MIN_POS, OFFSET_LENS_MAX_POS);
+
         return DEVICE_OK;
     }
 
     return ERR_DEVICE_NOT_AVAILABLE;
+}
+
+int EvidentHubWin::QueryOffsetLensRange(int nosepiecePos)
+{
+    std::string cmd = BuildCommand(CMD_OFFSET_LENS_RANGE, nosepiecePos);
+    std::string response;
+    int ret = ExecuteCommand(cmd, response);
+    if (ret != DEVICE_OK)
+    {
+        model_.SetLimits(DeviceType_OffsetLens, OFFSET_LENS_MIN_POS, OFFSET_LENS_MAX_POS);
+        return ret;
+    }
+
+    ApplyOffsetLensRange(nosepiecePos, ret, response);
+    return DEVICE_OK;
+}
+
+void EvidentHubWin::QueryOffsetLensRangeAsync(int nosepiecePos)
+{
+    std::string cmd = BuildCommand(CMD_OFFSET_LENS_RANGE, nosepiecePos);
+    ExecuteCommandFireAndForget(cmd,
+        [this, nosepiecePos](int ret, const std::string& response)
+        {
+            ApplyOffsetLensRange(nosepiecePos, ret, response);
+        });
+}
+
+void EvidentHubWin::ApplyOffsetLensRange(int nosepiecePos, int ret, const std::string& response)
+{
+    if (ret != DEVICE_OK)
+    {
+        model_.SetLimits(DeviceType_OffsetLens, OFFSET_LENS_MIN_POS, OFFSET_LENS_MAX_POS);
+        return;
+    }
+
+    std::vector<std::string> params = ParseParameters(response);
+    if (params.size() >= 2)
+    {
+        long lower = ParseLongParameter(params[0]);
+        long upper = ParseLongParameter(params[1]);
+
+        if (lower >= OFFSET_LENS_MIN_POS && upper <= OFFSET_LENS_MAX_POS && lower <= upper)
+        {
+            model_.SetLimits(DeviceType_OffsetLens, lower, upper);
+            std::ostringstream msg;
+            msg << "Offset lens range for nosepiece " << nosepiecePos
+                << ": " << lower << " to " << upper << " steps";
+            LogMessage(msg.str().c_str(), true);
+            return;
+        }
+
+        std::ostringstream msg;
+        msg << "Invalid GABRANGE response for nosepiece " << nosepiecePos
+            << ": lower=" << lower << " upper=" << upper << "; using defaults";
+        LogMessage(msg.str().c_str(), false);
+    }
+    else
+    {
+        LogMessage("GABRANGE response missing parameters; using defaults", false);
+    }
+
+    model_.SetLimits(DeviceType_OffsetLens, OFFSET_LENS_MIN_POS, OFFSET_LENS_MAX_POS);
 }
 
 int EvidentHubWin::UpdateNosepieceIndicator(int position)
@@ -2172,6 +2264,10 @@ void EvidentHubWin::ProcessNotification(const std::string& message)
         if (pos >= 0)
         {
             model_.SetPosition(DeviceType_Nosepiece, pos);
+
+            // Refresh offset lens range for the new objective (async — must not block callback thread)
+            if (model_.IsDevicePresent(DeviceType_OffsetLens) && pos >= 1 && pos <= NOSEPIECE_MAX_POS)
+                QueryOffsetLensRangeAsync(pos);
 
             // Note: MCU indicator I1 is updated automatically by SDK when using OBSEQ
 
