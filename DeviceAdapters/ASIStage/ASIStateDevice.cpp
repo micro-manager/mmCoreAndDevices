@@ -137,12 +137,8 @@ int StateDevice::Initialize()
 	return DEVICE_OK;
 }
 
-int StateDevice::Shutdown()
-{
-	if (initialized_)
-	{
-		initialized_ = false;
-	}
+int StateDevice::Shutdown() {
+	initialized_ = false;
 	return DEVICE_OK;
 }
 

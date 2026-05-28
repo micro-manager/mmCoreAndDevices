@@ -254,12 +254,8 @@ int ZStage::Initialize()
     return DEVICE_OK;
 }
 
-int ZStage::Shutdown()
-{
-    if (initialized_)
-    {
-        initialized_ = false;
-    }
+int ZStage::Shutdown() {
+    initialized_ = false;
     return DEVICE_OK;
 }
 

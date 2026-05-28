@@ -104,12 +104,8 @@ int AZ100Turret::Initialize()
 	return DEVICE_OK;
 }
 
-int AZ100Turret::Shutdown()
-{
-	if (initialized_)
-	{
-		initialized_ = false;
-	}
+int AZ100Turret::Shutdown() {
+	initialized_ = false;
 	return DEVICE_OK;
 }
 

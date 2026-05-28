@@ -108,12 +108,8 @@ int TIRF::Initialize()
     return DEVICE_OK;
 }
 
-int TIRF::Shutdown()
-{
-    if (initialized_)
-    {
-        initialized_ = false;
-    }
+int TIRF::Shutdown() {
+    initialized_ = false;
     return DEVICE_OK;
 }
 

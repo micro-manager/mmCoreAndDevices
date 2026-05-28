@@ -260,12 +260,8 @@ int XYStage::Initialize()
 	return DEVICE_OK;
 }
 
-int XYStage::Shutdown()
-{
-	if (initialized_)
-	{
-		initialized_ = false;
-	}
+int XYStage::Shutdown() {
+	initialized_ = false;
 	return DEVICE_OK;
 }
 

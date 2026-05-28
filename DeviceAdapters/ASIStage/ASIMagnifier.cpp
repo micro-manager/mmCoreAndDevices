@@ -105,12 +105,8 @@ int Magnifier::Initialize()
     return DEVICE_OK;
 }
 
-int Magnifier::Shutdown()
-{
-    if (initialized_)
-    {
-        initialized_ = false;
-    }
+int Magnifier::Shutdown() {
+    initialized_ = false;
     return DEVICE_OK;
 }
 
