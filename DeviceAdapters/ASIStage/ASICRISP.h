@@ -86,22 +86,22 @@ private:
 	void CreateSetLogAmpAGCProperty();
 	void CreateSetLockOffsetProperty();
 
-	std::string axisLetter_;
-	std::string focusState_;
-	long waitAfterLock_;
+	std::string axisLetter_ = "Z"; // determined by pre-init property
+	std::string focusState_{};
 
-	int answerTimeoutMs_;
+	long waitAfterLock_ = 1000;
+	int answerTimeoutMs_ = 1000;
 
 	// cached properties
-	long gainMultiplier_;
-	long ledIntensity_;
-	long numAverages_;
-	long numSkips_; // update rate (milliseconds)
-	double calibrationRange_; // microns
-	double inFocusRange_; // microns
-	double lockRange_; // millimeters
-	double objectiveNA_;
+	long gainMultiplier_ = 0;
+	long ledIntensity_ = 0;
+	long numAverages_ = 0;
+	long numSkips_ = 0; // update rate (milliseconds)
+	double calibrationRange_ = 0; // microns
+	double inFocusRange_ = 0; // microns
+	double lockRange_ = 0; // millimeters
+	double objectiveNA_ = 0;
 
 	static constexpr int SIZE_OF_FC_ARRAY = 24;
-	std::string focusCurveData_[SIZE_OF_FC_ARRAY];
+	std::string focusCurveData_[SIZE_OF_FC_ARRAY]{};
 };

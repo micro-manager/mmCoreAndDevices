@@ -42,30 +42,14 @@ constexpr char SetLockOffset[] = "Set Lock Offset (Advanced Users Only)";
 namespace Props = Properties;
 } // namespace
 
-CRISP::CRISP() :
-	ASIBase(this, ""),
-	axisLetter_("Z"),
-	focusState_(""),
-	waitAfterLock_(1000),
-	answerTimeoutMs_(1000),
-	// init cached properties
-	gainMultiplier_(0),
-	ledIntensity_(0),
-	numAverages_(0),
-	numSkips_(0),
-	calibrationRange_(0),
-	inFocusRange_(0),
-	lockRange_(0),
-	objectiveNA_(0)
-{
+CRISP::CRISP() : ASIBase(this, "") {
 	InitializeDefaultErrorMessages();
 
 	SetErrorText(ERR_NOT_CALIBRATED, "CRISP is not calibrated. Try focusing close to a coverslip and selecting 'Calibrate'");
 	SetErrorText(ERR_UNRECOGNIZED_ANSWER, "The ASI controller said something incomprehensible");
 	SetErrorText(ERR_NOT_LOCKED, "The CRISP failed to lock");
 
-	// create pre-initialization properties
-	// ------------------------------------
+	// create pre-init properties
 
 	// Name
 	CreateProperty(MM::g_Keyword_Name, g_CRISPDeviceName, MM::String, true);

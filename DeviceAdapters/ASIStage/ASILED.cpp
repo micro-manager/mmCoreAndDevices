@@ -7,20 +7,10 @@
 
 #include "ASILED.h"
 
-LED::LED() :
-	ASIBase(this, ""),
-	open_(false),
-	intensity_(20),
-	name_("LED"),
-	answerTimeoutMs_(1000),
-	channel_(0),
-	channelAxisChar_('X'),
-	hasDLED_(false)
-{
+LED::LED() : ASIBase(this, "") {
 	InitializeDefaultErrorMessages();
 
-	// create pre-initialization properties
-	// ------------------------------------
+	// create pre-init properties
 
 	// Name
 	CreateProperty(MM::g_Keyword_Name, g_LEDDeviceName, MM::String, true);
@@ -50,7 +40,6 @@ void LED::GetName(char* name) const
 {
 	CDeviceUtils::CopyLimitedString(name, g_LEDDeviceName);
 }
-
 
 bool LED::SupportsDeviceDetection()
 {

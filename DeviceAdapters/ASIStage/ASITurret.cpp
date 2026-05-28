@@ -7,15 +7,10 @@
 
 #include "ASITurret.h"
 
-AZ100Turret::AZ100Turret() :
-	ASIBase(this, ""),
-	numPos_(4),
-	position_(0)
-{
+AZ100Turret::AZ100Turret() : ASIBase(this, "") {
 	InitializeDefaultErrorMessages();
 
-	// create pre-initialization properties
-	// ------------------------------------
+	// create pre-init properties
 
 	// Name
 	CreateProperty(MM::g_Keyword_Name, g_AZ100TurretName, MM::String, true);

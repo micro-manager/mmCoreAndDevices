@@ -9,8 +9,7 @@
 
 #include "ASIBase.h"
 
-class TIRF : public CGenericBase<TIRF>, public ASIBase
-{
+class TIRF : public CGenericBase<TIRF>, public ASIBase {
 public:
     TIRF();
     ~TIRF();
@@ -37,8 +36,8 @@ private:
     int SetAngle(double angle);
     double GetAngle();
 
-    std::string axis_;
-    int answerTimeoutMs_;
-    double scaleFactor_;
-    double unitFactor_;
+    std::string axis_ = "F"; // normally the TIRF axis is the F axis
+    int answerTimeoutMs_ = 1000;
+    double scaleFactor_ = 1;
+    double unitFactor_ = 10000;
 };

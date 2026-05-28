@@ -9,8 +9,7 @@
 
 #include "ASIBase.h"
 
-class StateDevice : public CStateDeviceBase<StateDevice>, public ASIBase
-{
+class StateDevice : public CStateDeviceBase<StateDevice>, public ASIBase {
 public:
 	StateDevice();
 	~StateDevice();
@@ -33,8 +32,8 @@ public:
 private:
 	int UpdateCurrentPosition();
 
-	long numPos_;
-	std::string axis_;
-	long position_;
-	double answerTimeoutMs_;
+	std::string axis_ = "F";
+	long numPos_ = 4;
+	long position_ = 0;
+	double answerTimeoutMs_ = 1000;
 };

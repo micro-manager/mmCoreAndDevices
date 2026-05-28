@@ -9,8 +9,7 @@
 
 #include "ASIBase.h"
 
-class Magnifier : public CMagnifierBase<Magnifier>, public ASIBase
-{
+class Magnifier : public CMagnifierBase<Magnifier>, public ASIBase {
 public:
     Magnifier();
     ~Magnifier();
@@ -37,6 +36,6 @@ public:
 private:
     int SetMagnification(double mag);
 
-    std::string axis_;
-    int answerTimeoutMs_;
+    std::string axis_ = "M"; // normally the zoom axis is the M axis
+    int answerTimeoutMs_ = 1000;
 };

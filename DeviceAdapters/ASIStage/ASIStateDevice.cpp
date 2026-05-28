@@ -7,17 +7,10 @@
 
 #include "ASIStateDevice.h"
 
-StateDevice::StateDevice() :
-	ASIBase(this, ""),
-	numPos_(4),
-	axis_("F"),
-	position_(0),
-	answerTimeoutMs_(1000)
-{
+StateDevice::StateDevice() : ASIBase(this, "") {
 	InitializeDefaultErrorMessages();
 
-	// create pre-initialization properties
-	// ------------------------------------
+	// create pre-init properties
 
 	// Name
 	CreateProperty(MM::g_Keyword_Name, g_StateDeviceName, MM::String, true);

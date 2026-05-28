@@ -9,8 +9,7 @@
 
 #include "ASIBase.h"
 
-class AZ100Turret : public CStateDeviceBase<AZ100Turret>, public ASIBase
-{
+class AZ100Turret : public CStateDeviceBase<AZ100Turret>, public ASIBase {
 public:
 	AZ100Turret();
 	~AZ100Turret();
@@ -27,7 +26,6 @@ public:
 	int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-	MM::MMTime changedTime_;
-	long numPos_;
-	long position_;
+	long numPos_ = 4;
+	long position_ = 0;
 };
