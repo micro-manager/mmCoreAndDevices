@@ -138,8 +138,8 @@ void CCRISP::LogFirmwareSupport(const bool hasLockQueries, const bool hasExShort
 
 int CCRISP::Initialize() {
     // call generic Initialize first, this gets hub
-    if (const int error = PeripheralInitialize()) {
-        return error;
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
     }
 
     // create CommandTable after PeripheralInitialize()
@@ -231,14 +231,14 @@ bool CCRISP::Busy() {
 int CCRISP::SetContinuousFocusing(bool state) {
     bool isFocusing = false;
     // will update focusState_
-    if (const int error = GetContinuousFocusing(isFocusing)) {
-        return error;
+    if (const int status = GetContinuousFocusing(isFocusing); status != DEVICE_OK) {
+        return status;
     }
     if (isFocusing && !state) {
         // was on, turn off
         const Command& cmd = commands_->unlock;
-        if (const int error = hub_->QueryCommandVerify(cmd.set, cmd.setReply)) {
-            return error;
+        if (const int status = hub_->QueryCommandVerify(cmd.set, cmd.setReply); status != DEVICE_OK) {
+            return status;
         }
     } else if (!isFocusing && state) {
         // was off, turn on
@@ -246,11 +246,11 @@ int CCRISP::SetContinuousFocusing(bool state) {
             return SetFocusState(g_CRISP_K);
         } else {
             // need to move to ready state, then turn on
-            if (const int error = SetFocusState(g_CRISP_R)) {
-                return error;
+            if (const int status = SetFocusState(g_CRISP_R); status != DEVICE_OK) {
+                return status;
             }
-            if (const int error = SetFocusState(g_CRISP_K)) {
-                return error;
+            if (const int status = SetFocusState(g_CRISP_K); status != DEVICE_OK) {
+                return status;
             }
         }
     }
@@ -260,8 +260,8 @@ int CCRISP::SetContinuousFocusing(bool state) {
 
 // Update focusState_ from the controller and check if focus is locked or trying to lock ('F' or 'K' state).
 int CCRISP::GetContinuousFocusing(bool& state) {
-    if (const int error = UpdateFocusState()) {
-        return error;
+    if (const int status = UpdateFocusState(); status != DEVICE_OK) {
+        return status;
     }
     state = (focusState_ == g_CRISP_K) || (focusState_ == g_CRISP_F);
     return DEVICE_OK;
@@ -274,8 +274,8 @@ bool CCRISP::IsContinuousFocusLocked() {
 
 // Does a "one-shot" autofocus: locks and then unlocks again
 int CCRISP::FullFocus() {
-    if (const int error = SetContinuousFocusing(true)) {
-        return error;
+    if (const int status = SetContinuousFocusing(true); status != DEVICE_OK) {
+        return status;
     }
 
     const MM::MMTime startTime = GetCurrentMMTime();
@@ -301,16 +301,16 @@ int CCRISP::IncrementalFocus() {
 int CCRISP::GetCurrentFocusScore(double& score) {
     score = 0.0; // default to 0 if serial read fails
     const Command& cmd = commands_->focusScore;
-    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-        return error;
+    if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+        return status;
     }
     return hub_->ParseAnswerAfterPosition3(score);
 }
 
 int CCRISP::GetOffset(double& offset) {
     const Command& cmd = commands_->lockOffset;
-    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-        return error;
+    if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+        return status;
     }
     return hub_->ParseAnswerAfterPosition3(offset);
 }
@@ -318,8 +318,8 @@ int CCRISP::GetOffset(double& offset) {
 int CCRISP::SetOffset(double offset) {
     const Command& cmd = commands_->setLockOffset;
     const std::string command = cmd.set + std::to_string(offset);
-    if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-        return error;
+    if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+        return status;
     }
     return DEVICE_OK;
 }
@@ -327,14 +327,14 @@ int CCRISP::SetOffset(double offset) {
 int CCRISP::UpdateFocusState() {
     // get the state
     const Command& cmd = commands_->state;
-    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-        return error;
+    if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+        return status;
     }
 
     // get the state character
     char state = '\0';
-    if (const int error = hub_->GetAnswerCharAtPosition3(state)) {
-        return error;
+    if (const int status = hub_->GetAnswerCharAtPosition3(state); status != DEVICE_OK) {
+        return status;
     }
 
     switch (state) {
@@ -407,12 +407,11 @@ int CCRISP::SetFocusState(const std::string& focusState) {
         return DEVICE_OK;
     }
 
-    if (const int error = ForceSetFocusState(focusState)) {
-        return error;
+    if (const int status = ForceSetFocusState(focusState); status != DEVICE_OK) {
+        return status;
     }
 
     focusState_ = focusState;
-
     return DEVICE_OK;
 }
 
@@ -468,11 +467,11 @@ int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+          return status;
       }
-      if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-          return error;
+      if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+          return status;
       }
       if (!pProp->Set(tmp)) {
           return DEVICE_INVALID_PROPERTY_VALUE;
@@ -482,8 +481,8 @@ int CCRISP::OnNA(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(tmp);
       const std::string command = cmd.set + std::to_string(tmp);
-      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+          return status;
       }
       refreshOverride_ = true;
       // update dependent properties
@@ -506,11 +505,11 @@ int CCRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+          return status;
       }
-      if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-          return error;
+      if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+          return status;
       }
       if (!pProp->Set(tmp)) {
           return DEVICE_INVALID_PROPERTY_VALUE;
@@ -520,8 +519,8 @@ int CCRISP::OnCalGain(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(tmp);
       const std::string command = cmd.set + std::to_string(tmp);
-      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+          return status;
       }
    }
    return DEVICE_OK;
@@ -537,11 +536,11 @@ int CCRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
         if (!refreshProps_ && initialized_ && !refreshOverride_) {
             return DEVICE_OK;
         }
-        if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-            return error;
+        if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+            return status;
         }
-        if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-            return error;
+        if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+            return status;
         }
         if (!pProp->Set(tmp * 1000.0)) {
             return DEVICE_INVALID_PROPERTY_VALUE;
@@ -551,8 +550,8 @@ int CCRISP::OnCalRange(MM::PropertyBase* pProp, MM::ActionType eAct)
     {
         pProp->Get(tmp);
         const std::string command = cmd.set + std::to_string(tmp / 1000.0);
-        if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-            return error;
+        if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+            return status;
         }
     }
     return DEVICE_OK;
@@ -567,11 +566,11 @@ int CCRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+          return status;
       }
-      if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-          return error;
+      if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+          return status;
       }
       if (!pProp->Set(tmp)) {
           return DEVICE_INVALID_PROPERTY_VALUE;
@@ -581,8 +580,8 @@ int CCRISP::OnLockRange(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(tmp);
       const std::string command = cmd.set + std::to_string(tmp);
-      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+          return status;
       }
    }
    return DEVICE_OK;
@@ -597,11 +596,11 @@ int CCRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+          return status;
       }
-      if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-          return error;
+      if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+          return status;
       }
       if (!pProp->Set(tmp)) {
           return DEVICE_INVALID_PROPERTY_VALUE;
@@ -611,8 +610,8 @@ int CCRISP::OnLEDIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(tmp);
       const std::string command = cmd.set + std::to_string(tmp);
-      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+          return status;
       }
    }
    return DEVICE_OK;
@@ -627,11 +626,11 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+          return status;
       }
-      if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-          return error;
+      if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+          return status;
       }
       if (!pProp->Set(tmp)) {
           return DEVICE_INVALID_PROPERTY_VALUE;
@@ -641,8 +640,8 @@ int CCRISP::OnLoopGainMultiplier(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(tmp);
       const std::string command = cmd.set + std::to_string(tmp);
-      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+          return status;
       }
    }
    return DEVICE_OK;
@@ -657,11 +656,11 @@ int CCRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+          return status;
       }
-      if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-          return error;
+      if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+          return status;
       }
       if (!pProp->Set(tmp)) {
           return DEVICE_INVALID_PROPERTY_VALUE;
@@ -671,8 +670,8 @@ int CCRISP::OnNumAvg(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(tmp);
       const std::string command = cmd.set + std::to_string(tmp);
-      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+          return status;
       }
    }
    return DEVICE_OK;
@@ -687,11 +686,11 @@ int CCRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!refreshProps_ && initialized_) {
           return DEVICE_OK;
       }
-      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+          return status;
       }
-      if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-          return error;
+      if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+          return status;
       }
       if (!pProp->Set(tmp)) {
           return DEVICE_INVALID_PROPERTY_VALUE;
@@ -701,8 +700,8 @@ int CCRISP::OnNumSkips(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(tmp);
       const std::string command = cmd.set + std::to_string(tmp);
-      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+          return status;
       }
    }
    return DEVICE_OK;
@@ -718,11 +717,11 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (!refreshProps_ && initialized_ && !refreshOverride_) {
           return DEVICE_OK;
       }
-      if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+          return status;
       }
-      if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-          return error;
+      if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+          return status;
       }
       if (!pProp->Set(tmp * 1000.0)) {
           return DEVICE_INVALID_PROPERTY_VALUE;
@@ -732,8 +731,8 @@ int CCRISP::OnInFocusRange(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       pProp->Get(tmp);
       const std::string command = cmd.set + std::to_string(tmp / 1000.0);
-      if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-          return error;
+      if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+          return status;
       }
    }
    return DEVICE_OK;
@@ -747,15 +746,15 @@ void CCRISP::CreateFocusStateProperty() {
         Props::State, "Idle", false,
         new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
-                if (const int error = UpdateFocusState()) {
-                    return error;
+                if (const int status = UpdateFocusState(); status != DEVICE_OK) {
+                    return status;
                 }
                 pProp->Set(focusState_.c_str());
             } else if (eAct == MM::AfterSet) {
                 std::string focusState;
                 pProp->Get(focusState);
-                if (const int error = SetFocusState(focusState)) {
-                    return error;
+                if (const int status = SetFocusState(focusState); status != DEVICE_OK) {
+                    return status;
                 }
             }
             return DEVICE_OK;
@@ -788,11 +787,11 @@ void CCRISP::CreateStateProperty() {
             if (eAct == MM::BeforeGet) {
                 char tmp = '\0';
                 const Command& cmd = commands_->stateChar;
-                if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-                    return error;
+                if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+                    return status;
                 }
-                if (const int error = hub_->GetAnswerCharAtPosition3(tmp)) {
-                    return error;
+                if (const int status = hub_->GetAnswerCharAtPosition3(tmp); status != DEVICE_OK) {
+                    return status;
                 }
                 const std::string str(1, tmp);
                 if (!pProp->Set(str.c_str())) {
@@ -814,11 +813,11 @@ void CCRISP::CreateSNRProperty() {
             if (eAct == MM::BeforeGet) {
                 double tmp = 0.0;
                 const Command& cmd = commands_->signalNoiseRatio;
-                if (const int error = hub_->QueryCommand(cmd.get)) {
-                    return error;
+                if (const int status = hub_->QueryCommand(cmd.get); status != DEVICE_OK) {
+                    return status;
                 }
-                if (const int error = hub_->ParseAnswerAfterPosition(0, tmp)) {
-                    return error;
+                if (const int status = hub_->ParseAnswerAfterPosition(0, tmp); status != DEVICE_OK) {
+                    return status;
                 }
                 if (!pProp->Set(tmp)) {
                     return DEVICE_INVALID_PROPERTY_VALUE;
@@ -841,8 +840,8 @@ void CCRISP::CreateLockOffsetProperty() {
                     return DEVICE_OK;
                 }
                 double tmp = 0.0; // Note: autofocus API requires double
-                if (const int error = GetOffset(tmp)) {
-                    return error;
+                if (const int status = GetOffset(tmp); status != DEVICE_OK) {
+                    return status;
                 }
                 // convert to long for integer property
                 if (!pProp->Set(static_cast<long>(tmp))) {
@@ -868,11 +867,11 @@ void CCRISP::CreateSumProperty() {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
                     const Command& cmd = commands_->sum;
-                    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-                        return error;
+                    if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+                        return status;
                     }
-                    if (const int error = hub_->ParseAnswerAfterPosition3(tmp)) {
-                        return error;
+                    if (const int status = hub_->ParseAnswerAfterPosition3(tmp); status != DEVICE_OK) {
+                        return status;
                     }
                     if (!pProp->Set(tmp)) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
@@ -891,8 +890,8 @@ void CCRISP::CreateSumProperty() {
             new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     const Command& cmd = commands_->sum;
-                    if (const int error = hub_->QueryCommand(cmd.get)) {
-                        return error;
+                    if (const int status = hub_->QueryCommand(cmd.get); status != DEVICE_OK) {
+                        return status;
                     }
                     const std::vector<std::string> reply = hub_->SplitAnswerOnSpace();
                     if (reply.size() <= 2) {
@@ -922,11 +921,11 @@ void CCRISP::CreateDitherErrorProperty() {
                 if (eAct == MM::BeforeGet) {
                     long tmp = 0;
                     const Command& cmd = commands_->ditherError;
-                    if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-                        return error;
+                    if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+                        return status;
                     }
-                    if (const int error = hub_->ParseAnswerAfterPosition3(tmp)) {
-                        return error;
+                    if (const int status = hub_->ParseAnswerAfterPosition3(tmp); status != DEVICE_OK) {
+                        return status;
                     }
                     if (!pProp->Set(tmp)) {
                         return DEVICE_INVALID_PROPERTY_VALUE;
@@ -945,8 +944,8 @@ void CCRISP::CreateDitherErrorProperty() {
             new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
                 if (eAct == MM::BeforeGet) {
                     const Command& cmd = commands_->ditherError;
-                    if (const int error = hub_->QueryCommand(cmd.get)) {
-                        return error;
+                    if (const int status = hub_->QueryCommand(cmd.get); status != DEVICE_OK) {
+                        return status;
                     }
                     const std::vector<std::string> reply = hub_->SplitAnswerOnSpace();
                     if (reply.size() <= 2) {
@@ -972,11 +971,11 @@ void CCRISP::CreateLogAmpAGCProperty() {
             if (eAct == MM::BeforeGet) {
                 double tmp = 0.0; // Note: response is ":A X=1.000000", parse as double
                 const Command& cmd = commands_->logAmpAGC;
-                if (const int error = hub_->QueryCommandVerify(cmd.get, cmd.getReply)) {
-                    return error;
+                if (const int status = hub_->QueryCommandVerify(cmd.get, cmd.getReply); status != DEVICE_OK) {
+                    return status;
                 }
-                if (const int error = hub_->ParseAnswerAfterEquals(tmp)) {
-                    return error;
+                if (const int status = hub_->ParseAnswerAfterEquals(tmp); status != DEVICE_OK) {
+                    return status;
                 }
                 // convert to long for integer property
                 if (!pProp->Set(static_cast<long>(tmp))) {
@@ -1004,8 +1003,8 @@ void CCRISP::CreateSetLogAmpAGCProperty() {
                 if (logAmpAGC != 0) {
                     const Command& cmd = commands_->setLogAmpAGC;
                     const std::string command = cmd.set + std::to_string(logAmpAGC);
-                    if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-                        return error;
+                    if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+                        return status;
                     }
                 }
             }
@@ -1028,8 +1027,8 @@ void CCRISP::CreateSetLockOffsetProperty() {
                 if (offset != 0) {
                     const Command& cmd = commands_->setLockOffset;
                     const std::string command = cmd.set + std::to_string(offset);
-                    if (const int error = hub_->QueryCommandVerify(command, cmd.setReply)) {
-                        return error;
+                    if (const int status = hub_->QueryCommandVerify(command, cmd.setReply); status != DEVICE_OK) {
+                        return status;
                     }
                     refreshOverride_ = true;
                     UpdateProperty(Props::LockOffset);
