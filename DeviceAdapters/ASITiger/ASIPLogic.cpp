@@ -67,10 +67,11 @@ CPLogic::CPLogic(const char* name) :
    AddAllowedValue(g_PLogicModePropertyName, g_PLogicMode7ChTTLShutter);
 }
 
-int CPLogic::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CPLogic::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    std::ostringstream command;

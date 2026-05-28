@@ -41,10 +41,11 @@ CClocked::CClocked(const char* name) :
     }
 }
 
-int CClocked::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CClocked::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 
@@ -290,9 +291,10 @@ CFSlider::CFSlider(const char* name) : CClocked(name) {
     // inherits from CClocked, description has been changed
 }
 
-int CFSlider::Initialize()
-{
-   RETURN_ON_MM_ERROR( CClocked::Initialize() );
+int CFSlider::Initialize() {
+    if (const int status = CClocked::Initialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 
@@ -309,9 +311,10 @@ CPortSwitch::CPortSwitch(const char* name) : CClocked(name) {
     // inherits from CClocked, description has been changed
 }
 
-int CPortSwitch::Initialize()
-{
-   RETURN_ON_MM_ERROR( CClocked::Initialize() );
+int CPortSwitch::Initialize() {
+    if (const int status = CClocked::Initialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 
@@ -328,9 +331,10 @@ CTurret::CTurret(const char* name) : CClocked(name) {
     // inherits from CClocked, description has been changed
 }
 
-int CTurret::Initialize()
-{
-   RETURN_ON_MM_ERROR( CClocked::Initialize() );
+int CTurret::Initialize() {
+    if (const int status = CClocked::Initialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 

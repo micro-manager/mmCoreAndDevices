@@ -45,10 +45,11 @@ CScanner::CScanner(const char* name) :
     }
 }
 
-int CScanner::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CScanner::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    // read the unit multiplier for X and Y axes
    // ASI's unit multiplier is how many units per degree rotation for the micromirror card

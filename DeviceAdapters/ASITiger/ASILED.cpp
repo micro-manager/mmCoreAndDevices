@@ -66,10 +66,11 @@ CLED::CLED(const char* name) :
    }
 }
 
-int CLED::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CLED::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    std::ostringstream command;

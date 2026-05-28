@@ -45,10 +45,11 @@ CXYStage::CXYStage(const char* name) :
     }
 }
 
-int CXYStage::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CXYStage::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    // read the unit multiplier for X and Y axes
    // ASI's unit multiplier is how many units per mm, so divide by 1000 here to get units per micron

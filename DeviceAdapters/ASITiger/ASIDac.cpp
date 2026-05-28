@@ -42,17 +42,16 @@ CDAC::CDAC(const char* name) :
 	}
 }
 
-int CDAC::Initialize()
-{
-	// call generic Initialize first, this gets hub
-	RETURN_ON_MM_ERROR(PeripheralInitialize());
+int CDAC::Initialize() {
+	if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+		return status;
+	}
 
 	std::ostringstream command;
 	CPropertyAction* pAct;
 	double tmp;
 
 	// create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-	command.str("");
 	command << g_DacDeviceDescription << " Axis=" << axisLetter_ << " HexAddr=" << addressString_;
 	CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
 

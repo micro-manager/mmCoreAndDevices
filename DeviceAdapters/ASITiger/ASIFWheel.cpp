@@ -41,10 +41,11 @@ CFWheel::CFWheel(const char* name) :
     }
 }
 
-int CFWheel::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize(true) );
+int CFWheel::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(true); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 

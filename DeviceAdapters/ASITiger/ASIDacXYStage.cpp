@@ -54,10 +54,11 @@ CDACXYStage::CDACXYStage(const char* name) :
 	UpdateProperty(g_DACMicronsPerMvYPropertyName);
 }
 
-int CDACXYStage::Initialize()
-{
+int CDACXYStage::Initialize() {
 	// call generic Initialize first, this gets the hub
-	RETURN_ON_MM_ERROR(PeripheralInitialize());
+	if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+		return status;
+	}
 
 	CPropertyAction* pAct;
 
