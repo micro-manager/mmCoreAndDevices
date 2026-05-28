@@ -115,5 +115,5 @@ private:
     bool ring_buffer_supported_ = false;
     bool ttl_trigger_supported_ = false;
     bool ttl_trigger_enabled_ = false;
-    std::vector<double> sequence_;
+    std::vector<double> sequence_{};
 };

@@ -130,5 +130,5 @@ private:
 
     // The CommandTable is created in Initialize() once we know the card address and firmware version.
     // std::optional allows the table to be late-initialized while keeping its members const for immutability.
-    std::optional<CommandTable> commands_;
+    std::optional<CommandTable> commands_{};
 };

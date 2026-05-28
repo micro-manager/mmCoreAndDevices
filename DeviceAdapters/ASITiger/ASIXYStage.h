@@ -170,6 +170,6 @@ private:
     bool ttl_trigger_enabled_ = false;
     bool advancedPropsEnabled_ = false;
     bool speedTruth_ = false;
-    std::vector<double> sequenceX_;
-    std::vector<double> sequenceY_;
+    std::vector<double> sequenceX_{};
+    std::vector<double> sequenceY_{};
 };

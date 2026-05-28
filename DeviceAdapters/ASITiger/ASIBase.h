@@ -116,6 +116,6 @@ protected:
 
     bool initialized_ = false;
     double firmwareVersion_ = 0.0; // firmware version
-    std::string firmwareDate_;     // firmware compile date
-    std::string firmwareBuild_;    // firmware build name
+    std::string firmwareDate_{};   // firmware compile date
+    std::string firmwareBuild_{};  // firmware build name
 };

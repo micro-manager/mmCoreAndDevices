@@ -181,11 +181,11 @@ private:
       long pattern;
    };
 
-   SingleAxisState saStateX_;
-   SingleAxisState saStateY_;
+   SingleAxisState saStateX_{};
+   SingleAxisState saStateY_{};
 
    // for polygons
-   std::vector<std::pair<double,double> > polygons_;
+   std::vector<std::pair<double, double>> polygons_{};
    long polygonRepetitions_ = 0;
    bool ring_buffer_supported_ = false;
 

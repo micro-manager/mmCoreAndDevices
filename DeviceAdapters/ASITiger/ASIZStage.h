@@ -135,5 +135,5 @@ private:
     bool runningFastSequence_ = false;
     bool advancedPropsEnabled_ = false;
     bool speedTruth_ = false;
-    std::vector<double> sequence_;
+    std::vector<double> sequence_{};
 };

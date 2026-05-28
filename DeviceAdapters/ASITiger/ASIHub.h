@@ -156,12 +156,12 @@ private:
 
     MMThreadLock threadLock_; // used to lock thread during serial transaction
 
-    std::map<std::string, std::string> deviceMap_; // to implement properties shared between devices
+    std::map<std::string, std::string> deviceMap_{}; // to implement properties shared between devices
     // key is the device name, value is the Tiger address (normally a single character, see note about addressChar_ in ASIPeripheralBase
 
-    std::string serialAnswer_;       // last answer received from any communication with the controller
-    std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
-    std::string serialCommand_;      // last command sent, or can be set for calling commands without args
+    std::string serialAnswer_{};       // last answer received from any communication with the controller
+    std::string manualSerialAnswer_{}; // last answer received when the SerialCommand property was used
+    std::string serialCommand_{};      // last command sent, or can be set for calling commands without args
     std::string serialTerminator_ = g_SerialTerminatorDefault; // only used when parsing command sent via OnSerialCommand action handler
     long serialRepeatDuration_ = 0; // for how long total time the command is repeatedly sent
     long serialRepeatPeriod_ = 500; // how often in ms the command is sent

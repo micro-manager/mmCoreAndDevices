@@ -161,6 +161,6 @@ private:
 	bool ttl_trigger_enabled_ = false;
 	long umToMvX_ = 1; // microns to millivolts conversion factors
 	long umToMvY_ = 1;
-	std::vector<double> sequenceX_;
-	std::vector<double> sequenceY_;
+	std::vector<double> sequenceX_{};
+	std::vector<double> sequenceY_{};
 };
