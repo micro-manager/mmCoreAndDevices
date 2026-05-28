@@ -177,8 +177,8 @@ private:
     unsigned int axisIndexY_ = 1;
 
    struct SingleAxisState {
-      long mode;
-      long pattern;
+      long mode = -1;
+      long pattern = -1;
    };
 
    SingleAxisState saStateX_{};

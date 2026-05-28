@@ -36,12 +36,6 @@
 
 CScanner::CScanner(const char* name) :
     ASIPeripheralBase< ::CGalvoBase, CScanner >(name) {
-    // initialize single axis states
-    saStateX_.mode = -1;
-    saStateX_.pattern = -1;
-    saStateY_.mode = -1;
-    saStateY_.pattern = -1;
-
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetterX_ = GetAxisLetterFromExtName(name);
