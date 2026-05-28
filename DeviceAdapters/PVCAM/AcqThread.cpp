@@ -37,31 +37,43 @@ void AcqThread::Pause()
 void AcqThread::Resume()
 {
     // No logging, this is called frequently
+    acqStatus_ = DEVICE_OK;
     resumeEvent_.Set();
+}
+
+int AcqThread::AcqStatus() const
+{
+    return acqStatus_;
 }
 
 int AcqThread::svc()
 {
     camera_->LogAdapterMessage("AcqThead loop started");
-    int nRet = DEVICE_OK;
-    while(!requestStop_)
+
+    while (!requestStop_)
     {
         resumeEvent_.Wait();
         if (requestStop_)
             break;
 
-        nRet = camera_->acquireFrameSeq();
-        if (nRet != DEVICE_OK)
-            continue; // Error logged, ignore and try again
-        nRet = camera_->waitForFrameSeq();
-        if (nRet != DEVICE_OK)
-            continue; // Error logged, ignore and try again
+        acqStatus_ = camera_->startSingleFrameAcquisition();
+        if (acqStatus_ != DEVICE_OK)
+        {
+            resumeEvent_.Reset(); // Pause on error
+            continue;
+        }
 
-        // Frame successfully arrived and ready in the buffer. If we are
-        // not using callbacks we need to manually push it to the core.
-        if (!camera_->acqCfgCur_.CallbacksEnabled)
-            camera_->FrameAcquired();
+        acqStatus_ = camera_->waitForSingleFrame();
+        if (acqStatus_ != DEVICE_OK)
+        {
+            resumeEvent_.Reset(); // Pause on error
+            continue;
+        }
+
+        // Frame successfully arrived and ready in the buffer.
+        // Frame pushed to the MM core from PVCAM callback handler.
     }
+
     camera_->LogAdapterMessage("AcqThead loop exited");
-    return nRet;
+    return DEVICE_OK;
 }

@@ -195,10 +195,6 @@ public:
     */
     bool CircBufSizeAuto{ true };
     /**
-    * True if PVCAM callbacks are active, false to use polling
-    */
-    bool CallbacksEnabled{ true };
-    /**
     * Enables or disables custom streaming to disk.
     * Please note that this streaming is enabled for continuous acquisition only.
     * The streaming to disk is fully controlled by PVCAM adapter and should only

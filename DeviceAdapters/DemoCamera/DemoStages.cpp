@@ -25,6 +25,7 @@
 #include <sstream>
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 
 // External names used by the rest of the system
 extern const char* g_StageDeviceName;
@@ -258,6 +259,11 @@ CDemoXYStage::CDemoXYStage()
 
    // parent ID display
    CreateHubIDProperty();
+
+   CPropertyAction* pAct = new CPropertyAction(this, &CDemoXYStage::OnUsesCallbacks);
+   CreateStringProperty("UsesCallbacks", "Yes", false, pAct, true);
+   AddAllowedValue("UsesCallbacks", "Yes");
+   AddAllowedValue("UsesCallbacks", "No");
 }
 
 CDemoXYStage::~CDemoXYStage()
@@ -309,6 +315,9 @@ int CDemoXYStage::Initialize()
 
    initialized_ = true;
 
+   if (usesCallbacks_)
+      StartNotificationThread();
+
    return DEVICE_OK;
 }
 
@@ -316,6 +325,7 @@ int CDemoXYStage::Shutdown()
 {
    if (initialized_)
    {
+      StopNotificationThread();
       initialized_ = false;
    }
    return DEVICE_OK;
@@ -323,14 +333,17 @@ int CDemoXYStage::Shutdown()
 
 bool CDemoXYStage::Busy()
 {
-   if (timeOutTimer_ == 0)
+   MMThreadGuard guard(moveLock_);
+   if (timeOutTimer_ == nullptr)
       return false;
-   if (timeOutTimer_->expired(GetCurrentMMTime()))
-   {
-      // delete(timeOutTimer_);
-      return false;
-   }
-   return true;
+   return !timeOutTimer_->expired(GetCurrentMMTime());
+}
+
+std::pair<double, double> CDemoXYStage::ControllerUmToUserUm(double x_um, double y_um)
+{
+   long xSteps = (long)(x_um / stepSize_um_);
+   long ySteps = (long)(y_um / stepSize_um_);
+   return ConvertPositionStepsToUm(xSteps, ySteps);
 }
 
 int CDemoXYStage::SetPositionSteps(long x, long y)
@@ -339,48 +352,69 @@ int CDemoXYStage::SetPositionSteps(long x, long y)
    double newTargetX = x * stepSize_um_;
    double newTargetY = y * stepSize_um_;
 
-   // If a move is in progress, compute the intermediate position and cancel the old move.
-   if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
+   double startX, startY;
    {
-      double currentPosX, currentPosY;
-      ComputeIntermediatePosition(currentTime, currentPosX, currentPosY);
-      startPosX_um_ = currentPosX;
-      startPosY_um_ = currentPosY;
-      delete timeOutTimer_;
-      timeOutTimer_ = nullptr;
+      MMThreadGuard guard(moveLock_);
+
+      // Determine the current position to use as the start of the new move.
+      if (timeOutTimer_ != nullptr)
+      {
+         if (!timeOutTimer_->expired(currentTime))
+         {
+            // Move still in progress: interpolate current position.
+            ComputeIntermediatePosition(currentTime, startPosX_um_, startPosY_um_);
+         }
+         else
+         {
+            // Move completed but posX_um_/posY_um_ not yet updated (e.g. no polling).
+            startPosX_um_ = posX_um_ = targetPosX_um_;
+            startPosY_um_ = posY_um_ = targetPosY_um_;
+         }
+         delete timeOutTimer_;
+         timeOutTimer_ = nullptr;
+      }
+      else
+      {
+         // No move in progress; start from the last settled position.
+         startPosX_um_ = posX_um_;
+         startPosY_um_ = posY_um_;
+      }
+
+      // Set the new target.
+      targetPosX_um_ = newTargetX;
+      targetPosY_um_ = newTargetY;
+
+      // Calculate the distance and determine the move duration (in ms)
+      double difX = targetPosX_um_ - startPosX_um_;
+      double difY = targetPosY_um_ - startPosY_um_;
+      double distance = sqrt((difX * difX) + (difY * difY));
+      moveDuration_ms_ = (long)(distance / velocity_);
+      if (moveDuration_ms_ < 1)
+         moveDuration_ms_ = 1;  // enforce a minimum duration
+
+      moveStartTime_ = currentTime;
+      timeOutTimer_ = new MM::TimeoutMs(currentTime, moveDuration_ms_);
+
+      startX = startPosX_um_;
+      startY = startPosY_um_;
    }
-   else
-   {
-      // No move in progress; start from the last settled position.
-      startPosX_um_ = posX_um_;
-      startPosY_um_ = posY_um_;
-   }
 
-   // Set the new target.
-   targetPosX_um_ = newTargetX;
-   targetPosY_um_ = newTargetY;
-
-   // Calculate the distance and determine the move duration (in ms)
-   double difX = targetPosX_um_ - startPosX_um_;
-   double difY = targetPosY_um_ - startPosY_um_;
-   double distance = sqrt((difX * difX) + (difY * difY));
-   moveDuration_ms_ = (long)(distance / velocity_);
-   if (moveDuration_ms_ < 1)
-      moveDuration_ms_ = 1;  // enforce a minimum duration
-
-   moveStartTime_ = currentTime;
-   timeOutTimer_ = new MM::TimeoutMs(currentTime, moveDuration_ms_);
-
-   // Optionally, notify listeners of the starting position (as an acknowledgement)
-   int ret = OnXYStagePositionChanged(startPosX_um_, startPosY_um_);
+   // Notify listeners of the starting position in user/adapter coordinates.
+   auto userStart = ControllerUmToUserUm(startX, startY);
+   int ret = OnXYStagePositionChanged(userStart.first, userStart.second);
    if (ret != DEVICE_OK)
       return ret;
+
+   // Wake the polling thread immediately so it starts reporting mid-move positions.
+   if (notificationThread_ != nullptr)
+      notificationThread_->NotifyMoveStarted();
 
    return DEVICE_OK;
 }
 
 int CDemoXYStage::GetPositionSteps(long& x, long& y)
 {
+   MMThreadGuard guard(moveLock_);
    MM::MMTime currentTime = GetCurrentMMTime();
    if (timeOutTimer_ != nullptr && !timeOutTimer_->expired(currentTime))
    {
@@ -413,8 +447,20 @@ int CDemoXYStage::SetRelativePositionSteps(long x, long y)
    return this->SetPositionSteps(xSteps+x, ySteps+y);
 }
 
-// currentTime: the current time
-// currentPosX, currentPosY: output parameters for the computed position in microns
+int CDemoXYStage::SetRelativePositionUm(double dx, double dy)
+{
+   // GetPositionUm routes through GetPositionSteps + ConvertPositionStepsToUm,
+   // so it returns the true interpolated position in adapter/user coordinates
+   // (with origin and mirroring applied), matching the coordinate space that
+   // SetPositionUm expects.
+   double currentX, currentY;
+   int ret = GetPositionUm(currentX, currentY);
+   if (ret != DEVICE_OK)
+      return ret;
+   return SetPositionUm(currentX + dx, currentY + dy);
+}
+
+// Must be called with moveLock_ held.
 void CDemoXYStage::ComputeIntermediatePosition(
    const MM::MMTime& currentTime, double& currentPosX, double& currentPosY)
 {
@@ -426,24 +472,165 @@ void CDemoXYStage::ComputeIntermediatePosition(
    currentPosY = startPosY_um_ + fraction * (targetPosY_um_ - startPosY_um_);
 }
 
-void CDemoXYStage::CommitCurrentIntermediatePosition_(const MM::MMTime& now)
-{
-   if (timeOutTimer_ && !timeOutTimer_->expired(now))
-   {
-      // freeze where we *are* now
-      ComputeIntermediatePosition(now, posX_um_, posY_um_);
-      (void)OnXYStagePositionChanged(posX_um_, posY_um_);
-   }
-   // Drop the timer so Busy() instantly goes idle
-   delete timeOutTimer_;
-   timeOutTimer_ = nullptr;
-}
-
 int CDemoXYStage::Stop()
 {
-   MM::MMTime now = GetCurrentMMTime();
-   CommitCurrentIntermediatePosition_(now);
+   double posX, posY;
+   {
+      MMThreadGuard guard(moveLock_);
+      MM::MMTime now = GetCurrentMMTime();
+      if (timeOutTimer_ != nullptr)
+      {
+         if (!timeOutTimer_->expired(now))
+            ComputeIntermediatePosition(now, posX_um_, posY_um_);
+         else
+         {
+            posX_um_ = targetPosX_um_;
+            posY_um_ = targetPosY_um_;
+         }
+         delete timeOutTimer_;
+         timeOutTimer_ = nullptr;
+      }
+      posX = posX_um_;
+      posY = posY_um_;
+   }
+   // Call outside the lock to avoid re-entrancy issues with the core callback.
+   auto userPos = ControllerUmToUserUm(posX, posY);
+   (void)OnXYStagePositionChanged(userPos.first, userPos.second);
    return DEVICE_OK;
+}
+
+void CDemoXYStage::StartNotificationThread()
+{
+   if (notificationThread_ != nullptr)
+      return;  // already running; don't leak a second thread
+   stopNotificationThread_ = false;
+   notificationThread_ = new NotificationThread(this);
+   notificationThread_->activate();
+}
+
+void CDemoXYStage::StopNotificationThread()
+{
+   if (notificationThread_ != nullptr)
+   {
+      stopNotificationThread_ = true;
+      notificationThread_->NotifyMoveStarted();  // wake thread so it sees the stop flag immediately
+      notificationThread_->wait();
+      delete notificationThread_;
+      notificationThread_ = nullptr;
+   }
+   // Thread is gone; commit any in-flight or expired move so posX_um_/posY_um_
+   // are correct and the timer is not leaked.
+   {
+      MMThreadGuard guard(moveLock_);
+      if (timeOutTimer_ != nullptr)
+      {
+         MM::MMTime now = GetCurrentMMTime();
+         if (!timeOutTimer_->expired(now))
+            ComputeIntermediatePosition(now, posX_um_, posY_um_);
+         else
+         {
+            posX_um_ = targetPosX_um_;
+            posY_um_ = targetPosY_um_;
+         }
+         delete timeOutTimer_;
+         timeOutTimer_ = nullptr;
+      }
+   }
+}
+
+int CDemoXYStage::OnUsesCallbacks(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(usesCallbacks_ ? "Yes" : "No");
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      if (initialized_)
+         return DEVICE_ERR;  // strictly pre-init; reject changes after initialization
+      std::string val;
+      pProp->Get(val);
+      usesCallbacks_ = (val == "Yes");
+   }
+   return DEVICE_OK;
+}
+
+CDemoXYStage::NotificationThread::NotificationThread(CDemoXYStage* stage) : stage_(stage)
+{
+}
+
+CDemoXYStage::NotificationThread::~NotificationThread()
+{
+}
+
+void CDemoXYStage::NotificationThread::NotifyMoveStarted()
+{
+   {
+      std::lock_guard<std::mutex> lock(eventMutex_);
+      eventSignaled_ = true;
+   }
+   eventCond_.notify_one();
+}
+
+void CDemoXYStage::NotificationThread::WaitForMoveOrTimeout(unsigned long timeoutMs)
+{
+   std::unique_lock<std::mutex> lock(eventMutex_);
+   eventCond_.wait_for(lock, std::chrono::milliseconds(timeoutMs),
+                       [this] { return eventSignaled_; });
+   eventSignaled_ = false;
+}
+
+int CDemoXYStage::NotificationThread::svc()
+{
+   while (!stage_->stopNotificationThread_)
+   {
+      // When idle, sleep up to 1 s — NotifyMoveStarted() wakes us immediately.
+      WaitForMoveOrTimeout(1000);
+
+      // Drive position callbacks for the duration of the move.
+      while (!stage_->stopNotificationThread_)
+      {
+         double posX = 0.0, posY = 0.0;
+         bool report = false;
+         bool moving = false;
+
+         {
+            MMThreadGuard guard(stage_->moveLock_);
+            if (stage_->timeOutTimer_ != nullptr)
+            {
+               MM::MMTime now = stage_->GetCurrentMMTime();
+               if (!stage_->timeOutTimer_->expired(now))
+               {
+                  stage_->ComputeIntermediatePosition(now, posX, posY);
+                  moving = true;
+               }
+               else
+               {
+                  // Move just completed — snap to target and fire one final callback.
+                  stage_->posX_um_ = stage_->targetPosX_um_;
+                  stage_->posY_um_ = stage_->targetPosY_um_;
+                  delete stage_->timeOutTimer_;
+                  stage_->timeOutTimer_ = nullptr;
+                  posX = stage_->posX_um_;
+                  posY = stage_->posY_um_;
+               }
+               report = true;
+            }
+         }
+
+         if (report)
+         {
+            auto userPos = stage_->ControllerUmToUserUm(posX, posY);
+            (void)stage_->OnXYStagePositionChanged(userPos.first, userPos.second);
+         }
+
+         if (!moving)
+            break;  // move finished; go back to waiting for the next one
+
+         CDeviceUtils::SleepMs(50);
+      }
+   }
+   return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

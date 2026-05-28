@@ -497,6 +497,13 @@ int EvidentNosepiece::Initialize()
     AddAllowedValue("Set-Focus-Near-Limit", "Set");
     AddAllowedValue("Set-Focus-Near-Limit", "Clear");
 
+    // Create writable float property to set the near limit by typing a value
+    pAct = new CPropertyAction(this, &EvidentNosepiece::OnSetNearLimitValue);
+    ret = CreateProperty("Set-Focus-Near-Limit-um", "0.0", MM::Float, false, pAct);
+    if (ret != DEVICE_OK)
+        return ret;
+    SetPropertyLimits("Set-Focus-Near-Limit-um", 0.0, FOCUS_MAX_POS * FOCUS_STEP_SIZE_UM);
+
     // Query parfocal settings from microscope
     ret = QueryParfocalSettings();
     if (ret != DEVICE_OK)
@@ -935,6 +942,74 @@ int EvidentNosepiece::OnSetNearLimit(MM::PropertyBase* pProp, MM::ActionType eAc
             // Reset property to empty
             pProp->Set("");
         }
+    }
+    return DEVICE_OK;
+}
+
+int EvidentNosepiece::OnSetNearLimitValue(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+        if (nosepiecePos >= 1 && nosepiecePos <= (long)nearLimits_.size())
+            pProp->Set(nearLimits_[nosepiecePos - 1] * FOCUS_STEP_SIZE_UM);
+        else
+            pProp->Set(0.0);
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        EvidentHubWin* hub = GetHub();
+        if (!hub)
+            return DEVICE_ERR;
+
+        long nosepiecePos = hub->GetModel()->GetPosition(DeviceType_Nosepiece);
+        if (nosepiecePos < 1 || nosepiecePos > (long)nearLimits_.size())
+            return ERR_INVALID_PARAMETER;
+
+        double val;
+        pProp->Get(val);
+        long newLimit = static_cast<long>(val / FOCUS_STEP_SIZE_UM);
+        if (newLimit < FOCUS_MIN_POS) newLimit = FOCUS_MIN_POS;
+        if (newLimit > FOCUS_MAX_POS) newLimit = FOCUS_MAX_POS;
+
+        long oldLimit = nearLimits_[nosepiecePos - 1];
+        nearLimits_[nosepiecePos - 1] = newLimit;
+
+        std::ostringstream cmd;
+        cmd << CMD_FOCUS_NEAR_LIMIT << TAG_DELIMITER;
+        for (size_t i = 0; i < nearLimits_.size(); i++)
+        {
+            if (i > 0)
+                cmd << DATA_DELIMITER;
+            cmd << nearLimits_[i];
+        }
+
+        std::string response;
+        int ret = hub->ExecuteCommand(cmd.str(), response);
+        if (ret != DEVICE_OK)
+        {
+            nearLimits_[nosepiecePos - 1] = oldLimit;
+            pProp->Set(oldLimit * FOCUS_STEP_SIZE_UM);
+            return ret;
+        }
+
+        if (!IsPositiveAck(response, CMD_FOCUS_NEAR_LIMIT))
+        {
+            nearLimits_[nosepiecePos - 1] = oldLimit;
+            pProp->Set(oldLimit * FOCUS_STEP_SIZE_UM);
+            return ERR_NEGATIVE_ACK;
+        }
+
+        pProp->Set(newLimit * FOCUS_STEP_SIZE_UM);
+
+        std::ostringstream logMsg;
+        logMsg << "Set near limit for objective " << nosepiecePos
+               << " to " << (newLimit * FOCUS_STEP_SIZE_UM) << " um";
+        LogMessage(logMsg.str().c_str());
     }
     return DEVICE_OK;
 }
@@ -3583,18 +3658,12 @@ int EvidentAutofocus::Initialize()
         }
     }
 
-    // Query initial AF limits
-    cmd = BuildQuery(CMD_AF_LIMIT);
-    ret = hub->ExecuteCommand(cmd, response);
-    if (ret == DEVICE_OK)
-    {
-        std::vector<std::string> params = ParseParameters(response);
-        if (params.size() >= 2 && params[0] != "X" && params[1] != "X")
-        {
-            nearLimit_ = ParseIntParameter(params[0]);
-            farLimit_ = ParseIntParameter(params[1]);
-        }
-    }
+    // The hardware clears AFL limits when remote mode is exited, so we do not
+    // overwrite nearLimit_/farLimit_ from the hardware here.  Instead, mark
+    // zdcInitNeeded_ so InitializeZDC() will re-apply the adapter's stored
+    // limits (which include any values restored from a saved config file)
+    // before the first AF operation.
+    zdcInitNeeded_ = true;
 
     // Create AF Status property (read-only)
     CPropertyAction* pAct = new CPropertyAction(this, &EvidentAutofocus::OnAFStatus);
@@ -4384,6 +4453,14 @@ int EvidentAutofocus::FindFocusWithOffset()
     long measuredZOffset = hub->GetModel()->GetMeasuredZOffset();
     long targetZPos = currentZPos + measuredZOffset;
 
+    // Clamp to user-set AF search limits first, then enforce hardware bounds
+    // last so hardware limits always win regardless of what farLimit_/nearLimit_
+    // contain.
+    if (targetZPos < farLimit_)  targetZPos = farLimit_;
+    if (targetZPos > nearLimit_) targetZPos = nearLimit_;
+    if (targetZPos < FOCUS_MIN_POS) targetZPos = FOCUS_MIN_POS;
+    if (targetZPos > FOCUS_MAX_POS) targetZPos = FOCUS_MAX_POS;
+
     std::ostringstream logMsg;
     logMsg << "Applying Z-offset: " << measuredZOffset <<
               " steps (from " << currentZPos <<
@@ -4472,16 +4549,19 @@ int EvidentAutofocus::OnNearLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ERR_INVALID_PARAMETER;
         }
 
-        std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(newNear), static_cast<int>(farLimit_));
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-            return ret;
-
-        if (!IsPositiveAck(response, CMD_AF_LIMIT))
-            return ERR_NEGATIVE_ACK;
-
         nearLimit_ = newNear;
+
+        // AFL can only be set while AF is idle; if active, defer to InitializeZDC().
+        if (afStatus_ == 0)
+        {
+            std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(farLimit_));
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+                LogMessage("Warning: AFL command failed when setting near limit; will retry via InitializeZDC()");
+            else if (!IsPositiveAck(response, CMD_AF_LIMIT))
+                LogMessage("Warning: AFL negative ACK when setting near limit; will retry via InitializeZDC()");
+        }
 
         // Mark that ZDC needs re-initialization (deferred until next AF operation)
         zdcInitNeeded_ = true;
@@ -4511,16 +4591,19 @@ int EvidentAutofocus::OnFarLimit(MM::PropertyBase* pProp, MM::ActionType eAct)
             return ERR_INVALID_PARAMETER;
         }
 
-        std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(newFar));
-        std::string response;
-        int ret = hub->ExecuteCommand(cmd, response);
-        if (ret != DEVICE_OK)
-            return ret;
-
-        if (!IsPositiveAck(response, CMD_AF_LIMIT))
-            return ERR_NEGATIVE_ACK;
-
         farLimit_ = newFar;
+
+        // AFL can only be set while AF is idle; if active, defer to InitializeZDC().
+        if (afStatus_ == 0)
+        {
+            std::string cmd = BuildCommand(CMD_AF_LIMIT, static_cast<int>(nearLimit_), static_cast<int>(farLimit_));
+            std::string response;
+            int ret = hub->ExecuteCommand(cmd, response);
+            if (ret != DEVICE_OK)
+                LogMessage("Warning: AFL command failed when setting far limit; will retry via InitializeZDC()");
+            else if (!IsPositiveAck(response, CMD_AF_LIMIT))
+                LogMessage("Warning: AFL negative ACK when setting far limit; will retry via InitializeZDC()");
+        }
 
         // Mark that ZDC needs re-initialization (deferred until next AF operation)
         zdcInitNeeded_ = true;
@@ -4973,9 +5056,11 @@ int EvidentOffsetLens::SetPositionUm(double pos)
     // Convert μm to steps
     long steps = static_cast<long>(pos / stepSizeUm_);
 
-    // Clamp to limits
-    if (steps < OFFSET_LENS_MIN_POS) steps = OFFSET_LENS_MIN_POS;
-    if (steps > OFFSET_LENS_MAX_POS) steps = OFFSET_LENS_MAX_POS;
+    // Clamp to hardware-reported limits for the current objective
+    long minSteps, maxSteps;
+    hub->GetModel()->GetLimits(EvidentIX85Win::DeviceType_OffsetLens, minSteps, maxSteps);
+    if (steps < minSteps) steps = minSteps;
+    if (steps > maxSteps) steps = maxSteps;
 
     hub->GetModel()->SetBusy(EvidentIX85Win::DeviceType_OffsetLens, true);
 
@@ -5034,8 +5119,19 @@ int EvidentOffsetLens::SetOrigin()
 
 int EvidentOffsetLens::GetLimits(double& lower, double& upper)
 {
-    lower = OFFSET_LENS_MIN_POS * stepSizeUm_;
-    upper = OFFSET_LENS_MAX_POS * stepSizeUm_;
+    EvidentHubWin* hub = GetHub();
+    if (hub)
+    {
+        long minSteps, maxSteps;
+        hub->GetModel()->GetLimits(EvidentIX85Win::DeviceType_OffsetLens, minSteps, maxSteps);
+        lower = minSteps * stepSizeUm_;
+        upper = maxSteps * stepSizeUm_;
+    }
+    else
+    {
+        lower = OFFSET_LENS_MIN_POS * stepSizeUm_;
+        upper = OFFSET_LENS_MAX_POS * stepSizeUm_;
+    }
     return DEVICE_OK;
 }
 

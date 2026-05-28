@@ -845,7 +845,7 @@ void CDemoCamera::RenderBeadToImage(ImgBuffer& img, const Bead& bead, double blu
    }
 }
 
-void CDemoCamera::GenerateBeadsImage(ImgBuffer& img, double exposure)
+void CDemoCamera::GenerateBeadsImage(ImgBuffer& img, double /* exposure */)
 {
    if (img.Height() == 0 || img.Width() == 0 || img.Depth() == 0)
       return;

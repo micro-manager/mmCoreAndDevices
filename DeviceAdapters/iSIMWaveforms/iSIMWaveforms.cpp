@@ -1950,6 +1950,52 @@ int iSIMWaveforms::StartSequenceAcquisition(long numImages, double interval_ms, 
 	return DEVICE_OK;
 }
 
+void iSIMWaveforms::SetConfiguredOutputsToZero()
+{
+	if (!daq_ || channelMapping_.empty())
+		return;
+
+	// Release channel ownership from the stopped task so we can create a new on-demand task.
+	daq_->clearTasks();
+
+	// Build channel vectors from all pre-init configured channels (skip unmapped "None" entries).
+	std::vector<std::string> channels;
+	std::vector<double> minVs, maxVs, zeros;
+
+	for (const auto& entry : channelMapping_)
+	{
+		if (entry.second == "None")
+			continue;
+
+		const std::string& semantic = entry.first;
+		channels.push_back(entry.second);
+		minVs.push_back(minVoltage_.at(semantic));
+		maxVs.push_back(maxVoltage_.at(semantic));
+		zeros.push_back(0.0);
+	}
+
+	if (channels.empty())
+		return;
+
+	try
+	{
+		daq_->writeStaticOutputs(channels, minVs, maxVs, zeros);
+		LogMessage("SetConfiguredOutputsToZero: all channels set to 0V", false);
+	}
+	catch (const std::runtime_error& e)
+	{
+		LogMessage(std::string("SetConfiguredOutputsToZero error: ") + e.what(), false);
+	}
+
+	// writeStaticOutputs uses a temporary task that is cleared after writing, so daq_ now has
+	// no configured tasks. Rebuild so that the next StartWaveformOutput() call finds valid
+	// task handles. RebuildWaveforms() calls ConfigureDAQChannels() which is safe here.
+	int ret = RebuildWaveforms();
+	if (ret != DEVICE_OK)
+		LogMessage("SetConfiguredOutputsToZero: RebuildWaveforms failed (error " +
+		           std::to_string(ret) + ")", false);
+}
+
 int iSIMWaveforms::StopSequenceAcquisition()
 {
 	MM::Camera* camera = GetPhysicalCamera();
@@ -1959,8 +2005,9 @@ int iSIMWaveforms::StopSequenceAcquisition()
 	if (camera)
 		ret = camera->StopSequenceAcquisition();
 
-	// Then stop waveforms
+	// Stop waveforms, then drive all channels to 0V
 	StopWaveformOutput();
+	SetConfiguredOutputsToZero();
 
 	return ret;
 }

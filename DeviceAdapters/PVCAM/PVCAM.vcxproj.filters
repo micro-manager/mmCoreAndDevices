@@ -27,19 +27,10 @@
     <ClCompile Include="PvDebayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NotificationEntry.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="NotificationThread.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PvCircularBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PvFrameInfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PollingThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PpParam.cpp">
@@ -86,12 +77,6 @@
     <ClInclude Include="PvDebayer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NotificationEntry.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NotificationThread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PvCircularBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -99,9 +84,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PVCAMIncludes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PollingThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PpParam.h">

@@ -2,7 +2,9 @@
 
 // MMDevice
 #include "DeviceThreads.h"
+#include "MMDeviceConstants.h"
 
+// Local
 #include "Event.h"
 
 class Universal;
@@ -41,9 +43,11 @@ public:
     */
     void Pause();
     /**
-    * Resumes the acquisition loop.
+    * Resets the acquisition status and resumes the acquisition loop.
     */
     void Resume();
+
+    int AcqStatus() const;
 
     /**
     * Overridden function from MMDeviceThreadBase.
@@ -52,6 +56,7 @@ public:
 
 private:
     Universal* const camera_;
+    int acqStatus_{ DEVICE_OK };
     bool requestStop_{ false };
     Event resumeEvent_{ true, false };
 };
