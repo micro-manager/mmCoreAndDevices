@@ -8,23 +8,11 @@
 #include "ASIBase.h"
 
 ASIBase::ASIBase(MM::Device* device, const char* prefix) :
-	core_(nullptr),
 	device_(device),
-	port_("Undefined"),
-	initialized_(false),
-	oldstage_(false),
-	version_(Version()),
-	firmwareVersion_("Undefined"),
-	firmwareBuild_("Undefined"),
-	firmwareDate_("Undefined"),
-	oldstagePrefix_(prefix),
-	commandPrefix_(""),
-	serialTerm_("\r\n")
-{
+	oldstagePrefix_(prefix) {
 }
 
-ASIBase::~ASIBase()
-{
+ASIBase::~ASIBase() {
 }
 
 // Clear contents of serial port

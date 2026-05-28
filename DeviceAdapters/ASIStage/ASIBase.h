@@ -23,7 +23,7 @@
 // New version format: ":A Version: USB-9.50 \r\n" (revision is a digit character: '0'-'9')
 class Version {
 public:
-	Version() : major_(0), minor_(0), rev_(0) { }
+	Version() = default;
 	explicit Version(unsigned int major, unsigned int minor, unsigned int rev)
 		: major_(major), minor_(minor), rev_(rev) { }
 
@@ -77,9 +77,9 @@ public:
 	}
 
 private:
-	unsigned int major_;
-	unsigned int minor_;
-	unsigned int rev_;
+	unsigned int major_ = 0;
+	unsigned int minor_ = 0;
+	unsigned int rev_ = 0;
 };
 
 // Note: concrete device classes deriving ASIBase must set core_ in Initialize()
@@ -110,20 +110,20 @@ protected:
 	static constexpr size_t SERIAL_RXBUFFER_SIZE = 2048;
 	static constexpr size_t CLEAR_BUFFER_SIZE = 255;
 
-	MM::Core* core_;
-	MM::Device* device_;
-	std::string port_;
+	MM::Core* core_ = nullptr;
+	MM::Device* device_ = nullptr;
+	std::string port_ = "Undefined";
 
-	bool initialized_;
-	bool oldstage_;
+	bool initialized_ = false;
+	bool oldstage_ = false;
 
-	Version version_;
-	std::string firmwareVersion_;
-	std::string firmwareBuild_;
-	std::string firmwareDate_;
+	Version version_{};
+	std::string firmwareVersion_ = "Undefined";
+	std::string firmwareBuild_ = "Undefined";
+	std::string firmwareDate_ = "Undefined";
 
-	// Stage-specific configuration
-	std::string oldstagePrefix_; // "1H" or "2H" for LX-4000 stages, empty string for MS-2000 stages
-	std::string commandPrefix_; // set to oldstagePrefix_ if oldstage_ is true, otherwise empty string
-	std::string serialTerm_; // changes if oldstage_ is true
+	// stage-specific configuration
+	std::string oldstagePrefix_{}; // "1H" or "2H" for LX-4000 stages, empty string for MS-2000 stages
+	std::string commandPrefix_{}; // set to oldstagePrefix_ if oldstage_ is true, otherwise empty string
+	std::string serialTerm_ = "\r\n"; // changes if oldstage_ is true
 };
