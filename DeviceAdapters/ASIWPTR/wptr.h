@@ -27,6 +27,7 @@
 
 #include <string>
 
+#include "MMDevice.h"
 #include "DeviceBase.h"
 
 class WPTRobot : public CGenericBase<WPTRobot> {

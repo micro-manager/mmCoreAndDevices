@@ -117,9 +117,7 @@ int WPTRobot::Initialize() {
 }
 
 int WPTRobot::Shutdown() {
-    if (initialized_) {
-        initialized_ = false;
-    }
+    initialized_ = false;
     return DEVICE_OK;
 }
 
