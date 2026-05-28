@@ -5056,9 +5056,11 @@ int EvidentOffsetLens::SetPositionUm(double pos)
     // Convert μm to steps
     long steps = static_cast<long>(pos / stepSizeUm_);
 
-    // Clamp to limits
-    if (steps < OFFSET_LENS_MIN_POS) steps = OFFSET_LENS_MIN_POS;
-    if (steps > OFFSET_LENS_MAX_POS) steps = OFFSET_LENS_MAX_POS;
+    // Clamp to hardware-reported limits for the current objective
+    long minSteps, maxSteps;
+    hub->GetModel()->GetLimits(EvidentIX85Win::DeviceType_OffsetLens, minSteps, maxSteps);
+    if (steps < minSteps) steps = minSteps;
+    if (steps > maxSteps) steps = maxSteps;
 
     hub->GetModel()->SetBusy(EvidentIX85Win::DeviceType_OffsetLens, true);
 
@@ -5117,8 +5119,19 @@ int EvidentOffsetLens::SetOrigin()
 
 int EvidentOffsetLens::GetLimits(double& lower, double& upper)
 {
-    lower = OFFSET_LENS_MIN_POS * stepSizeUm_;
-    upper = OFFSET_LENS_MAX_POS * stepSizeUm_;
+    EvidentHubWin* hub = GetHub();
+    if (hub)
+    {
+        long minSteps, maxSteps;
+        hub->GetModel()->GetLimits(EvidentIX85Win::DeviceType_OffsetLens, minSteps, maxSteps);
+        lower = minSteps * stepSizeUm_;
+        upper = maxSteps * stepSizeUm_;
+    }
+    else
+    {
+        lower = OFFSET_LENS_MIN_POS * stepSizeUm_;
+        upper = OFFSET_LENS_MAX_POS * stepSizeUm_;
+    }
     return DEVICE_OK;
 }
 
