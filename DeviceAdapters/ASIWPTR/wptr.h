@@ -58,6 +58,6 @@ private:
     long slot_ = 1;
 
     // serial communication
-    std::string port_;
-    std::string command_;
+    std::string port_{};
+    std::string command_{};
 };
