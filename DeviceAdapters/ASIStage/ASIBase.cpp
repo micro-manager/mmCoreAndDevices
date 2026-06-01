@@ -8,23 +8,11 @@
 #include "ASIBase.h"
 
 ASIBase::ASIBase(MM::Device* device, const char* prefix) :
-	core_(nullptr),
 	device_(device),
-	port_("Undefined"),
-	initialized_(false),
-	oldstage_(false),
-	version_(Version()),
-	firmwareVersion_("Undefined"),
-	firmwareBuild_("Undefined"),
-	firmwareDate_("Undefined"),
-	oldstagePrefix_(prefix),
-	commandPrefix_(""),
-	serialTerm_("\r\n")
-{
+	oldstagePrefix_(prefix) {
 }
 
-ASIBase::~ASIBase()
-{
+ASIBase::~ASIBase() {
 }
 
 // Clear contents of serial port
@@ -105,8 +93,8 @@ int ASIBase::CheckDeviceStatus() {
 
 int ASIBase::GetVersion(std::string& version) const {
     std::string answer;
-    if (const int error = QueryCommand("V", answer)) {
-        return error;
+	if (const int status = QueryCommand("V", answer); status != DEVICE_OK) {
+        return status;
     }
     if (answer.size() > 16 && answer.compare(0, 2, ":A") == 0) {
         const size_t start = 16; // dash position

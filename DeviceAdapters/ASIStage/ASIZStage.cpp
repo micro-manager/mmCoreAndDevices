@@ -7,36 +7,10 @@
 
 #include "ASIZStage.h"
 
-ZStage::ZStage() :
-    ASIBase(this, "1H"), // LX-4000 prefix
-    axis_("Z"),
-    axisNr_(4),
-    stepSizeUm_(0.1),
-    answerTimeoutMs_(1000),
-    sequenceable_(false),
-    runningFastSequence_(false),
-    hasRingBuffer_(false),
-    nrEvents_(0),
-    curSteps_(0),
-    maxSpeed_(7.5),
-    motorOn_(true),
-    supportsLinearSequence_(false),
-    linearSequenceIntervalUm_(0.0),
-    linearSequenceLength_(0),
-    linearSequenceTimeoutMs_(10000),
-    // init cached properties
-    speed_(0),
-    waitCycles_(0),
-    backlash_(0),
-    error_(0),
-    acceleration_(0),
-    finishError_(0),
-    overShoot_(0)
-{
+ZStage::ZStage() : ASIBase(this, "1H") { // "1H" is the LX-4000 prefix
     InitializeDefaultErrorMessages();
 
-    // create pre-initialization properties
-    // ------------------------------------
+    // create pre-init properties
 
     // Name
     CreateProperty(MM::g_Keyword_Name, g_ZStageDeviceName, MM::String, true);
@@ -280,12 +254,8 @@ int ZStage::Initialize()
     return DEVICE_OK;
 }
 
-int ZStage::Shutdown()
-{
-    if (initialized_)
-    {
-        initialized_ = false;
-    }
+int ZStage::Shutdown() {
+    initialized_ = false;
     return DEVICE_OK;
 }
 

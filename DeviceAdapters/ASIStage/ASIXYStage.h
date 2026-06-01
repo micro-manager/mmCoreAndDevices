@@ -5,8 +5,7 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASIXYSTAGE_H
-#define ASIXYSTAGE_H
+#pragma once
 
 #include "ASIBase.h"
 
@@ -89,30 +88,28 @@ private:
 	int OnVectorY(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisletterY_); }
 
 
-	std::string axisletterX_;
-	std::string axisletterY_;
-	double stepSizeXUm_;
-	double stepSizeYUm_;
-	double maxSpeed_;
-	double ASISerialUnit_; // this variable converts the floating point number provided by ASI (in 10ths of microns) into a long
-	bool motorOn_;
-	int joyStickSpeedFast_;
-	int joyStickSpeedSlow_;
-	bool joyStickMirror_;
-	long nrMoveRepetitions_;
-	double answerTimeoutMs_;
-	bool stopSignal_;
-	bool serialOnlySendChanged_; // if true the serial command is only sent when it has changed
-	std::string manualSerialAnswer_; // last answer received when the SerialCommand property was used
-	bool advancedPropsEnabled_;
+	std::string axisletterX_ = "X";
+	std::string axisletterY_ = "Y";
+	double stepSizeXUm_= 0.0;
+	double stepSizeYUm_ = 0.0;
+	double maxSpeed_ = 7.5;
+	double ASISerialUnit_ = 10.0; // this variable converts the floating point number provided by ASI (in 10ths of microns) into a long
+	bool motorOn_ = true;
+	int joyStickSpeedFast_ = 60;
+	int joyStickSpeedSlow_ = 5;
+	bool joyStickMirror_ = false;
+	long nrMoveRepetitions_ = 0;
+	double answerTimeoutMs_ = 1000;
+	bool stopSignal_ = false;
+	bool serialOnlySendChanged_ = true; // if true the serial command is only sent when it has changed
+	std::string manualSerialAnswer_{}; // last answer received when the SerialCommand property was used
+	bool advancedPropsEnabled_ = false;
 	// cached properties
-	long acceleration_;
-	long waitCycles_;
-	double speed_;
-	double backlash_;
-	double error_;
-	double finishError_;
-	double overShoot_;
+	long acceleration_ = 0;
+	long waitCycles_ = 0;
+	double speed_ = 0;
+	double backlash_ = 0;
+	double error_ = 0;
+	double finishError_ = 0;
+	double overShoot_ = 0;
 };
-
-#endif // ASIXYSTAGE_H

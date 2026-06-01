@@ -5,13 +5,11 @@
  *              Jon Daniels (jon@asiimaging.com)
  */
 
-#ifndef ASILED_H
-#define ASILED_H
+#pragma once
 
 #include "ASIBase.h"
 
-class LED : public CShutterBase<LED>, public ASIBase
-{
+class LED : public CShutterBase<LED>, public ASIBase {
 public:
 	LED();
 	~LED();
@@ -40,13 +38,13 @@ private:
 	int IsOpen(bool* open); // queries the device rather than using a cached value
 	int CurrentIntensity(long* intensity); // queries the device rather than using a cached value
 
-	bool open_;
-	long intensity_;
-	std::string name_;
-	int answerTimeoutMs_;
-	long channel_;
-	char channelAxisChar_;
-	bool hasDLED_;
-};
+	std::string name_ = "LED";
+	long channel_ = 0;
+	char channelAxisChar_ = 'X';
 
-#endif // ASILED_H
+	bool open_ = false;
+	bool hasDLED_ = false;
+
+	long intensity_ = 20;
+	int answerTimeoutMs_ = 1000;
+};

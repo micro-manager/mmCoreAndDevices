@@ -7,17 +7,10 @@
 
 #include "ASITIRF.h"
 
-TIRF::TIRF() :
-    ASIBase(this, ""),
-    axis_("F"), // normally the TIRF axis is the F axis
-    answerTimeoutMs_(1000),
-    scaleFactor_(1),
-    unitFactor_(10000)
-{
+TIRF::TIRF() : ASIBase(this, "") {
     InitializeDefaultErrorMessages();
 
-    // create pre-initialization properties
-    // ------------------------------------
+    // create pre-init properties
 
     // Name
     CreateProperty(MM::g_Keyword_Name, g_TIRFDeviceName, MM::String, true);
@@ -115,12 +108,8 @@ int TIRF::Initialize()
     return DEVICE_OK;
 }
 
-int TIRF::Shutdown()
-{
-    if (initialized_)
-    {
-        initialized_ = false;
-    }
+int TIRF::Shutdown() {
+    initialized_ = false;
     return DEVICE_OK;
 }
 

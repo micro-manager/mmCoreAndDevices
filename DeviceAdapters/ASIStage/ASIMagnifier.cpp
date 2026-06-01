@@ -7,15 +7,10 @@
 
 #include "ASIMagnifier.h"
 
-Magnifier::Magnifier() :
-    ASIBase(this, ""),
-    axis_("M"), // normally the zoom axis is the M axis
-    answerTimeoutMs_(1000)
-{
+Magnifier::Magnifier() : ASIBase(this, "") {
     InitializeDefaultErrorMessages();
 
-    // create pre-initialization properties
-    // ------------------------------------
+    // create pre-init properties
 
     // Name
     CreateProperty(MM::g_Keyword_Name, g_MagnifierDeviceName, MM::String, true);
@@ -110,12 +105,8 @@ int Magnifier::Initialize()
     return DEVICE_OK;
 }
 
-int Magnifier::Shutdown()
-{
-    if (initialized_)
-    {
-        initialized_ = false;
-    }
+int Magnifier::Shutdown() {
+    initialized_ = false;
     return DEVICE_OK;
 }
 

@@ -7,37 +7,10 @@
 
 #include "ASIXYStage.h"
 
-XYStage::XYStage() :
-	ASIBase(this, "2H"), // LX-4000 prefix
-	axisletterX_("X"),
-	axisletterY_("Y"),
-	stepSizeXUm_(0.0),
-	stepSizeYUm_(0.0),
-	maxSpeed_(7.5),
-	ASISerialUnit_(10.0),
-	motorOn_(true),
-	joyStickSpeedFast_(60),
-	joyStickSpeedSlow_(5),
-	joyStickMirror_(false),
-	nrMoveRepetitions_(0),
-	answerTimeoutMs_(1000),
-	stopSignal_(false),
-	serialOnlySendChanged_(true),
-	manualSerialAnswer_(""),
-	advancedPropsEnabled_(false),
-	// init cached properties
-	acceleration_(0),
-	waitCycles_(0),
-	speed_(0),
-	backlash_(0),
-	error_(0),
-	finishError_(0),
-	overShoot_(0)
-{
+XYStage::XYStage() : ASIBase(this, "2H") { // "2H" is the LX-4000 prefix
 	InitializeDefaultErrorMessages();
 
-	// create pre-initialization properties
-	// ------------------------------------
+	// create pre-init properties
 
 	// Name
 	CreateProperty(MM::g_Keyword_Name, g_XYStageDeviceName, MM::String, true);
@@ -287,12 +260,8 @@ int XYStage::Initialize()
 	return DEVICE_OK;
 }
 
-int XYStage::Shutdown()
-{
-	if (initialized_)
-	{
-		initialized_ = false;
-	}
+int XYStage::Shutdown() {
+	initialized_ = false;
 	return DEVICE_OK;
 }
 
