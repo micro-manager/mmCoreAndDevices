@@ -25,17 +25,13 @@
 
 #include "wptr.h"
 
-#include <sstream>
 #include <string>
 
-#include "DeviceUtils.h"
-#include "ModuleInterface.h"
-
-const char* g_WPTRobotName = "WPTRobot";
+static const char* gWPTRobotName = "WPTRobot";
 
 // Exported MMDevice API
 MODULE_API void InitializeModuleData() {
-    RegisterDevice(g_WPTRobotName, MM::GenericDevice, "WPTRobot");
+    RegisterDevice(gWPTRobotName, MM::GenericDevice, "WPTRobot");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName) {
@@ -43,7 +39,7 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName) {
         return nullptr;
     }
 
-    if (std::string(deviceName) == g_WPTRobotName) {
+    if (std::string(deviceName) == gWPTRobotName) {
         return new WPTRobot();
     }
 
@@ -54,42 +50,42 @@ MODULE_API void DeleteDevice(MM::Device* pDevice) {
     delete pDevice;
 }
 
+// Error codes
+static constexpr int ERR_UNKNOWN_COMMAND = 10002;
+static constexpr int ERR_PORT_CHANGE_FORBIDDEN = 10004;
+static constexpr int ERR_UNRECOGNIZED_ANSWER = 10009;
+
 // Clear contents of serial port
-int ClearPort(MM::Device& device, MM::Core& core, const std::string& port) {
+static int ClearPort(const MM::Device& device, MM::Core& core, const std::string& port) {
     constexpr size_t bufferSize = 255;
     unsigned char clear[bufferSize];
     unsigned long read = bufferSize;
-    int result;
     while (read == bufferSize) {
-        result = core.ReadFromSerial(&device, port.c_str(), clear, bufferSize, read);
-        if (result != DEVICE_OK) {
-            return result;
+        if (const int status = core.ReadFromSerial(&device, port.c_str(), clear, bufferSize, read);
+            status != DEVICE_OK) {
+            return status;
         }
     }
     return DEVICE_OK;
 }
 
-WPTRobot::WPTRobot() :
-    initialized_(false),
-    numPos_(0),
-    port_(""),
-    command_(""),
-    stage_(1),
-    slot_(1) {
+// Returns true if the string starts with the prefix.
+static bool StartsWith(const std::string& str, const std::string& prefix) {
+    return str.compare(0, prefix.size(), prefix) == 0;
+}
 
+WPTRobot::WPTRobot() {
     InitializeDefaultErrorMessages();
 
-    // Create Preinitialization Properties
+    // register custom errors
+    SetErrorText(ERR_UNKNOWN_COMMAND, "Unknown serial command, not ORG, GET, PUT, AES, or DRT");
+    SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, "Serial port cannot be changed after initialization");
+    SetErrorText(ERR_UNRECOGNIZED_ANSWER, "Serial command replied with an unrecognized answer");
 
-    // Name
-    CreateProperty(MM::g_Keyword_Name, g_WPTRobotName, MM::String, true);
-
-    // Description
+    // create pre-init properties
+    CreateProperty(MM::g_Keyword_Name, gWPTRobotName, MM::String, true);
     CreateProperty(MM::g_Keyword_Description, "Wellplate Transfer Robot", MM::String, true);
-
-    // Port
-    CPropertyAction* pAct = new CPropertyAction(this, &WPTRobot::OnPort);
-    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
+    CreatePortProperty();
 }
 
 WPTRobot::~WPTRobot() {
@@ -97,29 +93,23 @@ WPTRobot::~WPTRobot() {
 }
 
 void WPTRobot::GetName(char* name) const {
-    CDeviceUtils::CopyLimitedString(name, g_WPTRobotName);
+    CDeviceUtils::CopyLimitedString(name, gWPTRobotName);
 }
 
 int WPTRobot::Initialize() {
-    // empty the Rx serial buffer before sending command
+    // empty the serial rx buffer before sending command
     ClearPort(*this, *GetCoreCallback(), port_.c_str());
 
-    // Stage and Slot passed as properties
-    CPropertyAction* pAct = new CPropertyAction(this, &WPTRobot::OnStage);
-    CreateProperty("Stage", "1", MM::Integer, false, pAct);
-    // SetPropertyLimits("Stage", 1, 3); // setting limits must be edited again, if set up changed
-
-    pAct = new CPropertyAction(this, &WPTRobot::OnSlot);
-    CreateProperty("Slot", "1", MM::Integer, false, pAct);
-    // SetPropertyLimits("Slot", 1, 10);
+    // stage and slot are passed as properties
+    CreateStageProperty();
+    CreateSlotProperty();
 
     // setting this property to different keywords leads to a command
-    pAct = new CPropertyAction(this, &WPTRobot::OnCommand);
-    CreateProperty("Command", "Undefined", MM::String, false, pAct);
+    CreateCommandProperty();
 
-    int ret = UpdateStatus();
-    if (ret != DEVICE_OK) {
-        return ret;
+    // update all properties
+    if (const int status = UpdateStatus(); status != DEVICE_OK) {
+        return status;
     }
 
     initialized_ = true;
@@ -127,9 +117,7 @@ int WPTRobot::Initialize() {
 }
 
 int WPTRobot::Shutdown() {
-    if (initialized_) {
-        initialized_ = false;
-    }
+    initialized_ = false;
     return DEVICE_OK;
 }
 
@@ -137,158 +125,101 @@ bool WPTRobot::Busy() {
     return false; // reply is only given after move is completed, so Busy() not necessary
 }
 
-int WPTRobot::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(port_.c_str());
-    } else if (eAct == MM::AfterSet) {
-        if (initialized_) {
-            // revert
-            pProp->Set(port_.c_str());
-            return ERR_PORT_CHANGE_FORBIDDEN;
-        }
-        pProp->Get(port_);
+// Returns the device status after sending a serial command.
+int WPTRobot::SendCommand(const std::string& command) {
+    // send the command
+    if (const int status = SendSerialCommand(port_.c_str(), command.c_str(), "\r\n");
+        status != DEVICE_OK) {
+        return status;
+    }
+    // read the answer
+    std::string answer;
+    if (const int status = GetSerialAnswer(port_.c_str(), "\r\n", answer);
+        status != DEVICE_OK) {
+        return status;
+    }
+    // Note: protocol specific, reply length is always 3, matches command length
+    if (answer.length() != 3 || answer.compare(0, 3, command) != 0) {
+        return ERR_UNRECOGNIZED_ANSWER;
     }
     return DEVICE_OK;
+}
+
+void WPTRobot::CreatePortProperty() {
+    CreateStringProperty(MM::g_Keyword_Port, "Undefined", false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(port_.c_str());
+            } else if (eAct == MM::AfterSet) {
+                if (initialized_) {
+                    // revert change
+                    pProp->Set(port_.c_str());
+                    return ERR_PORT_CHANGE_FORBIDDEN;
+                }
+                pProp->Get(port_);
+            }
+            return DEVICE_OK;
+        }),
+        true // pre-init property
+    );
 }
 
 // Just reading and writing to the stage variable
-int WPTRobot::OnStage(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(stage_);
-    } else if (eAct == MM::AfterSet) {
-        pProp->Get(stage_);
-    }
-    return DEVICE_OK;
+void WPTRobot::CreateStageProperty() {
+    CreateIntegerProperty("Stage", 1, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(stage_);
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(stage_);
+            }
+            return DEVICE_OK;
+        })
+    );
 }
 
 // Just reading and writing to the slot variable
-int WPTRobot::OnSlot(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(slot_);
-    } else if (eAct == MM::AfterSet) {
-        pProp->Get(slot_);
-    }
-    return DEVICE_OK;
+void WPTRobot::CreateSlotProperty() {
+    CreateIntegerProperty("Slot", 1, false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(slot_);
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(slot_);
+            }
+            return DEVICE_OK;
+        })
+    );
 }
 
-int WPTRobot::OnCommand(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    if (eAct == MM::BeforeGet) {
-        pProp->Set(command_.c_str());
-    } else if (eAct == MM::AfterSet) {
-        // Read what keyword the user issued, and send the corresponding command
-        pProp->Get(command_);
+void WPTRobot::CreateCommandProperty() {
+    CreateStringProperty("Command", "Undefined", false,
+        new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
+            if (eAct == MM::BeforeGet) {
+                pProp->Set(command_.c_str());
+            } else if (eAct == MM::AfterSet) {
+                pProp->Get(command_);
 
-        std::ostringstream os;
-        std::string answer;
-        int ret;
+                // is the command valid?
+                if (!StartsWith(command_, "ORG")
+                    && !StartsWith(command_, "GET")
+                    && !StartsWith(command_, "PUT")
+                    && !StartsWith(command_, "AES")    // command for emergency stop
+                    && !StartsWith(command_, "DRT")) { // command to enable after AES
+                    return ERR_UNKNOWN_COMMAND;
+                }
 
-        if (command_.compare(0, 3, "ORG") == 0) {
-            // user issued ORG command
-            os << "ORG";
+                // prefix is a valid command after check above
+                const std::string prefix = command_.substr(0, 3);
 
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
+                // append stage and slot for GET and PUT commands
+                const std::string command = (prefix == "GET" || prefix == "PUT")
+                    ? prefix + " " + std::to_string(stage_) + "," + std::to_string(slot_)
+                    : prefix;
 
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-            if (ret != DEVICE_OK) {
-                return ret;
+                return SendCommand(command);
             }
-
-            // checking if the answer is what is expected,
-            // if not just give an error and quit
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "ORG") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        } else if (command_.compare(0, 3, "GET") == 0) {
-            // user issued GET command
-            os << "GET " << stage_ << "," << slot_;
-
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
-
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
-
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "GET") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        } else if (command_.substr(0, 3) == "PUT") {
-            // user issued PUT command
-            os << "PUT " << stage_ << "," << slot_;
-
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
-
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
-
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "PUT") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        } else if (command_.compare(0, 3, "AES") == 0) {
-            // used issued STOP command
-
-            // AES is command for emergency stop, stops the robot cold, issue DRT command to enable again
-            os << "AES";
-
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
-
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
-
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "AES") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        } else if (command_.compare(0, 3, "DRT") == 0) {
-            // user issued DRT command
-
-            // override errors
-            os << "DRT";
-
-            ret = SendSerialCommand(port_.c_str(), os.str().c_str(), "\r\n");
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
-
-            ret = GetSerialAnswer(port_.c_str(), "\r\n", answer);
-            if (ret != DEVICE_OK) {
-                return ret;
-            }
-
-            if (answer.length() != 3) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-            if (answer.compare(0, 3, "DRT") != 0) {
-                return ERR_UNRECOGNIZED_ANSWER;
-            }
-        }
-    }
-    return DEVICE_OK;
+            return DEVICE_OK;
+        })
+    );
 }
