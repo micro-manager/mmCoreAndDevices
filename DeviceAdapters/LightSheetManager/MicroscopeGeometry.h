@@ -5,8 +5,7 @@
  * Copyright (c) 2022, Applied Scientific Instrumentation
  */
 
-#ifndef MICROSCOPE_GEOMETRY_H
-#define MICROSCOPE_GEOMETRY_H
+#pragma once
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -46,8 +45,6 @@ private:
     // Creates the list of microscope geometry types based on the device map.
     void CreateGeometryTypes();
 
-    std::map<std::string, std::map<std::string, MM::DeviceType>> deviceMap_;
-    std::vector<std::string> geometryTypes_;
+    std::map<std::string, std::map<std::string, MM::DeviceType>> deviceMap_{};
+    std::vector<std::string> geometryTypes_{};
 };
-
-#endif // MICROSCOPE_GEOMETRY_H

@@ -5,8 +5,7 @@
  * Copyright (c) 2022, Applied Scientific Instrumentation
  */
 
-#ifndef LIGHTSHEET_MANAGER_H
-#define LIGHTSHEET_MANAGER_H
+#pragma once
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -35,4 +34,3 @@ const char* const gLightSheetTypeScanned = "Scanned";
 // no device selected
 const char* const gUndefined = "Undefined";
 
-#endif // LIGHTSHEET_MANAGER_H
