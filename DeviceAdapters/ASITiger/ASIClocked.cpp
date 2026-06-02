@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp and others
-//
 
 #include "ASITiger.h"
 #include "ASIClocked.h"
@@ -32,29 +30,22 @@
 #include <vector>
 #include <string>
 
-
-///////////////////////////////////////////////////////////////////////////////
-// CClocked
-// this is a superclass for any clocked devices (except filterwheels which use a different command set)
-//   including turrets and filter sliders
-//
+// Superclass for any clocked devices (except filterwheels which use a different command set)
+// includes turrets and filter sliders
 CClocked::CClocked(const char* name) :
-   ASIPeripheralBase< ::CStateDeviceBase, CClocked >(name),
-   numPositions_(0),  // will read actual number of positions
-   curPosition_(0),   // will read actual position
-   axisLetter_(g_EmptyAxisLetterStr)
-{
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetter_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
-   }
+    ASIPeripheralBase< ::CStateDeviceBase, CClocked >(name) {
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        axisLetter_ = GetAxisLetterFromExtName(name);
+        CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
+    }
 }
 
-int CClocked::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CClocked::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 
@@ -295,24 +286,19 @@ int CClocked::OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// CFSlider
-// mostly just inherits from CClocked, except description
-//
-CFSlider::CFSlider(const char* name) :
-      CClocked(name)
-{
-
+// Filter Slider
+CFSlider::CFSlider(const char* name) : CClocked(name) {
+    // inherits from CClocked, description has been changed
 }
 
-int CFSlider::Initialize()
-{
-   RETURN_ON_MM_ERROR( CClocked::Initialize() );
+int CFSlider::Initialize() {
+    if (const int status = CClocked::Initialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-   command.str("");
    command << g_FSliderDeviceDescription << " Axis=" << axisLetter_ << " HexAddr=" << addressString_;
    CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
 
@@ -320,24 +306,19 @@ int CFSlider::Initialize()
    return DEVICE_OK;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// CPortSwitch
-// mostly just inherits from CClocked, except description
-//
-CPortSwitch::CPortSwitch(const char* name) :
-      CClocked(name)
-{
-
+// Port Switch
+CPortSwitch::CPortSwitch(const char* name) : CClocked(name) {
+    // inherits from CClocked, description has been changed
 }
 
-int CPortSwitch::Initialize()
-{
-   RETURN_ON_MM_ERROR( CClocked::Initialize() );
+int CPortSwitch::Initialize() {
+    if (const int status = CClocked::Initialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-   command.str("");
    command << g_PortSwitchDeviceDescription << " Axis=" << axisLetter_ << " HexAddr=" << addressString_;
    CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
 
@@ -345,24 +326,19 @@ int CPortSwitch::Initialize()
    return DEVICE_OK;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// CTurret
-// mostly just inherits from CClocked, except description
-//
-CTurret::CTurret(const char* name) :
-      CClocked(name)
-{
-
+// Turret
+CTurret::CTurret(const char* name) : CClocked(name) {
+    // inherits from CClocked, description has been changed
 }
 
-int CTurret::Initialize()
-{
-   RETURN_ON_MM_ERROR( CClocked::Initialize() );
+int CTurret::Initialize() {
+    if (const int status = CClocked::Initialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-   command.str("");
    command << g_TurretDeviceDescription << " Axis=" << axisLetter_ << " HexAddr=" << addressString_;
    CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
 

@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 04/2016
 //
-// BASED ON:      ASILED.c and others
-//
 
 #include "ASIPmt.h"
 #include "ASITiger.h"
@@ -35,26 +33,16 @@
 #include <string>
 #include <vector>
 
-
-///////////////////////////////////////////////////////////////////////////////
-// CPMT
-//
 CPMT::CPMT(const char* name) :
-   ASIPeripheralBase< ::CSignalIOBase, CPMT >(name),
-   channel_(1),
-   channelAxisChar_('X'), 
-   axisLetter_(g_EmptyAxisLetterStr),
-   gain_(0),
-   avg_length_(0)
-{
-   //Figure out what channel we are on
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      channel_= GetChannelFromExtName(name);
-	   axisLetter_ = GetAxisLetterFromExtName(name);
-   }
+    ASIPeripheralBase< ::CSignalIOBase, CPMT >(name) {
+    // figure out what channel we are on
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        channel_= GetChannelFromExtName(name);
+        axisLetter_ = GetAxisLetterFromExtName(name);
+    }
 
-   //Pick AxisChar to use.
+    // select axis character
    switch(channel_)
    {
    case 1:
@@ -81,10 +69,11 @@ CPMT::CPMT(const char* name) :
    }
 }
 
-int CPMT::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CPMT::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    // create MM description; this doesn't work during hardware configuration wizard but will work afterwards
    std::ostringstream command;
@@ -208,7 +197,7 @@ int CPMT::UpdateAvg()
    replyprefix << ":" << axisLetter_ << "=";
    RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), replyprefix.str()) );
    RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
-   avg_length_ = tmp;
+   avgLength_ = tmp;
 
    return DEVICE_OK;
 }
@@ -302,15 +291,15 @@ int CPMT::OnAverage(MM::PropertyBase* pProp, MM::ActionType eAct)
    { //Query the controller for gain
       if (!refreshProps_ && initialized_)
          return DEVICE_OK;
-      UpdateAvg();  // will set avg_length_ 
-      if (!pProp->Set((long)avg_length_ ))
+      UpdateAvg(); // will set avgLength_
+      if (!pProp->Set((long)avgLength_ ))
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
    else if (eAct == MM::AfterSet) {
       pProp->Get(tmp);
       command << "E " << axisLetter_ << "=" << tmp;
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), ":A") );
-      avg_length_ = tmp;
+      avgLength_ = tmp;
    }
    return DEVICE_OK;
 }

@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASICLOCKED_H
-#define ASICLOCKED_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -32,49 +31,47 @@ public:
     explicit CClocked(const char* name);
     ~CClocked() = default;
 
-   // Generic device API
-   int Initialize();
-   bool Busy();
+    // Generic device API
+    int Initialize();
+    bool Busy();
 
-   // State device API
-   unsigned long GetNumberOfPositions() const { return numPositions_; }
+    // State device API
+    unsigned long GetNumberOfPositions() const { return numPositions_; }
 
-   // action interface
-   int OnState                (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnLabel                (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnSaveCardSettings     (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnRefreshProperties    (MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnJoystickSelect       (MM::PropertyBase* pProp, MM::ActionType eAct);
+    // action interface
+    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnLabel(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnJoystickSelect(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
     int OnSaveJoystickSettings();
 
-   unsigned int numPositions_;
-   unsigned int curPosition_;
+    unsigned int numPositions_ = 0; // will read actual number of positions
+    unsigned int curPosition_ = 0;  // will read actual position
 
 protected:
-   std::string axisLetter_;
+    std::string axisLetter_ = g_EmptyAxisLetterStr;
 };
 
 class CFSlider : public CClocked {
 public:
     explicit CFSlider(const char* name);
 
-   int Initialize();
+    int Initialize();
 };
 
 class CTurret : public CClocked {
 public:
     explicit CTurret(const char* name);
 
-   int Initialize();
+    int Initialize();
 };
 
 class CPortSwitch : public CClocked {
 public:
     explicit CPortSwitch(const char* name);
 
-   int Initialize();
+    int Initialize();
 };
-
-#endif // ASICLOCKED_H

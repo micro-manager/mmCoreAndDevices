@@ -18,7 +18,7 @@
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
-//				  Modified for Tunable lens by Vik (vik@asiimaging.com)	05/2017
+//                Modified for Tunable lens by Vik (vik@asiimaging.com)	05/2017
 //
 
 #include "ASILens.h"
@@ -34,31 +34,20 @@
 #include <string>
 #include <vector>
 
-
-///////////////////////////////////////////////////////////////////////////////
-// CLens
-//
 CLens::CLens(const char* name) :
-   ASIPeripheralBase< ::CStageBase, CLens >(name),
-   axisLetter_(g_EmptyAxisLetterStr),  // value determined by extended name
-   unitMult_(g_StageDefaultUnitMult),  // later will try to read actual setting
-   stepSizeUm_(g_StageMinStepSize),    // we'll use 1 nm as our smallest possible step size, this is somewhat arbitrary and doesn't change during the program
-   ring_buffer_supported_(false),
-   ring_buffer_capacity_(0),
-   ttl_trigger_supported_(false),
-   ttl_trigger_enabled_(false)
-{
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetter_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
-   }
+    ASIPeripheralBase< ::CStageBase, CLens >(name) {
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        axisLetter_ = GetAxisLetterFromExtName(name);
+        CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
+    }
 }
 
-int CLens::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CLens::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    // read the unit multiplier
    // ASI's unit multiplier is how many units per mm, so divide by 1000 here to get units per micron

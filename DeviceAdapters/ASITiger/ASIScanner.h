@@ -20,15 +20,13 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASISCANNER_H
-#define ASISCANNER_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CScanner : public ASIPeripheralBase<CGalvoBase, CScanner>
-{
+class CScanner : public ASIPeripheralBase<CGalvoBase, CScanner> {
 public:
     explicit CScanner(const char* name);
     ~CScanner() = default;
@@ -157,47 +155,45 @@ private:
     // Properties
     void CreateSingleAxisRiseTimeProperty(const char axisChar, std::string axisLetter);
 
-   std::string axisLetterX_;
-   std::string axisLetterY_;
-   double unitMultX_;  // units per degree
-   double unitMultY_;  // units per degree
-   double upperLimitX_;   // positive limit only (on power-up things are symmetric about 0)
-   double upperLimitY_;   // positive limit only (on power-up things are symmetric about 0)
-   double lowerLimitX_;   // negative limit (on power-up things are symmetric about 0)
-   double lowerLimitY_;   // negative limit (on power-up things are symmetric about 0)
-   double shutterX_; // home position, used to turn beam off (in degrees)
-   double shutterY_; // home position, used to turn beam off (in degrees)
-   double lastX_;    // used to cache position (in degrees)
-   double lastY_;    // used to cache position (in degrees)
-   bool illuminationState_;  // true if on, false if beam is turned off
-   bool mmTarget_;    // true iff MM_TARGET firmware in place for phototargeting
-   bool mmFastCircles_;   // true iff FAST_CIRCLES firmware in place (usually together with MM_TARGET)
-   bool laserTriggerPLogic_;  // true iff using PLogic for laser trigger (currently equivalent to LED Z=3 mode)
-   long targetExposure_;  // exposure time for targeting, stored locally
-   long targetSettling_;  // settling time for targeting, stored locally
-   unsigned int axisIndexX_;
-   unsigned int axisIndexY_;
+    std::string axisLetterX_ = g_EmptyAxisLetterStr; // value determined by extended name
+    std::string axisLetterY_ = g_EmptyAxisLetterStr; // value determined by extended name
+    double unitMultX_ = g_ScannerDefaultUnitMult;  // units per degree, later will try to read actual setting
+    double unitMultY_ = g_ScannerDefaultUnitMult;  // units per degree, later will try to read actual setting
+    double upperLimitX_ = 0; // positive limit only (on power-up things are symmetric about 0), later will try to read actual setting
+    double upperLimitY_ = 0; // positive limit only (on power-up things are symmetric about 0), later will try to read actual setting
+    double lowerLimitX_ = 0; // negative limit (on power-up things are symmetric about 0), later will try to read actual setting
+    double lowerLimitY_ = 0; // negative limit (on power-up things are symmetric about 0), later will try to read actual setting
+    double shutterX_ = 0; // home position, used to turn beam off (in degrees)
+    double shutterY_ = 0; // home position, used to turn beam off (in degrees)
+    double lastX_ = 0; // used to cache position (in degrees)
+    double lastY_ = 0; // used to cache position (in degrees)
+    bool illuminationState_ = true; // true if on, false if beam is turned off
+    bool mmTarget_ = false; // true iff MM_TARGET firmware in place for phototargeting
+    bool mmFastCircles_ = false; // true iff FAST_CIRCLES firmware in place (usually together with MM_TARGET)
+    bool laserTriggerPLogic_ = false; // true iff using PLogic for laser trigger (currently equivalent to LED Z=3 mode)
+    long targetExposure_ = 0;  // exposure time for targeting, stored locally
+    long targetSettling_ = 5; // settling time for targeting, stored locally
+    unsigned int axisIndexX_ = 0;
+    unsigned int axisIndexY_ = 1;
 
    struct SingleAxisState {
-      long mode;
-      long pattern;
+      long mode = -1;
+      long pattern = -1;
    };
 
-   SingleAxisState saStateX_;
-   SingleAxisState saStateY_;
+   SingleAxisState saStateX_{};
+   SingleAxisState saStateY_{};
 
    // for polygons
-   std::vector<std::pair<double,double> > polygons_;
-   long polygonRepetitions_;
-   bool ring_buffer_supported_;
+   std::vector<std::pair<double, double>> polygons_{};
+   long polygonRepetitions_ = 0;
+   bool ring_buffer_supported_ = false;
 
-   unsigned char laser_side_;  // code for corresponding laser line: 0 for none, 1 for side0, 2 for side1
-   bool laserTTLenabled_;      // whether it has MM_LASER_TTL module
+   unsigned char laser_side_ = 0; // code for corresponding laser line: 0 for none, 1 for side0, 2 for side1
+   bool laserTTLenabled_ = false; // whether it has MM_LASER_TTL module
 
-   bool fastCirclesOn_;
+   bool fastCirclesOn_ = false;
 
-   bool dac4ch_;
-   bool signalDAC_;
+   bool dac4ch_ = false;
+   bool signalDAC_ = false;
 };
-
-#endif // ASISCANNER_H
