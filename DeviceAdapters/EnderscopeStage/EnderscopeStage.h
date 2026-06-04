@@ -17,6 +17,9 @@
 extern const char* g_EnderscopeXYStageDeviceName;
 extern const char* g_EnderscopeZStageDeviceName;
 
+// Device adapter custom error codes (>= 10000 by MM convention)
+constexpr int ERR_PORT_CHANGE_FORBIDDEN = 10004;
+
 class EnderscopeBase
 {
 public:
