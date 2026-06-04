@@ -4,7 +4,7 @@
 // SUBSYSTEM:     DeviceAdapters
 //
 // DESCRIPTION:   Enderscope Stage adapter (Marlin/Enderscope-compatible)
-//                Inspired by adapter structure used in Marzhauser-LStep.
+//                Adapted in spirit from the Marzhauser-LStep adapter shape.
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifndef _ENDERSCOPE_STAGE_H_
@@ -40,7 +40,6 @@ protected:
 protected:
    bool initialized_;
    std::string port_;
-   long baudRate_;
    long readTimeoutMs_;
 
    MM::Device* device_;
@@ -81,7 +80,6 @@ public:
    double GetStepSizeYUm() override { return stepSizeYUm_; }
 
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnBaudRate(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnReadTimeout(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnStepSizeX(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnStepSizeY(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -130,7 +128,6 @@ public:
    bool IsContinuousFocusDrive() const override { return false; }
 
    int OnPort(MM::PropertyBase* pProp, MM::ActionType eAct);
-   int OnBaudRate(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnReadTimeout(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnStepSize(MM::PropertyBase* pProp, MM::ActionType eAct);
 

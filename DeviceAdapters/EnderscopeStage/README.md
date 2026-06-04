@@ -21,7 +21,7 @@ This directory contains a new Micro-Manager device adapter that follows the stru
 - `SetPositionUm(...)` -> `G90` then `G0 ...` then `M400`
 - `SetRelativePositionUm(...)` -> `G91` then `G0 ...` then `M400`
 - `GetPosition...` -> `M114` (parses `X:.. Y:.. Z:..`)
-- `Home()` -> `G28 X Y` / `G28 Z` (fallback `G28`) then `M400`
+- `Home()` -> `G28 X Y` (XY stage) / `G28 Z` (Z stage) then `M400`
 - `Stop()` -> `M410`
 
 All stage coordinates are converted between Micro-Manager um and Enderscope mm.
@@ -29,13 +29,18 @@ All stage coordinates are converted between Micro-Manager um and Enderscope mm.
 ## Pre-initialization Properties
 
 - `Port` (serial port)
-- `BaudRate` (default `115200`)
 - `ReadTimeoutMs` (default `1000`)
+
+The serial baud rate is configured on the COM port device itself (its own
+`BaudRate` property), not on the stage device. Set the port to match the
+controller (typically `115200`).
 
 ## Notes
 
 - Adapter currently reports unbounded limits.
 - Adapter uses synchronous motion (`M400`) and returns `Busy() == false`.
+- `Home()` homes only the axes owned by each device; it never falls back to a
+  full `G28` home-all, so the XY device never moves Z and vice versa.
 - To compile in `mmCoreAndDevices`, place this folder under `DeviceAdapters/` and add it to that repository's build configuration (CMake or VS project lists, depending on platform/build system).
 
 ## References

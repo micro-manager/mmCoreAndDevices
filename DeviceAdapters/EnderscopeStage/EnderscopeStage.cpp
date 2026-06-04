@@ -28,20 +28,16 @@
 #include <sstream>
 #include <vector>
 
-using namespace std;
-
 const char* g_EnderscopeXYStageDeviceName = "EnderscopeXYStage";
 const char* g_EnderscopeZStageDeviceName = "EnderscopeZStage";
 
 namespace
 {
-const long kDefaultBaudRate = 115200;
 const long kDefaultReadTimeoutMs = 1000;
 const double kDefaultStepSizeUm = 1.0;
 
 const char* kGCodeAbsolute = "G90";
 const char* kGCodeRelative = "G91";
-const char* kGCodeHomeAll = "G28";
 const char* kGCodeHomeXY = "G28 X Y";
 const char* kGCodeHomeZ = "G28 Z";
 const char* kGCodeFinish = "M400";
@@ -88,7 +84,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 EnderscopeBase::EnderscopeBase(MM::Device* device)
    : initialized_(false),
      port_("Undefined"),
-     baudRate_(kDefaultBaudRate),
      readTimeoutMs_(kDefaultReadTimeoutMs),
      device_(device),
      core_(0)
@@ -119,7 +114,8 @@ int EnderscopeBase::CheckDeviceStatus()
       return ret;
    }
 
-   initialized_ = true;
+   // initialized_ is set only at the end of Initialize(), not here, so a
+   // failure during property creation does not leave the device half-initialized.
    return DEVICE_OK;
 }
 
@@ -134,8 +130,11 @@ int EnderscopeBase::ClearPort()
    unsigned char clear[bufSize];
    unsigned long read = bufSize;
 
+   // Cap the number of drain iterations so a device that streams continuously
+   // (e.g. Marlin auto-reporting from M155) cannot trap us in an unbounded loop.
+   const int maxIterations = 100;
    int ret = DEVICE_OK;
-   while (static_cast<int>(read) == bufSize)
+   for (int i = 0; static_cast<int>(read) == bufSize && i < maxIterations; ++i)
    {
       ret = core_->ReadFromSerial(device_, port_.c_str(), clear, bufSize, read);
       if (ret != DEVICE_OK)
@@ -188,6 +187,11 @@ int EnderscopeBase::CommandExpectOk(const std::string& command) const
       return ret;
    }
 
+   // The number of read attempts is a coarse bound derived from ReadTimeoutMs,
+   // assuming each GetSerialAnswer call returns in roughly 10 ms. The real
+   // per-read timeout is enforced by the serial port's own AnswerTimeout
+   // setting; this loop only limits how many lines we are willing to skip
+   // (e.g. blank lines or Marlin auto-reports) while waiting for "ok".
    const long maxReads = std::max(1L, readTimeoutMs_ / 10L);
    for (long i = 0; i < maxReads; ++i)
    {
@@ -212,6 +216,12 @@ int EnderscopeBase::CommandExpectOk(const std::string& command) const
    return DEVICE_SERIAL_TIMEOUT;
 }
 
+// Queries the current position with M114. The expected Marlin reply is a single
+// data line of the form:
+//    X:0.00 Y:0.00 Z:0.00 E:0.00 Count X:0 Y:0 Z:0
+// followed by an "ok". Only the leading work-coordinate fields (the first "X:",
+// "Y:", "Z:") are parsed; the trailing "Count ..." stepper section is ignored
+// because ParseAxisValue matches the first occurrence of each axis key.
 int EnderscopeBase::QueryPositionMm(double& x, double& y, double& z) const
 {
    int ret = SendCommand(kGCodePosition);
@@ -259,6 +269,14 @@ int EnderscopeBase::QueryPositionMm(double& x, double& y, double& z) const
    if (!sawDataLine || !sawOk)
    {
       return DEVICE_SERIAL_INVALID_RESPONSE;
+   }
+
+   // Drop the trailing "Count ..." stepper section so its per-axis fields can
+   // never be mistaken for the work coordinates we want.
+   const size_t countPos = dataLine.find("Count");
+   if (countPos != std::string::npos)
+   {
+      dataLine = dataLine.substr(0, countPos);
    }
 
    if (!ParseAxisValue(dataLine, 'X', x) || !ParseAxisValue(dataLine, 'Y', y) || !ParseAxisValue(dataLine, 'Z', z))
@@ -334,13 +352,8 @@ EnderscopeXYStage::EnderscopeXYStage()
    CPropertyAction* pAct = new CPropertyAction(this, &EnderscopeXYStage::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
 
-   pAct = new CPropertyAction(this, &EnderscopeXYStage::OnBaudRate);
-   CreateProperty("BaudRate", CDeviceUtils::ConvertToString(baudRate_), MM::Integer, false, pAct, true);
-
-   AddAllowedValue("BaudRate", "9600");
-   AddAllowedValue("BaudRate", "57600");
-   AddAllowedValue("BaudRate", "115200");
-   AddAllowedValue("BaudRate", "250000");
+   // Note: the serial baud rate is configured on the COM port device itself
+   // (the port's own BaudRate property), not here.
 
    pAct = new CPropertyAction(this, &EnderscopeXYStage::OnReadTimeout);
    CreateProperty("ReadTimeoutMs", CDeviceUtils::ConvertToString(readTimeoutMs_), MM::Integer, false, pAct, true);
@@ -399,6 +412,8 @@ int EnderscopeXYStage::Shutdown()
 
 bool EnderscopeXYStage::Busy()
 {
+   // Motion is synchronous: SetPosition... blocks on M400 ("ok") until the move
+   // completes, so the device is never busy by the time control returns.
    return false;
 }
 
@@ -410,7 +425,7 @@ int EnderscopeXYStage::SetAbsoluteMm(double xMm, double yMm)
       return ret;
    }
 
-   ostringstream cmd;
+   std::ostringstream cmd;
    cmd << "G0 X " << xMm << " Y " << yMm;
    ret = CommandExpectOk(cmd.str());
    if (ret != DEVICE_OK)
@@ -429,7 +444,7 @@ int EnderscopeXYStage::SetRelativeMm(double dxMm, double dyMm)
       return ret;
    }
 
-   ostringstream cmd;
+   std::ostringstream cmd;
    cmd << "G0 X " << dxMm << " Y " << dyMm;
    ret = CommandExpectOk(cmd.str());
    if (ret != DEVICE_OK)
@@ -522,14 +537,12 @@ int EnderscopeXYStage::SetRelativePositionSteps(long x, long y)
 
 int EnderscopeXYStage::Home()
 {
+   // Home only X and Y here. We deliberately do not fall back to "home all"
+   // (G28) on failure: this is the XY device and must never move the Z axis.
    int ret = CommandExpectOk(kGCodeHomeXY);
    if (ret != DEVICE_OK)
    {
-      ret = CommandExpectOk(kGCodeHomeAll);
-      if (ret != DEVICE_OK)
-      {
-         return ret;
-      }
+      return ret;
    }
 
    ret = CommandExpectOk(kGCodeFinish);
@@ -622,25 +635,6 @@ int EnderscopeXYStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
    return DEVICE_OK;
 }
 
-int EnderscopeXYStage::OnBaudRate(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(baudRate_);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      if (initialized_)
-      {
-         pProp->Set(baudRate_);
-         return DEVICE_CAN_NOT_SET_PROPERTY;
-      }
-      pProp->Get(baudRate_);
-   }
-
-   return DEVICE_OK;
-}
-
 int EnderscopeXYStage::OnReadTimeout(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
    if (eAct == MM::BeforeGet)
@@ -718,13 +712,8 @@ EnderscopeZStage::EnderscopeZStage()
    CPropertyAction* pAct = new CPropertyAction(this, &EnderscopeZStage::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
 
-   pAct = new CPropertyAction(this, &EnderscopeZStage::OnBaudRate);
-   CreateProperty("BaudRate", CDeviceUtils::ConvertToString(baudRate_), MM::Integer, false, pAct, true);
-
-   AddAllowedValue("BaudRate", "9600");
-   AddAllowedValue("BaudRate", "57600");
-   AddAllowedValue("BaudRate", "115200");
-   AddAllowedValue("BaudRate", "250000");
+   // Note: the serial baud rate is configured on the COM port device itself
+   // (the port's own BaudRate property), not here.
 
    pAct = new CPropertyAction(this, &EnderscopeZStage::OnReadTimeout);
    CreateProperty("ReadTimeoutMs", CDeviceUtils::ConvertToString(readTimeoutMs_), MM::Integer, false, pAct, true);
@@ -776,6 +765,8 @@ int EnderscopeZStage::Shutdown()
 
 bool EnderscopeZStage::Busy()
 {
+   // Motion is synchronous: SetPosition... blocks on M400 ("ok") until the move
+   // completes, so the device is never busy by the time control returns.
    return false;
 }
 
@@ -787,7 +778,7 @@ int EnderscopeZStage::SetAbsoluteMm(double zMm)
       return ret;
    }
 
-   ostringstream cmd;
+   std::ostringstream cmd;
    cmd << "G0 Z " << zMm;
    ret = CommandExpectOk(cmd.str());
    if (ret != DEVICE_OK)
@@ -806,7 +797,7 @@ int EnderscopeZStage::SetRelativeMm(double dzMm)
       return ret;
    }
 
-   ostringstream cmd;
+   std::ostringstream cmd;
    cmd << "G0 Z " << dzMm;
    ret = CommandExpectOk(cmd.str());
    if (ret != DEVICE_OK)
@@ -886,14 +877,12 @@ int EnderscopeZStage::Stop()
 
 int EnderscopeZStage::Home()
 {
+   // Home only Z here. We deliberately do not fall back to "home all" (G28)
+   // on failure: this is the Z device and must never move the X/Y axes.
    int ret = CommandExpectOk(kGCodeHomeZ);
    if (ret != DEVICE_OK)
    {
-      ret = CommandExpectOk(kGCodeHomeAll);
-      if (ret != DEVICE_OK)
-      {
-         return ret;
-      }
+      return ret;
    }
 
    ret = CommandExpectOk(kGCodeFinish);
@@ -958,25 +947,6 @@ int EnderscopeZStage::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
          return ERR_PORT_CHANGE_FORBIDDEN;
       }
       pProp->Get(port_);
-   }
-
-   return DEVICE_OK;
-}
-
-int EnderscopeZStage::OnBaudRate(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(baudRate_);
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      if (initialized_)
-      {
-         pProp->Set(baudRate_);
-         return DEVICE_CAN_NOT_SET_PROPERTY;
-      }
-      pProp->Get(baudRate_);
    }
 
    return DEVICE_OK;
