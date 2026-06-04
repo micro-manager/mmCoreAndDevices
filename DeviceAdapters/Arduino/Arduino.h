@@ -302,15 +302,20 @@ class ArduinoInputMonitorThread : public MMDeviceThreadBase
 
       void Start();
       void Stop() {stop_ = true;}
-      ArduinoInputMonitorThread & operator=( const ArduinoInputMonitorThread & ) 
-      {
-         return *this;
-      }
+
+      // Holds a reference member (aInput_), so it cannot be sensibly copied
+      // or assigned; the previous no-op operator= silently did nothing.
+      ArduinoInputMonitorThread(const ArduinoInputMonitorThread&) = delete;
+      ArduinoInputMonitorThread& operator=(const ArduinoInputMonitorThread&) = delete;
 
 
    private:
+      // Number of analog input pins we track state for. Must be at least as
+      // large as the highest analog input pin index used by any supported
+      // firmware; the svc() loop bounds its index against this.
+      static const int g_NumAnalogStates = 6;
       long state_;
-      long analogState_[6];
+      long analogState_[g_NumAnalogStates];
       CArduinoInput& aInput_;
       std::mutex mutex_;
       bool stop_;
