@@ -883,8 +883,12 @@ int CArduinoSwitch::OnState(MM::PropertyBase* pProp, MM::ActionType eAct)
          std::istringstream is (sequence[i]);
          // Parse as an integer: reading into an unsigned char would store
          // the first character (e.g. '4' = 0x34) instead of the value 4.
+         // Validate: reject non-numeric input (which would silently stay 0),
+         // trailing garbage, and values that don't fit in a single byte.
          unsigned int val = 0;
          is >> val;
+         if (is.fail() || !(is >> std::ws).eof() || val > 255)
+            return DEVICE_INVALID_PROPERTY_VALUE;
          seq[i] = (unsigned char) val;
       }
       // Note: LoadSequence calls hub_->GetLock()
@@ -1287,7 +1291,7 @@ int CArduinoDA::Initialize()
    // Refuse to initialize a DA device for a channel the firmware does not
    // expose (e.g. DAC3-8 on an original Arduino that reports 2 channels).
    if (channel_ < 1 || (unsigned) channel_ > maxChannel_)
-      return ERR_UNKNOWN_POSITION;
+      return DEVICE_INVALID_PROPERTY_VALUE;
 
    // set property list
    // -----------------
@@ -1357,7 +1361,7 @@ int CArduinoDA::WriteToPort(unsigned long value)
 int CArduinoDA::WriteSignal(double volts)
 {
    if (maxV_ <= 0.0)
-      return ERR_UNKNOWN_POSITION;
+      return DEVICE_INVALID_PROPERTY_VALUE;
 
    long value = (long) ( (volts - minV_) / maxV_ * 4095);
 
@@ -1425,9 +1429,13 @@ int CArduinoDA::OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct)
       double maxV;
       pProp->Get(maxV);
       // A zero (or negative) max voltage would cause a divide-by-zero in
-      // WriteSignal; reject it and keep the previous value.
+      // WriteSignal; reject it, restore the previous value on the property,
+      // and report a standard invalid-value error.
       if (maxV <= 0.0)
-         return ERR_UNKNOWN_POSITION;
+      {
+         pProp->Set(maxV_);
+         return DEVICE_INVALID_PROPERTY_VALUE;
+      }
       maxV_ = maxV;
       if (HasProperty("Volts"))
          SetPropertyLimits("Volts", 0.0, maxV_);
@@ -1819,7 +1827,7 @@ int CArduinoInput::GetAnalogInput(long channel, long* value)
    // channel is sent as a single byte; reject out-of-range values rather
    // than silently truncating them onto the wire.
    if (channel < 0 || channel > 255)
-      return ERR_UNKNOWN_POSITION;
+      return DEVICE_INVALID_INPUT_PARAM;
 
    const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
@@ -1888,7 +1896,7 @@ int CArduinoInput::OnAnalogInput(MM::PropertyBase* pProp, MM::ActionType eAct, l
    {
       // channel is sent as a single byte; reject out-of-range values.
       if (channel < 0 || channel > 255)
-         return ERR_UNKNOWN_POSITION;
+         return DEVICE_INVALID_INPUT_PARAM;
 
       const std::lock_guard<std::mutex> lock(hub_->GetLock());
 
