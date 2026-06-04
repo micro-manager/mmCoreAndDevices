@@ -542,9 +542,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThorlabsTSP01", "DeviceAdap
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpinnakerC", "DeviceAdapters\SpinnakerC\SpinnakerC.vcxproj", "{4DEE8237-EF6F-426A-9DED-1909B6F3B18D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NikonAZ100SDK", "SecretDeviceAdapters\NikonAZ100SDK\NikonAZ100SDK.vcxproj", "{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EndersccopeStage", "DeviceAdapters\EnderscopeStage\EnderscopeStage.vcxproj", "{2e5b103b-0d6f-4d73-9309-0ecb807a5154}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EnderscopeStage", "DeviceAdapters\EnderscopeStage\EnderscopeStage.vcxproj", "{2e5b103b-0d6f-4d73-9309-0ecb807a5154}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1632,10 +1630,6 @@ Global
 		{4DEE8237-EF6F-426A-9DED-1909B6F3B18D}.Debug|x64.Build.0 = Debug|x64
 		{4DEE8237-EF6F-426A-9DED-1909B6F3B18D}.Release|x64.ActiveCfg = Release|x64
 		{4DEE8237-EF6F-426A-9DED-1909B6F3B18D}.Release|x64.Build.0 = Release|x64
-		{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}.Debug|x64.ActiveCfg = Debug|x64
-		{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}.Debug|x64.Build.0 = Debug|x64
-		{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}.Release|x64.ActiveCfg = Release|x64
-		{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}.Release|x64.Build.0 = Release|x64
 		{2e5b103b-0d6f-4d73-9309-0ecb807a5154}.Debug|x64.ActiveCfg = Debug|x64
 		{2e5b103b-0d6f-4d73-9309-0ecb807a5154}.Debug|x64.Build.0 = Debug|x64
 		{2e5b103b-0d6f-4d73-9309-0ecb807a5154}.Release|x64.ActiveCfg = Release|x64
