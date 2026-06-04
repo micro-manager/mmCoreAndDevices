@@ -8,6 +8,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifdef WIN32
+// Prevent windows.h (pulled in transitively) from defining min/max macros,
+// which break std::min/std::max.
+#define NOMINMAX
 #pragma warning(disable : 4355)
 #endif
 
