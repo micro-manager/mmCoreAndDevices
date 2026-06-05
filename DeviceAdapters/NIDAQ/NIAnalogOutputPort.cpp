@@ -346,6 +346,61 @@ int NIAnalogOutputPort::OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (err != DEVICE_OK)
          return err;
    }
+   else if (eAct == MM::IsSequenceable)
+   {
+      // Initialize to false: IsDASequenceable leaves the out-param
+      // untouched when neverSequenceable_ is set.
+      bool isSeq = false;
+      int err = IsDASequenceable(isSeq);
+      if (err != DEVICE_OK)
+         return err;
+      long maxLen = 0;
+      if (isSeq)
+      {
+         err = GetDASequenceMaxLength(maxLen);
+         if (err != DEVICE_OK)
+            return err;
+      }
+      pProp->SetSequenceable(isSeq ? maxLen : 0);
+   }
+   else if (eAct == MM::AfterLoadSequence)
+   {
+      std::vector<std::string> sequence = pProp->GetSequence();
+      int err = ClearDASequence();
+      if (err != DEVICE_OK)
+         return err;
+      for (std::vector<std::string>::const_iterator it = sequence.begin(),
+         end = sequence.end(); it != end; ++it)
+      {
+         double volts;
+         try
+         {
+            volts = std::stod(*it);
+         }
+         catch (const std::exception&)
+         {
+            return DEVICE_ERR;
+         }
+         err = AddToDASequence(volts);
+         if (err != DEVICE_OK)
+            return err;
+      }
+      err = SendDASequence();
+      if (err != DEVICE_OK)
+         return err;
+   }
+   else if (eAct == MM::StartSequence)
+   {
+      int err = StartDASequence();
+      if (err != DEVICE_OK)
+         return err;
+   }
+   else if (eAct == MM::StopSequence)
+   {
+      int err = StopDASequence();
+      if (err != DEVICE_OK)
+         return err;
+   }
    return DEVICE_OK;
 }
 
