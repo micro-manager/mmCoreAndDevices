@@ -116,7 +116,7 @@ private:
 	int ReadAllChannelRegisters();
 	int ReadDeviceStateByMode(int mode);
 	void UpdatePropertiesFromDevice();
-	uint16_t CalculateCRC(const uint8_t* data, int length);
+	uint16_t CalculateCRC(const uint8_t* data, size_t length);
 	int SendModbusCommand(const std::vector<uint8_t>& request, std::vector<uint8_t>& response, int expectedResponseLength);
 };
 

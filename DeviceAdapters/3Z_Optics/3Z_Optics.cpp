@@ -15,6 +15,19 @@
 
 using namespace std;
 
+#define MODE_ADDR 0x20
+#define CH1_INTENSITY_ADDR 0x31
+#define CH1_SWITCH_ADDR 0x31
+#define GLOBAL_INTENSITY_ADDR 0x30
+#define GLOBAL_SWITCH_ADDR 0x30
+
+enum
+{
+    MODE_GLOBAL = 1,
+    MODE_INDEPENDENT,
+    MODE_TTL
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Static member initialization
 ///////////////////////////////////////////////////////////////////////////////
@@ -76,6 +89,8 @@ int PollingThread::svc(void)
 
 void PollingThread::Start()
 {
+    // when thread is restarted, make sure to reset the stop flag
+    stop_ = false;
     activate();
 }
 
@@ -130,13 +145,13 @@ bool Controller::Busy()
     return false;
 }
 
-uint16_t Controller::CalculateCRC(const uint8_t* data, int length)
+uint16_t Controller::CalculateCRC(const uint8_t* data, size_t length)
 {
     uint16_t crc = 0xFFFF;
-    for (int i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
         crc ^= (uint16_t)data[i];
-        for (int j = 0; j < 8; j++)
+        for (size_t j = 0; j < 8; j++)
         {
             if (crc & 0x0001)
             {
@@ -462,7 +477,7 @@ int readInteger(ifstream& file)
 
     while (file.get(c))
     {
-        if (isdigit(c))
+        if (isdigit(static_cast<unsigned char>(c)))
         {
             result += c;
         }
@@ -695,7 +710,7 @@ int Controller::Initialize()
     }
 
     // Create Name and Description properties with device name
-    CreateStringProperty(MM::g_Keyword_Name, currentDevice_.name.c_str(), false);
+    CreateStringProperty(MM::g_Keyword_Name, currentDevice_.name.c_str(), true);
     string desc = "3Z Optics " + currentDevice_.name;
     CreateStringProperty(MM::g_Keyword_Description, desc.c_str(), true);
 
@@ -748,7 +763,7 @@ int Controller::Initialize()
     pAct = new CPropertyAction(this, &Controller::OnMode);
     CreateProperty("Mode", "Global", MM::String, false, pAct);
     AddAllowedValue("Mode", "Global");
-    AddAllowedValue("Mode", "independent");
+    AddAllowedValue("Mode", "Independent");
     AddAllowedValue("Mode", "TTL");
 
     // Refresh property - manual refresh button
@@ -763,6 +778,8 @@ int Controller::Initialize()
     ret = ReadCurrentDeviceState();
     if (ret != DEVICE_OK)
     {
+        initializationInProgress_ = false;
+        return ret;
     }
 
     // Update all properties with initial values
@@ -801,23 +818,29 @@ int Controller::Shutdown()
 
 int Controller::SetOpen(bool open)
 {
+    MMThreadGuard guard(GetLock());
+
     // Skip writing to hardware during initialization
     if (initializationInProgress_)
     {
         shutterState_ = open;
-        globalSwitch_ = open;
+        if (currentMode_ == MODE_GLOBAL)
+        {
+            globalSwitch_ = open;
+        }
+
         return DEVICE_OK;
     }
 
     if (open)
     {
         shutterState_ = true;
-        globalSwitch_ = true;
 
         // Turn on global switch
-        if (currentMode_==1)
+        if (currentMode_ == MODE_GLOBAL)
         {
-            int ret = WriteSingleCoil(0x30, true);
+            globalSwitch_ = true;
+            int ret = WriteSingleCoil(GLOBAL_SWITCH_ADDR, true);
             if (ret != DEVICE_OK)
             {
                 shutterState_ = false;
@@ -837,12 +860,16 @@ int Controller::SetOpen(bool open)
 
 int Controller::GetOpen(bool& open)
 {
+    MMThreadGuard guard(GetLock());
+
     open = shutterState_;
     return DEVICE_OK;
 }
 
 int Controller::ApplyChannelStates()
 {
+    MMThreadGuard guard(GetLock());
+
     // Skip writing to hardware during initialization
     if (initializationInProgress_)
     {
@@ -852,7 +879,7 @@ int Controller::ApplyChannelStates()
     for (size_t i = 0; i < channelStates_.size(); i++)
     {
         // Set channel switch state with coil
-        int ret = WriteSingleCoil(0x31 + (int)i, channelStates_[i] && shutterState_);
+        int ret = WriteSingleCoil(CH1_SWITCH_ADDR + (int)i, channelStates_[i] && shutterState_);
         if (ret != DEVICE_OK)
             return ret;
     }
@@ -861,6 +888,8 @@ int Controller::ApplyChannelStates()
 
 int Controller::TurnAllOff()
 {
+    MMThreadGuard guard(GetLock());
+
     // Skip writing to hardware during initialization
     if (initializationInProgress_)
     {
@@ -876,15 +905,15 @@ int Controller::TurnAllOff()
     for (size_t i = 0; i < channels_.size(); i++)
     {
         // Turn off channel with coil
-        int ret = WriteSingleCoil(0x31 + (int)i, false);
+        int ret = WriteSingleCoil(CH1_SWITCH_ADDR + (int)i, false);
         if (ret != DEVICE_OK)
             return ret;
     }
 
     // Turn off global switch with coil
-    if (currentMode_ == 1)
+    if (currentMode_ == MODE_GLOBAL)
     {
-        int ret = WriteSingleCoil(0x30, false);
+        int ret = WriteSingleCoil(GLOBAL_SWITCH_ADDR, false);
         if (ret != DEVICE_OK)
             return ret;
     }
@@ -896,19 +925,21 @@ int Controller::TurnAllOff()
 
 int Controller::ReadDeviceStateByMode(int mode)
 {
+    MMThreadGuard guard(GetLock());
+
     int ret = DEVICE_OK;
 
     if (mode == 1) // Global mode
     {
         // Read global switch (coil 0x30) and global intensity (register 0x30)
         bool globalSwitch = false;
-        ret = ReadSingleCoil(0x30, globalSwitch);
+        ret = ReadSingleCoil(GLOBAL_SWITCH_ADDR, globalSwitch);
         if (ret != DEVICE_OK) return ret;
         globalSwitch_ = globalSwitch;
         shutterState_ = globalSwitch;
 
         uint16_t globalIntensity = 0;
-        ret = ReadHoldingRegister(0x30, globalIntensity);
+        ret = ReadHoldingRegister(GLOBAL_INTENSITY_ADDR, globalIntensity);
         if (ret != DEVICE_OK) return ret;
         globalIntensity_ = (int)globalIntensity;
     }
@@ -920,7 +951,7 @@ int Controller::ReadDeviceStateByMode(int mode)
         {
             // Read all channel coils at once
             std::vector<bool> coilValues;
-            ret = ReadMultipleCoils(0x31, channelCount, coilValues);
+            ret = ReadMultipleCoils(CH1_SWITCH_ADDR, channelCount, coilValues);
             if (ret != DEVICE_OK) return ret;
             for (int i = 0; i < channelCount; i++)
             {
@@ -929,7 +960,7 @@ int Controller::ReadDeviceStateByMode(int mode)
 
             // Read all channel registers at once
             std::vector<uint16_t> regValues;
-            ret = ReadMultipleHoldingRegisters(0x31, channelCount, regValues);
+            ret = ReadMultipleHoldingRegisters(CH1_INTENSITY_ADDR, channelCount, regValues);
             if (ret != DEVICE_OK) return ret;
             for (int i = 0; i < channelCount; i++)
             {
@@ -943,18 +974,22 @@ int Controller::ReadDeviceStateByMode(int mode)
 
 int Controller::ReadCurrentDeviceState()
 {
+    MMThreadGuard guard(GetLock());
+
     // Read Mode (register 0x20)
     uint16_t modeVal = 0;
     int ret = ReadHoldingRegister(0x20, modeVal);
     if (ret != DEVICE_OK) return ret;
     currentMode_ = (int)modeVal;
     string modeStr;
-    if (currentMode_ == 1)
+    if (currentMode_ == MODE_GLOBAL)
         modeStr = "Global";
-    else if (currentMode_ == 2)
-        modeStr = "independent";
-    else
+    else if (currentMode_ == MODE_INDEPENDENT)
+        modeStr = "Independent";
+    else if (currentMode_ == MODE_TTL)
         modeStr = "TTL";
+    //else
+    //    return DEVICE_ERR;
 
     // Read based on current mode
     ret = ReadDeviceStateByMode(currentMode_);
@@ -985,6 +1020,8 @@ int Controller::ReadCurrentDeviceState()
 
 int Controller::SetIntensity(int channel, int intensity)
 {
+    MMThreadGuard guard(GetLock());
+
     if (channel < 0 || channel >= (int)channelIntensities_.size())
         return DEVICE_ERR;
 
@@ -992,7 +1029,7 @@ int Controller::SetIntensity(int channel, int intensity)
 
     if (shutterState_ && channelStates_[channel])
     {
-        return WriteHoldingRegister(channel, (uint16_t)intensity);
+        return WriteHoldingRegister(CH1_INTENSITY_ADDR + channel, (uint16_t)intensity);
     }
     return DEVICE_OK;
 }
@@ -1003,6 +1040,8 @@ int Controller::SetIntensity(int channel, int intensity)
 
 int Controller::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    MMThreadGuard guard(GetLock());
+
     if (eAct == MM::BeforeGet)
     {
         pProp->Set(port_.c_str());
@@ -1021,14 +1060,16 @@ int Controller::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int Controller::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    MMThreadGuard guard(GetLock());
+
     if (eAct == MM::BeforeGet)
     {
         string modeStr;
-        if (currentMode_ == 1)
+        if (currentMode_ == MODE_GLOBAL)
             modeStr = "Global";
-        else if (currentMode_ == 2)
-            modeStr = "independent";
-        else
+        else if (currentMode_ == MODE_INDEPENDENT)
+            modeStr = "Independent";
+        else if (currentMode_ == MODE_TTL)
             modeStr = "TTL";
         pProp->Set(modeStr.c_str());
         modeUpdated_ = false;
@@ -1047,7 +1088,7 @@ int Controller::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
         int newModeValue = 1;
         if (newMode == "Global")
             newModeValue = 1;
-        else if (newMode == "independent")
+        else if (newMode == "Independent")
             newModeValue = 2;
         else if (newMode == "TTL")
             newModeValue = 3;
@@ -1063,7 +1104,7 @@ int Controller::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
             if (originalMode == 1)
                 originalModeStr = "Global";
             else if (originalMode == 2)
-                originalModeStr = "independent";
+                originalModeStr = "Independent";
             else if (originalMode == 3)
                 originalModeStr = "TTL";
             pProp->Set(originalModeStr.c_str());
@@ -1085,6 +1126,8 @@ int Controller::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int Controller::OnChannelSwitch(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    MMThreadGuard guard(GetLock());
+
     string propName = pProp->GetName();
     int index = -1;
     auto it = channelSwitchLookup_.find(propName);
@@ -1120,7 +1163,7 @@ int Controller::OnChannelSwitch(MM::PropertyBase* pProp, MM::ActionType eAct)
         channelStates_[index] = newState;
 
         // Send channel switch state to coil (address 0x31 + index)
-        int ret = WriteSingleCoil(0x31 + index, newState);
+        int ret = WriteSingleCoil(CH1_SWITCH_ADDR + index, newState && shutterState_);
         if (ret != DEVICE_OK)
         {
             // Send failed, roll back
@@ -1134,6 +1177,8 @@ int Controller::OnChannelSwitch(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int Controller::OnChannelIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    MMThreadGuard guard(GetLock());
+
     string propName = pProp->GetName();
     int index = -1;
     auto it = channelIntensityLookup_.find(propName);
@@ -1175,7 +1220,7 @@ int Controller::OnChannelIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
         channelIntensities_[index] = newIntensity;
 
         // Always send to device regardless of channel switch state
-        int ret = WriteHoldingRegister(0x31 + index, (uint16_t)newIntensity);
+        int ret = WriteHoldingRegister(CH1_INTENSITY_ADDR + index, (uint16_t)newIntensity);
         if (ret != DEVICE_OK)
         {
             // Send failed, roll back
@@ -1189,6 +1234,8 @@ int Controller::OnChannelIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int Controller::OnGlobalSwitch(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    MMThreadGuard guard(GetLock());
+
     if (eAct == MM::BeforeGet)
     {
         pProp->Set(globalSwitch_ ? "on" : "off");
@@ -1212,9 +1259,9 @@ int Controller::OnGlobalSwitch(MM::PropertyBase* pProp, MM::ActionType eAct)
         globalSwitch_ = newGlobalSwitch;
 
         // Write global switch to coil (address 0x30)
-        if (currentMode_ == 1)
+        if (currentMode_ == MODE_GLOBAL)
         {
-            int ret = WriteSingleCoil(0x30, newGlobalSwitch);
+            int ret = WriteSingleCoil(GLOBAL_SWITCH_ADDR, newGlobalSwitch);
             if (ret != DEVICE_OK)
             {
                 // Roll back
@@ -1232,6 +1279,8 @@ int Controller::OnGlobalSwitch(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int Controller::OnGlobalIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    MMThreadGuard guard(GetLock());
+
     if (eAct == MM::BeforeGet)
     {
         pProp->Set((long)globalIntensity_);
@@ -1242,6 +1291,11 @@ int Controller::OnGlobalIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
         // Skip writing to hardware during initialization
         if (initializationInProgress_)
         {
+            return DEVICE_OK;
+        }
+        if (currentMode_ != MODE_GLOBAL)
+        {
+            // Global Intensity only applies in Global mode
             return DEVICE_OK;
         }
 
@@ -1262,7 +1316,7 @@ int Controller::OnGlobalIntensity(MM::PropertyBase* pProp, MM::ActionType eAct)
         globalIntensity_ = newGlobalIntensity;
 
         // Write global intensity to register 0x30
-        int ret = WriteHoldingRegister(0x30, (uint16_t)newGlobalIntensity);
+        int ret = WriteHoldingRegister(GLOBAL_INTENSITY_ADDR, (uint16_t)newGlobalIntensity);
         if (ret != DEVICE_OK)
         {
             // Roll back everything
@@ -1312,12 +1366,14 @@ int Controller::PollDeviceStatus()
 
 int Controller::ReadAllChannelRegisters()
 {
+    MMThreadGuard guard(GetLock());
+
     int channelCount = (int)channels_.size();
     if (channelCount > 0)
     {
         // Read all channel coils at once
         std::vector<bool> coilValues;
-        int ret = ReadMultipleCoils(0x31, channelCount, coilValues);
+        int ret = ReadMultipleCoils(CH1_SWITCH_ADDR, channelCount, coilValues);
         if (ret != DEVICE_OK) return ret;
         for (int i = 0; i < channelCount; i++)
         {
@@ -1326,7 +1382,7 @@ int Controller::ReadAllChannelRegisters()
 
         // Read all channel registers at once
         std::vector<uint16_t> regValues;
-        ret = ReadMultipleHoldingRegisters(0x31, channelCount, regValues);
+        ret = ReadMultipleHoldingRegisters(CH1_INTENSITY_ADDR, channelCount, regValues);
         if (ret != DEVICE_OK) return ret;
         for (int i = 0; i < channelCount; i++)
         {
@@ -1369,6 +1425,8 @@ void Controller::UpdatePropertiesFromDevice()
 
 int Controller::OnRefresh(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
+    MMThreadGuard guard(GetLock());
+
     if (eAct == MM::BeforeGet)
     {
         pProp->Set(0L);
