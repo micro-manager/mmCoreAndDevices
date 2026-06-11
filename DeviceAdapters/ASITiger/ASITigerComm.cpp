@@ -22,21 +22,16 @@
 
 #include "ASITiger.h"
 #include "ASITigerComm.h"
-#include <cstdio>
-#include <string>
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include "ModuleInterface.h"
+#include <cstdio>
 #include <iostream>
+#include <string>
 #include <vector>
 
-
-///////////////////////////////////////////////////////////////////////////////
-// CTigerHub implementation
-//
-CTigerCommHub::CTigerCommHub()
-{
-   CreateProperty(MM::g_Keyword_Name, g_TigerCommHubName, MM::String, true);
+CTigerCommHub::CTigerCommHub() {
+    CreateProperty(MM::g_Keyword_Name, g_TigerCommHubName, MM::String, true);
 }
 
 int CTigerCommHub::Initialize()

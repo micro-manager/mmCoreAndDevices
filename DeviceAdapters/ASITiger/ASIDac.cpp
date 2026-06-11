@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 08/2019
 //
-// BASED ON:      ASILED.c, ASIPmt.c and others
-//
 
 #include "ASIDac.h"
 #include "ASITiger.h"
@@ -35,39 +33,25 @@
 #include <string>
 #include <vector>
 
-
-///////////////////////////////////////////////////////////////////////////////
-// CDAC
-//
 CDAC::CDAC(const char* name) :
-	ASIPeripheralBase< ::CSignalIOBase, CDAC >(name),
-	unitMult_(g_DACDefaultUnitMult),   // later will try to read actual setting
-	axisLetter_(g_EmptyAxisLetterStr), // value determined by extended name
-	maxvolts_(0.0),
-	minvolts_(0.0),
-	ring_buffer_supported_(false),
-	ring_buffer_capacity_(0),
-	ttl_trigger_supported_(false),
-	ttl_trigger_enabled_(false)
-{
-	if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-	{
+	ASIPeripheralBase< ::CSignalIOBase, CDAC >(name) {
+	// only set up these properties if we have the required information in the name
+	if (IsExtendedName(name)) {
 		axisLetter_ = GetAxisLetterFromExtName(name);
 		CreateProperty(g_AxisLetterPropertyName, axisLetter_.c_str(), MM::String, true);
 	}
 }
 
-int CDAC::Initialize()
-{
-	// call generic Initialize first, this gets hub
-	RETURN_ON_MM_ERROR(PeripheralInitialize());
+int CDAC::Initialize() {
+	if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+		return status;
+	}
 
 	std::ostringstream command;
 	CPropertyAction* pAct;
 	double tmp;
 
 	// create MM description; this doesn't work during hardware configuration wizard but will work afterwards
-	command.str("");
 	command << g_DacDeviceDescription << " Axis=" << axisLetter_ << " HexAddr=" << addressString_;
 	CreateProperty(MM::g_Keyword_Description, command.str().c_str(), MM::String, true);
 

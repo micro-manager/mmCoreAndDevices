@@ -21,9 +21,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp, ASIFW1000.cpp, Arduino.cpp, and DemoCamera.cpp
-//
-//
 
 #include "ASITiger.h"
 #include "ASITigerComm.h"

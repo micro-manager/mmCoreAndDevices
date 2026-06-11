@@ -5873,25 +5873,28 @@ std::string CMMCore::getCurrentPixelSizeConfig(bool cached) MMCORE_LEGACY_THROW(
          const auto propName = cs.getPropertyName();
          if (!curState.isPropertyIncluded(deviceLabel.c_str(), propName.c_str()))
          {
-            try
+            std::string value;
+            if (!cached)
             {
-               std::string value;
-               if (!cached)
+               try
                {
                   value = getProperty(deviceLabel.c_str(), propName.c_str());
                }
-               else
+               catch (CMMError& err)
                {
-                  value = stateCache_->getSetting(deviceLabel.c_str(), propName.c_str())->getPropertyValue();
+                  logError(deviceLabel.c_str(), err.getMsg().c_str());
+                  continue;
                }
-               PropertySetting ss(deviceLabel.c_str(), propName.c_str(), value.c_str()); // state setting
-               curState.addSetting(ss);
             }
-            catch (CMMError& err)
+            else
             {
-               // just log error
-               logError(deviceLabel.c_str(), err.getMsg().c_str());
+               auto s = stateCache_->getSetting(deviceLabel.c_str(), propName.c_str());
+               if (!s)
+                  continue;
+               value = s->getPropertyValue();
             }
+            PropertySetting ss(deviceLabel.c_str(), propName.c_str(), value.c_str()); // state setting
+            curState.addSetting(ss);
          }
       }
    }

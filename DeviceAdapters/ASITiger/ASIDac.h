@@ -20,94 +20,88 @@
 // AUTHOR:        Vikram Kopuri (vik@asiimaging.com) 08/2019
 //
 
-#ifndef ASIDAC_H
-#define ASIDAC_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CDAC : public ASIPeripheralBase<CSignalIOBase, CDAC>
-{
+class CDAC : public ASIPeripheralBase<CSignalIOBase, CDAC> {
 public:
     explicit CDAC(const char* name);
     ~CDAC() = default;
 
-	// Device API
-	int Initialize();
-	bool Busy() { return false; };
+    // Device API
+    int Initialize();
+    bool Busy() { return false; };
 
-	// DAC API
-	int SetGateOpen(bool open);
-	int GetGateOpen(bool& open);
-	int SetSignal(double volts);
-	int GetSignal(double& volts);
-	int GetLimits(double& minVolts, double& maxVolts);
+    // DAC API
+    int SetGateOpen(bool open);
+    int GetGateOpen(bool& open);
+    int SetSignal(double volts);
+    int GetSignal(double& volts);
+    int GetLimits(double& minVolts, double& maxVolts);
 
-	// Sequence commands ie Ring Buffer needs TTL 
-	
-	int IsDASequenceable(bool& isSequenceable) const { isSequenceable = ttl_trigger_enabled_; return DEVICE_OK; }
-	int GetDASequenceMaxLength(long &nrEvents) const { nrEvents = ring_buffer_capacity_; return DEVICE_OK; }
-	int StartDASequence();
-	int StopDASequence();
-	int ClearDASequence();
-	int AddToDASequence(double voltage);
-	int SendDASequence();
+    // Sequence commands ie Ring Buffer needs TTL
+    int IsDASequenceable(bool& isSequenceable) const { isSequenceable = ttl_trigger_enabled_; return DEVICE_OK; }
+    int GetDASequenceMaxLength(long &nrEvents) const { nrEvents = ring_buffer_capacity_; return DEVICE_OK; }
+    int StartDASequence();
+    int StopDASequence();
+    int ClearDASequence();
+    int AddToDASequence(double voltage);
+    int SendDASequence();
 
-	// action interface
-	int OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
+    // action interface
+    int OnSaveCardSettings(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnRefreshProperties(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-	//Signal DAC specific properties
-	int OnDACMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnDACVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnDACGate(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnCutoffFreq(MM::PropertyBase* pProp, MM::ActionType eAct);
+    //Signal DAC specific properties
+    int OnDACMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnDACVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnDACGate(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnCutoffFreq(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-	// single axis properties
-	int OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct);
+    // single axis properties
+    int OnSAAmplitude(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSAOffset(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSAPeriod(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSAMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSAPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSAAdvanced(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSAClkSrc(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSAClkPol(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSATTLOut(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSATTLPol(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnSAPatternByte(MM::PropertyBase* pProp, MM::ActionType eAct);
 
-	// ring buffer properties
-	int OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnRBSequenceState(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnAddtoRBSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
-	
-	//Others
-	int OnTTLin(MM::PropertyBase* pProp, MM::ActionType eAct);
-	int OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct);
+    // ring buffer properties
+    int OnRBDelayBetweenPoints(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnRBMode(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnRBTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnRBRunning(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnUseSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnRBSequenceState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnAddtoRBSequence(MM::PropertyBase* pProp, MM::ActionType eAct);
+
+    int OnTTLin(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnTTLout(MM::PropertyBase* pProp, MM::ActionType eAct);
 
 private:
-	int GetMaxVolts(double& volts);
-	int GetMinVolts(double& volts);
-	int SetSignalmv(double millivolts);
-	int GetSignalmv(double& millivolts);
+    int GetMaxVolts(double& volts);
+    int GetMinVolts(double& volts);
+    int SetSignalmv(double millivolts);
+    int GetSignalmv(double& millivolts);
 
-	// Properties
-	void CreateSingleAxisRiseTimeProperty();
+    // Properties
+    void CreateSingleAxisRiseTimeProperty();
 
-	double unitMult_;
-	std::string axisLetter_;
-	double maxvolts_;
-	double minvolts_;
-	bool ring_buffer_supported_;
-	long ring_buffer_capacity_;
-	bool ttl_trigger_supported_;
-	bool ttl_trigger_enabled_;
-	std::vector<double> sequence_; // carries data in volts
+    std::string axisLetter_ = g_EmptyAxisLetterStr; // value determined by extended name
+    double unitMult_ = g_DACDefaultUnitMult; // will read actual unit multiplier
+    double maxvolts_ = 0.0;
+    double minvolts_ = 0.0;
+    long ring_buffer_capacity_ = 0;
+    bool ring_buffer_supported_ = false;
+    bool ttl_trigger_supported_ = false;
+    bool ttl_trigger_enabled_ = false;
+    std::vector<double> sequence_{}; // carries data in volts
 };
-
-#endif // ASIDAC_H

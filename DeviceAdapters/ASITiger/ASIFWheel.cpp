@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp and others
-//
 
 #include "ASITiger.h"
 #include "ASIFWheel.h"
@@ -32,34 +30,22 @@
 #include <vector>
 #include <string>
 
-
 // shared properties not implemented for filter wheel except for save settings because no shared properties
 
-///////////////////////////////////////////////////////////////////////////////
-// CFWheel
-//
-
-// initialize static member
-std::string CFWheel::selectedWheel_ = g_EmptyAxisLetterStr;
-
 CFWheel::CFWheel(const char* name) :
-   ASIPeripheralBase< ::CStateDeviceBase, CFWheel >(name),
-   numPositions_(0),  // will read actual number of positions
-   curPosition_(0),   // will read actual position
-   spinning_(false),
-   wheelNumber_(g_EmptyAxisLetterStr)  // 0..9 for filter wheels instead of A..Z
-{
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      wheelNumber_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterPropertyName, wheelNumber_.c_str(), MM::String, true);
-   }
+    ASIPeripheralBase< ::CStateDeviceBase, CFWheel >(name) {
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        wheelNumber_ = GetAxisLetterFromExtName(name);
+        CreateProperty(g_AxisLetterPropertyName, wheelNumber_.c_str(), MM::String, true);
+    }
 }
 
-int CFWheel::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize(true) );
+int CFWheel::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(true); status != DEVICE_OK) {
+        return status;
+    }
 
    std::ostringstream command;
 

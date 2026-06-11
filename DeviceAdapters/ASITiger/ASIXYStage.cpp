@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
-// BASED ON:      ASIStage.cpp and others
-//
 
 #include "ASIXYStage.h"
 #include "ASITiger.h"
@@ -34,42 +32,24 @@
 #include <sstream>
 #include <string>
 
-
 // TODO faster busy check for typical case where axes are on same card by just querying card busy
 
-///////////////////////////////////////////////////////////////////////////////
-// CXYStage
-//
 CXYStage::CXYStage(const char* name) :
-   ASIPeripheralBase< ::CXYStageBase, CXYStage >(name),
-   unitMultX_(g_StageDefaultUnitMult),  // later will try to read actual setting
-   unitMultY_(g_StageDefaultUnitMult),  // later will try to read actual setting
-   stepSizeXUm_(g_StageMinStepSize),    // we'll use 1 nm as our smallest possible step size, this is somewhat arbitrary
-   stepSizeYUm_(g_StageMinStepSize),    //   and doesn't change during the program
-   axisLetterX_(g_EmptyAxisLetterStr),    // value determined by extended name
-   axisLetterY_(g_EmptyAxisLetterStr),    // value determined by extended name
-   advancedPropsEnabled_(false),
-   speedTruth_(false),
-   lastSpeedX_(1.0),
-   lastSpeedY_(1.0),
-   ring_buffer_supported_(false),
-   ring_buffer_capacity_(0),
-   ttl_trigger_supported_(false),
-   ttl_trigger_enabled_(false)
-{
-   if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-   {
-      axisLetterX_ = GetAxisLetterFromExtName(name);
-      CreateProperty(g_AxisLetterXPropertyName, axisLetterX_.c_str(), MM::String, true);
-      axisLetterY_ = GetAxisLetterFromExtName(name,1);
-      CreateProperty(g_AxisLetterYPropertyName, axisLetterY_.c_str(), MM::String, true);
-   }
+    ASIPeripheralBase< ::CXYStageBase, CXYStage >(name) {
+    // only set up these properties if we have the required information in the name
+    if (IsExtendedName(name)) {
+        axisLetterX_ = GetAxisLetterFromExtName(name);
+        CreateProperty(g_AxisLetterXPropertyName, axisLetterX_.c_str(), MM::String, true);
+        axisLetterY_ = GetAxisLetterFromExtName(name, 1);
+        CreateProperty(g_AxisLetterYPropertyName, axisLetterY_.c_str(), MM::String, true);
+    }
 }
 
-int CXYStage::Initialize()
-{
-   // call generic Initialize first, this gets hub
-   RETURN_ON_MM_ERROR( PeripheralInitialize() );
+int CXYStage::Initialize() {
+    // call generic Initialize first, this gets hub
+    if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+        return status;
+    }
 
    // read the unit multiplier for X and Y axes
    // ASI's unit multiplier is how many units per mm, so divide by 1000 here to get units per micron

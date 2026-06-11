@@ -7,18 +7,22 @@
 
 #include "LightSheetDeviceManager.h"
 
-LightSheetDeviceManager::LightSheetDeviceManager() :
-    initialized_(false),
-    geometryType_("SCAPE"),
-    lightSheetType_("Static"),
-    numImagingPaths_(1),
-    numIlluminationPaths_(1),
-    numSimultaneousCameras_(1) {
+namespace {
+namespace Properties {
+    constexpr char IlluminationPaths[] = "IlluminationPaths";
+    constexpr char ImagingPaths[] = "ImagingPaths";
+    constexpr char LightSheetType[] = "LightSheetType";
+    constexpr char MicroscopeGeometry[] =  "MicroscopeGeometry";
+    constexpr char SimultaneousCameras[] =  "SimultaneousCameras";
+} // namespace Properties
+namespace Props = Properties;
+} // namespace
 
-    // call the base class method to setup default error codes/messages
+LightSheetDeviceManager::LightSheetDeviceManager() {
+    // call the base method to setup default errors
     InitializeDefaultErrorMessages();
 
-    // Create pre-init properties
+    // create pre-init properties
     CreateNumIlluminationPathsProperty();
     CreateNumImagingPathsProperty();
     CreateLightSheetTypeProperty();
@@ -35,12 +39,11 @@ void LightSheetDeviceManager::GetName(char* name) const {
 }
 
 int LightSheetDeviceManager::Shutdown() {
-    if (initialized_) {
-        initialized_ = false;
-    }
+    initialized_ = false;
     return DEVICE_OK;
 }
 
+// Return false, this "device" can never be busy.
 bool LightSheetDeviceManager::Busy() {
     return false;
 }
@@ -91,10 +94,10 @@ void LightSheetDeviceManager::CreateDeviceProperties(const std::map<std::string,
         }
 
         // create properties based on the property name prefix
-        if (numImagingPaths_ > 1 && StringStartsWith(propertyName, gImagingPrefix)) {
+        if (numImagingPaths_ > 1 && StartsWith(propertyName, gImagingPrefix)) {
             // create multiple properties => "Imaging1, Imaging2, ... ImagingN"
             CreatePrefixProperties(propertyName, gImagingPrefix, numImagingPaths_, deviceType);
-        } else if (numIlluminationPaths_ > 1 && StringStartsWith(propertyName, gIllumPrefix)) {
+        } else if (numIlluminationPaths_ > 1 && StartsWith(propertyName, gIllumPrefix)) {
             // create multiple properties => "Illum1, Illum2, ... IllumN"
             CreatePrefixProperties(propertyName, gIllumPrefix, numIlluminationPaths_, deviceType);
         } else {
@@ -139,7 +142,7 @@ void LightSheetDeviceManager::CreateCameraProperties() {
 }
 
 // TODO: use rfind for now: use starts_with when we have C++20 support
-bool LightSheetDeviceManager::StringStartsWith(const std::string& str, const std::string& searchTerm) const {
+bool LightSheetDeviceManager::StartsWith(const std::string& str, const std::string& searchTerm) const {
     return str.rfind(searchTerm, 0) == 0;
 }
 
@@ -190,13 +193,12 @@ void LightSheetDeviceManager::CreateNumImagingPathsProperty() {
         }),
         true
     );
-    SetPropertyLimits(propertyName.c_str(), 1, 8);
+    SetPropertyLimits(propertyName.c_str(), 1, 4);
 }
 
 void LightSheetDeviceManager::CreateNumIlluminationPathsProperty() {
-    const std::string propertyName = "IlluminationPaths";
     CreateIntegerProperty(
-        propertyName.c_str(), numIlluminationPaths_, false,
+        Props::IlluminationPaths, numIlluminationPaths_, false,
         new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 pProp->Set(numIlluminationPaths_);
@@ -209,13 +211,12 @@ void LightSheetDeviceManager::CreateNumIlluminationPathsProperty() {
         }),
         true
     );
-    SetPropertyLimits(propertyName.c_str(), 1, 8);
+    SetPropertyLimits(Props::IlluminationPaths, 1, 4);
 }
 
 void LightSheetDeviceManager::CreateLightSheetTypeProperty() {
-    const std::string propertyName = "LightSheetType";
     CreateStringProperty(
-        propertyName.c_str(), lightSheetType_.c_str(), false,
+        Props::LightSheetType, lightSheetType_.c_str(), false,
         new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 pProp->Set(lightSheetType_.c_str());
@@ -228,14 +229,13 @@ void LightSheetDeviceManager::CreateLightSheetTypeProperty() {
         }),
         true
     );
-    AddAllowedValue(propertyName.c_str(), gLightSheetTypeScanned);
-    AddAllowedValue(propertyName.c_str(), gLightSheetTypeStatic);
+    AddAllowedValue(Props::LightSheetType, gLightSheetTypeScanned);
+    AddAllowedValue(Props::LightSheetType, gLightSheetTypeStatic);
 }
 
 void LightSheetDeviceManager::CreateMicroscopeGeometryProperty() {
-    const std::string propertyName = "MicroscopeGeometry";
     CreateStringProperty(
-        propertyName.c_str(), geometryType_.c_str(), false,
+        Props::MicroscopeGeometry, geometryType_.c_str(), false,
         new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 pProp->Set(geometryType_.c_str());
@@ -249,13 +249,12 @@ void LightSheetDeviceManager::CreateMicroscopeGeometryProperty() {
         true
     );
     std::vector<std::string> allowedValues = geometry_.GetGeometryTypes();
-    SetAllowedValues(propertyName.c_str(), allowedValues);
+    SetAllowedValues(Props::MicroscopeGeometry, allowedValues);
 }
 
 void LightSheetDeviceManager::CreateNumSimultaneousCamerasProperty() {
-    const std::string propertyName = "SimultaneousCameras";
     CreateIntegerProperty(
-        propertyName.c_str(), numSimultaneousCameras_, false,
+        Props::SimultaneousCameras, numSimultaneousCameras_, false,
         new MM::ActionLambda([this](MM::PropertyBase* pProp, MM::ActionType eAct) {
             if (eAct == MM::BeforeGet) {
                 pProp->Set(numSimultaneousCameras_);
@@ -268,5 +267,5 @@ void LightSheetDeviceManager::CreateNumSimultaneousCamerasProperty() {
         }),
         true
     );
-    SetPropertyLimits(propertyName.c_str(), 1, 8);
+    SetPropertyLimits(Props::SimultaneousCameras, 1, 4);
 }

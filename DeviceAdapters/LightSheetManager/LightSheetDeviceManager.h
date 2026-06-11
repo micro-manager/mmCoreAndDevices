@@ -5,8 +5,7 @@
  * Copyright (c) 2022, Applied Scientific Instrumentation
  */
 
-#ifndef LIGHTSHEET_DEVICE_MANAGER_H
-#define LIGHTSHEET_DEVICE_MANAGER_H
+#pragma once
 
 #include "MMDevice.h"
 #include "DeviceBase.h"
@@ -35,7 +34,7 @@ private:
     void CreateCameraProperties();
 
     // Returns true if the string starts with the search term.
-    bool StringStartsWith(const std::string& str, const std::string& searchTerm) const;
+    bool StartsWith(const std::string& str, const std::string& searchTerm) const;
 
     // Returns the device names of all devices of MM::DeviceType loaded in the hardware configuration as strings.
     std::vector<std::string> GetLoadedDevicesOfType(const MM::DeviceType deviceType);
@@ -51,16 +50,14 @@ private:
     void CreateMicroscopeGeometryProperty();
     void CreateNumSimultaneousCamerasProperty();
 
-    std::map<MM::DeviceType, std::vector<std::string>> devices_;
-    MicroscopeGeometry geometry_;
-    bool initialized_;
+    std::map<MM::DeviceType, std::vector<std::string>> devices_{};
+    MicroscopeGeometry geometry_{};
+    bool initialized_ = false;
 
     // pre-init properties
-    std::string geometryType_;   // type of microscope geometry
-    std::string lightSheetType_; // scanned or static sheet
-    long numImagingPaths_;
-    long numIlluminationPaths_;
-    long numSimultaneousCameras_;
+    std::string geometryType_ = "SCAPE";   // type of microscope geometry
+    std::string lightSheetType_ = "Static"; // scanned or static sheet
+    long numImagingPaths_ = 1;
+    long numIlluminationPaths_ = 1;
+    long numSimultaneousCameras_ = 1;
 };
-
-#endif // LIGHTSHEET_DEVICE_MANAGER_H

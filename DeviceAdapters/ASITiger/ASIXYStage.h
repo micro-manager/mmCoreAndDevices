@@ -20,8 +20,7 @@
 // AUTHOR:        Jon Daniels (jon@asiimaging.com) 09/2013
 //
 
-#ifndef ASIXYSTAGE_H
-#define ASIXYSTAGE_H
+#pragma once
 
 #include "ASIPeripheralBase.h"
 #include "MMDevice.h"
@@ -34,12 +33,10 @@ public:
     ~CXYStage() = default;
 
    // Device API
-   // ----------
    int Initialize();
    bool Busy();
 
    // XYStage API
-   // -----------
    int Stop();
 
    // XYStageBase uses these functions to move the stage
@@ -155,27 +152,24 @@ public:
    int OnVectorX(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterX_); }
    int OnVectorY(MM::PropertyBase* pProp, MM::ActionType eAct) { return OnVectorGeneric(pProp, eAct, axisLetterY_); }
 
-
 private:
-   double unitMultX_;
-   double unitMultY_;
-   double stepSizeXUm_;
-   double stepSizeYUm_;
-   std::string axisLetterX_;
-   std::string axisLetterY_;
-   bool advancedPropsEnabled_;
-   bool speedTruth_;
-   double lastSpeedX_;
-   double lastSpeedY_;
-   bool ring_buffer_supported_;
-   long ring_buffer_capacity_;
-   bool ttl_trigger_supported_;
-   bool ttl_trigger_enabled_;
-   std::vector<double> sequenceX_;
-   std::vector<double> sequenceY_;
+    int OnSaveJoystickSettings();
+    int getMinMaxSpeed(const std::string& axisLetter, double& minSpeed, double& maxSpeed);
 
-   int OnSaveJoystickSettings();
-   int getMinMaxSpeed(const std::string& axisLetter, double& minSpeed, double& maxSpeed);
+    std::string axisLetterX_ = g_EmptyAxisLetterStr; // value determined by extended name
+    std::string axisLetterY_ = g_EmptyAxisLetterStr; // value determined by extended name
+    double unitMultX_ = g_StageDefaultUnitMult; // later will try to read actual setting
+    double unitMultY_ = g_StageDefaultUnitMult; // later will try to read actual setting
+    double stepSizeXUm_ = g_StageMinStepSize; // we'll use 1 nm as our smallest possible step size, this is somewhat arbitrary
+    double stepSizeYUm_ = g_StageMinStepSize; //   and doesn't change during the program
+    double lastSpeedX_ = 1.0;
+    double lastSpeedY_ = 1.0;
+    long ring_buffer_capacity_ = 0;
+    bool ring_buffer_supported_ = false;
+    bool ttl_trigger_supported_ = false;
+    bool ttl_trigger_enabled_ = false;
+    bool advancedPropsEnabled_ = false;
+    bool speedTruth_ = false;
+    std::vector<double> sequenceX_{};
+    std::vector<double> sequenceY_{};
 };
-
-#endif // ASIXYSTAGE_H

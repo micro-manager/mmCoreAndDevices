@@ -19,8 +19,6 @@
 //
 // AUTHOR:        Brandon Simpson (brandon@asiimaging.com) 2/2022
 //
-// BASED ON:      ASIStage.cpp and others
-//
 
 #include "ASIDacXYStage.h"
 #include "ASITiger.h"
@@ -33,22 +31,9 @@
 #include <string>
 
 CDACXYStage::CDACXYStage(const char* name) :
-	ASIPeripheralBase< ::CXYStageBase, CDACXYStage >(name),
-	axisLetterX_(g_EmptyAxisLetterStr),    // value determined by extended name
-	axisLetterY_(g_EmptyAxisLetterStr),    // value determined by extended name
-	maxvoltsX_(0.0), // X axis limits
-	minvoltsX_(0.0),
-	maxvoltsY_(0.0), // Y axis limits
-	minvoltsY_(0.0),
-	ring_buffer_supported_(false),
-	ring_buffer_capacity_(0),
-	ttl_trigger_supported_(false),
-	ttl_trigger_enabled_(false),
-	umToMvX_(1),
-	umToMvY_(1)
-{
-	if (IsExtendedName(name))  // only set up these properties if we have the required information in the name
-	{
+	ASIPeripheralBase< ::CXYStageBase, CDACXYStage >(name) {
+	// only set up these properties if we have the required information in the name
+	if (IsExtendedName(name)) {
 		axisLetterX_ = GetAxisLetterFromExtName(name);
 		CreateProperty(g_AxisLetterXPropertyName, axisLetterX_.c_str(), MM::String, true);
 		axisLetterY_ = GetAxisLetterFromExtName(name, 1);
@@ -69,10 +54,11 @@ CDACXYStage::CDACXYStage(const char* name) :
 	UpdateProperty(g_DACMicronsPerMvYPropertyName);
 }
 
-int CDACXYStage::Initialize()
-{
+int CDACXYStage::Initialize() {
 	// call generic Initialize first, this gets the hub
-	RETURN_ON_MM_ERROR(PeripheralInitialize());
+	if (const int status = PeripheralInitialize(); status != DEVICE_OK) {
+		return status;
+	}
 
 	CPropertyAction* pAct;
 

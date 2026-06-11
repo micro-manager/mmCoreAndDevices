@@ -346,6 +346,82 @@ int NIAnalogOutputPort::OnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct)
       if (err != DEVICE_OK)
          return err;
    }
+   else if (eAct == MM::IsSequenceable)
+   {
+      // Initialize to false: IsDASequenceable leaves the out-param
+      // untouched when neverSequenceable_ is set.
+      bool isSeq = false;
+      int err = IsDASequenceable(isSeq);
+      if (err != DEVICE_OK)
+         return err;
+      long maxLen = 0;
+      if (isSeq)
+      {
+         err = GetDASequenceMaxLength(maxLen);
+         if (err != DEVICE_OK)
+            return err;
+      }
+      pProp->SetSequenceable(isSeq ? maxLen : 0);
+   }
+   else if (eAct == MM::AfterLoadSequence)
+   {
+      if (sequenceRunning_)
+         return ERR_SEQUENCE_RUNNING;
+
+      std::vector<std::string> sequence = pProp->GetSequence();
+      if (sequence.empty())
+         return ERR_SEQUENCE_ZERO_LENGTH;
+
+      long maxLength = 0;
+      int err = GetDASequenceMaxLength(maxLength);
+      if (err != DEVICE_OK)
+         return err;
+      if (static_cast<long>(sequence.size()) > maxLength)
+         return ERR_SEQUENCE_TOO_LONG;
+
+      err = ClearDASequence();
+      if (err != DEVICE_OK)
+         return err;
+      for (std::vector<std::string>::const_iterator it = sequence.begin(),
+         end = sequence.end(); it != end; ++it)
+      {
+         double volts;
+         try
+         {
+            std::size_t idx = 0;
+            volts = std::stod(*it, &idx);
+            if (idx != it->size())
+               return DEVICE_INVALID_PROPERTY_VALUE;
+         }
+         catch (const std::exception&)
+         {
+            return DEVICE_INVALID_PROPERTY_VALUE;
+         }
+         err = AddToDASequence(volts);
+         if (err != DEVICE_OK)
+            return err;
+      }
+      err = SendDASequence();
+      if (err != DEVICE_OK)
+         return err;
+   }
+   else if (eAct == MM::StartSequence)
+   {
+      if (sequenceRunning_)
+         return ERR_SEQUENCE_RUNNING;
+      if (sentSequence_.empty())
+         return ERR_SEQUENCE_ZERO_LENGTH;
+
+      int err = StartDASequence();
+      if (err != DEVICE_OK)
+         return err;
+   }
+   else if (eAct == MM::StopSequence)
+   {
+      int err = StopDASequence();
+      if (err != DEVICE_OK)
+         return err;
+   }
    return DEVICE_OK;
 }
 
