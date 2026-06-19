@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 #include <sstream>
 
@@ -863,14 +864,22 @@ int64_t SpinnakerCCamera::getPixelFormatEnumValue() const
    return val;
 }
 
-int64_t SpinnakerCCamera::getPixelSizeEnumValue() const
+int SpinnakerCCamera::getPixelSizeBits() const
 {
    spinNodeHandle hNode = nullptr;
    if (getNodeHandle(NODE_PIXEL_SIZE, &hNode) != SPINNAKER_ERR_SUCCESS)
+   {
+      LogMessage("PixelSize node not available; cannot determine bit depth");
       return -1;
-   int64_t val = -1;
-   getEnumIntValue(hNode, val);
-   return val;
+   }
+   std::string sym;
+   if (getEnumSymbolic(hNode, sym) != SPINNAKER_ERR_SUCCESS ||
+       sym.compare(0, 3, "Bpp") != 0)
+   {
+      LogMessage("Unexpected PixelSize value: '" + sym + "'");
+      return -1;
+   }
+   return std::atoi(sym.c_str() + 3);   // "Bpp12" -> 12
 }
 
 
@@ -1013,33 +1022,10 @@ unsigned SpinnakerCCamera::GetImageBytesPerPixel() const
    if (pixFmt == PixelFormat_RGB8 || pixFmt == PixelFormat_RGB8Packed || pixFmt == PixelFormat_BGRa8)
       return 4;
 
-   int64_t pixSize = getPixelSizeEnumValue();
-   switch (pixSize)
-   {
-   case PixelSize_Bpp1:
-   case PixelSize_Bpp2:
-   case PixelSize_Bpp4:
-   case PixelSize_Bpp8:
-      return 1;
-   case PixelSize_Bpp10:
-   case PixelSize_Bpp12:
-   case PixelSize_Bpp14:
-   case PixelSize_Bpp16:
-      return 2;
-   case PixelSize_Bpp20:
-   case PixelSize_Bpp24:
-      return 3;
-   case PixelSize_Bpp30:
-   case PixelSize_Bpp32:
-      return 4;
-   case PixelSize_Bpp48:
-      return 6;
-   case PixelSize_Bpp64:
-      return 8;
-   case PixelSize_Bpp96:
-      return 12;
-   }
-   return 0;
+   int bits = getPixelSizeBits();
+   if (bits <= 0)
+      return 2;                  // fallback: assume 16-bit (warning already logged)
+   return static_cast<unsigned>((bits + 7) / 8);
 }
 
 unsigned SpinnakerCCamera::GetNumberOfComponents() const
@@ -1056,26 +1042,10 @@ unsigned SpinnakerCCamera::GetBitDepth() const
    if (pixFmt == PixelFormat_RGB8 || pixFmt == PixelFormat_RGB8Packed || pixFmt == PixelFormat_BGRa8)
       return 8;
 
-   int64_t pixSize = getPixelSizeEnumValue();
-   switch (pixSize)
-   {
-   case PixelSize_Bpp1:  return 1;
-   case PixelSize_Bpp2:  return 2;
-   case PixelSize_Bpp4:  return 4;
-   case PixelSize_Bpp8:  return 8;
-   case PixelSize_Bpp10: return 10;
-   case PixelSize_Bpp12: return 12;
-   case PixelSize_Bpp14: return 14;
-   case PixelSize_Bpp16: return 16;
-   case PixelSize_Bpp20: return 20;
-   case PixelSize_Bpp24: return 24;
-   case PixelSize_Bpp30: return 30;
-   case PixelSize_Bpp32: return 32;
-   case PixelSize_Bpp48: return 48;
-   case PixelSize_Bpp64: return 64;
-   case PixelSize_Bpp96: return 96;
-   }
-   return 0;
+   int bits = getPixelSizeBits();
+   if (bits <= 0)
+      return 16;
+   return static_cast<unsigned>(bits);
 }
 
 long SpinnakerCCamera::GetImageBufferSize() const
