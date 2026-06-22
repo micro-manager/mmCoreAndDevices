@@ -143,7 +143,7 @@ private:
    void RGBtoBGRA(uint8_t* data, size_t imageBuffLength);
 
    int64_t getPixelFormatEnumValue() const;
-   int64_t getPixelSizeEnumValue() const;
+   int getPixelSizeBits() const;   // bits-per-pixel from PixelSize symbolic, or -1
 
    std::string m_deviceName;
    std::string m_serialNumber;
