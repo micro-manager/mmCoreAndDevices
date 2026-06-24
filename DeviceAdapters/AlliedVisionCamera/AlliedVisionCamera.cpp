@@ -1276,21 +1276,7 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages, double interval
         m_frames[i].context[0] = this;                        //<! Pointer to camera
         m_frames[i].context[1] = reinterpret_cast<void *>(i); //<! Pointer to frame index
 
-        auto frameCallback = [](const VmbHandle_t cameraHandle, const VmbHandle_t streamHandle, VmbFrame_t *frame)
-        {
-            (void)cameraHandle;
-            (void)streamHandle;
-            reinterpret_cast<AlliedVisionCamera *>(frame->context[0])->insertFrame(frame);
-        };
-
         err = m_sdk->VmbFrameAnnounce_t(m_handle, &(m_frames[i]), sizeof(VmbFrame_t));
-        if (err != VmbErrorSuccess)
-        {
-            LOG_ERROR(err, "Error during frame praparation for continous acquisition!");
-            return err;
-        }
-
-        err = m_sdk->VmbCaptureFrameQueue_t(m_handle, &(m_frames[i]), frameCallback);
         if (err != VmbErrorSuccess)
         {
             LOG_ERROR(err, "Error during frame praparation for continous acquisition!");
@@ -1305,9 +1291,28 @@ int AlliedVisionCamera::StartSequenceAcquisition(long numImages, double interval
         return err;
     }
 
-    err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart);
+    auto frameCallback = [](const VmbHandle_t cameraHandle, const VmbHandle_t streamHandle, VmbFrame_t *frame)
+    {
+        (void)cameraHandle;
+        (void)streamHandle;
+        reinterpret_cast<AlliedVisionCamera *>(frame->context[0])->insertFrame(frame);
+    };
+
+    for (size_t i = 0; i < MAX_FRAMES; i++)
+    {
+        err = m_sdk->VmbCaptureFrameQueue_t(m_handle, &(m_frames[i]), frameCallback);
+        if (err != VmbErrorSuccess)
+        {
+            LOG_ERROR(err, "Error during frame praparation for continous acquisition!");
+            return err;
+        }
+    }
+
+    // Set the flag before AcquisitionStart so frame callbacks that fire
+    // immediately can re-queue their buffers (insertFrame requires IsCapturing).
     m_isAcquisitionRunning = true;
 
+    err = m_sdk->VmbFeatureCommandRun_t(m_handle, g_AcquisitionStart);
     if (err != VmbErrorSuccess)
     {
         LOG_ERROR(err, "Error during start acquisition!");
