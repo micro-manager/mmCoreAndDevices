@@ -109,6 +109,8 @@ libMMCore_la_SOURCES = \
 	SerializedMetadata.h \
 	Semaphore.cpp \
 	Semaphore.h \
+	SequenceAcquisition.cpp \
+	SequenceAcquisition.h \
 	SynchronizedConfiguration.h \
 	Task.cpp \
 	Task.h \

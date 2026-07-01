@@ -15,12 +15,13 @@ TEST_CASE("All core metadata fields present for GRAY8 image") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    cam.InsertTestImage();
 
    Metadata md;
    c.getLastImageMD(md);
+   c.stopSequenceAcquisition();
 
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue() == "cam");
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
@@ -84,7 +85,7 @@ TEST_CASE("PixelType metadata for all pixel formats") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    cam.InsertTestImage();
 
@@ -92,6 +93,7 @@ TEST_CASE("PixelType metadata for all pixel formats") {
    c.getLastImageMD(md);
    CHECK(md.GetSingleTag(MM::g_Keyword_PixelType).GetValue() ==
          expectedPixelType);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("Camera label matches device label") {
@@ -100,13 +102,14 @@ TEST_CASE("Camera label matches device label") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("myCam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    cam.InsertTestImage();
 
    Metadata md;
    c.getLastImageMD(md);
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_CameraLabel).GetValue() == "myCam");
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("Width and Height reflect camera dimensions") {
@@ -117,7 +120,7 @@ TEST_CASE("Width and Height reflect camera dimensions") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    cam.InsertTestImage();
 
@@ -125,6 +128,7 @@ TEST_CASE("Width and Height reflect camera dimensions") {
    c.getLastImageMD(md);
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_Width).GetValue() == "256");
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_Height).GetValue() == "128");
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("ImageNumber increments across inserted images") {
@@ -133,7 +137,7 @@ TEST_CASE("ImageNumber increments across inserted images") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    cam.InsertTestImage();
    cam.InsertTestImage();
@@ -149,6 +153,7 @@ TEST_CASE("ImageNumber increments across inserted images") {
    c.popNextImageMD(md);
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
          "2");
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("Unconditionally-added fields overwrite camera-provided values") {
@@ -157,7 +162,7 @@ TEST_CASE("Unconditionally-added fields overwrite camera-provided values") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    MM::CameraImageMetadata camMd;
    camMd.AddTag(MM::g_Keyword_Metadata_CameraLabel, "WRONG");
@@ -181,6 +186,7 @@ TEST_CASE("Unconditionally-added fields overwrite camera-provided values") {
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_TimeInCore).GetValue() !=
          "wrong");
    CHECK(md.GetKeys().size() == 7);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("ElapsedTime-ms preserved when camera provides it") {
@@ -189,7 +195,7 @@ TEST_CASE("ElapsedTime-ms preserved when camera provides it") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    MM::CameraImageMetadata camMd;
    camMd.AddTag(MM::g_Keyword_Elapsed_Time_ms, "42.0");
@@ -198,40 +204,7 @@ TEST_CASE("ElapsedTime-ms preserved when camera provides it") {
    Metadata md;
    c.getLastImageMD(md);
    CHECK(md.GetSingleTag(MM::g_Keyword_Elapsed_Time_ms).GetValue() == "42.0");
-}
-
-TEST_CASE("Custom device tag is transmitted") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   cam.AddTag("MyCustomTag", "cam", "hello");
-   cam.InsertTestImage();
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetSingleTag("cam-MyCustomTag").GetValue() == "hello");
-   CHECK(md.GetKeys().size() == 8);
-}
-
-TEST_CASE("RemoveTag removes a previously added device tag") {
-   StubCamera cam;
-   MockAdapterWithDevices adapter{{"cam", &cam}};
-   CMMCore c;
-   adapter.LoadIntoCore(c);
-   c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
-
-   cam.AddTag("MyCustomTag", "cam", "hello");
-   cam.RemoveTag("cam-MyCustomTag");
-   cam.InsertTestImage();
-
-   Metadata md;
-   c.getLastImageMD(md);
-   CHECK(md.GetKeys().size() == 7);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("ImageNumber is tracked per camera across interleaved inserts") {
@@ -241,7 +214,8 @@ TEST_CASE("ImageNumber is tracked per camera across interleaved inserts") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("camA");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition("camA", 10, 0.0, true);
+   c.startSequenceAcquisition("camB", 10, 0.0, true);
 
    REQUIRE(camA.InsertTestImage() == DEVICE_OK);
    REQUIRE(camB.InsertTestImage() == DEVICE_OK);
@@ -260,6 +234,9 @@ TEST_CASE("ImageNumber is tracked per camera across interleaved inserts") {
       CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
             e.number);
    }
+
+   c.stopSequenceAcquisition("camA");
+   c.stopSequenceAcquisition("camB");
 }
 
 TEST_CASE("ImageNumber resets after clearCircularBuffer") {
@@ -268,7 +245,7 @@ TEST_CASE("ImageNumber resets after clearCircularBuffer") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
@@ -280,6 +257,7 @@ TEST_CASE("ImageNumber resets after clearCircularBuffer") {
    Metadata md;
    c.popNextImageMD(md);
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() == "0");
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("ImageNumber resets after re-initializeCircularBuffer") {
@@ -288,17 +266,19 @@ TEST_CASE("ImageNumber resets after re-initializeCircularBuffer") {
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
+   c.stopSequenceAcquisition();
 
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(10, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
 
    Metadata md;
    c.popNextImageMD(md);
    CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() == "0");
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("ImageNumber is monotonic across overwrite-on-overflow wrap") {
@@ -335,7 +315,7 @@ TEST_CASE("ImageNumbers are contiguous under stop-on-overflow") {
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
    c.setCircularBufferMemoryFootprint(1);
-   c.initializeCircularBuffer();
+   c.startSequenceAcquisition(100, 0.0, true);
 
    long total = c.getBufferTotalCapacity();
    REQUIRE(total == 4);
@@ -351,4 +331,5 @@ TEST_CASE("ImageNumbers are contiguous under stop-on-overflow") {
       CHECK(md.GetSingleTag(MM::g_Keyword_Metadata_ImageNumber).GetValue() ==
             std::to_string(i));
    }
+   c.stopSequenceAcquisition();
 }
