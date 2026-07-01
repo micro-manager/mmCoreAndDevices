@@ -558,7 +558,7 @@ int Universal::Initialize()
     {
         pAct = new CPropertyAction (this, &Universal::OnTriggerMode);
         // The PARAM_EXPOSURE_MODE is buggy, the ATTR_CURRENT does not work correctly
-        // in 3.0.5.2 (last checked on Sept 2015). So as current value we use the first one.
+        // in PVCAM 3.0.5.2 (fixed in 3.1.4.1). So as current value we use the first one.
         const char* currentMode = prmTriggerMode_->GetEnumStrings()[0].c_str();
         // The ATTR_CURRENT returns 0 which might not be among the allowed values so we need
         // to make sure that the cache contains correct value. NOTE: The parameter is read only
@@ -1395,15 +1395,12 @@ int Universal::Initialize()
 
     // Initialize the acquisition configuration
     unsigned int maxRois = 1;
-    if (prmRoiCount_->IsAvailable())
-        maxRois = prmRoiCount_->Max();
+    for (const auto& p : camSpdTable_)
+        for (const auto& s : p.second)
+            if (maxRois < s.second.roiCountMax)
+                maxRois = s.second.roiCountMax;
     acqCfgNew_.Rois.SetCapacity(maxRois);
     acqCfgNew_.Rois.Add(PvRoi(0, 0, camSerSize_, camParSize_));
-    // We know the max ROIs so update our error message
-    std::stringstream ss;
-    ss << maxRois;
-    SetErrorText(ERR_TOO_MANY_ROIS,
-        std::string("Device supports only " + ss.str() + " ROI(s).").c_str());
 
     // Make sure our configs are synchronized
     acqCfgCur_ = acqCfgNew_;
@@ -1665,7 +1662,7 @@ unsigned Universal::GetNumberOfComponents() const
     return channelsPerPixel;
 }
 
-int Universal::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
+int Universal::SetROI(unsigned int x, unsigned int y, unsigned int xSize, unsigned int ySize)
 {
     START_METHOD("Universal::SetROI");
 
@@ -1673,30 +1670,30 @@ int Universal::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 
     // PVCAM does not like ROIs smaller than 2x2 pixels (8 bytes)
     // (This check avoids crash for 1x1 ROIs in PVCAM 2.9.5)
-    if ( xSize * ySize < 4 )
-    {
-        return LogAdapterError( ERR_ROI_SIZE_NOT_SUPPORTED, __LINE__,
-            "Universal::SetROI ROI size not supported" );
-    }
+    if (xSize * ySize < 4)
+        return LogAdapterError(ERR_ROI_SIZE_NOT_SUPPORTED, __LINE__,
+            "Universal::SetROI ROI size not supported");
 
     // We keep the ROI definition in sensor coordinates however the coordinates given by uM are
     // related to the actual image the ROI was drawn on. We need to take the current binning
     // into account.
 
-    // Calling this function for camera with multi ROI support should clear
-    // all the multi ROI definitions and revert to single ROI operation.
+    usesMultiROI_ = false;
+
+    // Set the ROI only, keep the binning
     const uns16 bx = acqCfgCur_.Rois.BinX();
     const uns16 by = acqCfgCur_.Rois.BinY();
+
     acqCfgNew_.Rois.Clear();
     acqCfgNew_.Rois.Add(PvRoi(
-        static_cast<uns16>(x * bx), static_cast<uns16>(y * by),
+        static_cast<uns16>(x     * bx), static_cast<uns16>(y     * by),
         static_cast<uns16>(xSize * bx), static_cast<uns16>(ySize * by), bx, by));
     nRet = applyAcqConfig();
 
     return nRet;
 }
 
-int Universal::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& ySize)
+int Universal::GetROI(unsigned int& x, unsigned int& y, unsigned int& xSize, unsigned int& ySize)
 {
     START_METHOD("Universal::GetROI");
 
@@ -1716,6 +1713,8 @@ int Universal::ClearROI()
 
     int nRet = DEVICE_OK;
 
+    usesMultiROI_ = false;
+
     // Clear the ROI only, keep the binning.
     const uns16 bx = acqCfgCur_.Rois.BinX();
     const uns16 by = acqCfgCur_.Rois.BinY();
@@ -1729,30 +1728,43 @@ int Universal::ClearROI()
 
 bool Universal::SupportsMultiROI()
 {
-    const bool supported = (prmRoiCount_->IsAvailable() && prmRoiCount_->Max() > 1);
+    const bool supported = (camCurrentSpeed_.roiCountMax > 1);
+    START_METHOD("Universal::SupportsMultiROI - " + std::to_string(supported));
     return supported;
 }
 
 bool Universal::IsMultiROISet()
 {
-    const bool isSet = (acqCfgCur_.Rois.Count() > 1);
-    return isSet;
+    START_METHOD("Universal::IsMultiROISet - " + std::to_string(usesMultiROI_));
+    return usesMultiROI_;
 }
 
-int Universal::GetMultiROICount(unsigned& count)
+int Universal::GetMultiROICount(unsigned int& count)
 {
-    count = static_cast<unsigned>(acqCfgCur_.Rois.Count());
+    count = (usesMultiROI_) ? acqCfgCur_.Rois.Count() : 0;
+    START_METHOD("Universal::GetMultiROICount - " + std::to_string(count));
     return DEVICE_OK;
 }
 
-int Universal::SetMultiROI(const unsigned* xs, const unsigned* ys, const unsigned* widths, const unsigned* heights, unsigned numROIs)
+int Universal::SetMultiROI(const unsigned int* xs, const unsigned int* ys,
+        const unsigned int* widths, const unsigned int* heights, unsigned int numROIs)
 {
+    START_METHOD("Universal::SetMultiROI(..., " + std::to_string(numROIs) + ")");
+
     int nRet = DEVICE_OK;
 
-    if (numROIs > acqCfgCur_.Rois.Capacity())
+    if (numROIs > camCurrentSpeed_.roiCountMax)
+    {
+        SetErrorText(ERR_TOO_MANY_ROIS,
+            std::string("Device supports only "
+                + std::to_string(camCurrentSpeed_.roiCountMax)
+                + " ROI(s) for this port/speed.").c_str());
         return ERR_TOO_MANY_ROIS;
+    }
 
-    // Get the current binning
+    usesMultiROI_ = true;
+
+    // Set the ROI only, keep the binning
     const uns16 bx = acqCfgCur_.Rois.BinX();
     const uns16 by = acqCfgCur_.Rois.BinY();
 
@@ -1760,7 +1772,7 @@ int Universal::SetMultiROI(const unsigned* xs, const unsigned* ys, const unsigne
     for (unsigned int i = 0; i < numROIs; ++i)
     {
         const PvRoi roi(
-            static_cast<uns16>(xs[i] * bx), static_cast<uns16>(ys[i] * by),
+            static_cast<uns16>(    xs[i] * bx), static_cast<uns16>(     ys[i] * by),
             static_cast<uns16>(widths[i] * bx), static_cast<uns16>(heights[i] * by),
             bx, by);
         acqCfgNew_.Rois.Add(roi);
@@ -1770,14 +1782,14 @@ int Universal::SetMultiROI(const unsigned* xs, const unsigned* ys, const unsigne
     return nRet;
 }
 
-int Universal::GetMultiROI(unsigned* xs, unsigned* ys, unsigned* widths, unsigned* heights, unsigned* length)
+int Universal::GetMultiROI(unsigned int* xs, unsigned int* ys,
+        unsigned int* widths, unsigned int* heights, unsigned int* length)
 {
-    const unsigned roiCount = acqCfgCur_.Rois.Count();
+    START_METHOD("Universal::GetMultiROI");
+
+    const unsigned int roiCount = (usesMultiROI_) ? acqCfgCur_.Rois.Count() : 0;
     if (roiCount > *length)
-    {
-       // This should never happen.
-       return DEVICE_INTERNAL_INCONSISTENCY;
-    }
+        return DEVICE_INTERNAL_INCONSISTENCY; // This should never happen
 
     for (unsigned int i = 0; i < roiCount; ++i)
     {
@@ -4369,6 +4381,12 @@ int Universal::initializeSpeedTable()
             if (pl_set_param(hPVCAM_, PARAM_SPDTAB_INDEX, &spdEntry.spdIndex) != PV_OK)
                 return LogPvcamError(__LINE__, "pl_set_param PARAM_SPDTAB_INDEX");
 
+            // Read the maximum ROI count
+            if (pl_get_param(hPVCAM_, PARAM_ROI_COUNT, ATTR_MAX, &spdEntry.roiCountMax) != PV_OK)
+            {
+                LogPvcamError(__LINE__, "pl_get_param PARAM_ROI_COUNT failed, using 1 ROI only");
+                spdEntry.roiCountMax = 1;
+            }
             // Read the pixel time for this speed choice
             if (pl_get_param(hPVCAM_, PARAM_PIX_TIME, ATTR_CURRENT, &spdEntry.pixTime) != PV_OK)
             {
@@ -4377,28 +4395,22 @@ int Universal::initializeSpeedTable()
             }
             // Read the bit depth for this speed choice
             if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK)
-            {
                 return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT");
-            }
             // Read the sensor color mask for the current speed
             rs_bool colorAvail = FALSE;
             // Default values for cameras that do not support color mode
             spdEntry.colorMaskStr = "Grayscale";
             spdEntry.colorMask = COLOR_NONE;
             if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_AVAIL, &colorAvail) == PV_OK
-                && colorAvail == TRUE)
+                    && colorAvail == TRUE)
             {
                 uns32 colorCount = 0;
                 if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_COUNT, &colorCount) != PV_OK
-                    || colorCount < 1)
-                {
+                        || colorCount < 1)
                     return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_COUNT");
-                }
                 int32 colorCur = 0;
                 if (pl_get_param(hPVCAM_, PARAM_COLOR_MODE, ATTR_CURRENT, &colorCur) != PV_OK)
-                {
                     return LogPvcamError(__LINE__, "pl_get_param PARAM_COLOR_MODE ATTR_CURRENT");
-                }
                 // We need to find the value/string that corresponds to ATTR_CURRENT value
                 // First a couple of hacks for older cameras. Old PVCAM prior 3.0.5.2 (inclusive) reported
                 // only two values, COLOR_NONE and COLOR_RGGB. However some cameras actually had different mask.
@@ -4429,16 +4441,12 @@ int Universal::initializeSpeedTable()
                 {
                     uns32 enumStrLen = 0;
                     if (pl_enum_str_length(hPVCAM_, PARAM_COLOR_MODE, colorIndex, &enumStrLen) != PV_OK)
-                    {
                         return LogPvcamError(__LINE__, "pl_enum_str_length PARAM_COLOR_MODE");
-                    }
                     auto enumStrBuf = std::make_unique<char[]>(enumStrLen + 1);
                     enumStrBuf[enumStrLen] = '\0';
                     int32 enumVal = 0;
                     if (pl_get_enum_param(hPVCAM_, PARAM_COLOR_MODE, colorIndex, &enumVal, enumStrBuf.get(), enumStrLen) != PV_OK)
-                    {
                         return LogPvcamError(__LINE__, "pl_get_enum_param PARAM_COLOR_MODE");
-                    }
                     if (enumVal == colorCur)
                     {
                         bFound = true;
@@ -4479,13 +4487,9 @@ int Universal::initializeSpeedTable()
                 // depths per gain we use the default one as a "common" depth that will be displayed
                 // next to the readout rate.
                 if (pl_set_param(hPVCAM_, PARAM_GAIN_INDEX, &spdEntry.gainDef) != PV_OK)
-                {
                     return LogPvcamError(__LINE__, "pl_set_param PARAM_GAIN_INDEX");
-                }
                 if (pl_get_param(hPVCAM_, PARAM_BIT_DEPTH, ATTR_CURRENT, &bitDepth) != PV_OK)
-                {
                     return LogPvcamError(__LINE__, "pl_get_param PARAM_BIT_DEPTH ATTR_CURRENT");
-                }
 
                 // Iterate all gains and read each gain name if supported. If not supported or
                 // if we cannot successfully retrieve the string we fall back to a simple
@@ -4497,7 +4501,7 @@ int Universal::initializeSpeedTable()
                     std::string gainNameStr = std::to_string(gainIdx);
                     rs_bool gainNameAvail = FALSE;
                     if (pl_get_param(hPVCAM_, PARAM_GAIN_NAME, ATTR_AVAIL, &gainNameAvail) == PV_OK
-                        && gainNameAvail == TRUE)
+                            && gainNameAvail == TRUE)
                     {
                         if (pl_set_param(hPVCAM_, PARAM_GAIN_INDEX, &gainIdx) == PV_OK)
                         {
@@ -4540,7 +4544,7 @@ int Universal::initializeSpeedTable()
             std::string spdNameStr;
             rs_bool spdNameAvail = FALSE;
             if (pl_get_param(hPVCAM_, PARAM_SPDTAB_NAME, ATTR_AVAIL, &spdNameAvail) == PV_OK
-                && spdNameAvail == TRUE)
+                    && spdNameAvail == TRUE)
             {
                 char spdName[MAX_SPDTAB_NAME_LEN];
                 if (pl_get_param(hPVCAM_, PARAM_SPDTAB_NAME, ATTR_CURRENT, spdName) == PV_OK)
@@ -5966,6 +5970,17 @@ int Universal::applyAcqConfig(bool forceSetup)
             }
         }
         const SpdTabEntry& spd = camCurrentSpeed_;
+
+        if (acqCfgNew_.Rois.Count() > spd.roiCountMax)
+        {
+            acqCfgNew_ = acqCfgCur_; // New settings not accepted, reset it back to previous state
+            SetErrorText(ERR_TOO_MANY_ROIS,
+                std::string("Device supports only "
+                    + std::to_string(spd.roiCountMax)
+                    + " ROI(s) for this port/speed.").c_str());
+            return LogAdapterError(ERR_TOO_MANY_ROIS, __LINE__,
+                "Universal::applyAcqConfig() this port/speed does not support so many ROIs.");
+        }
 
         // When speed changes, the Gain range may need to be updated
         std::vector<std::string> gainChoices;
