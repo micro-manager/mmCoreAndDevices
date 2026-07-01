@@ -114,6 +114,7 @@
 */
 struct SpdTabEntry
 {
+    uns16 roiCountMax;     // Maximum number of ROIs
     uns16 pixTime;         // Readout rate in ns
     rs_bool gainAvail;     // Gain available
     int16   gainMin;       // Min gain index for this speed
@@ -860,6 +861,8 @@ private:
     std::vector<int32>              binningValuesY_{};
     bool                            binningRestricted_{ false };
 
+    bool             usesMultiROI_{ false };
+
     double           redScale_{ 1.0 };
     double           greenScale_{ 1.0 };
     double           blueScale_{ 1.0 };
@@ -987,10 +990,10 @@ private:
     std::vector<PpParam> PostProc_{}; // PP_PARAM can change: BIT_DEPTH, IMAGE_FORMAT
 
     // Camera speed table
-    //  usage: SpdTabEntry e = camSpdTable_[port][speed];
+    //  usage: SpdTabEntry e = camSpdTable_[port_val][speed_idx];
     std::map<int32, std::map<int16, SpdTabEntry>> camSpdTable_{};
     // Reverse speed table to get the speed based on UI selection
-    //  usage: SpdTabEntry e = camSpdTableReverse_[port][ui_selected_string];
+    //  usage: SpdTabEntry e = camSpdTableReverse_[port_val][ui_selected_string];
     std::map<int32, std::map<std::string, SpdTabEntry>> camSpdTableReverse_{};
     // Currently selected speed
     SpdTabEntry camCurrentSpeed_{};
