@@ -36,6 +36,16 @@
 #include <algorithm>
 #include <cstdint>
 
+// Values for the PixelType property. These are the strings the rest of the
+// device adapters use -- see DemoCamera -- and they are deliberately not
+// MMDevice's PixelType keyword constants: those belong to the image metadata
+// tag of the same name, which MMCore writes itself from the byte depth and the
+// component count.
+const char *g_PixelType_8bit     = "8bit";
+const char *g_PixelType_16bit    = "16bit";
+const char *g_PixelType_32bitRGB = "32bitRGB";
+const char *g_PixelType_Unknown  = "Unknown";
+
 std::vector<std::string> supportedPixelFormats = {
   "Mono8",
   "Mono10",
@@ -84,16 +94,40 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 
+// A GenICam increment that could not be read, or that a camera reports as
+// zero, is not a step size -- and dividing by it is a division by zero. One is
+// the identity, so it is both safe and correct when there is no granularity to
+// honour.
+static gint ArvIncrement(gint increment)
+{
+  return (increment > 0) ? increment : 1;
+}
+
+
 // RGB unpacker.
-void rgb_to_rgba(unsigned char *dest, unsigned char *source, size_t size)
+//
+// Micro-Manager's RGB32 is BGRA in memory, and its documentation says the
+// alpha byte "is not used and should contain zeroes". Neither held before: the
+// three colour bytes were copied in the order the camera sent them, so an RGB8
+// camera came out with red and blue exchanged, and the alpha byte was left
+// holding whatever the image buffer held last -- zeros on a fresh allocation,
+// stale pixels once it had been reused.
+void rgb_to_rgba(unsigned char *dest, unsigned char *source, size_t size, bool swap_rb)
 {
   size_t i;
   size_t dOffset = 0;
   size_t sOffset = 0;
-  
+
   for (i = 0; i < size; i++){
-    memcpy(dest + dOffset, source + sOffset, 3);
-    //dest[dOffset + 3] = 0;
+    if (swap_rb){
+      dest[dOffset]     = source[sOffset + 2];
+      dest[dOffset + 1] = source[sOffset + 1];
+      dest[dOffset + 2] = source[sOffset];
+    }
+    else{
+      memcpy(dest + dOffset, source + sOffset, 3);
+    }
+    dest[dOffset + 3] = 0;
     sOffset += 3;
     dOffset += 4;
   }
@@ -124,12 +158,14 @@ AravisCamera::AravisCamera(const char *name) :
   img_buffer_number_components(0),
   img_buffer_number_pixels(0),
   img_buffer_size(0),
+  img_buffer_swap_rb(false),
   img_buffer_width(0),
   initialized(false),
   arv_buffer(nullptr),
   arv_cam(nullptr),
   arv_cam_name(name ? name : ""),
   arv_device(nullptr),
+  arv_pixel_format(0),
   arv_stream(nullptr),
   img_buffer(nullptr),
   pixel_type(nullptr)
@@ -279,11 +315,11 @@ void AravisCamera::ArvBufferUpdate(ArvBuffer *aBuffer)
   // A format with no case in ArvPixelFormatUpdate() leaves these at zero.
   // Zero components is not one, so the copy below would take the RGB path and
   // write four bytes per pixel into a buffer sized for zero. Refuse instead.
+  //
+  // Silently: this runs once per frame, and ArvPixelFormatUpdate() has just
+  // named the format and said it is not implemented. Repeating that here for
+  // every frame of a live acquisition buries the rest of the log.
   if ((img_buffer_bytes_per_pixel < 1) || (img_buffer_number_components < 1)){
-    std::stringstream msg;
-    msg << "Aravis Error, cannot copy an image in unsupported pixel format "
-	<< arvPixelFormat;
-    LogMessage(msg.str(), false);
     return;
   }
 
@@ -322,7 +358,8 @@ void AravisCamera::ArvBufferUpdate(ArvBuffer *aBuffer)
     memcpy(img_buffer, arvBufferData, size);
   }
   else{
-    rgb_to_rgba(img_buffer, arvBufferData, img_buffer_number_pixels);
+    rgb_to_rgba(img_buffer, arvBufferData, img_buffer_number_pixels,
+		img_buffer_swap_rb);
   }
 }
 
@@ -348,6 +385,30 @@ int AravisCamera::ArvCheckError(GError **gerror) const
 }
 
 
+// Read the camera's region and describe the image with it.
+//
+// Micro-Manager asks for the image dimensions and the buffer size before it
+// has seen a single frame -- it sizes its circular buffer from them -- and
+// again immediately after any change to the region or the binning. Both
+// questions used to be answered from whatever the last frame had set: nothing
+// at all before the first snap, and the previous geometry after every change.
+void AravisCamera::ArvGeometryUpdate()
+{
+  gint gx, gy, gwidth, gheight;
+  GError *gerror = nullptr;
+
+  arv_camera_get_region(arv_cam, &gx, &gy, &gwidth, &gheight, &gerror);
+  if (ArvCheckError(&gerror)){
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(img_buffer_mutex);
+  img_buffer_width = (int)gwidth;
+  img_buffer_height = (int)gheight;
+  img_buffer_number_pixels = (size_t)gwidth * (size_t)gheight;
+}
+
+
 // Call the Aravis library to check exposure time only as needed.
 void AravisCamera::ArvGetExposure()
 {
@@ -362,76 +423,96 @@ void AravisCamera::ArvGetExposure()
 
 
 // Update MM image values based on pixel format.
+//
+// PixelType here says what the buffer Micro-Manager is handed looks like, in
+// the vocabulary the other device adapters use. The camera's own format name
+// lives in the PixelFormat property. Previously this set a third set of
+// strings ("8bit mono", "8bitRGB") that belonged to neither.
+//
+// Mono10, Mono12 and Mono14 are all 16bit: two bytes per pixel, lsb aligned,
+// with the sensor's real depth reported separately by GetBitDepth().
 void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
 {
+  // ArvBufferUpdate() calls this for every frame. A format the adapter has no
+  // case for is a standing fact about the camera, not a per-frame event, so it
+  // is worth saying only when the format has actually changed.
+  bool format_changed = (arvPixelFormat != arv_pixel_format);
+  arv_pixel_format = arvPixelFormat;
+
+  // Only the packed RGB formats set this; it is meaningless for the rest.
+  img_buffer_swap_rb = false;
+
   switch (arvPixelFormat){
   case ARV_PIXEL_FORMAT_MONO_8:
     img_buffer_bit_depth = 8;
     img_buffer_bytes_per_pixel = 1;
     img_buffer_number_components = 1;
-    pixel_type = "8bit mono";
+    pixel_type = g_PixelType_8bit;
     break;
   case ARV_PIXEL_FORMAT_MONO_10:
     img_buffer_bit_depth = 10;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
-    pixel_type = "10bit mono";
+    pixel_type = g_PixelType_16bit;
     break;
   case ARV_PIXEL_FORMAT_MONO_12:
-    img_buffer_bit_depth = 10;
+    img_buffer_bit_depth = 12;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
-    pixel_type = "12bit mono";
+    pixel_type = g_PixelType_16bit;
     break;
   case ARV_PIXEL_FORMAT_MONO_14:
     img_buffer_bit_depth = 14;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
-    pixel_type = "14bit mono";
+    pixel_type = g_PixelType_16bit;
     break;
   case ARV_PIXEL_FORMAT_MONO_16:
     img_buffer_bit_depth = 16;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
-    pixel_type = "16bit mono";
+    pixel_type = g_PixelType_16bit;
     break;
-    
+
   case ARV_PIXEL_FORMAT_BAYER_RG_8:
     img_buffer_bit_depth = 8;
     img_buffer_bytes_per_pixel = 1;
     img_buffer_number_components = 1;
-    pixel_type = "8bit mono";
+    pixel_type = g_PixelType_8bit;
     break;
   case ARV_PIXEL_FORMAT_BAYER_RG_10:
     img_buffer_bit_depth = 10;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
-    pixel_type = "10bit mono";
+    pixel_type = g_PixelType_16bit;
     break;
   case ARV_PIXEL_FORMAT_BAYER_RG_12:
     img_buffer_bit_depth = 12;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
-    pixel_type = "12bit mono";
+    pixel_type = g_PixelType_16bit;
     break;
   case ARV_PIXEL_FORMAT_BAYER_RG_16:
     img_buffer_bit_depth = 16;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
-    pixel_type = "16bit mono";
+    pixel_type = g_PixelType_16bit;
     break;
-	
+
   case ARV_PIXEL_FORMAT_RGB_8_PACKED:
     img_buffer_bit_depth = 8;
     img_buffer_bytes_per_pixel = 4;
     img_buffer_number_components = 4;
-    pixel_type = "8bitRGB";
+    // The camera sends R,G,B and Micro-Manager wants B,G,R,A.
+    img_buffer_swap_rb = true;
+    pixel_type = g_PixelType_32bitRGB;
     break;
   case ARV_PIXEL_FORMAT_BGR_8_PACKED:
     img_buffer_bit_depth = 8;
     img_buffer_bytes_per_pixel = 4;
     img_buffer_number_components = 4;
-    pixel_type = "8bitBGR";
+    // Already in Micro-Manager's order; only the alpha byte has to be added.
+    pixel_type = g_PixelType_32bitRGB;
     break;
 
   default:
@@ -439,7 +520,7 @@ void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
     // unusable, rather than keeping the previous format's values and
     // describing the new data with them. printf() went to a console that
     // Micro-Manager users do not have; this belongs in the log.
-    {
+    if (format_changed){
       std::stringstream msg;
       msg << "Aravis Error, pixel format " << (int)arvPixelFormat
 	  << " is not implemented";
@@ -448,7 +529,7 @@ void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
     img_buffer_bit_depth = 0;
     img_buffer_bytes_per_pixel = 0;
     img_buffer_number_components = 0;
-    pixel_type = "Unknown";
+    pixel_type = g_PixelType_Unknown;
     break;
   }
 }
@@ -508,7 +589,9 @@ int AravisCamera::ClearROI()
 
   arv_camera_set_region(arv_cam, 0, 0, w, h, &gerror);
   ArvCheckError(&gerror);
-    
+
+  ArvGeometryUpdate();
+
   return DEVICE_OK;
 }
 
@@ -556,7 +639,6 @@ const unsigned char* AravisCamera::GetImageBuffer()
       ArvBufferUpdate(arv_buffer);
     }
     g_clear_object(&arv_buffer);
-    SetProperty(MM::g_Keyword_PixelType, pixel_type);
     return img_buffer;
   }
   return NULL;
@@ -605,12 +687,17 @@ int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& yS
   GError *gerror = nullptr;
 
   arv_camera_get_region(arv_cam, &gx, &gy, &gwidth, &gheight, &gerror);
-  ArvCheckError(&gerror);
+  if (ArvCheckError(&gerror)){
+    return ARV_ERROR;
+  }
 
+  // y was assigned gx, and the two sizes were assigned to themselves, so every
+  // caller got a garbage region -- on a camera at 0,0 the first two happened
+  // to be right, which is why this survived.
   x = (unsigned)gx;
-  y = (unsigned)gx;
-  xSize = (unsigned)xSize;
-  ySize = (unsigned)ySize;
+  y = (unsigned)gy;
+  xSize = (unsigned)gwidth;
+  ySize = (unsigned)gheight;
 
   return DEVICE_OK;
 }
@@ -619,7 +706,6 @@ int AravisCamera::GetROI(unsigned& x, unsigned& y, unsigned& xSize, unsigned& yS
 int AravisCamera::Initialize()
 {
   int i,ret;
-  gint tmp;
   GError *gerror = nullptr;
 
   if(initialized){
@@ -634,16 +720,10 @@ int AravisCamera::Initialize()
   // Clear ROI settings that may still be present from a previous session.
   ClearROI();
 
-  // Get starting image size.
-  gint h,w;
-  arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);  
-  ArvCheckError(&gerror);
-
-  arv_camera_get_width_bounds(arv_cam, &tmp, &w, &gerror);
-  ArvCheckError(&gerror);
-
-  img_buffer_height = (int)h;
-  img_buffer_width = (int)w;
+  // Get starting image size. From the region the camera is actually in, not
+  // from the largest one it could be in: a camera opening on a smaller region
+  // described every image it produced with the wrong dimensions.
+  ArvGeometryUpdate();
 
   // Set image properties based on current pixel type.
   guint32 arvPixelFormat;
@@ -661,29 +741,42 @@ int AravisCamera::Initialize()
   // Get current exposure time.
   ArvGetExposure();
   
-  // Pixel formats.
+  // Pixel formats, as two properties, because there are two vocabularies and
+  // they are not the same one. PixelFormat selects what the camera sends,
+  // under the camera's own GenICam names. PixelType describes the buffer
+  // Micro-Manager is handed, in Micro-Manager's names. One property cannot be
+  // both, and trying left it flipping between three different sets of strings
+  // depending on which code path wrote it last.
   // FIXME: Camera might start with a format that is not supported.
   const char *pixel_format;
   pixel_format = arv_camera_get_pixel_format_as_string (arv_cam, &gerror);
   ArvCheckError(&gerror);
-  
-  CPropertyAction* pAct = new CPropertyAction(this, &AravisCamera::OnPixelType);
-  ret = CreateProperty(MM::g_Keyword_PixelType, pixel_format, MM::String, false, pAct);
+
+  CPropertyAction* pAct = new CPropertyAction(this, &AravisCamera::OnPixelFormat);
+  ret = CreateProperty(ARV_PROP_PIXEL_FORMAT,
+		       (pixel_format != nullptr) ? pixel_format : "",
+		       MM::String, false, pAct);
   assert(ret == DEVICE_OK);
 
   guint nPixelFormats;
-  std::vector<std::string> pixelTypeValues;
+  std::vector<std::string> pixelFormatValues;
   const char **pixelFormats;
-      
+
   pixelFormats = arv_camera_dup_available_pixel_formats_as_strings(arv_cam, &nPixelFormats, &gerror);
   ArvCheckError(&gerror);
   for(i=0;i<nPixelFormats;i++){
     if (std::find(supportedPixelFormats.begin(), supportedPixelFormats.end(), pixelFormats[i]) != supportedPixelFormats.end()){
-      pixelTypeValues.push_back(pixelFormats[i]);
+      pixelFormatValues.push_back(pixelFormats[i]);
     }
   }
   g_free(pixelFormats);
-  SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
+  SetAllowedValues(ARV_PROP_PIXEL_FORMAT, pixelFormatValues);
+
+  // Read-only, because it is derived rather than chosen: it follows whatever
+  // format the camera is in.
+  pAct = new CPropertyAction(this, &AravisCamera::OnPixelType);
+  ret = CreateProperty(MM::g_Keyword_PixelType, pixel_type, MM::String, true, pAct);
+  assert(ret == DEVICE_OK);
   
   // Binning.
   pAct = new CPropertyAction(this, &AravisCamera::OnBinning);
@@ -1104,32 +1197,72 @@ int AravisCamera::OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
-int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
+int AravisCamera::OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
   GError *gerror = nullptr;
 
   if (eAct == MM::AfterSet){
     if (!capturing){
       guint32 arvPixelFormat;
-      std::string pixelType;
-      pProp->Get(pixelType);
-      
-      arv_camera_set_pixel_format_from_string(arv_cam, pixelType.c_str(), &gerror);
-      ArvCheckError(&gerror);
-      
+      std::string pixelFormat;
+      pProp->Get(pixelFormat);
+
+      // Nothing to do if the camera is already in that format -- and more than
+      // nothing to avoid: a camera that offers a single format has no reason
+      // to make PixelFormat writable, so writing even the value it already
+      // holds fails at the register.
+      const char *current;
+      current = arv_camera_get_pixel_format_as_string(arv_cam, &gerror);
+      if (ArvCheckError(&gerror)){
+	return ARV_ERROR;
+      }
+      if ((current != nullptr) && (pixelFormat == current)){
+	return DEVICE_OK;
+      }
+
+      arv_camera_set_pixel_format_from_string(arv_cam, pixelFormat.c_str(), &gerror);
+      if (ArvCheckError(&gerror)){
+	return ARV_ERROR;
+      }
+
+      // Read back rather than assume: a camera may round the request, or
+      // decline it while leaving the property looking as though it took.
       arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
-      ArvCheckError(&gerror);
+      if (ArvCheckError(&gerror)){
+	return ARV_ERROR;
+      }
       ArvPixelFormatUpdate(arvPixelFormat);
     }
   }
   else if (eAct == MM::BeforeGet) {
     const char *pixelFormat;
     pixelFormat = arv_camera_get_pixel_format_as_string(arv_cam, &gerror);
-    ArvCheckError(&gerror);
-
-    pProp->Set(pixelFormat);
+    if (ArvCheckError(&gerror)){
+      return ARV_ERROR;
+    }
+    if (pixelFormat != nullptr){
+      pProp->Set(pixelFormat);
+    }
   }
-  
+
+  return DEVICE_OK;
+}
+
+
+// PixelType is read-only and derived: it says what the buffer Micro-Manager
+// receives looks like, which is a consequence of the camera's pixel format
+// rather than an independent setting. Selecting a format is PixelFormat's job.
+//
+// Computing it on every read is also what keeps the adapter from ever writing
+// it: GetImageBuffer() used to push this value into the property on the image
+// path, which sent "Unknown" back through the format setter and asked the
+// camera, once per image, to switch to a pixel format by that name.
+int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  if (eAct == MM::BeforeGet){
+    pProp->Set((pixel_type != nullptr) ? pixel_type : g_PixelType_Unknown);
+  }
+
   return DEVICE_OK;
 }
 
@@ -1261,26 +1394,34 @@ int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
   gint inc, ix, iy, ixs, iys;
   GError *gerror = nullptr;
 
+  // A camera that has no OffsetX fails the increment query, and Aravis has no
+  // increment to return; dividing by what comes back would be a division by
+  // zero. One is the identity here, so it is also the safe answer.
   inc = arv_camera_get_x_offset_increment(arv_cam, &gerror);
   ArvCheckError(&gerror);
-  ix = ((gint)x/inc)*inc;
+  ix = ((gint)x/ArvIncrement(inc))*ArvIncrement(inc);
 
   inc = arv_camera_get_y_offset_increment(arv_cam, &gerror);
   ArvCheckError(&gerror);
-  iy = ((gint)y/inc)*inc;
+  iy = ((gint)y/ArvIncrement(inc))*ArvIncrement(inc);
 
   inc = arv_camera_get_width_increment(arv_cam, &gerror);
   ArvCheckError(&gerror);
-  ixs = ((gint)xSize/inc)*inc;
+  ixs = ((gint)xSize/ArvIncrement(inc))*ArvIncrement(inc);
 
   inc = arv_camera_get_height_increment(arv_cam, &gerror);
   ArvCheckError(&gerror);
-  iys = ((gint)ySize/inc)*inc;
-  
-  arv_camera_set_region(arv_cam, ix, iy, ixs, iys, &gerror);
-  ArvCheckError(&gerror);
+  iys = ((gint)ySize/ArvIncrement(inc))*ArvIncrement(inc);
 
-  return DEVICE_OK;
+  arv_camera_set_region(arv_cam, ix, iy, ixs, iys, &gerror);
+  int ret = ArvCheckError(&gerror) ? ARV_ERROR : DEVICE_OK;
+
+  // Either way: Micro-Manager reads the new dimensions straight away, and if
+  // the camera rounded the request or refused it outright, what it actually
+  // took is what the rest of the application has to work from.
+  ArvGeometryUpdate();
+
+  return ret;
 }
 
 

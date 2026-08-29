@@ -53,6 +53,11 @@
 #define ARV_SNAP_EXPOSURE_FACTOR 5.0
 #define ARV_SNAP_MIN_TIMEOUT_US  5000000  // 5 seconds
 
+// The camera's own pixel format, under its GenICam name. Micro-Manager's
+// PixelType property is a different thing in a different vocabulary, so it
+// gets a different property.
+#define ARV_PROP_PIXEL_FORMAT "PixelFormat"
+
 
 class AravisAcquisitionThread;
 
@@ -101,6 +106,7 @@ public:
   int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -110,6 +116,7 @@ public:
   void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
   void ArvBufferUpdate(ArvBuffer *aBuffer);
   int ArvCheckError(GError **gerror) const;
+  void ArvGeometryUpdate();
   void ArvGetExposure();
   void ArvPixelFormatUpdate(guint32 arvPixelFormat);
   int ArvStartSequenceAcquisition();
@@ -134,6 +141,11 @@ private:
   unsigned img_buffer_number_components;
   size_t img_buffer_number_pixels;
   size_t img_buffer_size;
+
+  // Whether the camera's red and blue channels have to be exchanged on the
+  // way into Micro-Manager's BGRA buffer.
+  bool img_buffer_swap_rb;
+
   int img_buffer_width;
   bool initialized;
 
@@ -146,6 +158,12 @@ private:
   ArvCamera *arv_cam;
   std::string arv_cam_name;
   ArvDevice *arv_device;
+
+  // The format the image description was last built from. Kept so that a
+  // format the adapter cannot decode is reported when it changes rather than
+  // once per frame.
+  guint32 arv_pixel_format;
+
   ArvStream *arv_stream;
   unsigned char *img_buffer;
   const char *pixel_type;
