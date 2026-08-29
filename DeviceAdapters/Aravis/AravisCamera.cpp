@@ -150,8 +150,13 @@ stream_callback (void *user_data, ArvStreamCallbackType type, ArvBuffer *arv_buf
 AravisCamera::AravisCamera(const char *name) :
   capturing(false),
   counter(0),
+  num_images(-1),
   exposure_time(0.0),
   has_binning(false),
+  has_exposure_time(false),
+  has_frame_rate(false),
+  has_region_offset(false),
+  has_settable_region(false),
   img_buffer_bit_depth(0),
   img_buffer_bytes_per_pixel(0),
   img_buffer_height(0),
@@ -170,6 +175,21 @@ AravisCamera::AravisCamera(const char *name) :
   img_buffer(nullptr),
   pixel_type(nullptr)
 {
+  // A bare "3141" in a dialog tells a user nothing. Give the two codes this
+  // adapter returns some words, and name the camera in the one that means it
+  // did not answer -- that is the failure a user meets when a camera in a
+  // saved configuration is switched off or has moved to another subnet.
+  SetErrorText(ARV_ERROR,
+	       "The Aravis library reported an error. The message from the "
+	       "camera is in the CoreLog.");
+  SetErrorText(ARV_ERROR_NO_CAMERA,
+	       ("No camera answered to the id '" + arv_cam_name + "'. Check "
+		"that it is powered on, connected, and on the same subnet as "
+		"this computer.").c_str());
+  SetErrorText(ARV_ERROR_NO_SUPPORTED_FORMAT,
+	       "This camera offers no pixel format that the Aravis adapter can "
+	       "decode. The formats it does offer are listed in the CoreLog.");
+
   // The name was previously copied into malloc(strlen(name)) with
   // CDeviceUtils::CopyLimitedString(), which writes strlen(name) + 1 bytes.
   // That put the terminating NUL one byte past the end of the allocation on
@@ -190,6 +210,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
 {
   size_t size;
   unsigned char *cb_arv_buffer_data;
+  int inserted = DEVICE_OK;
 
   MM::CameraImageMetadata md;
 
@@ -238,17 +259,38 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
       md.AddTag(MM::g_Keyword_PixelType, pixel_type);
 
       // Pass data to MM.
-      GetCoreCallback()->InsertImage(this,
-				     img_buffer,
-				     img_buffer_width,
-				     img_buffer_height,
-				     img_buffer_bytes_per_pixel,
-				     1,
-				     md.Serialize());
+      inserted = GetCoreCallback()->InsertImage(this,
+					       img_buffer,
+					       img_buffer_width,
+					       img_buffer_height,
+					       img_buffer_bytes_per_pixel,
+					       1,
+					       md.Serialize());
     }
 
     arv_stream_push_buffer(arv_stream, popped_arv_buffer);
     counter += 1;
+
+    // MMDevice's contract: stop on any InsertImage() error. The Core no longer
+    // reports a buffer overflow when it was told not to stop on one, so an
+    // error here always means the frame could not be delivered.
+    if (inserted != DEVICE_OK){
+      std::stringstream msg;
+      msg << "Aravis Error, stopping the sequence: the Core refused frame "
+	  << counter << " with error " << inserted;
+      LogMessage(msg.str(), false);
+      ArvSequenceFinished();
+      break;
+    }
+
+    // A finite sequence has to stop itself. Micro-Manager asks for a number of
+    // frames and then waits for the camera to say it is done; this used to
+    // stream until something else stopped it, so a request for 8 frames
+    // delivered hundreds and never finished.
+    long wanted = num_images;
+    if ((wanted > 0) && (counter >= wanted)){
+      ArvSequenceFinished();
+    }
     break;
     }
   }
@@ -415,6 +457,10 @@ void AravisCamera::ArvGetExposure()
   double expTimeUs;
   GError *gerror = nullptr;
 
+  if (!has_exposure_time){
+    return;
+  }
+
   expTimeUs = arv_camera_get_exposure_time(arv_cam, &gerror);
   if(!ArvCheckError(&gerror)){
     exposure_time = expTimeUs * 1.0e-3;
@@ -535,6 +581,30 @@ void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
 }
 
 
+// End a sequence from inside the stream callback.
+//
+// Deliberately not StopSequenceAcquisition(): that unreffs the stream, which
+// stops and joins the stream's own thread -- the thread calling this one. The
+// camera is stopped over the control channel, which is a different socket and
+// safe from here, and the stream itself is released by whichever
+// StopSequenceAcquisition() or Shutdown() comes next.
+void AravisCamera::ArvSequenceFinished()
+{
+  GError *gerror = nullptr;
+
+  if (!capturing.exchange(false)){
+    return;
+  }
+
+  if (arv_cam != nullptr){
+    arv_camera_stop_acquisition(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+  }
+
+  GetCoreCallback()->AcqFinished(this, 0);
+}
+
+
 int AravisCamera::ArvStartSequenceAcquisition()
 {
   int i;
@@ -577,22 +647,32 @@ int AravisCamera::ClearROI()
 {
   gint h,tmp,w;
   GError *gerror = nullptr;
-  
-  arv_camera_set_region(arv_cam, 0, 0, 64, 64, &gerror);
-  ArvCheckError(&gerror);
-      
-  arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);  
+
+  // A camera whose size is fixed is always at full frame. There is nothing to
+  // clear, and asking would fail on every call -- which is what happened at
+  // Initialize() on every such camera.
+  if (!has_settable_region){
+    ArvGeometryUpdate();
+    return DEVICE_OK;
+  }
+
+  // The 64x64 intermediate this used to set first was superstition: it fails
+  // outright on a camera whose minimum width is larger than 64 or whose
+  // increment does not divide it, and it was never needed, because
+  // arv_camera_set_region() already zeroes OffsetX and OffsetY before writing
+  // the new size and restores them afterwards.
+  arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);
   ArvCheckError(&gerror);
 
   arv_camera_get_width_bounds(arv_cam, &tmp, &w, &gerror);
   ArvCheckError(&gerror);
 
   arv_camera_set_region(arv_cam, 0, 0, w, h, &gerror);
-  ArvCheckError(&gerror);
+  int ret = ArvCheckError(&gerror) ? ARV_ERROR : DEVICE_OK;
 
   ArvGeometryUpdate();
 
-  return DEVICE_OK;
+  return ret;
 }
 
 
@@ -713,10 +793,65 @@ int AravisCamera::Initialize()
   }
   
   arv_cam = arv_camera_new(arv_cam_name.c_str(), &gerror);
-  if (ArvCheckError(&gerror)) return ARV_ERROR;
+  if (ArvCheckError(&gerror) || (arv_cam == nullptr)){
+    return ARV_ERROR_NO_CAMERA;
+  }
 
   arv_device = arv_camera_get_device(arv_cam);
-  
+
+  // What this camera can do, asked once, before anything relies on it.
+  //
+  // The region is two questions, not one. Aravis' region-offset probe reports
+  // on OffsetX and OffsetY only, so a camera with a settable size and a fixed
+  // offset -- or the reverse -- was handled wrongly in both directions. The
+  // size is answered from the GenICam access mode of Width and Height, which
+  // is what actually decides whether a write can succeed.
+  has_region_offset = arv_camera_is_region_offset_available(arv_cam, &gerror);
+  ArvCheckError(&gerror);
+  has_settable_region =
+    (arv_device_get_feature_access_mode(arv_device, "Width") == ARV_GC_ACCESS_MODE_RW) &&
+    (arv_device_get_feature_access_mode(arv_device, "Height") == ARV_GC_ACCESS_MODE_RW);
+
+  has_exposure_time = arv_camera_is_exposure_time_available(arv_cam, &gerror);
+  ArvCheckError(&gerror);
+  has_frame_rate = arv_camera_is_frame_rate_available(arv_cam, &gerror);
+  ArvCheckError(&gerror);
+
+  // Which camera is this? Nothing recorded it before, so a configuration with
+  // two cameras of the same model said nothing about which was which, and a
+  // support question could not be answered without walking to the microscope.
+  auto describe = [&](const char *name, const char *value){
+    CreateProperty(name, (value != nullptr) ? value : "", MM::String, true);
+  };
+  describe(MM::g_Keyword_Description, "Aravis GigE Vision / USB3 Vision camera");
+
+  const char *info;
+  info = arv_camera_get_vendor_name(arv_cam, &gerror);
+  ArvCheckError(&gerror);
+  describe("Vendor", info);
+
+  info = arv_camera_get_model_name(arv_cam, &gerror);
+  ArvCheckError(&gerror);
+  describe(MM::g_Keyword_CameraName, info);
+
+  info = arv_camera_get_device_serial_number(arv_cam, &gerror);
+  ArvCheckError(&gerror);
+  describe("SerialNumber", info);
+
+  info = arv_camera_get_device_id(arv_cam, &gerror);
+  ArvCheckError(&gerror);
+  describe(MM::g_Keyword_CameraID, info);
+
+  // Not standard enough to assume: ask before reading, or a camera without it
+  // logs a failure at every open.
+  if (arv_camera_is_feature_available(arv_cam, "DeviceVersion", &gerror)){
+    ArvCheckError(&gerror);
+    info = arv_device_get_string_feature_value(arv_device, "DeviceVersion", &gerror);
+    ArvCheckError(&gerror);
+    describe(MM::g_Keyword_Version, info);
+  }
+  ArvCheckError(&gerror);
+
   // Clear ROI settings that may still be present from a previous session.
   ClearROI();
 
@@ -747,19 +882,12 @@ int AravisCamera::Initialize()
   // Micro-Manager is handed, in Micro-Manager's names. One property cannot be
   // both, and trying left it flipping between three different sets of strings
   // depending on which code path wrote it last.
-  // FIXME: Camera might start with a format that is not supported.
-  const char *pixel_format;
-  pixel_format = arv_camera_get_pixel_format_as_string (arv_cam, &gerror);
-  ArvCheckError(&gerror);
-
-  CPropertyAction* pAct = new CPropertyAction(this, &AravisCamera::OnPixelFormat);
-  ret = CreateProperty(ARV_PROP_PIXEL_FORMAT,
-		       (pixel_format != nullptr) ? pixel_format : "",
-		       MM::String, false, pAct);
-  assert(ret == DEVICE_OK);
-
+  //
+  // Sort the camera's formats before either property exists, because what the
+  // adapter can decode decides whether this camera can be opened at all.
   guint nPixelFormats;
   std::vector<std::string> pixelFormatValues;
+  std::vector<std::string> unsupportedFormats;
   const char **pixelFormats;
 
   pixelFormats = arv_camera_dup_available_pixel_formats_as_strings(arv_cam, &nPixelFormats, &gerror);
@@ -768,8 +896,77 @@ int AravisCamera::Initialize()
     if (std::find(supportedPixelFormats.begin(), supportedPixelFormats.end(), pixelFormats[i]) != supportedPixelFormats.end()){
       pixelFormatValues.push_back(pixelFormats[i]);
     }
+    else{
+      unsupportedFormats.push_back(pixelFormats[i]);
+    }
   }
   g_free(pixelFormats);
+
+  // Dropped formats used to vanish without a word, so a camera whose list came
+  // back short looked like a camera with a short list.
+  if (!unsupportedFormats.empty()){
+    std::stringstream msg;
+    msg << "Aravis: this camera offers " << unsupportedFormats.size()
+	<< " pixel format(s) that this adapter does not implement, and which "
+	<< "are therefore not offered in " << ARV_PROP_PIXEL_FORMAT << ":";
+    for (const std::string &name : unsupportedFormats){
+      msg << " " << name;
+    }
+    LogMessage(msg.str(), false);
+  }
+
+  // A camera this adapter cannot decode a single image from is not one it can
+  // open. Opening it anyway produced a device reporting zero bytes per pixel,
+  // which MMCore turns into "memory requirements not adequate" the first time
+  // live acquisition starts -- a message that says nothing about the cause.
+  if (pixelFormatValues.empty()){
+    std::stringstream msg;
+    msg << "Aravis Error, this camera offers no pixel format that this adapter "
+	<< "implements. It offers:";
+    for (const std::string &name : unsupportedFormats){
+      msg << " " << name;
+    }
+    LogMessage(msg.str(), false);
+    return ARV_ERROR_NO_SUPPORTED_FORMAT;
+  }
+
+  const char *pixel_format;
+  pixel_format = arv_camera_get_pixel_format_as_string (arv_cam, &gerror);
+  ArvCheckError(&gerror);
+
+  // A camera can be sitting in a format the adapter cannot decode while also
+  // offering one it can -- a packed mono default alongside Mono8, say. Move it
+  // rather than open into a state that produces no images.
+  if ((pixel_format == nullptr) ||
+      (std::find(pixelFormatValues.begin(), pixelFormatValues.end(),
+		 pixel_format) == pixelFormatValues.end())){
+    std::stringstream msg;
+    msg << "Aravis: camera is in pixel format "
+	<< ((pixel_format != nullptr) ? pixel_format : "(unreadable)")
+	<< ", which this adapter does not implement; switching to "
+	<< pixelFormatValues[0];
+    LogMessage(msg.str(), false);
+
+    arv_camera_set_pixel_format_from_string(arv_cam, pixelFormatValues[0].c_str(), &gerror);
+    if (ArvCheckError(&gerror)){
+      return ARV_ERROR_NO_SUPPORTED_FORMAT;
+    }
+
+    pixel_format = arv_camera_get_pixel_format_as_string(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+
+    arvPixelFormat = arv_camera_get_pixel_format(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+    ArvPixelFormatUpdate(arvPixelFormat);
+    ArvGeometryUpdate();
+  }
+
+  CPropertyAction* pAct = new CPropertyAction(this, &AravisCamera::OnPixelFormat);
+  ret = CreateProperty(ARV_PROP_PIXEL_FORMAT,
+		       (pixel_format != nullptr) ? pixel_format : "",
+		       MM::String, false, pAct);
+  assert(ret == DEVICE_OK);
+
   SetAllowedValues(ARV_PROP_PIXEL_FORMAT, pixelFormatValues);
 
   // Read-only, because it is derived rather than chosen: it follows whatever
@@ -795,7 +992,9 @@ int AravisCamera::Initialize()
     arv_camera_get_x_binning_bounds(arv_cam, &bmin, &bmax, &gerror);
     ArvCheckError(&gerror);
 
-    binc = arv_camera_get_x_binning_increment(arv_cam, &gerror);
+    // Guarded, because binc is the step of the loop below: an increment the
+    // camera could not report comes back as zero, and the loop never ends.
+    binc = ArvIncrement(arv_camera_get_x_binning_increment(arv_cam, &gerror));
     ArvCheckError(&gerror);
 
     for (int x = bmin; x <= bmax; x += binc){
@@ -1354,7 +1553,13 @@ int AravisCamera::SetBinning(int binSize)
   }
 
   arv_camera_set_binning(arv_cam, (gint)binSize, (gint)binSize, &gerror);
-  ArvCheckError(&gerror);
+  if (ArvCheckError(&gerror)){
+    return ARV_ERROR;
+  }
+
+  // Binning changes the frame size, and Micro-Manager reads the new one back
+  // before the next frame arrives.
+  ArvGeometryUpdate();
 
   return DEVICE_OK;
 }
@@ -1366,24 +1571,28 @@ void AravisCamera::SetExposure(double expMs)
   double min, max;
   GError *gerror = nullptr;
 
+  // Nothing to set, and nothing that could be set: a camera with no
+  // ExposureTime feature failed both calls below on every exposure change.
+  if (!has_exposure_time){
+    return;
+  }
+
   arv_camera_get_exposure_time_bounds(arv_cam, &min, &max, &gerror);
   ArvCheckError(&gerror);
 
   if (expUs < min){ expUs = min; }
   if (expUs > max){ expUs = max; }
-  
+
   arv_camera_set_exposure_time(arv_cam, expUs, &gerror);
   ArvCheckError(&gerror);
 
-  // This always returns the same bounds, independent of exposure time..
-  arv_camera_get_frame_rate_bounds(arv_cam, &min, &max, &gerror);
-  ArvCheckError(&gerror);
-
-  // arv_camera_set_frame_rate(arv_cam, max, &gerror);
-  // This is supposed to disable the frame rate, which will then
-  // presumably be set by the exposure time.
-  arv_camera_set_frame_rate(arv_cam, -1.0, &gerror);
-  ArvCheckError(&gerror);
+  // Disable the frame rate limit so the exposure is what paces the camera --
+  // but only on a camera that has one to disable. The bounds this used to read
+  // first were never looked at; the comment even said they do not change.
+  if (has_frame_rate){
+    arv_camera_set_frame_rate(arv_cam, -1.0, &gerror);
+    ArvCheckError(&gerror);
+  }
 
   ArvGetExposure();
 }
@@ -1490,6 +1699,10 @@ int AravisCamera::SnapImage()
 
 int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, bool stopOnOverflow)
 {
+  // stopOnOverflow is not kept: the Core acts on it itself, and tells this
+  // adapter by failing InsertImage(), which the callback already stops on.
+  num_images = numImages;
+
   if (!ArvStartSequenceAcquisition()){
     int ret = GetCoreCallback()->PrepareForAcq(this);
     if (ret != DEVICE_OK) {
@@ -1502,6 +1715,9 @@ int AravisCamera::StartSequenceAcquisition(long numImages, double interval_ms, b
 
 
 int AravisCamera::StartSequenceAcquisition(double interval_ms) {
+  // The continuous overload: run until Micro-Manager stops it.
+  num_images = -1;
+
   if (!ArvStartSequenceAcquisition()){
     int ret = GetCoreCallback()->PrepareForAcq(this);
     if (ret != DEVICE_OK) {
@@ -1517,19 +1733,22 @@ int AravisCamera::StopSequenceAcquisition()
 {
   GError *gerror = nullptr;
 
-  if (capturing){
-    capturing = false;
+  // The stream is released whether or not this call is the one that ended the
+  // acquisition: a finite sequence stops itself from the callback, which
+  // cannot touch the stream, so something has to clean up afterwards.
+  bool was_capturing = capturing.exchange(false);
 
-    if (arv_cam != nullptr){
-      arv_camera_stop_acquisition(arv_cam, &gerror);
-      ArvCheckError(&gerror);
-    }
+  if (was_capturing && (arv_cam != nullptr)){
+    arv_camera_stop_acquisition(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+  }
 
-    // Unreffing the stream stops and joins its thread, so no callback can be
-    // in flight once this returns. Shutdown() relies on that before it frees
-    // the image buffer the callback writes into.
-    g_clear_object(&arv_stream);
+  // Unreffing the stream stops and joins its thread, so no callback can be
+  // in flight once this returns. Shutdown() relies on that before it frees
+  // the image buffer the callback writes into.
+  g_clear_object(&arv_stream);
 
+  if (was_capturing){
     GetCoreCallback()->AcqFinished(this, 0);
   }
   return DEVICE_OK;
