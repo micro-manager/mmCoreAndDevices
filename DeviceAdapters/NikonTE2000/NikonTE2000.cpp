@@ -1946,7 +1946,11 @@ bool PFSOffset::Busy()
 
 int PFSOffset::SetPositionUm(double pos)
 {
-   return SetProperty(MM::g_Keyword_Position, CDeviceUtils::ConvertToString(pos));
+   int ret =  SetProperty(MM::g_Keyword_Position, CDeviceUtils::ConvertToString(pos));
+   if (ret== DEVICE_OK){
+      OnStagePositionChanged(pos);
+   }
+   return ret;
 }
 
 int PFSOffset::GetPositionUm(double& pos)
