@@ -1002,6 +1002,7 @@ int XYStage::SetPositionSteps(long x, long y)
 
    if (answer.substr(0,1).compare("R") == 0)
    {
+      OnXYStagePositionChanged(x*stepSizeXUm_, y*stepSizeYUm_);
       return DEVICE_OK;
    }
    else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
@@ -1038,6 +1039,7 @@ int XYStage::SetRelativePositionSteps(long x, long y)
 
    if (answer.substr(0,1).compare("R") == 0)
    {
+      // ?? I guess we have query in order to do this?
       return DEVICE_OK;
    }
    else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
@@ -1743,6 +1745,7 @@ int ZStage::SetPositionSteps(long pos)
    if (answer.substr(0,1).compare("R") == 0)
    {
       curSteps_ = pos;
+      OnStagePositionChanged(curSteps_*stepSizeUm_);
       return DEVICE_OK;
    }
    else if (answer.substr(0, 1).compare("E") == 0 && answer.length() > 2)
