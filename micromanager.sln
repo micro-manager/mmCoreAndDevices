@@ -546,6 +546,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "3Z_Optics", "DeviceAdapters
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NikonAZ100SDK", "SecretDeviceAdapters\NikonAZ100SDK\NikonAZ100SDK.vcxproj", "{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PicardUSB", "DeviceAdapters\PicardUSB\PicardUSB.vcxproj", "{9C82367B-6FE2-4173-AB4D-41F17738CC7D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1640,6 +1642,10 @@ Global
 		{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}.Debug|x64.Build.0 = Debug|x64
 		{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}.Release|x64.ActiveCfg = Release|x64
 		{F3A2D5B7-8C91-4E6A-B4D0-7E2F1A9C3D5E}.Release|x64.Build.0 = Release|x64
+		{9C82367B-6FE2-4173-AB4D-41F17738CC7D}.Debug|x64.ActiveCfg = Debug|x64
+		{9C82367B-6FE2-4173-AB4D-41F17738CC7D}.Debug|x64.Build.0 = Debug|x64
+		{9C82367B-6FE2-4173-AB4D-41F17738CC7D}.Release|x64.ActiveCfg = Release|x64
+		{9C82367B-6FE2-4173-AB4D-41F17738CC7D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

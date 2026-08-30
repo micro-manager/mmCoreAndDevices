@@ -1,0 +1,13 @@
+<project name="PicardUSB">
+   <import file="../../../buildscripts/deviceadapter.xml"/>
+
+   <property name="picard.piusb.sdk" location="${mm.thirdpartypublic}/Picard/PiUsbSDK-2.3"/>
+
+   <target name="install-Win32">
+      <copy todir="${mm.dll.installdir}" file="${picard.piusb.sdk}/bin/Win32/PiUsb.dll"/>
+   </target>
+
+   <target name="install-x64">
+      <copy todir="${mm.dll.installdir}" file="${picard.piusb.sdk}/bin/x64/PiUsb.dll"/>
+   </target>
+</project>
