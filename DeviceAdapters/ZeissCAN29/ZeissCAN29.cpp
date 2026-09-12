@@ -754,7 +754,8 @@ int ZeissAxis::GetTrajectoryAcceleration(MM::Device& device, MM::Core& core, Zei
 //
 ZeissScope::ZeissScope() :
    initialized_(false),
-   port_("Undefined")
+   port_("Undefined"),
+   devicesDetected_(false)
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_ANSWER_TIMEOUT, "The Zeiss microscope does not answer.  Is it switched on and connected to this computer?");
@@ -842,6 +843,14 @@ ZeissScope::~ZeissScope()
 
 
 int ZeissScope::DetectInstalledDevices() {
+   // Running this twice on the same instance would double-delete the
+   // deviceMap_-owned pointers added to installedDevices below (Core
+   // normally guards against this via HubInstance, but do not rely
+   // solely on that).
+   if (devicesDetected_)
+      return DEVICE_OK;
+   devicesDetected_ = true;
+
    ClearInstalledDevices();
    bool present = false;
    for (const auto& pair : deviceMap_)
@@ -935,7 +944,7 @@ int ZeissScope::Initialize()
    return 0;
 }
 
-int ZeissScope::Shutdown() 
+int ZeissScope::Shutdown()
 {
    if (g_hub.monitoringThread_ != 0) {
       g_hub.monitoringThread_->Stop();
@@ -943,7 +952,14 @@ int ZeissScope::Shutdown()
       delete g_hub.monitoringThread_;
       g_hub.monitoringThread_ = 0;
    }
+   // Reset discovery state so that a subsequent Initialize() (e.g. the
+   // Hardware Configuration Wizard's unload/reload verification cycle)
+   // starts from a clean slate instead of inheriting state from this run.
    g_hub.scopeInitialized_ = false;
+   g_hub.canNodes_.clear();
+   g_hub.availableDevices_.clear();
+   g_hub.hasDefiniteFocus_ = false;
+   g_hub.hasColibri_ = false;
    return 0;
 }
 
@@ -2264,6 +2280,7 @@ DefiniteFocus::DefiniteFocus() :
 
 DefiniteFocus::~DefiniteFocus()
 {
+   Shutdown();
 }
 
 
@@ -2764,6 +2781,7 @@ DFOffsetStage::DFOffsetStage() :
  
 DFOffsetStage::~DFOffsetStage()
 {
+   Shutdown();
 }
 
 void DFOffsetStage::GetName(char* Name) const                                       
@@ -2940,6 +2958,7 @@ Colibri::Colibri() :
 
 Colibri::~Colibri()
 {
+   Shutdown();
 }
 
 int Colibri::Initialize()
