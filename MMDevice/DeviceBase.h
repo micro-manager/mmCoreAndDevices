@@ -699,6 +699,26 @@ public:
    }
 
    /**
+    * @brief Remove the limits of a property, so that any value is allowed
+    * again.
+    *
+    * Use this instead of calling SetPropertyLimits() with an empty range
+    * (e.g. 0, 0): the latter returns an error and logs a message, because an
+    * empty range is not a valid set of limits.
+    */
+   int ClearPropertyLimits(const char* name)
+   {
+      MM::Property* pProp = properties_.Find(name);
+      if (!pProp)
+      {
+         SetMorePropertyErrorInfo(name);
+         return DEVICE_INVALID_PROPERTY;
+      }
+      pProp->ClearLimits();
+      return DEVICE_OK;
+   }
+
+   /**
     * @brief Set an entire array of allowed values.
     */
    int SetAllowedValues(const char* name, std::vector<std::string>& values)

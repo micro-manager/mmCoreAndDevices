@@ -1100,11 +1100,9 @@ int Universal::Initialize()
             CDeviceUtils::ConvertToString(circBufFrameCount_), MM::Integer, acqCfgNew_.CircBufSizeAuto, pAct);
     // If we are in auto mode the property has no limits because the value is read only and adjusted
     // automatically by internal algorithm or PVCAM. In manual mode we just set the initial range that
-    // is later dynamically adjusted by actual frame size.
-    // Note: passing 0, 0 will disable the limit checking but for some reason returns an error so
-    // we don't check the error code for SetPropertyLimits() here. See also: updateCircBufRange()
+    // is later dynamically adjusted by actual frame size. See also: updateCircBufRange()
     if (acqCfgNew_.CircBufSizeAuto)
-        SetPropertyLimits( g_Keyword_CircBufFrameCnt, 0, 0);
+        ClearPropertyLimits( g_Keyword_CircBufFrameCnt );
     else
         SetPropertyLimits( g_Keyword_CircBufFrameCnt, CIRC_BUF_FRAME_CNT_MIN, CIRC_BUF_FRAME_CNT_MAX );
 
@@ -5536,12 +5534,9 @@ int Universal::updateCircBufRange(unsigned int frameSize)
 
     if (acqCfgCur_.CircBufSizeAuto)
     {
-        // In auto mode the property is read-only and has no limits. There is a little catch though,
-        // to disable the "slider" when the property is made read-only we need to call
-        // SetPropertyLimits(..., 0, 0), however this returns an error DEVICE_INVALID_PROPERTY_LIMTS
-        // even though the SetLimits() implementation suggests that 0, 0 will disable the limit checking.
-        // For this reason, no error checking here.
-        SetPropertyLimits( g_Keyword_CircBufFrameCnt, 0, 0 );
+        // In auto mode the property is read-only and has no limits. To disable the
+        // "slider" when the property is made read-only the limits have to be removed.
+        ClearPropertyLimits( g_Keyword_CircBufFrameCnt );
     }
     else
     {
@@ -6168,7 +6163,7 @@ int Universal::applyAcqConfig(bool forceSetup)
             if (prmScanWidth_->IsReadOnly())
             {
                 // Disable the property, we will make it read-only in the OnScanWidth()
-                SetPropertyLimits(g_Keyword_ScanWidth, 0, 0);
+                ClearPropertyLimits(g_Keyword_ScanWidth);
             }
             else
             {
@@ -6196,7 +6191,7 @@ int Universal::applyAcqConfig(bool forceSetup)
             if (prmScanLineDelay_->IsReadOnly())
             {
                 // Disable the property, we will make it read-only in the OnScanLineDelay()
-                SetPropertyLimits(g_Keyword_ScanLineDelay, 0, 0);
+                ClearPropertyLimits(g_Keyword_ScanLineDelay);
             }
             else
             {
