@@ -71,9 +71,11 @@ public:
 
    void wait()
    {
-      // Note: joining a non-joinable thread (a programming error) will throw
-      // std::system_error.
-      thread_.join();
+      // Calling wait() on an already-wait()ed thread, or a never-activate()ed
+      // thread, is dubious usage, but the previous implementation allowed it,
+      // at least on Windows. So we must remain lenient here.
+      if (thread_.joinable())
+         thread_.join();
    }
 
 private:
