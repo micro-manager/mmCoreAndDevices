@@ -81,6 +81,12 @@ the mmCoreAndDevices repository) so that they are automatically maintained for
 source and binary compatibility. Out-of-tree adapters require careful and
 regular maintenance by their authors to keep up with interface changes.
 
+**C++ standard.** MMDevice is written to compile as C++14 or later, and its
+own build scripts compile it as C++14 to ensure this. Device adapters may use
+any standard from C++14 up; the in-tree build systems default adapters to
+C++17, but individual adapters (including some in-tree ones) still build as
+C++14. This is why C++17-only features are not used in MMDevice headers.
+
 ### Known portability issues
 
 **Use of `long`.** `long` is 32-bit on Windows but 64-bit on Linux/macOS. It
@@ -96,6 +102,7 @@ updates in device adapter code. Note the reverse-chronological order.
 
 | Date | PR | Change | Fix |
 | ---- | -- | ------ | --- |
+| 2026-07-20 | [#973](https://github.com/micro-manager/mmCoreAndDevices/pull/973) | Reimplemented `MMDeviceThreadBase`, `MMThreadLock`, and `MMThreadGuard` (`DeviceThreads.h`) using `std::thread` and `std::recursive_mutex`. Removed transitive `<Windows.h>` (Windows) and `<pthread.h>` (POSIX) includes from `DeviceThreads.h` (and thus from `DeviceBase.h`). Removed `MMThreadGuard::isLocked()`. `MMDeviceThreadBase::activate()` is now non-virtual and returns `void`. Thread/mutex errors that were previously ignored now throw `std::system_error`. | Add explicit `#include <Windows.h>` (defining `WIN32_LEAN_AND_MEAN` first is recommended) or `#include <pthread.h>` where the adapter relied on the transitive include. Remove uses of `isLocked()`. Do not override `activate()` or use its return value. |
 | 2026-02-26 | [#861](https://github.com/micro-manager/mmCoreAndDevices/pull/861) | Removed `GetPixelSizeUm()`, `GetComponentName()`, `PrepareSequenceAcqusition()` from `MM::Camera` interface. Removed `doProcess` parameter from `InsertImage()`. Added `UsesOnStagePositionChanged()` / `UsesOnXYStagePositionChanged()` to stage interfaces. DIV bumped to 75. | Remove `doProcess` argument from `InsertImage()` calls. Override `UsesOn[XY]StagePositionChanged()` if your stage uses position-changed callbacks. |
 | 2026-02-19 | [#853](https://github.com/micro-manager/mmCoreAndDevices/pull/853) | Made `GetComponentName()` `final` | Remove override. |
 | 2026-02-19 | [#852](https://github.com/micro-manager/mmCoreAndDevices/pull/852) | Made `PrepareSequenceAcqusition()` `final` | Remove override. |
