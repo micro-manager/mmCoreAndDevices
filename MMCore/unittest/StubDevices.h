@@ -7,7 +7,13 @@
 #include "CameraImageMetadata.h"
 #include "DeviceBase.h"
 
+#include <chrono>
+#include <condition_variable>
+#include <future>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <utility>
 #include <vector>
 
 struct StubGeneric : CGenericBase<StubGeneric> {
@@ -74,19 +80,21 @@ struct StubCamera : CCameraBase<StubCamera> {
       return DEVICE_OK;
    }
    int StartSequenceAcquisition(long, double, bool) override {
-      return DEVICE_OK;
-   }
-   int StartSequenceAcquisition(double) override { return DEVICE_OK; }
-   int StopSequenceAcquisition() override { return DEVICE_OK; }
-   bool IsCapturing() override { return capturing; }
-
-   int PrepareForAcq() {
+      capturing = true;
       return GetCoreCallback()->PrepareForAcq(this);
    }
-
-   int AcqFinished(int statusCode = 0) {
-      return GetCoreCallback()->AcqFinished(this, statusCode);
+   int StartSequenceAcquisition(double) override {
+      capturing = true;
+      return GetCoreCallback()->PrepareForAcq(this);
    }
+   int StopSequenceAcquisition() override {
+      if (capturing) {
+         capturing = false;
+         GetCoreCallback()->AcqFinished(this, 0);
+      }
+      return DEVICE_OK;
+   }
+   bool IsCapturing() override { return capturing; }
 
    int InsertTestImage(
          const MM::CameraImageMetadata& md = MM::CameraImageMetadata{},
@@ -124,8 +132,343 @@ struct SyncCamera : CCameraBase<SyncCamera> {
    int binning = 1;
    double exposure = 10.0;
    bool capturing = false;
+   bool reportCapturing = true;
+
+   // When true, SetExposure() blocks until UnblockSetExposure() is called.
+   // Tests use this to hold the camera adapter module lock from a thread
+   // that calls c.setExposure("cam", ...).
+   bool blockSetExposure = false;
+
+   // When true, StopSequenceAcquisition() blocks until ReleaseStopBlocked()
+   // is called. While blocked, the calling thread typically holds the
+   // camera adapter module lock (since CMMCore::stopSequenceAcquisition
+   // invokes camera->StopSequenceAcquisition under that lock).
+   bool blockStopSeqAcq = false;
 
    explicit SyncCamera(std::string n = "SyncCamera") : name(std::move(n)) {}
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SnapImage() override {
+      imgBuf_.assign(
+         static_cast<size_t>(width) * height * bytesPerPixel, 0);
+      return DEVICE_OK;
+   }
+   const unsigned char* GetImageBuffer() override { return imgBuf_.data(); }
+   long GetImageBufferSize() const override {
+      return static_cast<long>(width) * height * bytesPerPixel;
+   }
+   unsigned GetImageWidth() const override { return width; }
+   unsigned GetImageHeight() const override { return height; }
+   unsigned GetImageBytesPerPixel() const override { return bytesPerPixel; }
+   unsigned GetNumberOfComponents() const override { return nComponents; }
+   unsigned GetBitDepth() const override { return bitDepth; }
+   int GetBinning() const override { return binning; }
+   int SetBinning(int b) override { binning = b; return DEVICE_OK; }
+   void SetExposure(double e) override {
+      if (blockSetExposure) {
+         std::unique_lock<std::mutex> lk(setExpMu_);
+         inSetExposureBlock_ = true;
+         setExpCv_.notify_all();
+         setExpCv_.wait(lk, [this] { return setExposureReleased_; });
+         inSetExposureBlock_ = false;
+      }
+      exposure = e;
+   }
+   double GetExposure() const override { return exposure; }
+   int SetROI(unsigned, unsigned, unsigned, unsigned) override {
+      return DEVICE_OK;
+   }
+   int GetROI(unsigned& x, unsigned& y, unsigned& w, unsigned& h) override {
+      x = 0; y = 0; w = width; h = height;
+      return DEVICE_OK;
+   }
+   int ClearROI() override { return DEVICE_OK; }
+   int IsExposureSequenceable(bool& seq) const override {
+      seq = false;
+      return DEVICE_OK;
+   }
+
+   int StartSequenceAcquisition(long, double, bool) override {
+      capturing = true;
+      return GetCoreCallback()->PrepareForAcq(this);
+   }
+   int StartSequenceAcquisition(double) override {
+      capturing = true;
+      return GetCoreCallback()->PrepareForAcq(this);
+   }
+   int StopSequenceAcquisition() override {
+      if (blockStopSeqAcq) {
+         std::unique_lock<std::mutex> lk(stopBlockMu_);
+         inStopBlock_ = true;
+         stopBlockCv_.notify_all();
+         stopBlockCv_.wait(lk, [this] { return stopReleased_; });
+         inStopBlock_ = false;
+         // Note: do NOT call Finish() here. The test fires AcqFinished
+         // from a separate thread while we are parked, so that AcqFinished
+         // races against this thread's module-lock hold (the desired
+         // scenario). Calling Finish() would fire AcqFinished on this
+         // thread, which holds the module lock recursively — try_lock
+         // would succeed and SpawnOrDeferShutterClose would never run.
+         return DEVICE_OK;
+      }
+      Finish();
+      return DEVICE_OK;
+   }
+   bool IsCapturing() override { return capturing && reportCapturing; }
+
+   void TriggerSelfFinish() { Finish(); }
+
+   bool WaitForStopBlocked(
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(stopBlockMu_);
+      return stopBlockCv_.wait_for(lk, timeout,
+         [this] { return inStopBlock_; });
+   }
+   void ReleaseStopBlocked() {
+      {
+         std::lock_guard<std::mutex> lk(stopBlockMu_);
+         stopReleased_ = true;
+      }
+      stopBlockCv_.notify_all();
+   }
+
+   bool WaitForSetExposureBlocked(
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(setExpMu_);
+      return setExpCv_.wait_for(lk, timeout,
+         [this] { return inSetExposureBlock_; });
+   }
+   void UnblockSetExposure() {
+      {
+         std::lock_guard<std::mutex> lk(setExpMu_);
+         setExposureReleased_ = true;
+      }
+      setExpCv_.notify_all();
+   }
+
+   int InsertTestImage(const unsigned char* pixels = nullptr) {
+      std::vector<unsigned char> defaultBuf;
+      const unsigned char* buf = pixels;
+      if (!buf) {
+         defaultBuf.assign(
+            static_cast<size_t>(width) * height * bytesPerPixel, 0);
+         buf = defaultBuf.data();
+      }
+      return GetCoreCallback()->InsertImage(this, buf,
+         width, height, bytesPerPixel, nComponents, "{}");
+   }
+
+private:
+   void Finish() {
+      if (capturing) {
+         capturing = false;
+         GetCoreCallback()->AcqFinished(this, 0);
+      }
+   }
+
+   std::vector<unsigned char> imgBuf_;
+
+   std::mutex stopBlockMu_;
+   std::condition_variable stopBlockCv_;
+   bool inStopBlock_ = false;
+   bool stopReleased_ = false;
+
+   std::mutex setExpMu_;
+   std::condition_variable setExpCv_;
+   bool inSetExposureBlock_ = false;
+   bool setExposureReleased_ = false;
+};
+
+// A camera that produces images asynchronously on its own thread.
+struct AsyncCamera : CCameraBase<AsyncCamera> {
+   std::string name = "AsyncCamera";
+   unsigned width = 64;
+   unsigned height = 64;
+   unsigned bytesPerPixel = 1;
+   unsigned nComponents = 1;
+   unsigned bitDepth = 8;
+   int binning = 1;
+   double exposure = 10.0;
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SnapImage() override {
+      imgBuf_.assign(
+         static_cast<size_t>(width) * height * bytesPerPixel, 0);
+      return DEVICE_OK;
+   }
+   const unsigned char* GetImageBuffer() override {
+      return imgBuf_.data();
+   }
+   long GetImageBufferSize() const override {
+      return static_cast<long>(width) * height * bytesPerPixel;
+   }
+   unsigned GetImageWidth() const override { return width; }
+   unsigned GetImageHeight() const override { return height; }
+   unsigned GetImageBytesPerPixel() const override { return bytesPerPixel; }
+   unsigned GetNumberOfComponents() const override { return nComponents; }
+   unsigned GetBitDepth() const override { return bitDepth; }
+   int GetBinning() const override { return binning; }
+   int SetBinning(int b) override { binning = b; return DEVICE_OK; }
+   void SetExposure(double e) override { exposure = e; }
+   double GetExposure() const override { return exposure; }
+   int SetROI(unsigned, unsigned, unsigned, unsigned) override {
+      return DEVICE_OK;
+   }
+   int GetROI(unsigned& x, unsigned& y, unsigned& w, unsigned& h) override {
+      x = 0; y = 0; w = width; h = height;
+      return DEVICE_OK;
+   }
+   int ClearROI() override { return DEVICE_OK; }
+   int IsExposureSequenceable(bool& seq) const override {
+      seq = false;
+      return DEVICE_OK;
+   }
+
+   int StartSequenceAcquisition(long numImages, double /*unused*/, bool /*stopOnOverflow*/) override {
+      GetCoreCallback()->PrepareForAcq(this);
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         running_ = true;
+         stopRequested_ = false;
+      }
+      thread_ = std::thread([this, numImages] {
+         AcqThread(numImages);
+      });
+      return DEVICE_OK;
+   }
+
+   int StartSequenceAcquisition(double /*unused*/) override {
+      GetCoreCallback()->PrepareForAcq(this);
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         running_ = true;
+         stopRequested_ = false;
+      }
+      thread_ = std::thread([this] {
+         AcqThread(-1);
+      });
+      return DEVICE_OK;
+   }
+
+   ~AsyncCamera() {
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         stopRequested_ = true;
+      }
+      cv_.notify_one();
+      if (thread_.joinable())
+         thread_.join();
+   }
+
+   int StopSequenceAcquisition() override {
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         stopRequested_ = true;
+      }
+      cv_.notify_one();
+      if (thread_.joinable())
+         thread_.join();
+      return DEVICE_OK;
+   }
+
+   bool IsCapturing() override {
+      std::lock_guard<std::mutex> lk(mu_);
+      return running_;
+   }
+
+private:
+   void AcqThread(long numImages) {
+      std::vector<unsigned char> buf(
+         static_cast<size_t>(width) * height * bytesPerPixel, 0);
+      long count = 0;
+      while (numImages < 0 || count < numImages) {
+         {
+            std::lock_guard<std::mutex> lk(mu_);
+            if (stopRequested_)
+               break;
+         }
+         GetCoreCallback()->InsertImage(this, buf.data(),
+            width, height, bytesPerPixel, nComponents, "{}");
+         ++count;
+         {
+            std::unique_lock<std::mutex> lk(mu_);
+            cv_.wait_for(lk, std::chrono::microseconds(100),
+               [this] { return stopRequested_; });
+            if (stopRequested_)
+               break;
+         }
+      }
+      GetCoreCallback()->AcqFinished(this, 0);
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         running_ = false;
+      }
+   }
+
+   bool running_ = false;
+   bool stopRequested_ = false;
+   std::mutex mu_;
+   std::condition_variable cv_;
+   std::thread thread_;
+   std::vector<unsigned char> imgBuf_;
+};
+
+// A camera whose StartSequenceAcquisition spawns a worker thread that calls
+// PrepareForAcq on that thread (rather than synchronously on the calling
+// thread), then waits for stop. Worker calls AcqFinished before exiting.
+//
+// Test knobs let the StartSequenceAcquisition caller wait until the worker
+// has reached the PrepareForAcq call site (and optionally sleep a small
+// extra interval to let it enter the deferred-open wait), and let it return
+// a configurable status code instead of DEVICE_OK. This is used to exercise
+// the open-side deferred-open + rollback paths.
+struct WorkerThreadCamera : CCameraBase<WorkerThreadCamera> {
+   std::string name;
+   unsigned width = 64;
+   unsigned height = 64;
+   unsigned bytesPerPixel = 1;
+   unsigned nComponents = 1;
+   unsigned bitDepth = 8;
+   int binning = 1;
+   double exposure = 10.0;
+
+   // Test knobs (set before startSequenceAcquisition). Defaults cause the
+   // calling thread to wait until the worker has called PrepareForAcq, plus
+   // a small extra delay so the worker reliably reaches the deferred-open
+   // wait inside PrepareForAcq before StartSequenceAcquisition returns.
+   // (The "promise set" signal fires just *before* the call into
+   // PrepareForAcq, not after the deferred state is materialized; the
+   // extra sleep covers the inherent gap.)
+   int startReturnValue = DEVICE_OK;
+   bool waitForPrepareCalledBeforeStartReturns = true;
+   std::chrono::milliseconds extraSleepBeforeStartReturns{50};
+
+   explicit WorkerThreadCamera(std::string n = "WorkerThreadCamera")
+      : name(std::move(n)) {}
+
+   ~WorkerThreadCamera() override {
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         stopRequested_ = true;
+      }
+      cv_.notify_all();
+      if (thread_.joinable())
+         thread_.join();
+   }
 
    int Initialize() override { return DEVICE_OK; }
    int Shutdown() override { return DEVICE_OK; }
@@ -166,43 +509,93 @@ struct SyncCamera : CCameraBase<SyncCamera> {
    }
 
    int StartSequenceAcquisition(long, double, bool) override {
-      capturing = true;
-      GetCoreCallback()->PrepareForAcq(this);
-      return DEVICE_OK;
+      return SpawnWorker();
    }
    int StartSequenceAcquisition(double) override {
-      capturing = true;
-      GetCoreCallback()->PrepareForAcq(this);
-      return DEVICE_OK;
+      return SpawnWorker();
    }
+
    int StopSequenceAcquisition() override {
-      Finish();
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         stopRequested_ = true;
+      }
+      cv_.notify_all();
+      if (thread_.joinable())
+         thread_.join();
       return DEVICE_OK;
    }
-   bool IsCapturing() override { return capturing; }
 
-   void TriggerSelfFinish() { Finish(); }
+   bool IsCapturing() override {
+      std::lock_guard<std::mutex> lk(mu_);
+      return running_;
+   }
 
-   int InsertTestImage(const unsigned char* pixels = nullptr) {
-      std::vector<unsigned char> defaultBuf;
-      const unsigned char* buf = pixels;
-      if (!buf) {
-         defaultBuf.assign(
-            static_cast<size_t>(width) * height * bytesPerPixel, 0);
-         buf = defaultBuf.data();
-      }
-      return GetCoreCallback()->InsertImage(this, buf,
-         width, height, bytesPerPixel, nComponents, "{}");
+   // Returns once the worker thread has returned from PrepareForAcq (i.e.,
+   // the shutter is open or the open path has terminated with failure).
+   bool WaitForPrepareReturned(
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(mu_);
+      return prepareReturnedCv_.wait_for(lk, timeout,
+         [this] { return prepareReturned_; });
+   }
+   int PrepareReturnValue() {
+      std::lock_guard<std::mutex> lk(mu_);
+      return prepareReturnValue_;
    }
 
 private:
-   void Finish() {
-      if (capturing) {
-         capturing = false;
-         GetCoreCallback()->AcqFinished(this, 0);
+   int SpawnWorker() {
+      std::promise<void> reachedPromise;
+      auto reachedFut = reachedPromise.get_future();
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         running_ = true;
+         stopRequested_ = false;
+         prepareReturned_ = false;
+         prepareReturnValue_ = DEVICE_OK;
+         prepareCalledPromise_ = std::move(reachedPromise);
+      }
+      thread_ = std::thread([this] { WorkerLoop(); });
+      if (waitForPrepareCalledBeforeStartReturns)
+         reachedFut.wait();
+      if (extraSleepBeforeStartReturns.count() > 0)
+         std::this_thread::sleep_for(extraSleepBeforeStartReturns);
+      return startReturnValue;
+   }
+
+   void WorkerLoop() {
+      // Signal that the worker is about to enter PrepareForAcq.
+      prepareCalledPromise_.set_value();
+      int ret = GetCoreCallback()->PrepareForAcq(this);
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         prepareReturnValue_ = ret;
+         prepareReturned_ = true;
+      }
+      prepareReturnedCv_.notify_all();
+      // Wait for stop request (do not produce images by default).
+      {
+         std::unique_lock<std::mutex> lk(mu_);
+         cv_.wait(lk, [this] { return stopRequested_; });
+      }
+      GetCoreCallback()->AcqFinished(this, 0);
+      {
+         std::lock_guard<std::mutex> lk(mu_);
+         running_ = false;
       }
    }
 
+   bool running_ = false;
+   bool stopRequested_ = false;
+   bool prepareReturned_ = false;
+   int prepareReturnValue_ = DEVICE_OK;
+   std::mutex mu_;
+   std::condition_variable cv_;
+   std::condition_variable prepareReturnedCv_;
+   std::promise<void> prepareCalledPromise_;
+   std::thread thread_;
    std::vector<unsigned char> imgBuf_;
 };
 
@@ -322,6 +715,9 @@ struct StubShutter : CShutterBase<StubShutter> {
    std::string name = "StubShutter";
    using CShutterBase::GetCoreCallback; // No OnShutterOpenChanged on device side
    bool open = false;
+   int setOpenTrueCount = 0;
+   int setOpenFalseCount = 0;
+   int setOpenTrueReturnValue = DEVICE_OK;
 
    int Initialize() override { return DEVICE_OK; }
    int Shutdown() override { return DEVICE_OK; }
@@ -330,9 +726,99 @@ struct StubShutter : CShutterBase<StubShutter> {
       CDeviceUtils::CopyLimitedString(buf, name.c_str());
    }
 
-   int SetOpen(bool o) override { open = o; return DEVICE_OK; }
+   int SetOpen(bool o) override {
+      if (o) {
+         ++setOpenTrueCount;
+         if (setOpenTrueReturnValue != DEVICE_OK)
+            return setOpenTrueReturnValue;
+      } else {
+         ++setOpenFalseCount;
+      }
+      open = o;
+      return DEVICE_OK;
+   }
    int GetOpen(bool& o) override { o = open; return DEVICE_OK; }
    int Fire(double) override { return DEVICE_OK; }
+};
+
+// Mock shutter for multi-threaded tests. State changes are mutex-
+// synchronized; reads must go through the GetOpenSync / GetSet*Count
+// accessors. WaitForSetOpenTrue / WaitForSetOpenFalse provide an
+// observable synchronization point for tests that need to wait for a
+// worker thread to reach SetOpen.
+struct ConcurrentStubShutter : CShutterBase<ConcurrentStubShutter> {
+   std::string name = "ConcurrentStubShutter";
+   using CShutterBase::GetCoreCallback;
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SetOpen(bool o) override {
+      {
+         std::lock_guard<std::mutex> lk(stateMu_);
+         if (o) {
+            ++setOpenTrueCount_;
+         } else {
+            ++setOpenFalseCount_;
+            setOpenFalseThreadId_ = std::this_thread::get_id();
+         }
+         open_ = o;
+      }
+      stateCv_.notify_all();
+      return DEVICE_OK;
+   }
+   int GetOpen(bool& o) override {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      o = open_;
+      return DEVICE_OK;
+   }
+   int Fire(double) override { return DEVICE_OK; }
+
+   bool WaitForSetOpenTrue(
+         int count = 1,
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(stateMu_);
+      return stateCv_.wait_for(lk, timeout,
+         [this, count] { return setOpenTrueCount_ >= count; });
+   }
+   bool WaitForSetOpenFalse(
+         int count = 1,
+         std::chrono::milliseconds timeout =
+            std::chrono::milliseconds(5000)) {
+      std::unique_lock<std::mutex> lk(stateMu_);
+      return stateCv_.wait_for(lk, timeout,
+         [this, count] { return setOpenFalseCount_ >= count; });
+   }
+
+   bool GetOpenSync() {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      return open_;
+   }
+   int GetSetOpenTrueCount() {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      return setOpenTrueCount_;
+   }
+   int GetSetOpenFalseCount() {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      return setOpenFalseCount_;
+   }
+   std::thread::id GetSetOpenFalseThreadId() {
+      std::lock_guard<std::mutex> lk(stateMu_);
+      return setOpenFalseThreadId_;
+   }
+
+private:
+   std::mutex stateMu_;
+   std::condition_variable stateCv_;
+   bool open_ = false;
+   int setOpenTrueCount_ = 0;
+   int setOpenFalseCount_ = 0;
+   std::thread::id setOpenFalseThreadId_;
 };
 
 struct StubMagnifier : CMagnifierBase<StubMagnifier> {
@@ -472,5 +958,112 @@ struct StubGalvo : CGalvoBase<StubGalvo> {
    int GetChannel(char* channelName) override {
       CDeviceUtils::CopyLimitedString(channelName, "");
       return DEVICE_OK;
+   }
+};
+
+// Minimal mock of a composite multi-channel camera (in the style of the
+// Multi Camera adapter). Holds its physical cameras as direct pointers.
+struct MockCompositeCamera : CCameraBase<MockCompositeCamera> {
+   std::string name = "MockCompositeCamera";
+   std::vector<MM::Camera*> physicals;
+
+   explicit MockCompositeCamera(std::vector<MM::Camera*> p)
+      : physicals(std::move(p)) {}
+
+   int Initialize() override { return DEVICE_OK; }
+   int Shutdown() override { return DEVICE_OK; }
+   bool Busy() override { return false; }
+   void GetName(char* buf) const override {
+      CDeviceUtils::CopyLimitedString(buf, name.c_str());
+   }
+
+   int SnapImage() override { return DEVICE_OK; }
+   const unsigned char* GetImageBuffer() override {
+      return physicals.empty() ? nullptr : physicals[0]->GetImageBuffer();
+   }
+   long GetImageBufferSize() const override {
+      return physicals.empty() ? 0 : physicals[0]->GetImageBufferSize();
+   }
+   unsigned GetImageWidth() const override {
+      return physicals.empty() ? 0 : physicals[0]->GetImageWidth();
+   }
+   unsigned GetImageHeight() const override {
+      return physicals.empty() ? 0 : physicals[0]->GetImageHeight();
+   }
+   unsigned GetImageBytesPerPixel() const override {
+      return physicals.empty() ? 0 : physicals[0]->GetImageBytesPerPixel();
+   }
+   unsigned GetNumberOfComponents() const override { return 1; }
+   unsigned GetNumberOfChannels() const override {
+      return static_cast<unsigned>(physicals.size());
+   }
+   int GetChannelName(unsigned channel, char* chName) override {
+      if (channel < physicals.size()) {
+         physicals[channel]->GetLabel(chName);
+      } else {
+         CDeviceUtils::CopyLimitedString(chName, "");
+      }
+      return DEVICE_OK;
+   }
+   MM::Camera* GetChannelCameraPtr(unsigned n) override {
+      return n < physicals.size() ? physicals[n] : nullptr;
+   }
+   unsigned GetBitDepth() const override {
+      return physicals.empty() ? 8 : physicals[0]->GetBitDepth();
+   }
+   int GetBinning() const override {
+      return physicals.empty() ? 1 : physicals[0]->GetBinning();
+   }
+   int SetBinning(int b) override {
+      for (auto* p : physicals) p->SetBinning(b);
+      return DEVICE_OK;
+   }
+   void SetExposure(double e) override {
+      for (auto* p : physicals) p->SetExposure(e);
+   }
+   double GetExposure() const override {
+      return physicals.empty() ? 0.0 : physicals[0]->GetExposure();
+   }
+   int SetROI(unsigned, unsigned, unsigned, unsigned) override {
+      return DEVICE_OK;
+   }
+   int GetROI(unsigned& x, unsigned& y, unsigned& w, unsigned& h) override {
+      x = 0; y = 0;
+      w = GetImageWidth();
+      h = GetImageHeight();
+      return DEVICE_OK;
+   }
+   int ClearROI() override { return DEVICE_OK; }
+   int IsExposureSequenceable(bool& seq) const override {
+      seq = false;
+      return DEVICE_OK;
+   }
+
+   int StartSequenceAcquisition(long n, double i, bool s) override {
+      for (auto* p : physicals) {
+         int ret = p->StartSequenceAcquisition(n, i, s);
+         if (ret != DEVICE_OK) return ret;
+      }
+      return DEVICE_OK;
+   }
+   int StartSequenceAcquisition(double i) override {
+      for (auto* p : physicals) {
+         int ret = p->StartSequenceAcquisition(i);
+         if (ret != DEVICE_OK) return ret;
+      }
+      return DEVICE_OK;
+   }
+   int StopSequenceAcquisition() override {
+      for (auto* p : physicals) {
+         int ret = p->StopSequenceAcquisition();
+         if (ret != DEVICE_OK) return ret;
+      }
+      return DEVICE_OK;
+   }
+   bool IsCapturing() override {
+      for (auto* p : physicals) {
+         if (p->IsCapturing()) return true;
+      }
+      return false;
    }
 };

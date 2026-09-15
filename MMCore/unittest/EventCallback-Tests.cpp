@@ -363,12 +363,13 @@ TEST_CASE("onSequenceAcquisitionStarted from device",
    c.setCameraDevice("cam");
    c.registerCallback(&cb);
 
-   cam.PrepareForAcq();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    REQUIRE(cb.waitFor(CBType::SequenceAcquisitionStarted));
    auto recs = cb.records(CBType::SequenceAcquisitionStarted);
    REQUIRE(recs.size() >= 1);
    CHECK(recs[0].s1 == "cam");
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("onSequenceAcquisitionStopped from device",
@@ -381,7 +382,8 @@ TEST_CASE("onSequenceAcquisitionStopped from device",
    c.setCameraDevice("cam");
    c.registerCallback(&cb);
 
-   cam.AcqFinished();
+   c.startSequenceAcquisition(10, 0.0, true);
+   c.stopSequenceAcquisition();
 
    REQUIRE(cb.waitFor(CBType::SequenceAcquisitionStopped));
    auto recs = cb.records(CBType::SequenceAcquisitionStopped);
@@ -534,13 +536,14 @@ TEST_CASE("onShutterOpenChanged from AcqFinished", "[EventCallback]") {
    c.setAutoShutter(true);
    c.registerCallback(&cb);
 
-   cam.AcqFinished();
+   c.startSequenceAcquisition(10, 0.0, true);
+   c.stopSequenceAcquisition();
 
-   REQUIRE(cb.waitFor(CBType::ShutterOpenChanged));
+   REQUIRE(cb.waitForCount(CBType::ShutterOpenChanged, 2));
    auto recs = cb.records(CBType::ShutterOpenChanged);
-   REQUIRE(recs.size() >= 1);
-   CHECK(recs[0].s1 == "shutter");
-   CHECK(recs[0].b1 == false);
+   REQUIRE(recs.size() >= 2);
+   CHECK(recs[1].s1 == "shutter");
+   CHECK(recs[1].b1 == false);
 }
 
 TEST_CASE("onShutterOpenChanged from PrepareForAcq", "[EventCallback]") {
@@ -555,13 +558,14 @@ TEST_CASE("onShutterOpenChanged from PrepareForAcq", "[EventCallback]") {
    c.setAutoShutter(true);
    c.registerCallback(&cb);
 
-   cam.PrepareForAcq();
+   c.startSequenceAcquisition(10, 0.0, true);
 
    REQUIRE(cb.waitFor(CBType::ShutterOpenChanged));
    auto recs = cb.records(CBType::ShutterOpenChanged);
    REQUIRE(recs.size() >= 1);
    CHECK(recs[0].s1 == "shutter");
    CHECK(recs[0].b1 == true);
+   c.stopSequenceAcquisition();
 }
 
 TEST_CASE("onImageSnapped from snapImage", "[EventCallback]") {
