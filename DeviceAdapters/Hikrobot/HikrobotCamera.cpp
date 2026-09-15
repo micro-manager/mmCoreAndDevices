@@ -740,7 +740,6 @@ int HikrobotCamera::Initialize()
 	//// binning
 	pAct = new CPropertyAction(this, &HikrobotCamera::OnBinning);
 	ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);
-	SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
 	assert(ret == DEVICE_OK);
 	vector<string> binValues;
 	MVCC_ENUMVALUE BinningHorizontal = { 0 };
@@ -767,14 +766,11 @@ int HikrobotCamera::Initialize()
 
 		MvWriteLog(__FILE__, __LINE__, m_chDevID, "binning range: %lld - %lld", min, max);
 
-		SetPropertyLimits(MM::g_Keyword_Binning, (double)min, (double)max);
-
 		for (int x = 1; x <= max; x++)
 		{
 			std::ostringstream oss;
 			oss << x;
 			binValues.push_back(oss.str());
-			AddAllowedValue(MM::g_Keyword_Binning, oss.str().c_str());
 		}
 		binningFactor_.assign(CDeviceUtils::ConvertToString((long)BinningHorizontal.nCurValue));
 		CheckForBinningMode(pAct);
@@ -784,6 +780,7 @@ int HikrobotCamera::Initialize()
 		binValues.push_back("1");
 		binningFactor_.assign("1");
 	}
+	SetAllowedValues(MM::g_Keyword_Binning, binValues);
 
 	if (m_pCamera->EnumerateTls() & MV_GIGE_DEVICE)
 	{
