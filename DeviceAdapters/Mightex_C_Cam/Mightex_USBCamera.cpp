@@ -1818,8 +1818,8 @@ int CMightex_BUF_USBCCDCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType
 					return ret;
 				SetProperty(g_Keyword_Resolution, s_resolution);
 
-				SetPropertyLimits(g_Keyword_XStart, 0, 0);
-				SetPropertyLimits(g_Keyword_YStart, 0, 0);
+				ClearPropertyLimits(g_Keyword_XStart);
+				ClearPropertyLimits(g_Keyword_YStart);
 				SetProperty(g_Keyword_XStart, "0");
 				SetProperty(g_Keyword_YStart, "0");
 				g_xStart = 0;

@@ -1404,7 +1404,7 @@ int CMightex_SB_Camera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 				else
 					return DEVICE_ERR;
 
-				SetPropertyLimits(g_Keyword_YStart, 0, 0);
+				ClearPropertyLimits(g_Keyword_YStart);
 				SetProperty(g_Keyword_YStart, "0");
 				yStart = 0;
 
@@ -1468,7 +1468,7 @@ int CMightex_SB_Camera::OnBinMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 				binMode_ = binFactor;
 				if (binFactor > 0)
 				{				
-					SetPropertyLimits(g_Keyword_YStart, 0, 0);
+					ClearPropertyLimits(g_Keyword_YStart);
 					SetProperty(g_Keyword_YStart, "0");
 					yStart = 0;
 
@@ -1833,7 +1833,7 @@ int CMightex_SB_Camera::OnResolution(MM::PropertyBase* pProp, MM::ActionType eAc
 			}
 			img_.Resize(s_vidFrameSize[MAX_RESOLUTION].width, h, bytesPerPixel);
 
-			SetPropertyLimits(g_Keyword_YStart, 0, 0);
+			ClearPropertyLimits(g_Keyword_YStart);
 			SetProperty(g_Keyword_YStart, "0");
 			yStart = 0;
 
