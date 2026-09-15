@@ -1010,7 +1010,7 @@ int SCCamera::OnTriggerIn(MM::PropertyBase* pProp, MM::ActionType eAct) {
             }
             else {
                 ClearAllowedValues(g_feature_triggerActivation);
-                SetPropertyLimits(g_feature_triggerDelay, 0, 0); // disable
+                ClearPropertyLimits(g_feature_triggerDelay);
             }
             ret = DEVICE_OK;
         } break;

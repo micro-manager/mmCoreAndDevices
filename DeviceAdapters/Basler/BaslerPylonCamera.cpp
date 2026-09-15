@@ -815,7 +815,6 @@ int BaslerCamera::Initialize()
 		//// binning
 		pAct = new CPropertyAction(this, &BaslerCamera::OnBinning);
 		ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);
-		SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
 		assert(ret == DEVICE_OK);
 
 		vector<string> binValues;
@@ -827,16 +826,13 @@ int BaslerCamera::Initialize()
 		if (IsAvailable(BinningHorizontal) && IsAvailable(BinningVertical))
 		{
 			//assumed that BinningHorizontal and BinningVertical allow same steps
-			int64_t min = BinningHorizontal->GetMin();
 			int64_t max = BinningHorizontal->GetMax();
-			SetPropertyLimits(MM::g_Keyword_Binning, (double)min, (double)max);
 
 			for (int x = 1; x <= max; x++)
 			{
 				std::ostringstream oss;
 				oss << x;
 				binValues.push_back(oss.str());
-				AddAllowedValue(MM::g_Keyword_Binning, oss.str().c_str());
 			}
 			binningFactor_.assign(CDeviceUtils::ConvertToString((long)BinningHorizontal->GetValue()));
 			CheckForBinningMode(pAct);
@@ -846,6 +842,7 @@ int BaslerCamera::Initialize()
 			binValues.push_back("1");
 			binningFactor_.assign("1");
 		}
+		SetAllowedValues(MM::g_Keyword_Binning, binValues);
 
 		// synchronize all properties
 		// --------------------------

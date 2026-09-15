@@ -687,14 +687,14 @@ int AravisCamera::Initialize()
   
   // Binning.
   pAct = new CPropertyAction(this, &AravisCamera::OnBinning);
-  ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);    
-  SetPropertyLimits(MM::g_Keyword_Binning, 1, 1);
+  ret = CreateProperty(MM::g_Keyword_Binning, "1", MM::Integer, false, pAct);
   assert(ret == DEVICE_OK);
-    
+
   // Remembered, not just used here: every other binning entry point has to
   // know the answer too, or it will ask Aravis and log a failure each time.
   has_binning = arv_camera_is_binning_available(arv_cam, &gerror);
   ArvCheckError(&gerror);
+  std::vector<std::string> binValues;
   if (has_binning){
     gint bmin,bmax,binc;
 
@@ -705,13 +705,14 @@ int AravisCamera::Initialize()
     binc = arv_camera_get_x_binning_increment(arv_cam, &gerror);
     ArvCheckError(&gerror);
 
-    SetPropertyLimits(MM::g_Keyword_Binning, bmin, bmax);
-
     for (int x = bmin; x <= bmax; x += binc){
-      std::string xs = std::to_string(x);
-      AddAllowedValue(MM::g_Keyword_Binning, xs.c_str());
+      binValues.push_back(std::to_string(x));
     }
   }
+  else {
+    binValues.push_back("1");
+  }
+  SetAllowedValues(MM::g_Keyword_Binning, binValues);
   
   // Auto gain.
   gboolean hasAutoGain;
