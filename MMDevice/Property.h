@@ -217,6 +217,19 @@ public:
       return limits_ ? upperLimit_ : 0.0;
    }
 
+   /**
+    * Removes the limits, if any, so that any value is allowed again.
+    *
+    * Unlike SetLimits() with an empty range, this is not an error and is not
+    * logged as one.
+    */
+   void ClearLimits()
+   {
+      limits_ = false;
+      lowerLimit_ = 0.0;
+      upperLimit_ = 0.0;
+   }
+
    bool SetLimits(double lowerLimit, double upperLimit)
    {
       limits_ = true;
