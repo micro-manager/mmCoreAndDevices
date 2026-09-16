@@ -7,11 +7,10 @@
 //                Adapted in spirit from the Marzhauser-LStep adapter shape.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef WIN32
-// Prevent windows.h (pulled in transitively) from defining min/max macros,
+#ifdef _MSC_VER
+// Prevent Windows.h (pulled in transitively) from defining min/max macros,
 // which break std::min/std::max.
 #define NOMINMAX
-#pragma warning(disable : 4355)
 #endif
 
 #include "EnderscopeStage.h"
@@ -114,8 +113,6 @@ int EnderscopeBase::CheckDeviceStatus()
       return ret;
    }
 
-   // initialized_ is set only at the end of Initialize(), not here, so a
-   // failure during property creation does not leave the device half-initialized.
    return DEVICE_OK;
 }
 
@@ -351,9 +348,6 @@ EnderscopeXYStage::EnderscopeXYStage()
 
    CPropertyAction* pAct = new CPropertyAction(this, &EnderscopeXYStage::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
-
-   // Note: the serial baud rate is configured on the COM port device itself
-   // (the port's own BaudRate property), not here.
 
    pAct = new CPropertyAction(this, &EnderscopeXYStage::OnReadTimeout);
    CreateProperty("ReadTimeoutMs", CDeviceUtils::ConvertToString(readTimeoutMs_), MM::Integer, false, pAct, true);
@@ -711,9 +705,6 @@ EnderscopeZStage::EnderscopeZStage()
 
    CPropertyAction* pAct = new CPropertyAction(this, &EnderscopeZStage::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
-
-   // Note: the serial baud rate is configured on the COM port device itself
-   // (the port's own BaudRate property), not here.
 
    pAct = new CPropertyAction(this, &EnderscopeZStage::OnReadTimeout);
    CreateProperty("ReadTimeoutMs", CDeviceUtils::ConvertToString(readTimeoutMs_), MM::Integer, false, pAct, true);
