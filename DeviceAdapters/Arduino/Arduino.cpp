@@ -1384,27 +1384,34 @@ int CArduinoDA::Initialize()
 
    if (hub->GetDAVoltageRange(channel_, physMinV_, physMaxV_, numSteps_))
    {
-      // The firmware reports DA_MAX_VOLTAGE_MICROV, a hand-edited constant in
-      // the sketch that describes the DAC's *default* reference (5 V).  It is
-      // not a measurement, so it cannot know that this particular board was
-      // wired for a different reference.  The user-supplied "MaxVolt" is the
-      // authoritative description of the attached hardware: use the firmware
-      // range only for resolution (numSteps_) and for the lower bound, and
-      // never clamp the user's full-scale voltage down to it.
+      // The firmware knows this channel's full-scale range, so that range is
+      // the fixed hardware capability: numSteps_ codes span physMinV_ to
+      // physMaxV_, and no code can take the output beyond it.  "MaxVolt" is
+      // therefore a software ceiling *below* the hardware range, not a
+      // redefinition of it, and voltages are scaled against the hardware range
+      // (see VoltsToCode).  Scaling against MaxVolt while keeping the
+      // firmware's numSteps_ would make every channel reach full scale at its
+      // own MaxVolt, which is what made channels configured for 1, 5, 6 and
+      // 10 V all measure the same voltage at their maximum.
       hasPhysRange_ = true;
       minV_ = physMinV_;
 
-      // Not an error (the firmware constant describes the default board, the
-      // user describes theirs), but worth recording: if the two disagree the
-      // output voltage depends on the reference actually wired to the DAC.
-      if (maxV_ != physMaxV_)
+      // MaxVolt is a pre-init property, so it is set before the port is open
+      // and OnMaxVolt() cannot yet know the hardware range - this is the first
+      // point at which a too-high value can be detected.  Fail initialization
+      // rather than clamping: a silently clamped value looks like it was
+      // accepted while the device outputs something else entirely.
+      if (maxV_ > physMaxV_)
       {
          std::ostringstream os;
-         os << "DA channel " << channel_ << ": configured MaxVolt (" << maxV_
-            << " V) differs from the range reported by the firmware ("
-            << physMinV_ << " - " << physMaxV_ << " V). Using the configured value;"
-            << " verify the DAC reference voltage matches it.";
+         os << "MaxVolt (" << maxV_ << " V) exceeds the maximum voltage of "
+            << physMaxV_ << " V reported by the firmware for DA channel "
+            << channel_ << ".  Set MaxVolt to " << physMaxV_
+            << " V or lower.  MaxVolt can limit the output to less than the"
+            << " hardware can produce, but it cannot raise it.";
          LogMessage(os.str().c_str(), false);
+         SetErrorText(ERR_DA_MAXVOLT_ABOVE_HARDWARE, os.str().c_str());
+         return ERR_DA_MAXVOLT_ABOVE_HARDWARE;
       }
    }
 
@@ -1443,6 +1450,11 @@ int CArduinoDA::Initialize()
    if (nRet != DEVICE_OK)
       return nRet;
    SetPropertyLimits("Volts", minV_, maxV_);
+
+   // Constrain MaxVolt for any edit made after initialization (the pre-init
+   // value was already checked above, before the port was open).
+   if (hasPhysRange_ && HasProperty("MaxVolt"))
+      SetPropertyLimits("MaxVolt", 0.0, physMaxV_);
 
    nRet = UpdateStatus();
    if (nRet != DEVICE_OK)
@@ -1498,19 +1510,33 @@ int CArduinoDA::WriteToPort(unsigned long value)
 }
 
 
+// Converts a voltage to the digital code sent to the DAC.  numSteps_ codes span
+// the *hardware* range, so that is what must be scaled against whenever it is
+// known; MaxVolt only limits which voltages may be requested.  When the firmware
+// does not report a range (version < 6, or no DA chip), MaxVolt is the only
+// description of the hardware available, so it is used instead.
+long CArduinoDA::VoltsToCode(double volts) const
+{
+   double refMin = hasPhysRange_ ? physMinV_ : minV_;
+   double refMax = hasPhysRange_ ? physMaxV_ : maxV_;
+   double span = refMax - refMin;
+   if (span <= 0.0)
+      return 0;
+
+   long value = (long) ((volts - refMin) / span * numSteps_);
+   if (value < 0)
+      value = 0;
+   if (value > (long) numSteps_)
+      value = (long) numSteps_;
+   return value;
+}
+
 int CArduinoDA::WriteSignal(double volts)
 {
    if (maxV_ <= 0.0)
       return DEVICE_INVALID_PROPERTY_VALUE;
 
-   // Scale against the range the user configured (minV_/maxV_), not the
-   // firmware's reported constant.  Scaling against the firmware value while
-   // the property limit came from the user is what made the output differ from
-   // the requested voltage by the ratio of the two ranges.
-   double span = maxV_ - minV_;
-   long value = (span > 0.0) ? (long) ((volts - minV_) / span * numSteps_) : 0;
-   if (value < 0) value = 0;
-   if (value > (long) numSteps_) value = (long) numSteps_;
+   long value = VoltsToCode(volts);
 
    std::ostringstream os;
     os << "Volts: " << volts << " Max Voltage: " << maxV_ << " digital value: " << value;
@@ -1556,17 +1582,13 @@ int CArduinoDA::SendDASequence()
    if (!hub || !hub->IsPortAvailable())
       return ERR_NO_PORT_SET;
 
-   // Must use the same scaling as WriteSignal() so a sequenced voltage and a
-   // directly-set voltage produce the same output.
-   double span = maxV_ - minV_;
-
    std::vector<unsigned char> payload;
    payload.reserve(sequence_.size() * 2);
    for (size_t i = 0; i < sequence_.size(); i++)
    {
-      long value = (span > 0.0) ? (long) ((sequence_[i] - minV_) / span * numSteps_) : 0;
-      if (value < 0) value = 0;
-      if (value > (long) numSteps_) value = (long) numSteps_;
+      // Same conversion as WriteSignal(), so a sequenced voltage and a
+      // directly-set voltage always produce the same output.
+      long value = VoltsToCode(sequence_[i]);
       payload.push_back((unsigned char) (value / 256L));
       payload.push_back((unsigned char) (value & 255));
    }
@@ -1783,6 +1805,14 @@ int CArduinoDA::OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct)
       // WriteSignal; reject it, restore the previous value on the property,
       // and report a standard invalid-value error.
       if (maxV <= 0.0)
+      {
+         pProp->Set(maxV_);
+         return DEVICE_INVALID_PROPERTY_VALUE;
+      }
+      // MaxVolt is a ceiling below the hardware range; it cannot raise the
+      // DAC's full-scale output.  Reject rather than silently clamp, so the
+      // value is not quietly changed behind the user's back.
+      if (hasPhysRange_ && maxV > physMaxV_)
       {
          pProp->Set(maxV_);
          return DEVICE_INVALID_PROPERTY_VALUE;

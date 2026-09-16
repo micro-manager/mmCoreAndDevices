@@ -37,6 +37,7 @@
 #define ERR_VERSION_MISMATCH 109
 #define ERR_DA_CHANNEL_NOT_AVAILABLE 110
 #define ERR_DA_SEQUENCE_UPLOAD_FAILED 111
+#define ERR_DA_MAXVOLT_ABOVE_HARDWARE 112
 
 class ArduinoInputMonitorThread;
 class CArduinoMagnifier;
@@ -237,6 +238,7 @@ private:
    int WriteToPort(unsigned long lnValue);
    int WriteSignal(double volts);
    double ClosedGateVolts() const;
+   long VoltsToCode(double volts) const;
 
    bool initialized_;
    bool busy_;
