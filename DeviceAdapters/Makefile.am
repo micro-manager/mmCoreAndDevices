@@ -134,6 +134,7 @@ SUBDIRS = \
 	DTOpenLayer \
 	DemoCamera \
 	Diskovery \
+	EnderscopeStage \
 	EvidentIX85 \
 	FocalPoint \
 	FreeSerialPort \
