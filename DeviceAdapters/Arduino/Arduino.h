@@ -236,6 +236,7 @@ public:
 private:
    int WriteToPort(unsigned long lnValue);
    int WriteSignal(double volts);
+   double ClosedGateVolts() const;
 
    bool initialized_;
    bool busy_;

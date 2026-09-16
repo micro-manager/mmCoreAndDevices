@@ -167,6 +167,9 @@
 // with no error, even though the host may already have "Volts"/"MaxVolt"/"Sequence"
 // properties configured for DA channels from a previous session. Double-check this
 // matches your attached hardware before troubleshooting anything else DA-related.
+// The same applies when a DAC is compiled in but fails to initialize at runtime;
+// command 34 then reports 0 channels (see availableDAChannels() below), so the
+// host refuses to initialize DA devices instead of writing into a void.
 // #define TLV5618
 // #define TLV56x8
 // #define MCP4728
@@ -207,6 +210,18 @@ static const uint8_t RDY_PIN        = 3;
 Adafruit_MCP4728 mcp;
 bool mcp_ok = false;
 #endif
+
+// Number of DA channels actually usable right now.  This is the compile-time
+// numDAChannels_, except that a DAC which failed to initialize (MCP4728 not
+// found on the I2C bus) has no usable channels: analogueOut() discards every
+// write to it, so reporting the compile-time count to the host would make it
+// create DA devices whose writes are silently dropped.
+uint8_t availableDAChannels() {
+#ifdef MCP4728
+  if (!mcp_ok) return 0;
+#endif
+  return numDAChannels_;
+}
 
 const uint8_t numDigitalPins_ = 6;
    
@@ -354,7 +369,7 @@ const uint8_t numDigitalPins_ = 6;
               msb &= B00001111;
               if (waitForSerial(timeOut_)) {
                 byte lsb = Serial.read();
-                if (channel >= 0 && channel < numDAChannels_ && channel < MAX_DA_CHANNELS_)
+                if (channel >= 0 && channel < availableDAChannels() && channel < MAX_DA_CHANNELS_)
                   analogueOut(channel, msb, lsb);
                 Serial.write( byte(3));
                 Serial.write( channel);
@@ -542,7 +557,7 @@ const uint8_t numDigitalPins_ = 6;
        // Returns the number of DA channels
        case 34:
          Serial.write(byte(34));
-         Serial.write(byte(numDAChannels_));
+         Serial.write(byte(availableDAChannels()));
          break;
 
        // Returns the number of digital output pins
@@ -592,7 +607,7 @@ const uint8_t numDigitalPins_ = 6;
                unsigned int lo = Serial.read();
                unsigned int expectedCount = (hi << 8) | lo;
                unsigned int count = 0;
-               if (channel >= 0 && channel < numDAChannels_ && channel < MAX_DA_CHANNELS_
+               if (channel >= 0 && channel < availableDAChannels() && channel < MAX_DA_CHANNELS_
                    && expectedCount <= DA_SEQUENCELENGTH) {
                  while (count < expectedCount && waitForSerial(timeOut_)) {
                    byte msb = Serial.read();
@@ -707,7 +722,7 @@ const uint8_t numDigitalPins_ = 6;
     if (daTriggerMode_) {
       boolean tmp = PIND & inPinBit_;
       if (tmp != daTriggerState_) {
-        for (uint8_t ch = 0; ch < numDAChannels_ && ch < MAX_DA_CHANNELS_; ch++) {
+        for (uint8_t ch = 0; ch < availableDAChannels() && ch < MAX_DA_CHANNELS_; ch++) {
           if (daSequenceLength_[ch] > 0) {
             uint16_t code = daSequence_[ch][daSequenceNr_ % daSequenceLength_[ch]];
             analogueOut(ch, (byte)(code >> 8), (byte)(code & 0xFF));
@@ -821,10 +836,7 @@ void analogueOut(int channel, byte msb, byte lsb) {}; // noop
 // is compiled in and the channel is valid; otherwise reports 0/0/0 (unknown).
 bool getDaVoltageRangeMicroV(int channel, int32_t &minMicroV, int32_t &maxMicroV, uint32_t &numSteps) {
 #if defined TLV5618 || defined TLV56x8 || defined MCP4728
-  if (channel < 0 || channel >= numDAChannels_) { minMicroV = 0; maxMicroV = 0; numSteps = 0; return false; }
-  #if defined MCP4728
-  if (!mcp_ok) { minMicroV = 0; maxMicroV = 0; numSteps = 0; return false; }
-  #endif
+  if (channel < 0 || channel >= availableDAChannels()) { minMicroV = 0; maxMicroV = 0; numSteps = 0; return false; }
   minMicroV = DA_MIN_VOLTAGE_MICROV;
   maxMicroV = DA_MAX_VOLTAGE_MICROV;
   numSteps = DA_NUM_STEPS;

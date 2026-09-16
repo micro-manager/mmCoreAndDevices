@@ -440,6 +440,10 @@ int CArduinoHub::Initialize()
             if (ret != DEVICE_OK) return ret;
             bytesRead += br;
          }
+         // A partial reply leaves the remaining bytes zero-initialized, which would
+         // decode as a bogus range/resolution; require the complete reply.
+         if (bytesRead < nrBytes)
+            return ERR_COMMUNICATION;
          if (answer[0] != 36 || answer[1] != ch0)
             return ERR_COMMUNICATION;
 
@@ -474,6 +478,8 @@ int CArduinoHub::Initialize()
          if (ret != DEVICE_OK) return ret;
          seqLenBytesRead += br;
       }
+      if (seqLenBytesRead < seqLenNrBytes)
+         return ERR_COMMUNICATION;
       if (seqLenAnswer[0] != 37)
          return ERR_COMMUNICATION;
 
@@ -1405,8 +1411,17 @@ int CArduinoDA::Initialize()
 
    // State
    // -----
+   // The reported range need not contain 0 V (e.g. 1-5 V, or -10 to -1 V).
+   // SetPropertyLimits() does not adjust a cached value, so seed both the
+   // property and the internal signal state with a voltage inside the range.
+   if (volts_ < minV_ || volts_ > maxV_)
+      volts_ = minV_;
+   gatedVolts_ = gateOpen_ ? volts_ : ClosedGateVolts();
+
+   std::ostringstream vStr;
+   vStr << volts_;
    CPropertyAction* pAct = new CPropertyAction (this, &CArduinoDA::OnVolts);
-   int nRet = CreateProperty("Volts", "0.0", MM::Float, false, pAct);
+   int nRet = CreateProperty("Volts", vStr.str().c_str(), MM::Float, false, pAct);
    if (nRet != DEVICE_OK)
       return nRet;
    SetPropertyLimits("Volts", minV_, maxV_);
@@ -1505,6 +1520,11 @@ int CArduinoDA::AddToDASequence(double voltage)
 {
    if ((long) sequence_.size() >= daMaxSeqLength_)
       return DEVICE_SEQUENCE_TOO_LARGE;
+   // SendDASequence() clamps codes to the DAC range, so an out-of-range value
+   // would be accepted here and then played back as a different voltage than
+   // the caller asked for.  Reject it instead of silently changing the waveform.
+   if (voltage < minV_ || voltage > maxV_)
+      return DEVICE_INVALID_PROPERTY_VALUE;
    sequence_.push_back(voltage);
    return DEVICE_OK;
 }
@@ -1558,6 +1578,8 @@ int CArduinoDA::SendDASequence()
       if (ret != DEVICE_OK) return ret;
       bytesRead += br;
    }
+   if (bytesRead < nrBytes)
+      return ERR_COMMUNICATION;
    if (answer[0] != 38 || answer[1] != (unsigned char) (channel_ - 1))
       return ERR_COMMUNICATION;
 
@@ -1589,6 +1611,8 @@ int CArduinoDA::StartDASequence()
       if (ret != DEVICE_OK) return ret;
       bytesRead += br;
    }
+   if (bytesRead < 1)
+      return ERR_COMMUNICATION;
    if (answer[0] != 39)
       return ERR_COMMUNICATION;
    return DEVICE_OK;
@@ -1615,6 +1639,10 @@ int CArduinoDA::StopDASequence()
       if (ret != DEVICE_OK) return ret;
       bytesRead += br;
    }
+   // answer[1] carries the transition count, so a short reply must be rejected
+   // rather than silently logged as "0 transitions".
+   if (bytesRead < nrBytes)
+      return ERR_COMMUNICATION;
    if (answer[0] != 43)
       return ERR_COMMUNICATION;
 
@@ -1624,6 +1652,18 @@ int CArduinoDA::StopDASequence()
    return DEVICE_OK;
 }
 
+// Voltage used when the gate is closed.  0 V is the natural "off" value, but
+// it is not always inside the DAC's reported range (e.g. a 1-5 V DAC), in which
+// case the closest in-range voltage is used instead.
+double CArduinoDA::ClosedGateVolts() const
+{
+   if (0.0 < minV_)
+      return minV_;
+   if (0.0 > maxV_)
+      return maxV_;
+   return 0.0;
+}
+
 int CArduinoDA::SetSignal(double volts)
 {
    volts_ = volts;
@@ -1631,7 +1671,7 @@ int CArduinoDA::SetSignal(double volts)
       gatedVolts_ = volts_;
       return WriteSignal(volts_);
    } else {
-      gatedVolts_ = 0;
+      gatedVolts_ = ClosedGateVolts();
    }
 
    return DEVICE_OK;
@@ -1645,8 +1685,8 @@ int CArduinoDA::SetGateOpen(bool open)
       return WriteSignal(volts_);
    } 
    gateOpen_ = false;
-   gatedVolts_ = 0;
-   return WriteSignal(0.0);
+   gatedVolts_ = ClosedGateVolts();
+   return WriteSignal(gatedVolts_);
 
 }
 
@@ -1683,8 +1723,13 @@ int CArduinoDA::OnVolts(MM::PropertyBase* pProp, MM::ActionType eAct)
       for (unsigned int i = 0; i < seq.size(); i++)
       {
          std::istringstream is(seq[i]);
-         double v;
+         // Validate: reject non-numeric input (which would leave v
+         // uninitialized) and trailing garbage, as the digital sequence
+         // handler above does.
+         double v = 0.0;
          is >> v;
+         if (is.fail() || !(is >> std::ws).eof())
+            return DEVICE_INVALID_PROPERTY_VALUE;
          int ret = AddToDASequence(v);
          if (ret != DEVICE_OK)
             return ret;
@@ -1757,7 +1802,26 @@ int CArduinoDA::OnSequence(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       std::string state;
       pProp->Get(state);
-      sequenceOn_ = (state == g_On);
+      bool on = (state == g_On);
+      if (!on && sequenceOn_)
+      {
+         // Command 39 starts every channel that holds a non-empty sequence, so
+         // merely stopping to advertise sequenceability would still let this
+         // channel replay its old sequence when another DA is started.  Clear
+         // the pending sequence and push the now-empty sequence to the firmware
+         // so the channel is really disarmed.
+         ClearDASequence();
+         if (initialized_ && daSeqSupported_)
+         {
+            int ret = SendDASequence();
+            if (ret != DEVICE_OK)
+            {
+               pProp->Set(g_On);
+               return ret;
+            }
+         }
+      }
+      sequenceOn_ = on;
    }
    return DEVICE_OK;
 }
