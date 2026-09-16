@@ -1384,10 +1384,28 @@ int CArduinoDA::Initialize()
 
    if (hub->GetDAVoltageRange(channel_, physMinV_, physMaxV_, numSteps_))
    {
+      // The firmware reports DA_MAX_VOLTAGE_MICROV, a hand-edited constant in
+      // the sketch that describes the DAC's *default* reference (5 V).  It is
+      // not a measurement, so it cannot know that this particular board was
+      // wired for a different reference.  The user-supplied "MaxVolt" is the
+      // authoritative description of the attached hardware: use the firmware
+      // range only for resolution (numSteps_) and for the lower bound, and
+      // never clamp the user's full-scale voltage down to it.
       hasPhysRange_ = true;
       minV_ = physMinV_;
-      if (maxV_ > physMaxV_)
-         maxV_ = physMaxV_;
+
+      // Not an error (the firmware constant describes the default board, the
+      // user describes theirs), but worth recording: if the two disagree the
+      // output voltage depends on the reference actually wired to the DAC.
+      if (maxV_ != physMaxV_)
+      {
+         std::ostringstream os;
+         os << "DA channel " << channel_ << ": configured MaxVolt (" << maxV_
+            << " V) differs from the range reported by the firmware ("
+            << physMinV_ << " - " << physMaxV_ << " V). Using the configured value;"
+            << " verify the DAC reference voltage matches it.";
+         LogMessage(os.str().c_str(), false);
+      }
    }
 
    daSeqSupported_ = (hub->GetControllerVersionCached() >= 6);
@@ -1482,14 +1500,17 @@ int CArduinoDA::WriteToPort(unsigned long value)
 
 int CArduinoDA::WriteSignal(double volts)
 {
-   double refMin = hasPhysRange_ ? physMinV_ : minV_;
-   double refMax = hasPhysRange_ ? physMaxV_ : maxV_;
-   double span = refMax - refMin;
-   long value = (span > 0.0) ? (long) ((volts - refMin) / span * numSteps_) : 0;
-   if (value < 0) value = 0;
-   if (value > (long) numSteps_) value = (long) numSteps_;
    if (maxV_ <= 0.0)
       return DEVICE_INVALID_PROPERTY_VALUE;
+
+   // Scale against the range the user configured (minV_/maxV_), not the
+   // firmware's reported constant.  Scaling against the firmware value while
+   // the property limit came from the user is what made the output differ from
+   // the requested voltage by the ratio of the two ranges.
+   double span = maxV_ - minV_;
+   long value = (span > 0.0) ? (long) ((volts - minV_) / span * numSteps_) : 0;
+   if (value < 0) value = 0;
+   if (value > (long) numSteps_) value = (long) numSteps_;
 
    std::ostringstream os;
     os << "Volts: " << volts << " Max Voltage: " << maxV_ << " digital value: " << value;
@@ -1535,15 +1556,15 @@ int CArduinoDA::SendDASequence()
    if (!hub || !hub->IsPortAvailable())
       return ERR_NO_PORT_SET;
 
-   double refMin = hasPhysRange_ ? physMinV_ : minV_;
-   double refMax = hasPhysRange_ ? physMaxV_ : maxV_;
-   double span = refMax - refMin;
+   // Must use the same scaling as WriteSignal() so a sequenced voltage and a
+   // directly-set voltage produce the same output.
+   double span = maxV_ - minV_;
 
    std::vector<unsigned char> payload;
    payload.reserve(sequence_.size() * 2);
    for (size_t i = 0; i < sequence_.size(); i++)
    {
-      long value = (span > 0.0) ? (long) ((sequence_[i] - refMin) / span * numSteps_) : 0;
+      long value = (span > 0.0) ? (long) ((sequence_[i] - minV_) / span * numSteps_) : 0;
       if (value < 0) value = 0;
       if (value > (long) numSteps_) value = (long) numSteps_;
       payload.push_back((unsigned char) (value / 256L));
@@ -1767,8 +1788,6 @@ int CArduinoDA::OnMaxVolt(MM::PropertyBase* pProp, MM::ActionType eAct)
          return DEVICE_INVALID_PROPERTY_VALUE;
       }
       maxV_ = maxV;
-      if (hasPhysRange_ && maxV_ > physMaxV_)
-         maxV_ = physMaxV_;
       if (HasProperty("Volts"))
          SetPropertyLimits("Volts", minV_, maxV_);
 
