@@ -165,8 +165,8 @@ void CLasers::GenerateProperties()
     MMILE_->SetPropertyLimits( vPropertyName.c_str(), 0, 100 );
     PropertyPointers_[vPropertyName] = nullptr;
 
+#if 1
     // Enable
-#ifdef SHOW_LASER_ENABLE_PROPERTY
     vActEx = new CPropertyActionEx( this, &CLasers::OnEnable, vLaserIndex );
     vPropertyName = BuildPropertyName( g_EnableProperty, vWavelength );
     std::vector<std::string> vEnableStates;
