@@ -46,12 +46,25 @@
 
 #define ARV_ERROR 3141  // Should this be something specific?
 
+// Told apart from ARV_ERROR because it is the one a user is most likely to
+// hit and least able to diagnose from a number: the camera named in a saved
+// configuration is not answering.
+#define ARV_ERROR_NO_CAMERA 3142
+
+// The camera answered, but offers nothing this adapter can turn into an image.
+#define ARV_ERROR_NO_SUPPORTED_FORMAT 3143
+
 // SnapImage() waits this multiple of the exposure time for a frame, and never
 // less than the floor. Generous, because the alternative to a wrong guess is a
 // spurious timeout on a slow link -- but finite, because Aravis treats a zero
 // timeout as "block forever", which hangs the application.
 #define ARV_SNAP_EXPOSURE_FACTOR 5.0
 #define ARV_SNAP_MIN_TIMEOUT_US  5000000  // 5 seconds
+
+// The camera's own pixel format, under its GenICam name. Micro-Manager's
+// PixelType property is a different thing in a different vocabulary, so it
+// gets a different property.
+#define ARV_PROP_PIXEL_FORMAT "PixelFormat"
 
 
 class AravisAcquisitionThread;
@@ -101,6 +114,7 @@ public:
   int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -110,8 +124,10 @@ public:
   void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
   void ArvBufferUpdate(ArvBuffer *aBuffer);
   int ArvCheckError(GError **gerror) const;
+  void ArvGeometryUpdate();
   void ArvGetExposure();
   void ArvPixelFormatUpdate(guint32 arvPixelFormat);
+  void ArvSequenceFinished();
   int ArvStartSequenceAcquisition();
 
 
@@ -120,6 +136,12 @@ private:
   // callback thread, so plain bool is a data race.
   std::atomic<bool> capturing;
   long counter;
+
+  // How many frames this sequence was asked for; zero or less means until
+  // Micro-Manager says stop. Read on the stream thread, written on the
+  // Micro-Manager thread before the stream exists.
+  std::atomic<long> num_images;
+
   double exposure_time;
 
   // Whether this camera has binning at all, answered once by Initialize().
@@ -128,12 +150,26 @@ private:
   // remembered rather than rediscovered.
   bool has_binning;
 
+  // The rest of what this camera can and cannot do, asked once. Each is a
+  // separate question: a camera can have a settable size and a fixed offset,
+  // or an exposure time and no frame rate control, and guessing one from
+  // another is how the adapter ended up calling features that do not exist.
+  bool has_exposure_time;
+  bool has_frame_rate;
+  bool has_region_offset;
+  bool has_settable_region;
+
   unsigned img_buffer_bit_depth;
   int img_buffer_bytes_per_pixel;
   int img_buffer_height;
   unsigned img_buffer_number_components;
   size_t img_buffer_number_pixels;
   size_t img_buffer_size;
+
+  // Whether the camera's red and blue channels have to be exchanged on the
+  // way into Micro-Manager's BGRA buffer.
+  bool img_buffer_swap_rb;
+
   int img_buffer_width;
   bool initialized;
 
@@ -146,6 +182,12 @@ private:
   ArvCamera *arv_cam;
   std::string arv_cam_name;
   ArvDevice *arv_device;
+
+  // The format the image description was last built from. Kept so that a
+  // format the adapter cannot decode is reported when it changes rather than
+  // once per frame.
+  guint32 arv_pixel_format;
+
   ArvStream *arv_stream;
   unsigned char *img_buffer;
   const char *pixel_type;
