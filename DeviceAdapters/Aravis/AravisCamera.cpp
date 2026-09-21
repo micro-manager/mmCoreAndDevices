@@ -847,9 +847,10 @@ int AravisCamera::Initialize()
   ArvCheckError(&gerror);
   describe("SerialNumber", info);
 
-  info = arv_camera_get_device_id(arv_cam, &gerror);
-  ArvCheckError(&gerror);
-  describe(MM::g_Keyword_CameraID, info);
+  // The id Aravis found the camera by, which is the one Micro-Manager loads
+  // it by. The GenICam DeviceID feature is not universal: a USB3 Basler has
+  // none, logged "[DeviceID] Not found" at every open, and left this empty.
+  describe(MM::g_Keyword_CameraID, arv_cam_name.c_str());
 
   // Not standard enough to assume: ask before reading, or a camera without it
   // logs a failure at every open.
