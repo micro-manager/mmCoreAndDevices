@@ -649,18 +649,27 @@ int AravisCamera::ClearROI()
   GError *gerror = nullptr;
 
   // A camera whose size is fixed is always at full frame. There is nothing to
-  // clear, and asking would fail on every call -- which is what happened at
-  // Initialize() on every such camera.
+  // clear, and asking would fail on every call.
   if (!has_settable_region){
     ArvGeometryUpdate();
     return DEVICE_OK;
   }
 
-  // The 64x64 intermediate this used to set first was superstition: it fails
-  // outright on a camera whose minimum width is larger than 64 or whose
-  // increment does not divide it, and it was never needed, because
-  // arv_camera_set_region() already zeroes OffsetX and OffsetY before writing
-  // the new size and restores them afterwards.
+  // Move the offsets to zero *before* asking how large the region can be. On
+  // many cameras Width's maximum is WidthMax - OffsetX, so bounds read with
+  // an offset still in place are short by exactly that offset: a Basler
+  // acA1440 at OffsetX 8 cleared to 1448x1084 in a 1456x1088 sensor. The 64x64
+  // region this once set first did the same thing as a side effect, which is
+  // why removing it as unnecessary was a mistake. Lowering an offset never
+  // pushes the region past the edge of the sensor, so these writes are legal
+  // whatever the region is.
+  if (has_region_offset){
+    arv_camera_set_integer(arv_cam, "OffsetX", 0, &gerror);
+    ArvCheckError(&gerror);
+    arv_camera_set_integer(arv_cam, "OffsetY", 0, &gerror);
+    ArvCheckError(&gerror);
+  }
+
   arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);
   ArvCheckError(&gerror);
 
@@ -852,8 +861,14 @@ int AravisCamera::Initialize()
   }
   ArvCheckError(&gerror);
 
-  // Clear ROI settings that may still be present from a previous session.
-  ClearROI();
+  // Opening a camera does not change it. This used to call ClearROI() here,
+  // to clear a region "that may still be present from a previous session".
+  // But a camera's region is not necessarily left over from anything -- a
+  // Basler acA1440 ships at 1440x1080 in a 1456x1088 sensor -- and settings
+  // outlive the program that wrote them, so opening the camera in
+  // Micro-Manager rewrote it for every application that used it afterwards.
+  // Most GenICam adapters, Basler's own among them, only read the region
+  // here. Clearing it is still one call away.
 
   // Get starting image size. From the region the camera is actually in, not
   // from the largest one it could be in: a camera opening on a smaller region
