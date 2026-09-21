@@ -583,18 +583,38 @@ void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
 
 // End a sequence from inside the stream callback.
 //
-// Deliberately not StopSequenceAcquisition(): that unreffs the stream, which
-// stops and joins the stream's own thread -- the thread calling this one. The
-// camera is stopped over the control channel, which is a different socket and
-// safe from here, and the stream itself is released by whichever
-// StopSequenceAcquisition() or Shutdown() comes next.
+// Neither half of ending it can happen on this thread. Not the stream: unreffing
+// it joins the stream's own thread, which is this one. And not the camera: on
+// USB3 Vision the stream thread also services the device's USB transfers, so a
+// control write issued from it waits on itself -- every sequence that ended
+// itself timed out stopping a USB3 camera, which went on sending. (GigE puts
+// control on a separate socket, which is why that went unnoticed.) So the stop
+// goes to a thread of its own, doing what StopSequenceAcquisition() does from
+// the Micro-Manager thread, where the same stop takes a hundredth of a second.
+// The stream is released by ArvReleaseSequence(), from whatever runs next.
 void AravisCamera::ArvSequenceFinished()
 {
-  GError *gerror = nullptr;
+  std::lock_guard<std::mutex> lock(sequence_mutex);
 
   if (!capturing.exchange(false)){
     return;
   }
+
+  // ArvReleaseSequence() joins the previous stopper before a new sequence can
+  // start, so there is normally nothing to join here. Joining anyway keeps a
+  // joinable std::thread from being overwritten, which would terminate the
+  // process.
+  if (sequence_stopper.joinable()){
+    sequence_stopper.join();
+  }
+  sequence_stopper = std::thread(&AravisCamera::ArvStopCamera, this);
+}
+
+
+// The second half of a sequence that ended itself, run by sequence_stopper.
+void AravisCamera::ArvStopCamera()
+{
+  GError *gerror = nullptr;
 
   if (arv_cam != nullptr){
     arv_camera_stop_acquisition(arv_cam, &gerror);
@@ -605,6 +625,35 @@ void AravisCamera::ArvSequenceFinished()
 }
 
 
+// Release what a finished sequence still holds: its stream, and the thread
+// stopping the camera if the sequence ended itself.
+//
+// A sequence that ends itself cannot release its own stream, so whatever runs
+// next has to. Starting a new one used to create the new stream over the old
+// pointer instead, orphaning a stream and its thread every time. Each orphan
+// kept a reference to the device, so after the camera was reloaded the new
+// instance found GigE control privilege still held and every write was
+// refused as "access-denied" -- no ROI, no exposure -- until Micro-Manager
+// restarted.
+//
+// The stream goes first. Unreffing it joins the stream thread, so once that
+// returns no callback is running, and none can still be about to hand the stop
+// to sequence_stopper; only then is the stopper certain to be there to join.
+void AravisCamera::ArvReleaseSequence()
+{
+  g_clear_object(&arv_stream);
+
+  std::thread stopper;
+  {
+    std::lock_guard<std::mutex> lock(sequence_mutex);
+    stopper = std::move(sequence_stopper);
+  }
+  if (stopper.joinable()){
+    stopper.join();
+  }
+}
+
+
 int AravisCamera::ArvStartSequenceAcquisition()
 {
   int i;
@@ -612,7 +661,10 @@ int AravisCamera::ArvStartSequenceAcquisition()
   GError *gerror = nullptr;
 
   counter = 0;
-    
+
+  // Whatever the last sequence left, if it ended itself.
+  ArvReleaseSequence();
+
   arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &gerror);
   if (!ArvCheckError(&gerror)){
     arv_stream = arv_camera_create_stream(arv_cam, stream_callback, this, &gerror);
@@ -1687,6 +1739,12 @@ int AravisCamera::SnapImage()
 {
   GError *gerror = nullptr;
 
+  // A sequence that ended itself leaves its stream until something releases
+  // it, and snapping beside it gives the camera two readers.
+  if (!capturing){
+    ArvReleaseSequence();
+  }
+
   // A zero timeout means "no timeout" to Aravis, which pops the buffer with a
   // blocking call. A camera left in hardware trigger mode, or one frame lost
   // to a dropped packet, would then block this thread forever and hang the
@@ -1749,9 +1807,8 @@ int AravisCamera::StopSequenceAcquisition()
 {
   GError *gerror = nullptr;
 
-  // The stream is released whether or not this call is the one that ended the
-  // acquisition: a finite sequence stops itself from the callback, which
-  // cannot touch the stream, so something has to clean up afterwards.
+  // Released whether or not this call is the one that ended the acquisition:
+  // a finite sequence stops itself, and cannot release its own stream.
   bool was_capturing = capturing.exchange(false);
 
   if (was_capturing && (arv_cam != nullptr)){
@@ -1759,10 +1816,11 @@ int AravisCamera::StopSequenceAcquisition()
     ArvCheckError(&gerror);
   }
 
-  // Unreffing the stream stops and joins its thread, so no callback can be
-  // in flight once this returns. Shutdown() relies on that before it frees
-  // the image buffer the callback writes into.
-  g_clear_object(&arv_stream);
+  // Joins the stream thread, so no callback can be in flight once this
+  // returns -- Shutdown() relies on that before it frees the image buffer the
+  // callback writes into -- and waits for the camera to be stopped if the
+  // sequence ended itself.
+  ArvReleaseSequence();
 
   if (was_capturing){
     GetCoreCallback()->AcqFinished(this, 0);
