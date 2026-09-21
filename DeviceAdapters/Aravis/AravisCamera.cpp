@@ -1668,19 +1668,22 @@ void AravisCamera::SetExposure(double expMs)
 
 int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
-  gint inc, ix, iy, ixs, iys;
+  gint inc, ix = 0, iy = 0, ixs, iys;
   GError *gerror = nullptr;
 
   // A camera that has no OffsetX fails the increment query, and Aravis has no
   // increment to return; dividing by what comes back would be a division by
-  // zero. One is the identity here, so it is also the safe answer.
-  inc = arv_camera_get_x_offset_increment(arv_cam, &gerror);
-  ArvCheckError(&gerror);
-  ix = ((gint)x/ArvIncrement(inc))*ArvIncrement(inc);
+  // zero. One is the identity here, so it is also the safe answer. A camera
+  // with no offsets at all is not asked.
+  if (has_region_offset){
+    inc = arv_camera_get_x_offset_increment(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+    ix = ((gint)x/ArvIncrement(inc))*ArvIncrement(inc);
 
-  inc = arv_camera_get_y_offset_increment(arv_cam, &gerror);
-  ArvCheckError(&gerror);
-  iy = ((gint)y/ArvIncrement(inc))*ArvIncrement(inc);
+    inc = arv_camera_get_y_offset_increment(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+    iy = ((gint)y/ArvIncrement(inc))*ArvIncrement(inc);
+  }
 
   inc = arv_camera_get_width_increment(arv_cam, &gerror);
   ArvCheckError(&gerror);
@@ -1690,8 +1693,42 @@ int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
   ArvCheckError(&gerror);
   iys = ((gint)ySize/ArvIncrement(inc))*ArvIncrement(inc);
 
-  arv_camera_set_region(arv_cam, ix, iy, ixs, iys, &gerror);
-  int ret = ArvCheckError(&gerror) ? ARV_ERROR : DEVICE_OK;
+  // Written here rather than with arv_camera_set_region(), which writes the
+  // new size and then the offsets back to back. An Allied Vision Alvium (1800
+  // U-1240m) refuses an offset written that way, as "invalid-parameter", for
+  // any offset at all: it checks the offset against a limit it has not yet
+  // recomputed for the new size, and it recomputes that limit when the limit
+  // is read. Reading the offset's bounds between the two writes is enough --
+  // measured on the camera with no adapter involved -- and Allied Vision's own
+  // adapter reads each feature before writing it too. The camera's GenICam
+  // marks that limit as invalidated by the width, so the read reaches the
+  // camera and not a cache. On any other camera it is one extra read per
+  // offset.
+  //
+  // Otherwise this is the order arv_camera_set_region() uses: offsets to zero
+  // first, so the new size fits wherever the old region was -- lowering an
+  // offset never pushes the region off the sensor -- then the size, then the
+  // offsets.
+  auto write = [&](const char *name, gint value) -> bool {
+    arv_camera_set_integer(arv_cam, name, value, &gerror);
+    return !ArvCheckError(&gerror);
+  };
+  auto write_offset = [&](const char *name, gint value) -> bool {
+    gint64 min, max;
+    arv_camera_get_integer_bounds(arv_cam, name, &min, &max, &gerror);
+    return !ArvCheckError(&gerror) && write(name, value);
+  };
+
+  bool ok = true;
+  if (has_region_offset){
+    ok = write("OffsetX", 0) && write("OffsetY", 0);
+  }
+  ok = ok && ((ixs <= 0) || write("Width", ixs));
+  ok = ok && ((iys <= 0) || write("Height", iys));
+  if (has_region_offset){
+    ok = ok && write_offset("OffsetX", ix) && write_offset("OffsetY", iy);
+  }
+  int ret = ok ? DEVICE_OK : ARV_ERROR;
 
   // Either way: Micro-Manager reads the new dimensions straight away, and if
   // the camera rounded the request or refused it outright, what it actually
