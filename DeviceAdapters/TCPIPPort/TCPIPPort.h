@@ -79,7 +79,7 @@ private:
 
 	static int count_;
 
-	boost::asio::io_service ios_;
+	boost::asio::io_context ios_;
 	boost::asio::ip::tcp::socket sock_;
 	std::string host_;
 	unsigned short port_;
