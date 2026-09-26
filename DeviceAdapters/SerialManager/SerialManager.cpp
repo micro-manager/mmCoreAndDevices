@@ -38,7 +38,6 @@
 #include <dirent.h>
 #endif
 
-#include <boost/bind/bind.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
@@ -100,7 +99,7 @@ bool SerialPortLister::portAccessible(const char* portName)
 {
    try
    {
-      boost::asio::io_service service;
+      boost::asio::io_context service;
       boost::asio::serial_port sp(service, portName);
 
       if (sp.is_open()) {
@@ -509,7 +508,7 @@ int SerialPort::Initialize()
    ret = GetCurrentPropertyData(MM::g_Keyword_Handshaking, handshake);
    assert(ret == DEVICE_OK);
 
-   pService_ = new boost::asio::io_service();
+   pService_ = new boost::asio::io_context();
 
    try
    {
@@ -557,8 +556,7 @@ int SerialPort::Initialize()
 
    try
    {
-      pThread_ = new boost::thread(boost::bind(
-               &boost::asio::io_service::run, pService_));
+      pThread_ = new boost::thread([this] { pService_->run(); });
    }
    catch (std::exception& what)
    {

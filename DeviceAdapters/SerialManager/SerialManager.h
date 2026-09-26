@@ -141,7 +141,7 @@ private:
    std::string parity_;
 
    // create these varaiable in the order of declaration
-   boost::asio::io_service* pService_;
+   boost::asio::io_context* pService_;
    AsioClient* pPort_;
    // the worker thread
    boost::thread* pThread_;
