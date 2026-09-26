@@ -36,19 +36,14 @@
 #include <vector>
 
 
-#include <boost/version.hpp>
-#if BOOST_VERSION >= 104700
 typedef boost::asio::serial_port::native_handle_type SerialNativeHandle;
-#else
-typedef boost::asio::serial_port::native_type SerialNativeHandle;
-#endif
 
 
 class AsioClient
 {
 public:
    // Construct from an already open native handle.
-   AsioClient(boost::asio::io_service& ioService,
+   AsioClient(boost::asio::io_context& ioContext,
          const std::string& deviceName,
          SerialNativeHandle nativeHandle,
          unsigned int baud,
@@ -58,8 +53,8 @@ public:
          unsigned dataBits,
          SerialPort* pPort) :
       active_(true),
-      io_service_(ioService),
-      serialPortImplementation_(ioService, nativeHandle),
+      io_context_(ioContext),
+      serialPortImplementation_(ioContext, nativeHandle),
       pSerialPortAdapter_(pPort),
       device_(deviceName),
       shutDownInProgress_(false)
@@ -68,7 +63,7 @@ public:
    }
 
    // Construct and open the given device name.
-   AsioClient(boost::asio::io_service& ioService,
+   AsioClient(boost::asio::io_context& ioContext,
          unsigned int baud,
          const std::string& deviceName,
          boost::asio::serial_port::flow_control::type flow,
@@ -77,8 +72,8 @@ public:
          unsigned dataBits,
          SerialPort* pPort) :
       active_(true),
-      io_service_(ioService),
-      serialPortImplementation_(ioService, deviceName),
+      io_context_(ioContext),
+      serialPortImplementation_(ioContext, deviceName),
       pSerialPortAdapter_(pPort),
       device_(deviceName),
       shutDownInProgress_(false)
@@ -251,13 +246,13 @@ public:
 
    void WriteOneCharacterAsynchronously(const char ch)
    {
-      io_service_.post(boost::bind(&AsioClient::DoWriteCh, this, ch));
+      boost::asio::post(io_context_, boost::bind(&AsioClient::DoWriteCh, this, ch));
    }
 
    void WriteCharactersAsynchronously(const char* pmsg, size_t len)
    {
       std::vector<char> msg(pmsg, pmsg + len);
-      io_service_.post(boost::bind(&AsioClient::DoWriteMsg, this, msg));
+      boost::asio::post(io_context_, boost::bind(&AsioClient::DoWriteMsg, this, msg));
    }
 
 
@@ -295,7 +290,7 @@ public:
    {
       if (active_)
       {
-         io_service_.post(boost::bind(&AsioClient::DoClose, this, boost::system::error_code()));
+         boost::asio::post(io_context_, boost::bind(&AsioClient::DoClose, this, boost::system::error_code()));
       }
    }
 
@@ -458,7 +453,7 @@ private:
 
 private:
    bool active_; // remains true while this object is still operating
-   boost::asio::io_service& io_service_; // the main IO service that runs this connection
+   boost::asio::io_context& io_context_; // the main IO context that runs this connection
    boost::asio::serial_port serialPortImplementation_; // the serial port this instance is connected to
    char read_msg_[max_read_length]; // data read from the socket
    std::deque< std::vector<char> > write_msgs_; // buffered write data
