@@ -42,6 +42,7 @@
 #include <atomic>
 #include <mutex>
 #include <string>
+#include <thread>
 
 
 #define ARV_ERROR 3141  // Should this be something specific?
@@ -127,7 +128,9 @@ public:
   void ArvGeometryUpdate();
   void ArvGetExposure();
   void ArvPixelFormatUpdate(guint32 arvPixelFormat);
+  void ArvReleaseSequence();
   void ArvSequenceFinished();
+  void ArvStopCamera();
   int ArvStartSequenceAcquisition();
 
 
@@ -177,6 +180,13 @@ private:
   // callback may reallocate the buffer while the Micro-Manager thread is
   // reading it.
   mutable std::mutex img_buffer_mutex;
+
+  // A sequence that ends itself hands the stop to sequence_stopper, because
+  // the stream thread cannot do it (see ArvSequenceFinished). The mutex guards
+  // the thread object, which the stream thread writes and the Micro-Manager
+  // thread joins.
+  std::mutex sequence_mutex;
+  std::thread sequence_stopper;
 
   ArvBuffer *arv_buffer;
   ArvCamera *arv_cam;

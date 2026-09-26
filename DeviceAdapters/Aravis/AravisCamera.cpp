@@ -583,18 +583,38 @@ void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
 
 // End a sequence from inside the stream callback.
 //
-// Deliberately not StopSequenceAcquisition(): that unreffs the stream, which
-// stops and joins the stream's own thread -- the thread calling this one. The
-// camera is stopped over the control channel, which is a different socket and
-// safe from here, and the stream itself is released by whichever
-// StopSequenceAcquisition() or Shutdown() comes next.
+// Neither half of ending it can happen on this thread. Not the stream: unreffing
+// it joins the stream's own thread, which is this one. And not the camera: on
+// USB3 Vision the stream thread also services the device's USB transfers, so a
+// control write issued from it waits on itself -- every sequence that ended
+// itself timed out stopping a USB3 camera, which went on sending. (GigE puts
+// control on a separate socket, which is why that went unnoticed.) So the stop
+// goes to a thread of its own, doing what StopSequenceAcquisition() does from
+// the Micro-Manager thread, where the same stop takes a hundredth of a second.
+// The stream is released by ArvReleaseSequence(), from whatever runs next.
 void AravisCamera::ArvSequenceFinished()
 {
-  GError *gerror = nullptr;
+  std::lock_guard<std::mutex> lock(sequence_mutex);
 
   if (!capturing.exchange(false)){
     return;
   }
+
+  // ArvReleaseSequence() joins the previous stopper before a new sequence can
+  // start, so there is normally nothing to join here. Joining anyway keeps a
+  // joinable std::thread from being overwritten, which would terminate the
+  // process.
+  if (sequence_stopper.joinable()){
+    sequence_stopper.join();
+  }
+  sequence_stopper = std::thread(&AravisCamera::ArvStopCamera, this);
+}
+
+
+// The second half of a sequence that ended itself, run by sequence_stopper.
+void AravisCamera::ArvStopCamera()
+{
+  GError *gerror = nullptr;
 
   if (arv_cam != nullptr){
     arv_camera_stop_acquisition(arv_cam, &gerror);
@@ -605,6 +625,35 @@ void AravisCamera::ArvSequenceFinished()
 }
 
 
+// Release what a finished sequence still holds: its stream, and the thread
+// stopping the camera if the sequence ended itself.
+//
+// A sequence that ends itself cannot release its own stream, so whatever runs
+// next has to. Starting a new one used to create the new stream over the old
+// pointer instead, orphaning a stream and its thread every time. Each orphan
+// kept a reference to the device, so after the camera was reloaded the new
+// instance found GigE control privilege still held and every write was
+// refused as "access-denied" -- no ROI, no exposure -- until Micro-Manager
+// restarted.
+//
+// The stream goes first. Unreffing it joins the stream thread, so once that
+// returns no callback is running, and none can still be about to hand the stop
+// to sequence_stopper; only then is the stopper certain to be there to join.
+void AravisCamera::ArvReleaseSequence()
+{
+  g_clear_object(&arv_stream);
+
+  std::thread stopper;
+  {
+    std::lock_guard<std::mutex> lock(sequence_mutex);
+    stopper = std::move(sequence_stopper);
+  }
+  if (stopper.joinable()){
+    stopper.join();
+  }
+}
+
+
 int AravisCamera::ArvStartSequenceAcquisition()
 {
   int i;
@@ -612,7 +661,10 @@ int AravisCamera::ArvStartSequenceAcquisition()
   GError *gerror = nullptr;
 
   counter = 0;
-    
+
+  // Whatever the last sequence left, if it ended itself.
+  ArvReleaseSequence();
+
   arv_camera_set_acquisition_mode(arv_cam, ARV_ACQUISITION_MODE_CONTINUOUS, &gerror);
   if (!ArvCheckError(&gerror)){
     arv_stream = arv_camera_create_stream(arv_cam, stream_callback, this, &gerror);
@@ -649,18 +701,27 @@ int AravisCamera::ClearROI()
   GError *gerror = nullptr;
 
   // A camera whose size is fixed is always at full frame. There is nothing to
-  // clear, and asking would fail on every call -- which is what happened at
-  // Initialize() on every such camera.
+  // clear, and asking would fail on every call.
   if (!has_settable_region){
     ArvGeometryUpdate();
     return DEVICE_OK;
   }
 
-  // The 64x64 intermediate this used to set first was superstition: it fails
-  // outright on a camera whose minimum width is larger than 64 or whose
-  // increment does not divide it, and it was never needed, because
-  // arv_camera_set_region() already zeroes OffsetX and OffsetY before writing
-  // the new size and restores them afterwards.
+  // Move the offsets to zero *before* asking how large the region can be. On
+  // many cameras Width's maximum is WidthMax - OffsetX, so bounds read with
+  // an offset still in place are short by exactly that offset: a Basler
+  // acA1440 at OffsetX 8 cleared to 1448x1084 in a 1456x1088 sensor. The 64x64
+  // region this once set first did the same thing as a side effect, which is
+  // why removing it as unnecessary was a mistake. Lowering an offset never
+  // pushes the region past the edge of the sensor, so these writes are legal
+  // whatever the region is.
+  if (has_region_offset){
+    arv_camera_set_integer(arv_cam, "OffsetX", 0, &gerror);
+    ArvCheckError(&gerror);
+    arv_camera_set_integer(arv_cam, "OffsetY", 0, &gerror);
+    ArvCheckError(&gerror);
+  }
+
   arv_camera_get_height_bounds(arv_cam, &tmp, &h, &gerror);
   ArvCheckError(&gerror);
 
@@ -838,9 +899,10 @@ int AravisCamera::Initialize()
   ArvCheckError(&gerror);
   describe("SerialNumber", info);
 
-  info = arv_camera_get_device_id(arv_cam, &gerror);
-  ArvCheckError(&gerror);
-  describe(MM::g_Keyword_CameraID, info);
+  // The id Aravis found the camera by, which is the one Micro-Manager loads
+  // it by. The GenICam DeviceID feature is not universal: a USB3 Basler has
+  // none, logged "[DeviceID] Not found" at every open, and left this empty.
+  describe(MM::g_Keyword_CameraID, arv_cam_name.c_str());
 
   // Not standard enough to assume: ask before reading, or a camera without it
   // logs a failure at every open.
@@ -852,8 +914,14 @@ int AravisCamera::Initialize()
   }
   ArvCheckError(&gerror);
 
-  // Clear ROI settings that may still be present from a previous session.
-  ClearROI();
+  // Opening a camera does not change it. This used to call ClearROI() here,
+  // to clear a region "that may still be present from a previous session".
+  // But a camera's region is not necessarily left over from anything -- a
+  // Basler acA1440 ships at 1440x1080 in a 1456x1088 sensor -- and settings
+  // outlive the program that wrote them, so opening the camera in
+  // Micro-Manager rewrote it for every application that used it afterwards.
+  // Most GenICam adapters, Basler's own among them, only read the region
+  // here. Clearing it is still one call away.
 
   // Get starting image size. From the region the camera is actually in, not
   // from the largest one it could be in: a camera opening on a smaller region
@@ -1600,19 +1668,22 @@ void AravisCamera::SetExposure(double expMs)
 
 int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
 {
-  gint inc, ix, iy, ixs, iys;
+  gint inc, ix = 0, iy = 0, ixs, iys;
   GError *gerror = nullptr;
 
   // A camera that has no OffsetX fails the increment query, and Aravis has no
   // increment to return; dividing by what comes back would be a division by
-  // zero. One is the identity here, so it is also the safe answer.
-  inc = arv_camera_get_x_offset_increment(arv_cam, &gerror);
-  ArvCheckError(&gerror);
-  ix = ((gint)x/ArvIncrement(inc))*ArvIncrement(inc);
+  // zero. One is the identity here, so it is also the safe answer. A camera
+  // with no offsets at all is not asked.
+  if (has_region_offset){
+    inc = arv_camera_get_x_offset_increment(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+    ix = ((gint)x/ArvIncrement(inc))*ArvIncrement(inc);
 
-  inc = arv_camera_get_y_offset_increment(arv_cam, &gerror);
-  ArvCheckError(&gerror);
-  iy = ((gint)y/ArvIncrement(inc))*ArvIncrement(inc);
+    inc = arv_camera_get_y_offset_increment(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+    iy = ((gint)y/ArvIncrement(inc))*ArvIncrement(inc);
+  }
 
   inc = arv_camera_get_width_increment(arv_cam, &gerror);
   ArvCheckError(&gerror);
@@ -1622,8 +1693,42 @@ int AravisCamera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned ySize)
   ArvCheckError(&gerror);
   iys = ((gint)ySize/ArvIncrement(inc))*ArvIncrement(inc);
 
-  arv_camera_set_region(arv_cam, ix, iy, ixs, iys, &gerror);
-  int ret = ArvCheckError(&gerror) ? ARV_ERROR : DEVICE_OK;
+  // Written here rather than with arv_camera_set_region(), which writes the
+  // new size and then the offsets back to back. An Allied Vision Alvium (1800
+  // U-1240m) refuses an offset written that way, as "invalid-parameter", for
+  // any offset at all: it checks the offset against a limit it has not yet
+  // recomputed for the new size, and it recomputes that limit when the limit
+  // is read. Reading the offset's bounds between the two writes is enough --
+  // measured on the camera with no adapter involved -- and Allied Vision's own
+  // adapter reads each feature before writing it too. The camera's GenICam
+  // marks that limit as invalidated by the width, so the read reaches the
+  // camera and not a cache. On any other camera it is one extra read per
+  // offset.
+  //
+  // Otherwise this is the order arv_camera_set_region() uses: offsets to zero
+  // first, so the new size fits wherever the old region was -- lowering an
+  // offset never pushes the region off the sensor -- then the size, then the
+  // offsets.
+  auto write = [&](const char *name, gint value) -> bool {
+    arv_camera_set_integer(arv_cam, name, value, &gerror);
+    return !ArvCheckError(&gerror);
+  };
+  auto write_offset = [&](const char *name, gint value) -> bool {
+    gint64 min, max;
+    arv_camera_get_integer_bounds(arv_cam, name, &min, &max, &gerror);
+    return !ArvCheckError(&gerror) && write(name, value);
+  };
+
+  bool ok = true;
+  if (has_region_offset){
+    ok = write("OffsetX", 0) && write("OffsetY", 0);
+  }
+  ok = ok && ((ixs <= 0) || write("Width", ixs));
+  ok = ok && ((iys <= 0) || write("Height", iys));
+  if (has_region_offset){
+    ok = ok && write_offset("OffsetX", ix) && write_offset("OffsetY", iy);
+  }
+  int ret = ok ? DEVICE_OK : ARV_ERROR;
 
   // Either way: Micro-Manager reads the new dimensions straight away, and if
   // the camera rounded the request or refused it outright, what it actually
@@ -1670,6 +1775,12 @@ int AravisCamera::Shutdown()
 int AravisCamera::SnapImage()
 {
   GError *gerror = nullptr;
+
+  // A sequence that ended itself leaves its stream until something releases
+  // it, and snapping beside it gives the camera two readers.
+  if (!capturing){
+    ArvReleaseSequence();
+  }
 
   // A zero timeout means "no timeout" to Aravis, which pops the buffer with a
   // blocking call. A camera left in hardware trigger mode, or one frame lost
@@ -1733,9 +1844,8 @@ int AravisCamera::StopSequenceAcquisition()
 {
   GError *gerror = nullptr;
 
-  // The stream is released whether or not this call is the one that ended the
-  // acquisition: a finite sequence stops itself from the callback, which
-  // cannot touch the stream, so something has to clean up afterwards.
+  // Released whether or not this call is the one that ended the acquisition:
+  // a finite sequence stops itself, and cannot release its own stream.
   bool was_capturing = capturing.exchange(false);
 
   if (was_capturing && (arv_cam != nullptr)){
@@ -1743,10 +1853,11 @@ int AravisCamera::StopSequenceAcquisition()
     ArvCheckError(&gerror);
   }
 
-  // Unreffing the stream stops and joins its thread, so no callback can be
-  // in flight once this returns. Shutdown() relies on that before it frees
-  // the image buffer the callback writes into.
-  g_clear_object(&arv_stream);
+  // Joins the stream thread, so no callback can be in flight once this
+  // returns -- Shutdown() relies on that before it frees the image buffer the
+  // callback writes into -- and waits for the camera to be stopped if the
+  // sequence ended itself.
+  ArvReleaseSequence();
 
   if (was_capturing){
     GetCoreCallback()->AcqFinished(this, 0);
