@@ -382,58 +382,22 @@ int CRISP::UpdateFocusState() {
 }
 
 int CRISP::SetFocusState(const std::string& focusState) {
-	// avoid serial communication if already in the state
-	if (focusState == focusState_) {
-		return DEVICE_OK;
-	}
-
-	if (const int status = ForceSetFocusState(focusState); status != DEVICE_OK) {
-		return status;
-	}
-
-	focusState_ = focusState;
-	return DEVICE_OK;
-}
-
-int CRISP::ForceSetFocusState(const std::string& focusState) {
-	if (focusState == g_CRISP_I)
-	{
-		// Idle (switch off LED)
-		return SetCommand("LK F=79");
-	}
-	else if (focusState == g_CRISP_R)
-	{
-		// Unlock
+	if (focusState == g_CRISP_R) {
 		return SetCommand("LK F=85");
-	}
-	else if (focusState == g_CRISP_K)
-	{
-		// Lock
+	} else if (focusState == g_CRISP_K) {
 		return SetCommand("LK F=83");
-	}
-	else if (focusState == g_CRISP_G)
-	{
-		// Log-Amp Calibration;
-		return SetCommand("LK F=72");
-	}
-	else if (focusState == g_CRISP_SG)
-	{
-		// gain_Cal Calibration
-		return SetCommand("LK F=67");
-	}
-	else if (focusState == g_CRISP_f)
-	{
-		// Dither
-		return SetCommand("LK F=102");
-	}
-	else if (focusState == g_CRISP_RFO)
-	{
-		// Reset focus offset
-		return SetCommand("LK F=111");
-	}
-	else if (focusState == g_CRISP_SSZ)
-	{
-		return SetCommand("SS Z");
+	} else if  (focusState == g_CRISP_I) {
+		return SetCommand("LK F=79"); // Idle (switch off LED)
+	} else if (focusState == g_CRISP_G) {
+		return SetCommand("LK F=72"); // log-amp calibration
+	} else if (focusState == g_CRISP_SG) {
+		return SetCommand("LK F=67"); // gain_cal (servo) calibration
+	} else if (focusState == g_CRISP_f) {
+		return SetCommand("LK F=102"); // dither
+	} else if (focusState == g_CRISP_RFO) {
+		return SetCommand("LK F=111"); // reset focus offset
+	} else if (focusState == g_CRISP_SSZ) {
+		return SetCommand("SS Z"); // save settings to controller (least common, should be checked last)
 	}
 
 	return DEVICE_OK;
