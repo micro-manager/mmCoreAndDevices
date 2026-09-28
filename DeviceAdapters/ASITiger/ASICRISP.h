@@ -102,7 +102,6 @@ public:
 private:
     int UpdateFocusState();
     int SetFocusState(const std::string& focusState);
-    int ForceSetFocusState(const std::string& focusState);
 
     CommandTable BuildCommandTable(std::string_view cardAddress) const;
     void LogFirmwareSupport(const bool hasLockQueries, const bool hasExShortcut) const;
