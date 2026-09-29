@@ -373,8 +373,7 @@ int CCRISP::UpdateFocusState() {
     return DEVICE_OK;
 }
 
-// TODO: make a table to precompute commands
-int CCRISP::ForceSetFocusState(const std::string& focusState) {
+int CCRISP::SetFocusState(const std::string& focusState) {
     std::string command = "";
     if (focusState == g_CRISP_R) {
         command = "LK F=85";
@@ -399,20 +398,6 @@ int CCRISP::ForceSetFocusState(const std::string& focusState) {
     }
 
     return hub_->QueryCommandVerify(addressChar_ + command, ":A");
-}
-
-int CCRISP::SetFocusState(const std::string& focusState) {
-    // avoid serial communication if already in the state
-    if (focusState == focusState_) {
-        return DEVICE_OK;
-    }
-
-    if (const int status = ForceSetFocusState(focusState); status != DEVICE_OK) {
-        return status;
-    }
-
-    focusState_ = focusState;
-    return DEVICE_OK;
 }
 
 // Properties
