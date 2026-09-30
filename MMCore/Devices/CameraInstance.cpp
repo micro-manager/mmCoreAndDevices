@@ -122,20 +122,7 @@ int CameraInstance::StartSequenceAcquisition(long numImages, double interval_ms,
 int CameraInstance::StartSequenceAcquisition(double interval_ms) { RequireInitialized(__func__); return GetImpl()->StartSequenceAcquisition(interval_ms); }
 int CameraInstance::StopSequenceAcquisition() { RequireInitialized(__func__); return GetImpl()->StopSequenceAcquisition(); }
 bool CameraInstance::IsCapturing() { RequireInitialized(__func__); return GetImpl()->IsCapturing(); }
-
-std::string CameraInstance::GetTags()
-{
-   RequireInitialized(__func__);
-   // TODO Note the danger of limiting serialized metadata to MM::MaxStrLength
-   // (CCameraBase takes no precaution to limit string length; it is an
-   // interface bug).
-   DeviceStringBuffer serializedMetadataBuf(this, "GetTags");
-   GetImpl()->GetTags(serializedMetadataBuf.GetBuffer());
-   return serializedMetadataBuf.Get();
-}
-
-void CameraInstance::AddTag(const char* key, const char* deviceLabel, const char* value) { RequireInitialized(__func__); return GetImpl()->AddTag(key, deviceLabel, value); }
-void CameraInstance::RemoveTag(const char* key) { RequireInitialized(__func__); return GetImpl()->RemoveTag(key); }
+MM::Camera* CameraInstance::GetChannelCameraPtr(unsigned n) { RequireInitialized(__func__); return GetImpl()->GetChannelCameraPtr(n); }
 int CameraInstance::IsExposureSequenceable(bool& isSequenceable) const { RequireInitialized(__func__); return GetImpl()->IsExposureSequenceable(isSequenceable); }
 int CameraInstance::GetExposureSequenceMaxLength(long& nrEvents) const { RequireInitialized(__func__); return GetImpl()->GetExposureSequenceMaxLength(nrEvents); }
 int CameraInstance::StartExposureSequence() { RequireInitialized(__func__); return GetImpl()->StartExposureSequence(); }
