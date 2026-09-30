@@ -754,7 +754,8 @@ int ZeissAxis::GetTrajectoryAcceleration(MM::Device& device, MM::Core& core, Zei
 //
 ZeissScope::ZeissScope() :
    initialized_(false),
-   port_("Undefined")
+   port_("Undefined"),
+   devicesDetected_(false)
 {
    InitializeDefaultErrorMessages();
    SetErrorText(ERR_ANSWER_TIMEOUT, "The Zeiss microscope does not answer.  Is it switched on and connected to this computer?");
@@ -842,25 +843,51 @@ ZeissScope::~ZeissScope()
 
 
 int ZeissScope::DetectInstalledDevices() {
-   ClearInstalledDevices();
+   // Running this twice on the same instance would double-delete the
+   // deviceMap_-owned pointers added to installedDevices below (Core
+   // normally guards against this via HubInstance, but do not rely
+   // solely on that). We only want to latch that guard once a scan has
+   // actually completed successfully though: if a probe fails (e.g. the
+   // port is not yet configured, see GetModelPresent/ERR_PORT_NOT_OPEN),
+   // a later call with a properly configured port must still be able to
+   // find peripherals. So collect results locally first, and only touch
+   // installedDevices_/deviceMap_ ownership (and latch the guard) once
+   // we know the whole scan succeeded.
+   if (devicesDetected_)
+      return DEVICE_OK;
+
    bool present = false;
+   bool scanSucceeded = true;
+   std::vector<MM::Device*> presentDevices;
    for (const auto& pair : deviceMap_)
    {
       if (g_hub.GetModelPresent(*this, *GetCoreCallback(), pair.first, present) == DEVICE_OK)
       {
          if (present)
-            AddInstalledDevice(pair.second);
+            presentDevices.push_back(pair.second);
+      }
+      else
+      {
+         scanSucceeded = false;
       }
    }
+   if (!scanSucceeded)
+      return DEVICE_OK;
+
+   ClearInstalledDevices();
+   for (MM::Device* dev : presentDevices)
+      AddInstalledDevice(dev);
    if (g_hub.HasDefiniteFocus())
    {
       AddInstalledDevice(new DefiniteFocus());
       AddInstalledDevice(new DFOffsetStage());
    }
-   if (g_hub.HasColibri()) 
+   if (g_hub.HasColibri())
    {
       AddInstalledDevice(new Colibri());
    }
+
+   devicesDetected_ = true;
    return DEVICE_OK;
 }
 
@@ -935,7 +962,7 @@ int ZeissScope::Initialize()
    return 0;
 }
 
-int ZeissScope::Shutdown() 
+int ZeissScope::Shutdown()
 {
    if (g_hub.monitoringThread_ != 0) {
       g_hub.monitoringThread_->Stop();
@@ -943,7 +970,14 @@ int ZeissScope::Shutdown()
       delete g_hub.monitoringThread_;
       g_hub.monitoringThread_ = 0;
    }
+   // Reset discovery state so that a subsequent Initialize() (e.g. the
+   // Hardware Configuration Wizard's unload/reload verification cycle)
+   // starts from a clean slate instead of inheriting state from this run.
    g_hub.scopeInitialized_ = false;
+   g_hub.canNodes_.clear();
+   g_hub.availableDevices_.clear();
+   g_hub.hasDefiniteFocus_ = false;
+   g_hub.hasColibri_ = false;
    return 0;
 }
 
@@ -2264,6 +2298,7 @@ DefiniteFocus::DefiniteFocus() :
 
 DefiniteFocus::~DefiniteFocus()
 {
+   Shutdown();
 }
 
 
@@ -2764,6 +2799,7 @@ DFOffsetStage::DFOffsetStage() :
  
 DFOffsetStage::~DFOffsetStage()
 {
+   Shutdown();
 }
 
 void DFOffsetStage::GetName(char* Name) const                                       
@@ -2940,6 +2976,7 @@ Colibri::Colibri() :
 
 Colibri::~Colibri()
 {
+   Shutdown();
 }
 
 int Colibri::Initialize()
