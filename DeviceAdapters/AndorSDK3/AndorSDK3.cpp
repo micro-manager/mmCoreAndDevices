@@ -64,6 +64,8 @@ const char * const g_Keyword_FirmwareVersion = "CameraFirmware";
 const char * const g_Keyword_CameraModel = "CameraModel";
 const char * const g_Keyword_SoftwareVersion = "CurrentSoftware";
 const char * const g_Keyword_ExtTrigTimeout = "Ext (Exp) Trigger Timeout[ms]";
+const char * const g_Keyword_ReverseX = "ReverseX";
+const char * const g_Keyword_ReverseY = "ReverseY";
 
 const char * const g_CameraDefaultBinning = "1x1";
 
@@ -155,6 +157,8 @@ CAndorSDK3Camera::CAndorSDK3Camera()
   currentSeqExposure_(0),
   keep_trying_(false),
   stopOnOverflow_(false),
+  flipX_(false),
+  flipY_(false),
   SRRFControl_(nullptr),
   SRRFCamera_(nullptr)
 {
@@ -420,6 +424,19 @@ int CAndorSDK3Camera::Initialize()
    ret = CreateProperty(g_Keyword_ExtTrigTimeout, "5000", MM::Integer, false);
    assert(DEVICE_OK == ret);
 
+   // Software image flip, applied to every frame before it reaches Micro-Manager
+   CPropertyAction * pAct = new CPropertyAction(this, &CAndorSDK3Camera::OnFlipX);
+   ret = CreateProperty(g_Keyword_ReverseX, g_StatusOFF, MM::String, false, pAct);
+   assert(DEVICE_OK == ret);
+   AddAllowedValue(g_Keyword_ReverseX, g_StatusOFF);
+   AddAllowedValue(g_Keyword_ReverseX, g_StatusON);
+
+   pAct = new CPropertyAction(this, &CAndorSDK3Camera::OnFlipY);
+   ret = CreateProperty(g_Keyword_ReverseY, g_StatusOFF, MM::String, false, pAct);
+   assert(DEVICE_OK == ret);
+   AddAllowedValue(g_Keyword_ReverseY, g_StatusOFF);
+   AddAllowedValue(g_Keyword_ReverseY, g_StatusON);
+
    delete [] p_cameraInfoString;
 
    InitialiseSDK3Defaults();
@@ -654,6 +671,116 @@ void CAndorSDK3Camera::UnpackDataWithPadding(unsigned char * _pucSrcBuffer)
       ss << "[UnpackDataWithPadding] failed with code: " << ret_code << endl;
       LogMessage(ss.str().c_str());
    }
+   FlipImage();
+}
+
+template <typename PixelType>
+static void FlipPixels(PixelType * pixels, unsigned width, unsigned height, bool flipX, bool flipY)
+{
+   // std::reverse and std::swap_ranges are vectorized by the standard library
+   if (flipX && flipY)
+   {
+      // Flipping both axes is a 180 degree rotation: reverse the whole buffer in one pass
+      std::reverse(pixels, pixels + static_cast<size_t>(width) * height);
+   }
+   else if (flipX)
+   {
+      for (unsigned row = 0; row < height; ++row)
+      {
+         PixelType * rowStart = pixels + static_cast<size_t>(row) * width;
+         std::reverse(rowStart, rowStart + width);
+      }
+   }
+   else if (flipY && height > 1)
+   {
+      for (unsigned top = 0, bottom = height - 1; top < bottom; ++top, --bottom)
+      {
+         PixelType * topRow = pixels + static_cast<size_t>(top) * width;
+         PixelType * bottomRow = pixels + static_cast<size_t>(bottom) * width;
+         std::swap_ranges(topRow, topRow + width, bottomRow);
+      }
+   }
+}
+
+// Flips img_ in place according to the ReverseX/ReverseY properties.
+// Caller must hold imgPixelsLock_.
+void CAndorSDK3Camera::FlipImage()
+{
+   const bool flipX = flipX_;
+   const bool flipY = flipY_;
+   if (!flipX && !flipY)
+      return;
+
+   unsigned char * pixels = img_.GetPixelsRW();
+   const unsigned width = img_.Width();
+   const unsigned height = img_.Height();
+   switch (img_.Depth())
+   {
+   case 1:
+      FlipPixels(reinterpret_cast<unsigned char *>(pixels), width, height, flipX, flipY);
+      break;
+   case 2:
+      FlipPixels(reinterpret_cast<unsigned short *>(pixels), width, height, flipX, flipY);
+      break;
+   case 4:
+      FlipPixels(reinterpret_cast<unsigned int *>(pixels), width, height, flipX, flipY);
+      break;
+   case 8:
+      FlipPixels(reinterpret_cast<unsigned long long *>(pixels), width, height, flipX, flipY);
+      break;
+   default:
+      LogMessage("[FlipImage] unsupported pixel depth, image not flipped");
+      break;
+   }
+}
+
+/**
+* Converts an ROI between flipped (as displayed) and unflipped (sensor) image
+* coordinates. The mapping is its own inverse, so it serves SetROI and GetROI.
+*/
+void CAndorSDK3Camera::MirrorROI(unsigned & x, unsigned & y, unsigned xSize, unsigned ySize)
+{
+   int binning = GetBinning();
+   if (flipX_)
+   {
+      unsigned fullWidth = static_cast<unsigned>(aoi_property->GetSensorWidth() / binning);
+      x = (fullWidth > x + xSize) ? fullWidth - x - xSize : 0;
+   }
+   if (flipY_)
+   {
+      unsigned fullHeight = static_cast<unsigned>(aoi_property->GetSensorHeight() / binning);
+      y = (fullHeight > y + ySize) ? fullHeight - y - ySize : 0;
+   }
+}
+
+int CAndorSDK3Camera::OnFlipX(MM::PropertyBase * pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(flipX_ ? g_StatusON : g_StatusOFF);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      string value;
+      pProp->Get(value);
+      flipX_ = (value == g_StatusON);
+   }
+   return DEVICE_OK;
+}
+
+int CAndorSDK3Camera::OnFlipY(MM::PropertyBase * pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(flipY_ ? g_StatusON : g_StatusOFF);
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      string value;
+      pProp->Get(value);
+      flipY_ = (value == g_StatusON);
+   }
+   return DEVICE_OK;
 }
 
 
@@ -913,6 +1040,9 @@ int CAndorSDK3Camera::SetROI(unsigned x, unsigned y, unsigned xSize, unsigned yS
    }
    else
    {
+      // The ROI is drawn on the flipped image; map it back onto the sensor
+      MirrorROI(x, y, xSize, ySize);
+
       x += 1;
       y += 1;
       //Adjust for binning
@@ -944,6 +1074,8 @@ int CAndorSDK3Camera::GetROI(unsigned & x, unsigned & y, unsigned & xSize, unsig
 
    xSize = static_cast<unsigned>(aoi_property->GetWidth());
    ySize = static_cast<unsigned>(aoi_property->GetHeight());
+
+   MirrorROI(x, y, xSize, ySize);
 
    return DEVICE_OK;
 }

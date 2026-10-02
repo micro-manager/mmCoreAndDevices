@@ -38,6 +38,7 @@
 #include "DeviceThreads.h"
 #include "atcore.h"
 #include "IProperty.h"
+#include <atomic>
 #include <deque>
 
 class MySequenceThread;
@@ -121,13 +122,20 @@ public:
    // Used by SRRFControl via SRRFAndorSDK3Camera
    int AddProperty(const char* name, const char* value, MM::PropertyType eType, bool readOnly, MM::ActionFunctor* pAct);
    void ResizeSRRFImage(long radiality);
-   
+
+   // action interface
+   // ----------------
+   int OnFlipX(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnFlipY(MM::PropertyBase* pProp, MM::ActionType eAct);
+
 private:
    std::wstring currentSoftwareVersion_;
    std::wstring PerformReleaseVersionCheck();
 
    void InitialiseSDK3Defaults();
    void UnpackDataWithPadding(unsigned char* _pucSrcBuffer);
+   void FlipImage();
+   void MirrorROI(unsigned& x, unsigned& y, unsigned xSize, unsigned ySize);
    bool InitialiseDeviceCircularBuffer(const unsigned numBuffers);
    bool CleanUpDeviceCircularBuffer();
    int  SetupCameraForSeqAcquisition(long numImages);
@@ -163,6 +171,9 @@ private:
    bool in_external_;
    unsigned int currentSeqExposure_;
    bool stopOnOverflow_;
+   // ReverseX/ReverseY state, read by the acquisition thread for every frame
+   std::atomic<bool> flipX_;
+   std::atomic<bool> flipY_;
 
    unsigned char** image_buffers_;
    unsigned int numImgBuffersAllocated_;
