@@ -177,6 +177,7 @@ public:
   int ArvCheckError(GError **gerror) const;
   void ArvGeometryUpdate();
   bool ArvFrameRateLimited();
+  bool ArvHasBooleanFeature(const char *feature);
   void ArvGetExposure();
   void ArvPixelFormatUpdate(guint32 arvPixelFormat);
   void ArvReleaseSequence();

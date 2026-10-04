@@ -1214,9 +1214,7 @@ int AravisCamera::Initialize()
 
     // Whether the rate is held is a feature of its own, and not every camera
     // has it; on one without, the rate it is given is simply always in force.
-    if (arv_camera_is_feature_available(arv_cam, ARV_PROP_FRAME_RATE_ENABLE, &gerror)){
-      ArvCheckError(&gerror);
-
+    if (ArvHasBooleanFeature(ARV_PROP_FRAME_RATE_ENABLE)){
       pAct = new CPropertyAction(this, &AravisCamera::OnFrameRateEnable);
       ret = CreateProperty(ARV_PROP_FRAME_RATE_ENABLE, "0", MM::String, false, pAct);
       assert(ret == DEVICE_OK);
@@ -1325,11 +1323,9 @@ int AravisCamera::Initialize()
   // undoing that at the camera costs nothing -- Micro-Manager's own
   // TransposeMirror properties only turn the image over for the screen.
   for (const char *axis : {ARV_PROP_REVERSE_X, ARV_PROP_REVERSE_Y}){
-    if (!arv_camera_is_feature_available(arv_cam, axis, &gerror)){
-      ArvCheckError(&gerror);
+    if (!ArvHasBooleanFeature(axis)){
       continue;
     }
-    ArvCheckError(&gerror);
 
     pAct = new CPropertyAction(this, &AravisCamera::OnReverse);
     ret = CreateProperty(axis, "0", MM::String, false, pAct);
@@ -1660,6 +1656,18 @@ int AravisCamera::OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
+// Whether the camera has this feature, as a Boolean. A node that exists but
+// is some other type cannot be read with Aravis's boolean calls: they refuse
+// with "Not a ArvGcBoolean", and a property that asks at every refresh turns
+// that refusal into a log line per poll.
+bool AravisCamera::ArvHasBooleanFeature(const char *feature)
+{
+  ArvGcNode *node = arv_device_get_feature(arv_device, feature);
+
+  return (node != NULL) && ARV_IS_GC_BOOLEAN(node);
+}
+
+
 // Whether the camera is holding a frame rate, as the camera says rather than
 // as the adapter remembers. A camera with no AcquisitionFrameRateEnable
 // feature has no limit to switch off, so the answer there is false and
@@ -1669,11 +1677,9 @@ bool AravisCamera::ArvFrameRateLimited()
   gboolean enabled;
   GError *gerror = nullptr;
 
-  if (!arv_camera_is_feature_available(arv_cam, ARV_PROP_FRAME_RATE_ENABLE, &gerror)){
-    ArvCheckError(&gerror);
+  if (!ArvHasBooleanFeature(ARV_PROP_FRAME_RATE_ENABLE)){
     return false;
   }
-  ArvCheckError(&gerror);
 
   enabled = arv_device_get_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, &gerror);
   if (ArvCheckError(&gerror)){
