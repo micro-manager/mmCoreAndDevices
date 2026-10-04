@@ -1165,6 +1165,34 @@ int AravisCamera::Initialize()
     SetPropertyLimits(MM::g_Keyword_Offset, bmin, bmax);
   }
 
+  // Frame rate. Until now the adapter's only use of the camera's rate was to
+  // switch the limit off at every exposure change, so a user who wanted the
+  // camera to hold a rate had no way to say so.
+  if (has_frame_rate){
+    double fmin, fmax;
+
+    arv_camera_get_frame_rate_bounds(arv_cam, &fmin, &fmax, &gerror);
+    ArvCheckError(&gerror);
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnFrameRate);
+    ret = CreateProperty(ARV_PROP_FRAME_RATE, "0.0", MM::Float, false, pAct);
+    assert(ret == DEVICE_OK);
+    SetPropertyLimits(ARV_PROP_FRAME_RATE, fmin, fmax);
+
+    // Whether the rate is held is a feature of its own, and not every camera
+    // has it; on one without, the rate it is given is simply always in force.
+    if (arv_camera_is_feature_available(arv_cam, ARV_PROP_FRAME_RATE_ENABLE, &gerror)){
+      ArvCheckError(&gerror);
+
+      pAct = new CPropertyAction(this, &AravisCamera::OnFrameRateEnable);
+      ret = CreateProperty(ARV_PROP_FRAME_RATE_ENABLE, "0", MM::String, false, pAct);
+      assert(ret == DEVICE_OK);
+      std::vector<std::string> frameRateEnableValues = {"0", "1"};
+      SetAllowedValues(ARV_PROP_FRAME_RATE_ENABLE, frameRateEnableValues);
+    }
+    ArvCheckError(&gerror);
+  }
+
   // Gamma.
   //
   // Check by getting the feature because if "GammaEnable" is turned off the
@@ -1475,6 +1503,76 @@ int AravisCamera::OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
+// Whether the camera is holding a frame rate, as the camera says rather than
+// as the adapter remembers. A camera with no AcquisitionFrameRateEnable
+// feature has no limit to switch off, so the answer there is false and
+// SetExposure's disable stays the no-op it always was.
+bool AravisCamera::ArvFrameRateLimited()
+{
+  gboolean enabled;
+  GError *gerror = nullptr;
+
+  if (!arv_camera_is_feature_available(arv_cam, ARV_PROP_FRAME_RATE_ENABLE, &gerror)){
+    ArvCheckError(&gerror);
+    return false;
+  }
+  ArvCheckError(&gerror);
+
+  enabled = arv_device_get_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, &gerror);
+  if (ArvCheckError(&gerror)){
+    return false;
+  }
+  return enabled;
+}
+
+
+int AravisCamera::OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  double frameRate;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(frameRate);
+    // Aravis turns a positive rate into "switch the limit on, then write it",
+    // so asking for a rate is also how the limit is switched on.
+    arv_camera_set_frame_rate(arv_cam, frameRate, &gerror);
+    ArvCheckError(&gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    frameRate = arv_camera_get_frame_rate(arv_cam, &gerror);
+    if (!ArvCheckError(&gerror)){
+      pProp->Set(frameRate);
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  gboolean enable;
+  std::string frameRateEnable;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(frameRateEnable);
+    enable = std::stoi(frameRateEnable);
+    // Only the switch, leaving the rate as it is: the rate is the other
+    // property's to say.
+    arv_device_set_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, enable, &gerror);
+    ArvCheckError(&gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    enable = arv_device_get_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, &gerror);
+    if (!ArvCheckError(&gerror)){
+      frameRateEnable = std::to_string(enable);
+      pProp->Set(frameRateEnable.c_str());
+    }
+  }
+  return DEVICE_OK;
+}
+
+
 int AravisCamera::OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
   gboolean ge;
@@ -1688,9 +1786,10 @@ void AravisCamera::SetExposure(double expMs)
   ArvCheckError(&gerror);
 
   // Disable the frame rate limit so the exposure is what paces the camera --
-  // but only on a camera that has one to disable. The bounds this used to read
-  // first were never looked at; the comment even said they do not change.
-  if (has_frame_rate){
+  // but only on a camera that has one to disable, and only while the user has
+  // not asked the camera to hold a rate. Doing it unconditionally fought
+  // anyone who set one: the rate went back off at the next exposure change.
+  if (has_frame_rate && !ArvFrameRateLimited()){
     arv_camera_set_frame_rate(arv_cam, -1.0, &gerror);
     ArvCheckError(&gerror);
   }
