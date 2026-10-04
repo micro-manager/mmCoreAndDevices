@@ -1193,6 +1193,24 @@ int AravisCamera::Initialize()
     ArvCheckError(&gerror);
   }
 
+  // Mirroring, where the camera can do it. On a microscope the image's
+  // handedness depends on how many mirrors the light met on the way, and
+  // undoing that at the camera costs nothing -- Micro-Manager's own
+  // TransposeMirror properties only turn the image over for the screen.
+  for (const char *axis : {ARV_PROP_REVERSE_X, ARV_PROP_REVERSE_Y}){
+    if (!arv_camera_is_feature_available(arv_cam, axis, &gerror)){
+      ArvCheckError(&gerror);
+      continue;
+    }
+    ArvCheckError(&gerror);
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnReverse);
+    ret = CreateProperty(axis, "0", MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+    std::vector<std::string> reverseValues = {"0", "1"};
+    SetAllowedValues(axis, reverseValues);
+  }
+
   // Temperature, read-only. Standard on scientific cameras and the first
   // thing asked when an experiment drifts. Which sensor it reports is the
   // camera's DeviceTemperatureSelector to say, and this leaves that alone.
@@ -1579,6 +1597,33 @@ int AravisCamera::OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct
     if (!ArvCheckError(&gerror)){
       frameRateEnable = std::to_string(enable);
       pProp->Set(frameRateEnable.c_str());
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnReverse(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  gboolean reverse;
+  std::string value;
+  GError *gerror = nullptr;
+
+  // One handler for both axes: each property is named after the feature it
+  // reads, which is the only thing that differs between them.
+  const std::string feature = pProp->GetName();
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(value);
+    reverse = std::stoi(value);
+    arv_device_set_boolean_feature_value(arv_device, feature.c_str(), reverse, &gerror);
+    ArvCheckError(&gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    reverse = arv_device_get_boolean_feature_value(arv_device, feature.c_str(), &gerror);
+    if (!ArvCheckError(&gerror)){
+      value = std::to_string(reverse);
+      pProp->Set(value.c_str());
     }
   }
   return DEVICE_OK;

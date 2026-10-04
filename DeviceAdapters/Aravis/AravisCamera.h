@@ -75,6 +75,12 @@
 // it is read from.
 #define ARV_FEATURE_TEMPERATURE "DeviceTemperature"
 
+// Mirroring done by the camera, as opposed to Micro-Manager's own
+// TransposeMirror properties, which turn the image over on the way to the
+// screen and leave the data as the camera sent it.
+#define ARV_PROP_REVERSE_X "ReverseX"
+#define ARV_PROP_REVERSE_Y "ReverseY"
+
 #define ARV_PROP_FRAME_RATE        "AcquisitionFrameRate"
 #define ARV_PROP_FRAME_RATE_ENABLE "AcquisitionFrameRateEnable"
 
@@ -130,6 +136,7 @@ public:
   int OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnReverse(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
