@@ -1171,6 +1171,33 @@ int AravisCamera::Initialize()
     SetPropertyLimits(MM::g_Keyword_Offset, bmin, bmax);
   }
 
+  // Exposure auto. Initialize() switches it off above, because Micro-Manager
+  // is what sets the exposure and a camera adjusting it underneath makes
+  // SetExposure() a refusal on some cameras and a polite fiction on others.
+  // That is the right default -- but a camera that ships in auto, as the FLIR
+  // Blackfly S does, had the mode switched off at every open and no way to
+  // ask for it back.
+  if (arv_camera_is_exposure_auto_available(arv_cam, &gerror)){
+    ArvCheckError(&gerror);
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnExposureAuto);
+    ret = CreateProperty(ARV_PROP_EXPOSURE_AUTO, arv_auto_to_string(ARV_AUTO_OFF),
+			 MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+
+    // The camera's own vocabulary, which is what arv-tool and the vendor's
+    // own software show. GainAuto's AUTO_OFF/AUTO_ONCE/AUTO_CONTINUOUS
+    // predate this and are left as they are: changing them would break
+    // configurations people have already saved.
+    std::vector<std::string> exposureAutoValues = {
+      arv_auto_to_string(ARV_AUTO_OFF),
+      arv_auto_to_string(ARV_AUTO_ONCE),
+      arv_auto_to_string(ARV_AUTO_CONTINUOUS)
+    };
+    SetAllowedValues(ARV_PROP_EXPOSURE_AUTO, exposureAutoValues);
+  }
+  ArvCheckError(&gerror);
+
   // Frame rate. Until now the adapter's only use of the camera's rate was to
   // switch the limit off at every exposure change, so a user who wanted the
   // camera to hold a rate had no way to say so.
@@ -1653,6 +1680,38 @@ bool AravisCamera::ArvFrameRateLimited()
     return false;
   }
   return enabled;
+}
+
+
+int AravisCamera::OnExposureAuto(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  ArvAuto mode;
+  std::string value;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    // Not mid-sequence: the camera is streaming and the exposure the adapter
+    // reports would go stale underneath it. OnAutoGain declines the same way.
+    if (capturing){
+      return DEVICE_OK;
+    }
+
+    pProp->Get(value);
+    mode = arv_auto_from_string(value.c_str());
+    arv_camera_set_exposure_time_auto(arv_cam, mode, &gerror);
+    ArvCheckError(&gerror);
+
+    // Once the camera has the exposure, what it chose is what Micro-Manager
+    // should report.
+    ArvGetExposure();
+  }
+  else if (eAct == MM::BeforeGet){
+    mode = arv_camera_get_exposure_time_auto(arv_cam, &gerror);
+    if (!ArvCheckError(&gerror)){
+      pProp->Set(arv_auto_to_string(mode));
+    }
+  }
+  return DEVICE_OK;
 }
 
 

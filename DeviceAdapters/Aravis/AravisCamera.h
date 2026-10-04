@@ -75,6 +75,10 @@
 // it is read from.
 #define ARV_FEATURE_TEMPERATURE "DeviceTemperature"
 
+// The camera adjusting its own exposure. Micro-Manager's name for the camera
+// feature, in the camera's own vocabulary: Off, Once, Continuous.
+#define ARV_PROP_EXPOSURE_AUTO "ExposureAuto"
+
 // What the stream did: frames that arrived whole, frames that did not, and
 // frames the camera sent with no buffer ready to take them.
 #define ARV_PROP_FRAMES_COMPLETED "FramesCompleted"
@@ -151,6 +155,7 @@ public:
   int OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnExposureAuto(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
