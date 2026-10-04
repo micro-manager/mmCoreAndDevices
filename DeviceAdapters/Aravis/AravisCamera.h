@@ -70,6 +70,11 @@
 // The camera's own frame rate, under its GenICam names. Whether the rate is
 // held at all is a separate feature from what the rate is, and a camera can
 // have the second without the first.
+// The camera's temperature sensor. Micro-Manager's name for the property is
+// CCDTemperature whatever the sensor is made of; this is the GenICam feature
+// it is read from.
+#define ARV_FEATURE_TEMPERATURE "DeviceTemperature"
+
 #define ARV_PROP_FRAME_RATE        "AcquisitionFrameRate"
 #define ARV_PROP_FRAME_RATE_ENABLE "AcquisitionFrameRateEnable"
 
@@ -121,6 +126,7 @@ public:
   int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);

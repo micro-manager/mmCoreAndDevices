@@ -1193,6 +1193,18 @@ int AravisCamera::Initialize()
     ArvCheckError(&gerror);
   }
 
+  // Temperature, read-only. Standard on scientific cameras and the first
+  // thing asked when an experiment drifts. Which sensor it reports is the
+  // camera's DeviceTemperatureSelector to say, and this leaves that alone.
+  if (arv_camera_is_feature_available(arv_cam, ARV_FEATURE_TEMPERATURE, &gerror)){
+    ArvCheckError(&gerror);
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnTemperature);
+    ret = CreateProperty(MM::g_Keyword_CCDTemperature, "0.0", MM::Float, true, pAct);
+    assert(ret == DEVICE_OK);
+  }
+  ArvCheckError(&gerror);
+
   // Gamma.
   //
   // Check by getting the feature because if "GammaEnable" is turned off the
@@ -1567,6 +1579,23 @@ int AravisCamera::OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct
     if (!ArvCheckError(&gerror)){
       frameRateEnable = std::to_string(enable);
       pProp->Set(frameRateEnable.c_str());
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  double temperature;
+  GError *gerror = nullptr;
+
+  // Read-only: BeforeGet is the only action Micro-Manager will ask for, and
+  // the value is the camera's to report.
+  if (eAct == MM::BeforeGet){
+    temperature = arv_device_get_float_feature_value(arv_device, ARV_FEATURE_TEMPERATURE, &gerror);
+    if (!ArvCheckError(&gerror)){
+      pProp->Set(temperature);
     }
   }
   return DEVICE_OK;
