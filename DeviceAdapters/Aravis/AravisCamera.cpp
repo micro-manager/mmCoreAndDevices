@@ -52,6 +52,24 @@ std::vector<std::string> supportedPixelFormats = {
   "Mono12",
   "Mono14",
   "Mono16",
+  // Every Bayer layout, not just one. The layout names which pixel of the
+  // 2x2 cell is red, which is a question for whatever demosaics the image
+  // later; this adapter hands the mosaic over as it arrives. A camera that
+  // sends BayerBG8 is no harder to read than one that sends BayerRG8, and
+  // offering only RG left the others listed as "not implemented" and the
+  // camera unusable when one of them was all it had.
+  "BayerBG8",
+  "BayerBG10",
+  "BayerBG12",
+  "BayerBG16",
+  "BayerGB8",
+  "BayerGB10",
+  "BayerGB12",
+  "BayerGB16",
+  "BayerGR8",
+  "BayerGR10",
+  "BayerGR12",
+  "BayerGR16",
   "BayerRG8",
   "BayerRG10",
   "BayerRG12",
@@ -520,24 +538,39 @@ void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
     pixel_type = g_PixelType_16bit;
     break;
 
+  // All four Bayer layouts per depth: the layout decides which pixel of the
+  // 2x2 cell is red, and the buffer it arrives in is the same either way --
+  // one component, of the depth the format names.
+  case ARV_PIXEL_FORMAT_BAYER_BG_8:
+  case ARV_PIXEL_FORMAT_BAYER_GB_8:
+  case ARV_PIXEL_FORMAT_BAYER_GR_8:
   case ARV_PIXEL_FORMAT_BAYER_RG_8:
     img_buffer_bit_depth = 8;
     img_buffer_bytes_per_pixel = 1;
     img_buffer_number_components = 1;
     pixel_type = g_PixelType_8bit;
     break;
+  case ARV_PIXEL_FORMAT_BAYER_BG_10:
+  case ARV_PIXEL_FORMAT_BAYER_GB_10:
+  case ARV_PIXEL_FORMAT_BAYER_GR_10:
   case ARV_PIXEL_FORMAT_BAYER_RG_10:
     img_buffer_bit_depth = 10;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
     pixel_type = g_PixelType_16bit;
     break;
+  case ARV_PIXEL_FORMAT_BAYER_BG_12:
+  case ARV_PIXEL_FORMAT_BAYER_GB_12:
+  case ARV_PIXEL_FORMAT_BAYER_GR_12:
   case ARV_PIXEL_FORMAT_BAYER_RG_12:
     img_buffer_bit_depth = 12;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
     pixel_type = g_PixelType_16bit;
     break;
+  case ARV_PIXEL_FORMAT_BAYER_BG_16:
+  case ARV_PIXEL_FORMAT_BAYER_GB_16:
+  case ARV_PIXEL_FORMAT_BAYER_GR_16:
   case ARV_PIXEL_FORMAT_BAYER_RG_16:
     img_buffer_bit_depth = 16;
     img_buffer_bytes_per_pixel = 2;
