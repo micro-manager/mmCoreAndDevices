@@ -75,6 +75,13 @@
 // it is read from.
 #define ARV_FEATURE_TEMPERATURE "DeviceTemperature"
 
+// GigE stream tuning. The features are GigE Vision's own registers: the
+// packet size the camera sends, and the gap it leaves between packets.
+#define ARV_FEATURE_PACKET_SIZE  "GevSCPSPacketSize"
+#define ARV_FEATURE_PACKET_DELAY "GevSCPD"
+#define ARV_PROP_PACKET_SIZE     "PacketSize"
+#define ARV_PROP_PACKET_DELAY    "PacketDelay"
+
 // The camera's test pattern, which is not called the same thing everywhere.
 // The standard name is TestPattern; Basler's cameras have TestImageSelector
 // and no TestPattern at all. Micro-Manager sees one property either way.
@@ -143,6 +150,8 @@ public:
   int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnPacketDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnPacketSize(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnReverse(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
