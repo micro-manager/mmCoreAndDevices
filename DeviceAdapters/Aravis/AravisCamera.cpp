@@ -465,10 +465,17 @@ void AravisCamera::ArvGeometryUpdate()
     return;
   }
 
-  std::lock_guard<std::mutex> lock(img_buffer_mutex);
-  img_buffer_width = (int)gwidth;
-  img_buffer_height = (int)gheight;
-  img_buffer_number_pixels = (size_t)gwidth * (size_t)gheight;
+  {
+    std::lock_guard<std::mutex> lock(img_buffer_mutex);
+    img_buffer_width = (int)gwidth;
+    img_buffer_height = (int)gheight;
+    img_buffer_number_pixels = (size_t)gwidth * (size_t)gheight;
+  }
+
+  // The region and binning move the rate the camera can reach, so the frame
+  // rate property's limits have moved with them. Outside the lock: it guards
+  // the image buffer, and this has nothing to do with it.
+  ArvFrameRateBoundsUpdate();
 }
 
 
@@ -1180,8 +1187,13 @@ int AravisCamera::Initialize()
   if (arv_camera_is_exposure_auto_available(arv_cam, &gerror)){
     ArvCheckError(&gerror);
 
+    ArvAuto exposureAuto = arv_camera_get_exposure_time_auto(arv_cam, &gerror);
+    if (ArvCheckError(&gerror)){
+      exposureAuto = ARV_AUTO_OFF;
+    }
+
     pAct = new CPropertyAction(this, &AravisCamera::OnExposureAuto);
-    ret = CreateProperty(ARV_PROP_EXPOSURE_AUTO, arv_auto_to_string(ARV_AUTO_OFF),
+    ret = CreateProperty(ARV_PROP_EXPOSURE_AUTO, arv_auto_to_string(exposureAuto),
 			 MM::String, false, pAct);
     assert(ret == DEVICE_OK);
 
@@ -1202,21 +1214,36 @@ int AravisCamera::Initialize()
   // switch the limit off at every exposure change, so a user who wanted the
   // camera to hold a rate had no way to say so.
   if (has_frame_rate){
-    double fmin, fmax;
+    double frameRate;
 
-    arv_camera_get_frame_rate_bounds(arv_cam, &fmin, &fmax, &gerror);
-    ArvCheckError(&gerror);
+    // Every property below starts from what the camera says, not from a
+    // number written here: Micro-Manager shows a property's value from its
+    // own cache until something refreshes it, so a placeholder is what the
+    // user sees -- and "0.0" is not even inside this property's limits.
+    frameRate = arv_camera_get_frame_rate(arv_cam, &gerror);
+    if (ArvCheckError(&gerror)){
+      frameRate = 0.0;
+    }
 
     pAct = new CPropertyAction(this, &AravisCamera::OnFrameRate);
-    ret = CreateProperty(ARV_PROP_FRAME_RATE, "0.0", MM::Float, false, pAct);
+    ret = CreateProperty(ARV_PROP_FRAME_RATE, std::to_string(frameRate).c_str(),
+			 MM::Float, false, pAct);
     assert(ret == DEVICE_OK);
-    SetPropertyLimits(ARV_PROP_FRAME_RATE, fmin, fmax);
+    ArvFrameRateBoundsUpdate();
 
     // Whether the rate is held is a feature of its own, and not every camera
     // has it; on one without, the rate it is given is simply always in force.
     if (ArvHasBooleanFeature(ARV_PROP_FRAME_RATE_ENABLE)){
+      gboolean enabled;
+
+      enabled = arv_device_get_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, &gerror);
+      if (ArvCheckError(&gerror)){
+	enabled = FALSE;
+      }
+
       pAct = new CPropertyAction(this, &AravisCamera::OnFrameRateEnable);
-      ret = CreateProperty(ARV_PROP_FRAME_RATE_ENABLE, "0", MM::String, false, pAct);
+      ret = CreateProperty(ARV_PROP_FRAME_RATE_ENABLE, std::to_string(enabled).c_str(),
+			   MM::String, false, pAct);
       assert(ret == DEVICE_OK);
       std::vector<std::string> frameRateEnableValues = {"0", "1"};
       SetAllowedValues(ARV_PROP_FRAME_RATE_ENABLE, frameRateEnableValues);
@@ -1248,8 +1275,14 @@ int AravisCamera::Initialize()
     if (arv_camera_is_feature_available(arv_cam, ARV_FEATURE_PACKET_SIZE, &gerror)){
       ArvCheckError(&gerror);
 
+      long packetSize = (long)arv_camera_gv_get_packet_size(arv_cam, &gerror);
+      if (ArvCheckError(&gerror)){
+	packetSize = 0;
+      }
+
       pAct = new CPropertyAction(this, &AravisCamera::OnPacketSize);
-      ret = CreateProperty(ARV_PROP_PACKET_SIZE, "0", MM::Integer, false, pAct);
+      ret = CreateProperty(ARV_PROP_PACKET_SIZE, std::to_string(packetSize).c_str(),
+			   MM::Integer, false, pAct);
       assert(ret == DEVICE_OK);
 
       // Bounds if the camera gives them, and no limits rather than invented
@@ -1264,8 +1297,14 @@ int AravisCamera::Initialize()
     if (arv_camera_is_feature_available(arv_cam, ARV_FEATURE_PACKET_DELAY, &gerror)){
       ArvCheckError(&gerror);
 
+      long packetDelay = (long)arv_camera_gv_get_packet_delay(arv_cam, &gerror);
+      if (ArvCheckError(&gerror)){
+	packetDelay = 0;
+      }
+
       pAct = new CPropertyAction(this, &AravisCamera::OnPacketDelay);
-      ret = CreateProperty(ARV_PROP_PACKET_DELAY, "0", MM::Integer, false, pAct);
+      ret = CreateProperty(ARV_PROP_PACKET_DELAY, std::to_string(packetDelay).c_str(),
+			   MM::Integer, false, pAct);
       assert(ret == DEVICE_OK);
 
       arv_camera_get_integer_bounds(arv_cam, ARV_FEATURE_PACKET_DELAY, &gmin, &gmax, &gerror);
@@ -1327,8 +1366,13 @@ int AravisCamera::Initialize()
       continue;
     }
 
+    gboolean reversed = arv_device_get_boolean_feature_value(arv_device, axis, &gerror);
+    if (ArvCheckError(&gerror)){
+      reversed = FALSE;
+    }
+
     pAct = new CPropertyAction(this, &AravisCamera::OnReverse);
-    ret = CreateProperty(axis, "0", MM::String, false, pAct);
+    ret = CreateProperty(axis, std::to_string(reversed).c_str(), MM::String, false, pAct);
     assert(ret == DEVICE_OK);
     std::vector<std::string> reverseValues = {"0", "1"};
     SetAllowedValues(axis, reverseValues);
@@ -1340,8 +1384,14 @@ int AravisCamera::Initialize()
   if (arv_camera_is_feature_available(arv_cam, ARV_FEATURE_TEMPERATURE, &gerror)){
     ArvCheckError(&gerror);
 
+    double temperature = arv_device_get_float_feature_value(arv_device, ARV_FEATURE_TEMPERATURE, &gerror);
+    if (ArvCheckError(&gerror)){
+      temperature = 0.0;
+    }
+
     pAct = new CPropertyAction(this, &AravisCamera::OnTemperature);
-    ret = CreateProperty(MM::g_Keyword_CCDTemperature, "0.0", MM::Float, true, pAct);
+    ret = CreateProperty(MM::g_Keyword_CCDTemperature, std::to_string(temperature).c_str(),
+			 MM::Float, true, pAct);
     assert(ret == DEVICE_OK);
   }
   ArvCheckError(&gerror);
@@ -1668,6 +1718,31 @@ bool AravisCamera::ArvHasBooleanFeature(const char *feature)
 }
 
 
+// The frame rate a camera can reach depends on what else it has been asked
+// for: an Alvium manages 15.97 Hz at a 5 ms exposure and 4.996 Hz at 200 ms,
+// and the region and binning move it too. Micro-Manager refuses a value
+// outside a property's limits before the adapter is called at all, so limits
+// read once at startup turn a rate the camera would accept into "Cannot set
+// property". They are re-read whenever something that moves them changes.
+void AravisCamera::ArvFrameRateBoundsUpdate()
+{
+  double fmin, fmax;
+  GError *gerror = nullptr;
+
+  // Called from the exposure and geometry paths, which both run before this
+  // property exists -- and on cameras that never get one.
+  if (!has_frame_rate || !HasProperty(ARV_PROP_FRAME_RATE)){
+    return;
+  }
+
+  arv_camera_get_frame_rate_bounds(arv_cam, &fmin, &fmax, &gerror);
+  if (ArvCheckError(&gerror)){
+    return;
+  }
+  SetPropertyLimits(ARV_PROP_FRAME_RATE, fmin, fmax);
+}
+
+
 // Whether the camera is holding a frame rate, as the camera says rather than
 // as the adapter remembers. A camera with no AcquisitionFrameRateEnable
 // feature has no limit to switch off, so the answer there is false and
@@ -1727,11 +1802,24 @@ int AravisCamera::OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct)
   GError *gerror = nullptr;
 
   if (eAct == MM::AfterSet){
+    double fmin, fmax;
+
     pProp->Get(frameRate);
+
+    // Clamped to what the camera can do now, as SetExposure() clamps the
+    // exposure: the limits may have been read before the last exposure or
+    // region change moved them.
+    arv_camera_get_frame_rate_bounds(arv_cam, &fmin, &fmax, &gerror);
+    if (!ArvCheckError(&gerror)){
+      if (frameRate < fmin){ frameRate = fmin; }
+      if (frameRate > fmax){ frameRate = fmax; }
+    }
+
     // Aravis turns a positive rate into "switch the limit on, then write it",
     // so asking for a rate is also how the limit is switched on.
     arv_camera_set_frame_rate(arv_cam, frameRate, &gerror);
     ArvCheckError(&gerror);
+    ArvFrameRateBoundsUpdate();
   }
   else if (eAct == MM::BeforeGet){
     frameRate = arv_camera_get_frame_rate(arv_cam, &gerror);
@@ -2137,6 +2225,10 @@ void AravisCamera::SetExposure(double expMs)
     arv_camera_set_frame_rate(arv_cam, -1.0, &gerror);
     ArvCheckError(&gerror);
   }
+
+  // A longer exposure lowers the rate the camera can reach, so the frame rate
+  // property's limits have just moved.
+  ArvFrameRateBoundsUpdate();
 
   ArvGetExposure();
 }

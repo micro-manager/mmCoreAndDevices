@@ -176,6 +176,7 @@ public:
   void ArvBufferUpdate(ArvBuffer *aBuffer);
   int ArvCheckError(GError **gerror) const;
   void ArvGeometryUpdate();
+  void ArvFrameRateBoundsUpdate();
   bool ArvFrameRateLimited();
   bool ArvHasBooleanFeature(const char *feature);
   void ArvGetExposure();
