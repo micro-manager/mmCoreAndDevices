@@ -75,6 +75,13 @@
 // it is read from.
 #define ARV_FEATURE_TEMPERATURE "DeviceTemperature"
 
+// The camera's test pattern, which is not called the same thing everywhere.
+// The standard name is TestPattern; Basler's cameras have TestImageSelector
+// and no TestPattern at all. Micro-Manager sees one property either way.
+#define ARV_FEATURE_TEST_PATTERN "TestPattern"
+#define ARV_FEATURE_TEST_IMAGE   "TestImageSelector"
+#define ARV_PROP_TEST_PATTERN    "TestPattern"
+
 // Mirroring done by the camera, as opposed to Micro-Manager's own
 // TransposeMirror properties, which turn the image over on the way to the
 // screen and leave the data as the camera sent it.
@@ -133,6 +140,7 @@ public:
   int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -219,6 +227,10 @@ private:
   // format the adapter cannot decode is reported when it changes rather than
   // once per frame.
   guint32 arv_pixel_format;
+
+  // Which feature the TestPattern property writes to, since the name differs
+  // between vendors. Empty when the camera has no test pattern.
+  std::string test_pattern_feature;
 
   ArvStream *arv_stream;
   unsigned char *img_buffer;
