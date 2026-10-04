@@ -75,6 +75,12 @@
 // it is read from.
 #define ARV_FEATURE_TEMPERATURE "DeviceTemperature"
 
+// What the stream did: frames that arrived whole, frames that did not, and
+// frames the camera sent with no buffer ready to take them.
+#define ARV_PROP_FRAMES_COMPLETED "FramesCompleted"
+#define ARV_PROP_FRAMES_FAILED    "FramesFailed"
+#define ARV_PROP_FRAMES_UNDERRUN  "FramesUnderrun"
+
 // GigE stream tuning. The features are GigE Vision's own registers: the
 // packet size the camera sends, and the gap it leaves between packets.
 #define ARV_FEATURE_PACKET_SIZE  "GevSCPSPacketSize"
@@ -151,6 +157,7 @@ public:
   int OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPacketDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnStreamStatistic(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPacketSize(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnReverse(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -168,6 +175,7 @@ public:
   void ArvGetExposure();
   void ArvPixelFormatUpdate(guint32 arvPixelFormat);
   void ArvReleaseSequence();
+  void ArvStatisticsUpdate();
   void ArvSequenceFinished();
   void ArvStopCamera();
   int ArvStartSequenceAcquisition();
@@ -236,6 +244,15 @@ private:
   // format the adapter cannot decode is reported when it changes rather than
   // once per frame.
   guint32 arv_pixel_format;
+
+  // The stream's own counters, kept here rather than read live only: a
+  // stream that has ended cannot be asked, and the end of a sequence that
+  // went wrong is exactly when a user goes looking for the numbers. Read on
+  // the Micro-Manager thread, which is also where the stream is created and
+  // released.
+  guint64 stream_completed;
+  guint64 stream_failures;
+  guint64 stream_underruns;
 
   // Which feature the TestPattern property writes to, since the name differs
   // between vendors. Empty when the camera has no test pattern.

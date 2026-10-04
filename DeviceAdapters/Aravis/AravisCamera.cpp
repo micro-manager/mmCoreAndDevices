@@ -189,6 +189,9 @@ AravisCamera::AravisCamera(const char *name) :
   arv_cam_name(name ? name : ""),
   arv_device(nullptr),
   arv_pixel_format(0),
+  stream_completed(0),
+  stream_failures(0),
+  stream_underruns(0),
   arv_stream(nullptr),
   img_buffer(nullptr),
   pixel_type(nullptr)
@@ -674,6 +677,9 @@ void AravisCamera::ArvStopCamera()
 // to sequence_stopper; only then is the stopper certain to be there to join.
 void AravisCamera::ArvReleaseSequence()
 {
+  // Before the stream goes, not after: these are the numbers for the sequence
+  // that just ended, and nothing else will ever be able to report them.
+  ArvStatisticsUpdate();
   g_clear_object(&arv_stream);
 
   std::thread stopper;
@@ -1191,6 +1197,18 @@ int AravisCamera::Initialize()
       SetAllowedValues(ARV_PROP_FRAME_RATE_ENABLE, frameRateEnableValues);
     }
     ArvCheckError(&gerror);
+  }
+
+  // What the stream did. Packet loss on a marginal link shows up as failed
+  // frames and nothing else -- Micro-Manager simply receives fewer images --
+  // so without these a user has no way to tell a slow camera from a lossy
+  // cable.
+  for (const char *statistic : {ARV_PROP_FRAMES_COMPLETED,
+	                        ARV_PROP_FRAMES_FAILED,
+	                        ARV_PROP_FRAMES_UNDERRUN}){
+    pAct = new CPropertyAction(this, &AravisCamera::OnStreamStatistic);
+    ret = CreateProperty(statistic, "0", MM::Integer, true, pAct);
+    assert(ret == DEVICE_OK);
   }
 
   // GigE stream tuning, on a GigE camera. A packet larger than the path
@@ -1773,6 +1791,44 @@ int AravisCamera::OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
     ArvCheckError(&gerror);
     gammaEnable = std::to_string(ge);
     pProp->Set(gammaEnable.c_str());
+  }
+  return DEVICE_OK;
+}
+
+
+// Refresh the stream counters from the stream, while there is one. Aravis
+// counts per stream, so the numbers start again with each sequence.
+void AravisCamera::ArvStatisticsUpdate()
+{
+  if (arv_stream == nullptr){
+    return;
+  }
+  arv_stream_get_statistics(arv_stream, &stream_completed, &stream_failures,
+			    &stream_underruns);
+}
+
+
+int AravisCamera::OnStreamStatistic(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  // Read-only, and one handler for the three of them: the property's name
+  // says which counter it is.
+  if (eAct == MM::BeforeGet){
+    const std::string name = pProp->GetName();
+
+    // Live where there is a stream, and the last sequence's numbers where
+    // there is not. Asking a stream that has been released is a use after
+    // free, so this never reaches Aravis without one.
+    ArvStatisticsUpdate();
+
+    if (name == ARV_PROP_FRAMES_COMPLETED){
+      pProp->Set((long)stream_completed);
+    }
+    else if (name == ARV_PROP_FRAMES_FAILED){
+      pProp->Set((long)stream_failures);
+    }
+    else if (name == ARV_PROP_FRAMES_UNDERRUN){
+      pProp->Set((long)stream_underruns);
+    }
   }
   return DEVICE_OK;
 }
