@@ -153,20 +153,20 @@ public:
   int OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
-  int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
-  int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnExposureAuto(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
-  int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
-  int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPacketDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
-  int OnStreamStatistic(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPacketSize(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
-  int OnReverse(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnReverse(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnStreamStatistic(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -175,17 +175,17 @@ public:
   void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
   void ArvBufferUpdate(ArvBuffer *aBuffer);
   int ArvCheckError(GError **gerror) const;
-  void ArvGeometryUpdate();
   void ArvFrameRateBoundsUpdate();
   bool ArvFrameRateLimited();
-  bool ArvHasBooleanFeature(const char *feature);
+  void ArvGeometryUpdate();
   void ArvGetExposure();
+  bool ArvHasBooleanFeature(const char *feature);
   void ArvPixelFormatUpdate(guint32 arvPixelFormat);
   void ArvReleaseSequence();
-  void ArvStatisticsUpdate();
   void ArvSequenceFinished();
-  void ArvStopCamera();
   int ArvStartSequenceAcquisition();
+  void ArvStatisticsUpdate();
+  void ArvStopCamera();
 
 
 private:
