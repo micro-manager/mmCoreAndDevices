@@ -207,6 +207,8 @@ CPluginManager::UnloadPluginLibrary(const char* moduleName)
    {
       throw CMMError("Cannot unload device adapter " + ToQuotedString(moduleName), e);
    }
+
+   moduleMap_.erase(it);
 }
 
 

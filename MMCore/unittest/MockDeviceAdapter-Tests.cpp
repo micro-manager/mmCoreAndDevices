@@ -60,3 +60,17 @@ TEST_CASE("Create mock devices using MockAdapterWithDevices convenience class") 
    CHECK_THAT(c.getDeviceDescription("dev1"), ContainsSubstring("dev1"));
    CHECK_THAT(c.getDeviceDescription("dev2"), ContainsSubstring("dev2"));
 }
+
+TEST_CASE("Unloaded mock adapter can be loaded again under the same name") {
+   MyMockAdapter adapter1;
+   MyMockAdapter adapter2;
+
+   CMMCore c;
+   c.loadMockDeviceAdapter("myadapter", &adapter1);
+   c.unloadLibrary("myadapter");
+   c.loadMockDeviceAdapter("myadapter", &adapter2);
+   c.loadDevice("mylabel", "myadapter", "mydevice");
+   c.initializeDevice("mylabel");
+   CHECK(c.getDeviceName("mylabel") == "mydevice");
+   c.unloadDevice("mylabel");
+}
