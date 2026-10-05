@@ -67,6 +67,47 @@
 // gets a different property.
 #define ARV_PROP_PIXEL_FORMAT "PixelFormat"
 
+// The camera's own frame rate, under its GenICam names. Whether the rate is
+// held at all is a separate feature from what the rate is, and a camera can
+// have the second without the first.
+// The camera's temperature sensor. Micro-Manager's name for the property is
+// CCDTemperature whatever the sensor is made of; this is the GenICam feature
+// it is read from.
+#define ARV_FEATURE_TEMPERATURE "DeviceTemperature"
+
+// The camera adjusting its own exposure. Micro-Manager's name for the camera
+// feature, in the camera's own vocabulary: Off, Once, Continuous.
+#define ARV_PROP_EXPOSURE_AUTO "ExposureAuto"
+
+// What the stream did: frames that arrived whole, frames that did not, and
+// frames the camera sent with no buffer ready to take them.
+#define ARV_PROP_FRAMES_COMPLETED "FramesCompleted"
+#define ARV_PROP_FRAMES_FAILED    "FramesFailed"
+#define ARV_PROP_FRAMES_UNDERRUN  "FramesUnderrun"
+
+// GigE stream tuning. The features are GigE Vision's own registers: the
+// packet size the camera sends, and the gap it leaves between packets.
+#define ARV_FEATURE_PACKET_SIZE  "GevSCPSPacketSize"
+#define ARV_FEATURE_PACKET_DELAY "GevSCPD"
+#define ARV_PROP_PACKET_SIZE     "PacketSize"
+#define ARV_PROP_PACKET_DELAY    "PacketDelay"
+
+// The camera's test pattern, which is not called the same thing everywhere.
+// The standard name is TestPattern; Basler's cameras have TestImageSelector
+// and no TestPattern at all. Micro-Manager sees one property either way.
+#define ARV_FEATURE_TEST_PATTERN "TestPattern"
+#define ARV_FEATURE_TEST_IMAGE   "TestImageSelector"
+#define ARV_PROP_TEST_PATTERN    "TestPattern"
+
+// Mirroring done by the camera, as opposed to Micro-Manager's own
+// TransposeMirror properties, which turn the image over on the way to the
+// screen and leave the data as the camera sent it.
+#define ARV_PROP_REVERSE_X "ReverseX"
+#define ARV_PROP_REVERSE_Y "ReverseY"
+
+#define ARV_PROP_FRAME_RATE        "AcquisitionFrameRate"
+#define ARV_PROP_FRAME_RATE_ENABLE "AcquisitionFrameRateEnable"
+
 
 class AravisAcquisitionThread;
 
@@ -112,11 +153,20 @@ public:
   int OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnExposureAuto(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGain(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGamma(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnPacketDelay(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnPacketSize(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnReverse(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnStreamStatistic(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct);
+  int OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -125,13 +175,17 @@ public:
   void AcquisitionCallback(ArvStreamCallbackType, ArvBuffer *);
   void ArvBufferUpdate(ArvBuffer *aBuffer);
   int ArvCheckError(GError **gerror) const;
+  void ArvFrameRateBoundsUpdate();
+  bool ArvFrameRateLimited();
   void ArvGeometryUpdate();
   void ArvGetExposure();
+  bool ArvHasBooleanFeature(const char *feature);
   void ArvPixelFormatUpdate(guint32 arvPixelFormat);
   void ArvReleaseSequence();
   void ArvSequenceFinished();
-  void ArvStopCamera();
   int ArvStartSequenceAcquisition();
+  void ArvStatisticsUpdate();
+  void ArvStopCamera();
 
 
 private:
@@ -197,6 +251,19 @@ private:
   // format the adapter cannot decode is reported when it changes rather than
   // once per frame.
   guint32 arv_pixel_format;
+
+  // The stream's own counters, kept here rather than read live only: a
+  // stream that has ended cannot be asked, and the end of a sequence that
+  // went wrong is exactly when a user goes looking for the numbers. Read on
+  // the Micro-Manager thread, which is also where the stream is created and
+  // released.
+  guint64 stream_completed;
+  guint64 stream_failures;
+  guint64 stream_underruns;
+
+  // Which feature the TestPattern property writes to, since the name differs
+  // between vendors. Empty when the camera has no test pattern.
+  std::string test_pattern_feature;
 
   ArvStream *arv_stream;
   unsigned char *img_buffer;

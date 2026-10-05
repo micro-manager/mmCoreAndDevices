@@ -52,6 +52,24 @@ std::vector<std::string> supportedPixelFormats = {
   "Mono12",
   "Mono14",
   "Mono16",
+  // Every Bayer layout, not just one. The layout names which pixel of the
+  // 2x2 cell is red, which is a question for whatever demosaics the image
+  // later; this adapter hands the mosaic over as it arrives. A camera that
+  // sends BayerBG8 is no harder to read than one that sends BayerRG8, and
+  // offering only RG left the others listed as "not implemented" and the
+  // camera unusable when one of them was all it had.
+  "BayerBG8",
+  "BayerBG10",
+  "BayerBG12",
+  "BayerBG16",
+  "BayerGB8",
+  "BayerGB10",
+  "BayerGB12",
+  "BayerGB16",
+  "BayerGR8",
+  "BayerGR10",
+  "BayerGR12",
+  "BayerGR16",
   "BayerRG8",
   "BayerRG10",
   "BayerRG12",
@@ -171,6 +189,9 @@ AravisCamera::AravisCamera(const char *name) :
   arv_cam_name(name ? name : ""),
   arv_device(nullptr),
   arv_pixel_format(0),
+  stream_completed(0),
+  stream_failures(0),
+  stream_underruns(0),
   arv_stream(nullptr),
   img_buffer(nullptr),
   pixel_type(nullptr)
@@ -206,6 +227,8 @@ AravisCamera::~AravisCamera()
 
 
 // These are in alphabetical order.
+
+
 void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb_arv_buffer)
 {
   size_t size;
@@ -295,6 +318,7 @@ void AravisCamera::AcquisitionCallback(ArvStreamCallbackType type, ArvBuffer *cb
     }
   }
 }
+
 
 void AravisCamera::ArvBufferUpdate(ArvBuffer *aBuffer)
 {
@@ -427,6 +451,52 @@ int AravisCamera::ArvCheckError(GError **gerror) const
 }
 
 
+// The frame rate a camera can reach depends on what else it has been asked
+// for: an Alvium manages 15.97 Hz at a 5 ms exposure and 4.996 Hz at 200 ms,
+// and the region and binning move it too. Micro-Manager refuses a value
+// outside a property's limits before the adapter is called at all, so limits
+// read once at startup turn a rate the camera would accept into "Cannot set
+// property". They are re-read whenever something that moves them changes.
+void AravisCamera::ArvFrameRateBoundsUpdate()
+{
+  double fmin, fmax;
+  GError *gerror = nullptr;
+
+  // Called from the exposure and geometry paths, which both run before this
+  // property exists -- and on cameras that never get one.
+  if (!has_frame_rate || !HasProperty(ARV_PROP_FRAME_RATE)){
+    return;
+  }
+
+  arv_camera_get_frame_rate_bounds(arv_cam, &fmin, &fmax, &gerror);
+  if (ArvCheckError(&gerror)){
+    return;
+  }
+  SetPropertyLimits(ARV_PROP_FRAME_RATE, fmin, fmax);
+}
+
+
+// Whether the camera is holding a frame rate, as the camera says rather than
+// as the adapter remembers. A camera with no AcquisitionFrameRateEnable
+// feature has no limit to switch off, so the answer there is false and
+// SetExposure's disable stays the no-op it always was.
+bool AravisCamera::ArvFrameRateLimited()
+{
+  gboolean enabled;
+  GError *gerror = nullptr;
+
+  if (!ArvHasBooleanFeature(ARV_PROP_FRAME_RATE_ENABLE)){
+    return false;
+  }
+
+  enabled = arv_device_get_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, &gerror);
+  if (ArvCheckError(&gerror)){
+    return false;
+  }
+  return enabled;
+}
+
+
 // Read the camera's region and describe the image with it.
 //
 // Micro-Manager asks for the image dimensions and the buffer size before it
@@ -444,10 +514,17 @@ void AravisCamera::ArvGeometryUpdate()
     return;
   }
 
-  std::lock_guard<std::mutex> lock(img_buffer_mutex);
-  img_buffer_width = (int)gwidth;
-  img_buffer_height = (int)gheight;
-  img_buffer_number_pixels = (size_t)gwidth * (size_t)gheight;
+  {
+    std::lock_guard<std::mutex> lock(img_buffer_mutex);
+    img_buffer_width = (int)gwidth;
+    img_buffer_height = (int)gheight;
+    img_buffer_number_pixels = (size_t)gwidth * (size_t)gheight;
+  }
+
+  // The region and binning move the rate the camera can reach, so the frame
+  // rate property's limits have moved with them. Outside the lock: it guards
+  // the image buffer, and this has nothing to do with it.
+  ArvFrameRateBoundsUpdate();
 }
 
 
@@ -465,6 +542,18 @@ void AravisCamera::ArvGetExposure()
   if(!ArvCheckError(&gerror)){
     exposure_time = expTimeUs * 1.0e-3;
   }
+}
+
+
+// Whether the camera has this feature, as a Boolean. A node that exists but
+// is some other type cannot be read with Aravis's boolean calls: they refuse
+// with "Not a ArvGcBoolean", and a property that asks at every refresh turns
+// that refusal into a log line per poll.
+bool AravisCamera::ArvHasBooleanFeature(const char *feature)
+{
+  ArvGcNode *node = arv_device_get_feature(arv_device, feature);
+
+  return (node != NULL) && ARV_IS_GC_BOOLEAN(node);
 }
 
 
@@ -520,24 +609,39 @@ void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
     pixel_type = g_PixelType_16bit;
     break;
 
+  // All four Bayer layouts per depth: the layout decides which pixel of the
+  // 2x2 cell is red, and the buffer it arrives in is the same either way --
+  // one component, of the depth the format names.
+  case ARV_PIXEL_FORMAT_BAYER_BG_8:
+  case ARV_PIXEL_FORMAT_BAYER_GB_8:
+  case ARV_PIXEL_FORMAT_BAYER_GR_8:
   case ARV_PIXEL_FORMAT_BAYER_RG_8:
     img_buffer_bit_depth = 8;
     img_buffer_bytes_per_pixel = 1;
     img_buffer_number_components = 1;
     pixel_type = g_PixelType_8bit;
     break;
+  case ARV_PIXEL_FORMAT_BAYER_BG_10:
+  case ARV_PIXEL_FORMAT_BAYER_GB_10:
+  case ARV_PIXEL_FORMAT_BAYER_GR_10:
   case ARV_PIXEL_FORMAT_BAYER_RG_10:
     img_buffer_bit_depth = 10;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
     pixel_type = g_PixelType_16bit;
     break;
+  case ARV_PIXEL_FORMAT_BAYER_BG_12:
+  case ARV_PIXEL_FORMAT_BAYER_GB_12:
+  case ARV_PIXEL_FORMAT_BAYER_GR_12:
   case ARV_PIXEL_FORMAT_BAYER_RG_12:
     img_buffer_bit_depth = 12;
     img_buffer_bytes_per_pixel = 2;
     img_buffer_number_components = 1;
     pixel_type = g_PixelType_16bit;
     break;
+  case ARV_PIXEL_FORMAT_BAYER_BG_16:
+  case ARV_PIXEL_FORMAT_BAYER_GB_16:
+  case ARV_PIXEL_FORMAT_BAYER_GR_16:
   case ARV_PIXEL_FORMAT_BAYER_RG_16:
     img_buffer_bit_depth = 16;
     img_buffer_bytes_per_pixel = 2;
@@ -581,6 +685,38 @@ void AravisCamera::ArvPixelFormatUpdate(guint32 arvPixelFormat)
 }
 
 
+// Release what a finished sequence still holds: its stream, and the thread
+// stopping the camera if the sequence ended itself.
+//
+// A sequence that ends itself cannot release its own stream, so whatever runs
+// next has to. Starting a new one used to create the new stream over the old
+// pointer instead, orphaning a stream and its thread every time. Each orphan
+// kept a reference to the device, so after the camera was reloaded the new
+// instance found GigE control privilege still held and every write was
+// refused as "access-denied" -- no ROI, no exposure -- until Micro-Manager
+// restarted.
+//
+// The stream goes first. Unreffing it joins the stream thread, so once that
+// returns no callback is running, and none can still be about to hand the stop
+// to sequence_stopper; only then is the stopper certain to be there to join.
+void AravisCamera::ArvReleaseSequence()
+{
+  // Before the stream goes, not after: these are the numbers for the sequence
+  // that just ended, and nothing else will ever be able to report them.
+  ArvStatisticsUpdate();
+  g_clear_object(&arv_stream);
+
+  std::thread stopper;
+  {
+    std::lock_guard<std::mutex> lock(sequence_mutex);
+    stopper = std::move(sequence_stopper);
+  }
+  if (stopper.joinable()){
+    stopper.join();
+  }
+}
+
+
 // End a sequence from inside the stream callback.
 //
 // Neither half of ending it can happen on this thread. Not the stream: unreffing
@@ -608,49 +744,6 @@ void AravisCamera::ArvSequenceFinished()
     sequence_stopper.join();
   }
   sequence_stopper = std::thread(&AravisCamera::ArvStopCamera, this);
-}
-
-
-// The second half of a sequence that ended itself, run by sequence_stopper.
-void AravisCamera::ArvStopCamera()
-{
-  GError *gerror = nullptr;
-
-  if (arv_cam != nullptr){
-    arv_camera_stop_acquisition(arv_cam, &gerror);
-    ArvCheckError(&gerror);
-  }
-
-  GetCoreCallback()->AcqFinished(this, 0);
-}
-
-
-// Release what a finished sequence still holds: its stream, and the thread
-// stopping the camera if the sequence ended itself.
-//
-// A sequence that ends itself cannot release its own stream, so whatever runs
-// next has to. Starting a new one used to create the new stream over the old
-// pointer instead, orphaning a stream and its thread every time. Each orphan
-// kept a reference to the device, so after the camera was reloaded the new
-// instance found GigE control privilege still held and every write was
-// refused as "access-denied" -- no ROI, no exposure -- until Micro-Manager
-// restarted.
-//
-// The stream goes first. Unreffing it joins the stream thread, so once that
-// returns no callback is running, and none can still be about to hand the stop
-// to sequence_stopper; only then is the stopper certain to be there to join.
-void AravisCamera::ArvReleaseSequence()
-{
-  g_clear_object(&arv_stream);
-
-  std::thread stopper;
-  {
-    std::lock_guard<std::mutex> lock(sequence_mutex);
-    stopper = std::move(sequence_stopper);
-  }
-  if (stopper.joinable()){
-    stopper.join();
-  }
 }
 
 
@@ -692,6 +785,32 @@ int AravisCamera::ArvStartSequenceAcquisition()
   }
   capturing = true;
   return 0;
+}
+
+
+// Refresh the stream counters from the stream, while there is one. Aravis
+// counts per stream, so the numbers start again with each sequence.
+void AravisCamera::ArvStatisticsUpdate()
+{
+  if (arv_stream == nullptr){
+    return;
+  }
+  arv_stream_get_statistics(arv_stream, &stream_completed, &stream_failures,
+			    &stream_underruns);
+}
+
+
+// The second half of a sequence that ended itself, run by sequence_stopper.
+void AravisCamera::ArvStopCamera()
+{
+  GError *gerror = nullptr;
+
+  if (arv_cam != nullptr){
+    arv_camera_stop_acquisition(arv_cam, &gerror);
+    ArvCheckError(&gerror);
+  }
+
+  GetCoreCallback()->AcqFinished(this, 0);
 }
 
 
@@ -798,15 +917,15 @@ unsigned AravisCamera::GetImageBytesPerPixel() const
 }
 
 
-unsigned AravisCamera::GetImageWidth() const
-{
-  return (unsigned)img_buffer_width;
-}
-
-
 unsigned AravisCamera::GetImageHeight() const
 {
   return (unsigned)img_buffer_height;
+}
+
+
+unsigned AravisCamera::GetImageWidth() const
+{
+  return (unsigned)img_buffer_width;
 }
 
 
@@ -1132,6 +1251,224 @@ int AravisCamera::Initialize()
     SetPropertyLimits(MM::g_Keyword_Offset, bmin, bmax);
   }
 
+  // Exposure auto. Initialize() switches it off above, because Micro-Manager
+  // is what sets the exposure and a camera adjusting it underneath makes
+  // SetExposure() a refusal on some cameras and a polite fiction on others.
+  // That is the right default -- but a camera that ships in auto, as the FLIR
+  // Blackfly S does, had the mode switched off at every open and no way to
+  // ask for it back.
+  if (arv_camera_is_exposure_auto_available(arv_cam, &gerror)){
+    ArvCheckError(&gerror);
+
+    ArvAuto exposureAuto = arv_camera_get_exposure_time_auto(arv_cam, &gerror);
+    if (ArvCheckError(&gerror)){
+      exposureAuto = ARV_AUTO_OFF;
+    }
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnExposureAuto);
+    ret = CreateProperty(ARV_PROP_EXPOSURE_AUTO, arv_auto_to_string(exposureAuto),
+			 MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+
+    // The camera's own vocabulary, which is what arv-tool and the vendor's
+    // own software show. GainAuto's AUTO_OFF/AUTO_ONCE/AUTO_CONTINUOUS
+    // predate this and are left as they are: changing them would break
+    // configurations people have already saved.
+    std::vector<std::string> exposureAutoValues = {
+      arv_auto_to_string(ARV_AUTO_OFF),
+      arv_auto_to_string(ARV_AUTO_ONCE),
+      arv_auto_to_string(ARV_AUTO_CONTINUOUS)
+    };
+    SetAllowedValues(ARV_PROP_EXPOSURE_AUTO, exposureAutoValues);
+  }
+  ArvCheckError(&gerror);
+
+  // Frame rate. Until now the adapter's only use of the camera's rate was to
+  // switch the limit off at every exposure change, so a user who wanted the
+  // camera to hold a rate had no way to say so.
+  if (has_frame_rate){
+    double frameRate;
+
+    // Every property below starts from what the camera says, not from a
+    // number written here: Micro-Manager shows a property's value from its
+    // own cache until something refreshes it, so a placeholder is what the
+    // user sees -- and "0.0" is not even inside this property's limits.
+    frameRate = arv_camera_get_frame_rate(arv_cam, &gerror);
+    if (ArvCheckError(&gerror)){
+      frameRate = 0.0;
+    }
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnFrameRate);
+    ret = CreateProperty(ARV_PROP_FRAME_RATE, std::to_string(frameRate).c_str(),
+			 MM::Float, false, pAct);
+    assert(ret == DEVICE_OK);
+    ArvFrameRateBoundsUpdate();
+
+    // Whether the rate is held is a feature of its own, and not every camera
+    // has it; on one without, the rate it is given is simply always in force.
+    if (ArvHasBooleanFeature(ARV_PROP_FRAME_RATE_ENABLE)){
+      gboolean enabled;
+
+      enabled = arv_device_get_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, &gerror);
+      if (ArvCheckError(&gerror)){
+	enabled = FALSE;
+      }
+
+      pAct = new CPropertyAction(this, &AravisCamera::OnFrameRateEnable);
+      ret = CreateProperty(ARV_PROP_FRAME_RATE_ENABLE, std::to_string(enabled).c_str(),
+			   MM::String, false, pAct);
+      assert(ret == DEVICE_OK);
+      std::vector<std::string> frameRateEnableValues = {"0", "1"};
+      SetAllowedValues(ARV_PROP_FRAME_RATE_ENABLE, frameRateEnableValues);
+    }
+    ArvCheckError(&gerror);
+  }
+
+  // What the stream did. Packet loss on a marginal link shows up as failed
+  // frames and nothing else -- Micro-Manager simply receives fewer images --
+  // so without these a user has no way to tell a slow camera from a lossy
+  // cable.
+  for (const char *statistic : {ARV_PROP_FRAMES_COMPLETED,
+	                        ARV_PROP_FRAMES_FAILED,
+	                        ARV_PROP_FRAMES_UNDERRUN}){
+    pAct = new CPropertyAction(this, &AravisCamera::OnStreamStatistic);
+    ret = CreateProperty(statistic, "0", MM::Integer, true, pAct);
+    assert(ret == DEVICE_OK);
+  }
+
+  // GigE stream tuning, on a GigE camera. A packet larger than the path
+  // allows is dropped by the network rather than refused by the camera, so
+  // the stream fails on large frames and works on small ones; the delay
+  // between packets is what keeps a camera from overrunning a switch or a
+  // host that cannot take the data at line rate. Neither has any meaning on
+  // USB3, where the properties do not appear.
+  if (arv_camera_is_gv_device(arv_cam)){
+    gint64 gmin, gmax;
+
+    if (arv_camera_is_feature_available(arv_cam, ARV_FEATURE_PACKET_SIZE, &gerror)){
+      ArvCheckError(&gerror);
+
+      long packetSize = (long)arv_camera_gv_get_packet_size(arv_cam, &gerror);
+      if (ArvCheckError(&gerror)){
+	packetSize = 0;
+      }
+
+      pAct = new CPropertyAction(this, &AravisCamera::OnPacketSize);
+      ret = CreateProperty(ARV_PROP_PACKET_SIZE, std::to_string(packetSize).c_str(),
+			   MM::Integer, false, pAct);
+      assert(ret == DEVICE_OK);
+
+      // Bounds if the camera gives them, and no limits rather than invented
+      // ones if it does not.
+      arv_camera_get_integer_bounds(arv_cam, ARV_FEATURE_PACKET_SIZE, &gmin, &gmax, &gerror);
+      if (!ArvCheckError(&gerror)){
+	SetPropertyLimits(ARV_PROP_PACKET_SIZE, (double)gmin, (double)gmax);
+      }
+    }
+    ArvCheckError(&gerror);
+
+    if (arv_camera_is_feature_available(arv_cam, ARV_FEATURE_PACKET_DELAY, &gerror)){
+      ArvCheckError(&gerror);
+
+      long packetDelay = (long)arv_camera_gv_get_packet_delay(arv_cam, &gerror);
+      if (ArvCheckError(&gerror)){
+	packetDelay = 0;
+      }
+
+      pAct = new CPropertyAction(this, &AravisCamera::OnPacketDelay);
+      ret = CreateProperty(ARV_PROP_PACKET_DELAY, std::to_string(packetDelay).c_str(),
+			   MM::Integer, false, pAct);
+      assert(ret == DEVICE_OK);
+
+      arv_camera_get_integer_bounds(arv_cam, ARV_FEATURE_PACKET_DELAY, &gmin, &gmax, &gerror);
+      if (!ArvCheckError(&gerror)){
+	SetPropertyLimits(ARV_PROP_PACKET_DELAY, (double)gmin, (double)gmax);
+      }
+    }
+    ArvCheckError(&gerror);
+  }
+
+  // Test pattern, under whichever name this camera uses for it. A pattern
+  // generated by the camera is how a user tells a dark image apart from a
+  // broken link -- and how this adapter was tested with a lens cap on.
+  for (const char *feature : {ARV_FEATURE_TEST_PATTERN, ARV_FEATURE_TEST_IMAGE}){
+    guint nPatterns = 0;
+    const char **patterns;
+    const char *current;
+
+    if (!arv_camera_is_feature_available(arv_cam, feature, &gerror)){
+      ArvCheckError(&gerror);
+      continue;
+    }
+    ArvCheckError(&gerror);
+
+    // What the camera offers, rather than a list written here: the entries
+    // are the vendor's own ("Testimage1", "GreyDiagonalSawtooth8"), and a
+    // camera that offers none has nothing to put in the property.
+    patterns = arv_camera_dup_available_enumerations_as_strings(arv_cam, feature, &nPatterns, &gerror);
+    if (ArvCheckError(&gerror) || (patterns == NULL) || (nPatterns == 0)){
+      g_free(patterns);
+      continue;
+    }
+
+    std::vector<std::string> patternValues;
+    for (guint p = 0; p < nPatterns; p++){
+      patternValues.push_back(patterns[p]);
+    }
+    g_free(patterns);
+
+    current = arv_device_get_string_feature_value(arv_device, feature, &gerror);
+    if (ArvCheckError(&gerror) || (current == NULL)){
+      current = patternValues[0].c_str();
+    }
+
+    test_pattern_feature = feature;
+    pAct = new CPropertyAction(this, &AravisCamera::OnTestPattern);
+    ret = CreateProperty(ARV_PROP_TEST_PATTERN, current, MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+    SetAllowedValues(ARV_PROP_TEST_PATTERN, patternValues);
+    break;
+  }
+
+  // Mirroring, where the camera can do it. On a microscope the image's
+  // handedness depends on how many mirrors the light met on the way, and
+  // undoing that at the camera costs nothing -- Micro-Manager's own
+  // TransposeMirror properties only turn the image over for the screen.
+  for (const char *axis : {ARV_PROP_REVERSE_X, ARV_PROP_REVERSE_Y}){
+    if (!ArvHasBooleanFeature(axis)){
+      continue;
+    }
+
+    gboolean reversed = arv_device_get_boolean_feature_value(arv_device, axis, &gerror);
+    if (ArvCheckError(&gerror)){
+      reversed = FALSE;
+    }
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnReverse);
+    ret = CreateProperty(axis, std::to_string(reversed).c_str(), MM::String, false, pAct);
+    assert(ret == DEVICE_OK);
+    std::vector<std::string> reverseValues = {"0", "1"};
+    SetAllowedValues(axis, reverseValues);
+  }
+
+  // Temperature, read-only. Standard on scientific cameras and the first
+  // thing asked when an experiment drifts. Which sensor it reports is the
+  // camera's DeviceTemperatureSelector to say, and this leaves that alone.
+  if (arv_camera_is_feature_available(arv_cam, ARV_FEATURE_TEMPERATURE, &gerror)){
+    ArvCheckError(&gerror);
+
+    double temperature = arv_device_get_float_feature_value(arv_device, ARV_FEATURE_TEMPERATURE, &gerror);
+    if (ArvCheckError(&gerror)){
+      temperature = 0.0;
+    }
+
+    pAct = new CPropertyAction(this, &AravisCamera::OnTemperature);
+    ret = CreateProperty(MM::g_Keyword_CCDTemperature, std::to_string(temperature).c_str(),
+			 MM::Float, true, pAct);
+    assert(ret == DEVICE_OK);
+  }
+  ArvCheckError(&gerror);
+
   // Gamma.
   //
   // Check by getting the feature because if "GammaEnable" is turned off the
@@ -1227,18 +1564,18 @@ int AravisCamera::Initialize()
 }
 
 
+bool AravisCamera::IsCapturing()
+{
+  return capturing;
+}
+
+
 // Not sure if these cameras are sequencable or not, going with not.
 int AravisCamera::IsExposureSequenceable(bool &isSequencable) const
 {
   isSequencable = false;
 
   return DEVICE_OK;
-}
-
-
-bool AravisCamera::IsCapturing()
-{
-  return capturing;
 }
 
 
@@ -1329,7 +1666,7 @@ int AravisCamera::OnAutoGain(MM::PropertyBase* pProp, MM::ActionType eAct)
   return DEVICE_OK;
 }
 
-  
+
 int AravisCamera::OnBinning(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
   gint bx,by;
@@ -1397,6 +1734,98 @@ int AravisCamera::OnBlackLevel(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
+int AravisCamera::OnExposureAuto(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  ArvAuto mode;
+  std::string value;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    // Not mid-sequence: the camera is streaming and the exposure the adapter
+    // reports would go stale underneath it. OnAutoGain declines the same way.
+    if (capturing){
+      return DEVICE_OK;
+    }
+
+    pProp->Get(value);
+    mode = arv_auto_from_string(value.c_str());
+    arv_camera_set_exposure_time_auto(arv_cam, mode, &gerror);
+    ArvCheckError(&gerror);
+
+    // Once the camera has the exposure, what it chose is what Micro-Manager
+    // should report.
+    ArvGetExposure();
+  }
+  else if (eAct == MM::BeforeGet){
+    mode = arv_camera_get_exposure_time_auto(arv_cam, &gerror);
+    if (!ArvCheckError(&gerror)){
+      pProp->Set(arv_auto_to_string(mode));
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnFrameRate(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  double frameRate;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    double fmin, fmax;
+
+    pProp->Get(frameRate);
+
+    // Clamped to what the camera can do now, as SetExposure() clamps the
+    // exposure: the limits may have been read before the last exposure or
+    // region change moved them.
+    arv_camera_get_frame_rate_bounds(arv_cam, &fmin, &fmax, &gerror);
+    if (!ArvCheckError(&gerror)){
+      if (frameRate < fmin){ frameRate = fmin; }
+      if (frameRate > fmax){ frameRate = fmax; }
+    }
+
+    // Aravis turns a positive rate into "switch the limit on, then write it",
+    // so asking for a rate is also how the limit is switched on.
+    arv_camera_set_frame_rate(arv_cam, frameRate, &gerror);
+    ArvCheckError(&gerror);
+    ArvFrameRateBoundsUpdate();
+  }
+  else if (eAct == MM::BeforeGet){
+    frameRate = arv_camera_get_frame_rate(arv_cam, &gerror);
+    if (!ArvCheckError(&gerror)){
+      pProp->Set(frameRate);
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnFrameRateEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  gboolean enable;
+  std::string frameRateEnable;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(frameRateEnable);
+    enable = std::stoi(frameRateEnable);
+    // Only the switch, leaving the rate as it is: the rate is the other
+    // property's to say.
+    arv_device_set_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, enable, &gerror);
+    ArvCheckError(&gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    enable = arv_device_get_boolean_feature_value(arv_device, ARV_PROP_FRAME_RATE_ENABLE, &gerror);
+    if (!ArvCheckError(&gerror)){
+      frameRateEnable = std::to_string(enable);
+      pProp->Set(frameRateEnable.c_str());
+    }
+  }
+  return DEVICE_OK;
+}
+
+
 int AravisCamera::OnGain(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
   double gain;
@@ -1459,6 +1888,46 @@ int AravisCamera::OnGammaEnable(MM::PropertyBase* pProp, MM::ActionType eAct)
     ArvCheckError(&gerror);
     gammaEnable = std::to_string(ge);
     pProp->Set(gammaEnable.c_str());
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnPacketDelay(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  long packetDelay;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(packetDelay);
+    arv_camera_gv_set_packet_delay(arv_cam, (gint64)packetDelay, &gerror);
+    ArvCheckError(&gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    packetDelay = (long)arv_camera_gv_get_packet_delay(arv_cam, &gerror);
+    if (!ArvCheckError(&gerror)){
+      pProp->Set(packetDelay);
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnPacketSize(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  long packetSize;
+  GError *gerror = nullptr;
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(packetSize);
+    arv_camera_gv_set_packet_size(arv_cam, (gint)packetSize, &gerror);
+    ArvCheckError(&gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    packetSize = (long)arv_camera_gv_get_packet_size(arv_cam, &gerror);
+    if (!ArvCheckError(&gerror)){
+      pProp->Set(packetSize);
+    }
   }
   return DEVICE_OK;
 }
@@ -1534,6 +2003,103 @@ int AravisCamera::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
 }
 
 
+int AravisCamera::OnReverse(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  gboolean reverse;
+  std::string value;
+  GError *gerror = nullptr;
+
+  // One handler for both axes: each property is named after the feature it
+  // reads, which is the only thing that differs between them.
+  const std::string feature = pProp->GetName();
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(value);
+    reverse = std::stoi(value);
+    arv_device_set_boolean_feature_value(arv_device, feature.c_str(), reverse, &gerror);
+    ArvCheckError(&gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    reverse = arv_device_get_boolean_feature_value(arv_device, feature.c_str(), &gerror);
+    if (!ArvCheckError(&gerror)){
+      value = std::to_string(reverse);
+      pProp->Set(value.c_str());
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnStreamStatistic(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  // Read-only, and one handler for the three of them: the property's name
+  // says which counter it is.
+  if (eAct == MM::BeforeGet){
+    const std::string name = pProp->GetName();
+
+    // Live where there is a stream, and the last sequence's numbers where
+    // there is not. Asking a stream that has been released is a use after
+    // free, so this never reaches Aravis without one.
+    ArvStatisticsUpdate();
+
+    if (name == ARV_PROP_FRAMES_COMPLETED){
+      pProp->Set((long)stream_completed);
+    }
+    else if (name == ARV_PROP_FRAMES_FAILED){
+      pProp->Set((long)stream_failures);
+    }
+    else if (name == ARV_PROP_FRAMES_UNDERRUN){
+      pProp->Set((long)stream_underruns);
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  double temperature;
+  GError *gerror = nullptr;
+
+  // Read-only: BeforeGet is the only action Micro-Manager will ask for, and
+  // the value is the camera's to report.
+  if (eAct == MM::BeforeGet){
+    temperature = arv_device_get_float_feature_value(arv_device, ARV_FEATURE_TEMPERATURE, &gerror);
+    if (!ArvCheckError(&gerror)){
+      pProp->Set(temperature);
+    }
+  }
+  return DEVICE_OK;
+}
+
+
+int AravisCamera::OnTestPattern(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+  std::string pattern;
+  GError *gerror = nullptr;
+
+  // The property only exists when a feature was found for it, so this is a
+  // guard against nothing -- but the name is read from a member, and reading
+  // it empty would ask the camera for a feature called "".
+  if (test_pattern_feature.empty()){
+    return DEVICE_OK;
+  }
+
+  if (eAct == MM::AfterSet){
+    pProp->Get(pattern);
+    arv_device_set_string_feature_value(arv_device, test_pattern_feature.c_str(), pattern.c_str(), &gerror);
+    ArvCheckError(&gerror);
+  }
+  else if (eAct == MM::BeforeGet){
+    const char *current = arv_device_get_string_feature_value(arv_device, test_pattern_feature.c_str(), &gerror);
+    if (!ArvCheckError(&gerror) && (current != NULL)){
+      pProp->Set(current);
+    }
+  }
+  return DEVICE_OK;
+}
+
+
 int AravisCamera::OnTriggerMode(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
   GError *gerror = nullptr;
@@ -1583,7 +2149,7 @@ int AravisCamera::OnTriggerSelector(MM::PropertyBase* pProp, MM::ActionType eAct
   
   return DEVICE_OK;
 }
-  
+
 
 int AravisCamera::OnTriggerSource(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
@@ -1655,12 +2221,17 @@ void AravisCamera::SetExposure(double expMs)
   ArvCheckError(&gerror);
 
   // Disable the frame rate limit so the exposure is what paces the camera --
-  // but only on a camera that has one to disable. The bounds this used to read
-  // first were never looked at; the comment even said they do not change.
-  if (has_frame_rate){
+  // but only on a camera that has one to disable, and only while the user has
+  // not asked the camera to hold a rate. Doing it unconditionally fought
+  // anyone who set one: the rate went back off at the next exposure change.
+  if (has_frame_rate && !ArvFrameRateLimited()){
     arv_camera_set_frame_rate(arv_cam, -1.0, &gerror);
     ArvCheckError(&gerror);
   }
+
+  // A longer exposure lowers the rate the camera can reach, so the frame rate
+  // property's limits have just moved.
+  ArvFrameRateBoundsUpdate();
 
   ArvGetExposure();
 }
