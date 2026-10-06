@@ -19,6 +19,8 @@
 
 #include "LoadedDeviceAdapterImplRegular.h"
 
+#include "../Error.h"
+
 
 namespace mmcore {
 namespace internal {
@@ -40,7 +42,9 @@ LoadedDeviceAdapterImplRegular::LoadedDeviceAdapterImplRegular(const std::string
 
 void LoadedDeviceAdapterImplRegular::Unload()
 {
-   module_->Unload();
+   // Unloading a DLL is not safe in general (the adapter or its
+   // dependencies may not be written to be unloaded and reloaded).
+   throw CMMError("Unloading device adapter libraries is not supported");
 }
 
 

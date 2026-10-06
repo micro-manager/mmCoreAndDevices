@@ -1229,6 +1229,8 @@ std::string CMMCore::getDeviceLibrary(const char* label) MMCORE_LEGACY_THROW(CMM
 
 /**
  * Forcefully unload a library. Experimental. Don't use.
+ *
+ * Only mock device adapters can be unloaded.
  */
 void CMMCore::unloadLibrary(const char* moduleName) MMCORE_LEGACY_THROW(CMMError)
 {
