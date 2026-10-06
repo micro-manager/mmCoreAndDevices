@@ -226,6 +226,10 @@ int GenericSLM::Initialize()
       (monitorName_.empty() ? "Test Mode" : monitorName_) +
       "]";
 
+   if (refreshWaiter_.SetMonitor(monitorName_) != 0)
+       LogMessage("Could not attach vertical sync to " + monitorName_ +
+           ", reverting to primary display");
+
    windowThread_ = new SLMWindowThread(monitorName_.empty(),
          windowTitle, x, y, w, h);
    windowThread_->Show();
