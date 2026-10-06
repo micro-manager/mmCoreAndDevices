@@ -108,7 +108,7 @@ namespace notif = mmcore::internal::notification;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 12, MMCore_versionMinor = 5, MMCore_versionPatch = 0;
+const int MMCore_versionMajor = 12, MMCore_versionMinor = 5, MMCore_versionPatch = 1;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1228,9 +1228,16 @@ std::string CMMCore::getDeviceLibrary(const char* label) MMCORE_LEGACY_THROW(CMM
 }
 
 /**
- * Forcefully unload a library. Experimental. Don't use.
+ * Unload a device adapter.
+ *
+ * We do not currently have support for unloading regular device adapters that
+ * are loaded from libraries (DLLs).
  *
  * Only mock device adapters can be unloaded.
+ *
+ * Any devices from the adapter will be unloaded first. Do not call this
+ * function when devices from other adapters (e.g. Utilities) may be depending
+ * on them.
  */
 void CMMCore::unloadLibrary(const char* moduleName) MMCORE_LEGACY_THROW(CMMError)
 {
