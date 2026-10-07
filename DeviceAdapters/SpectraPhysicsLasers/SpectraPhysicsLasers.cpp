@@ -148,13 +148,13 @@ int SpectraPhysicsHub::Initialize()
 
     // Configure pump laser property
 	CPropertyAction* pActPumpLaser = new CPropertyAction(this, &SpectraPhysicsHub::OnPumpLaser);
-    ret = CreateStringProperty("Pump Laser", g_Off, false, pActPumpLaser);
+    ret = CreateStringProperty("Laser", g_Off, false, pActPumpLaser);
     if (ret != 0)
         return ret;
-    ret = AddAllowedValue("Pump Laser", g_Off);
+    ret = AddAllowedValue("Laser", g_Off);
     if (ret != 0)
         return ret;
-    ret = AddAllowedValue("Pump Laser", g_On);
+    ret = AddAllowedValue("Laser", g_On);
     if (ret != 0)
         return ret;
 
@@ -360,7 +360,7 @@ int SpectraPhysicsHub::Shutdown()
         }
         else {
             // Turn off the laser
-            int ret = SetProperty("Pump Laser", g_Off);
+            int ret = SetProperty("Laser", g_Off);
             if (ret != 0)
                 return ret;
             // TODO: Should we wait?
