@@ -130,7 +130,7 @@ int SpectraPhysicsHub::Initialize()
     }
 
     // Configure on close property
-    std::string watchdogProp = "On Close";
+    std::string watchdogProp = "When Shutting Down";
 	CPropertyAction* pActWatchdog = new CPropertyAction (this, &SpectraPhysicsHub::OnWatchdog);
 	ret = CreateStringProperty(watchdogProp.c_str(), g_Hibernate, false, pActWatchdog);
     if (ret != 0)
