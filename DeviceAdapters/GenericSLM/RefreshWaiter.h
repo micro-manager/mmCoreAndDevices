@@ -19,17 +19,22 @@
 #include <Windows.h>
 #include <ddraw.h>
 
+#include <string>
+
 
 class RefreshWaiter
 {
    HMODULE hDDrawLib_;
    typedef HRESULT (WINAPI *DirectDrawCreateFunc)(GUID*, LPDIRECTDRAW*, IUnknown*);
+   typedef HRESULT (WINAPI *DirectDrawEnumerateExFunc)(LPDDENUMCALLBACKEXA, LPVOID, DWORD);
    DirectDrawCreateFunc directDrawCreate_;
+   DirectDrawEnumerateExFunc directDrawEnumerateEx_;
    IDirectDraw* directDraw_;
 
 public:
    RefreshWaiter();
    ~RefreshWaiter();
 
+   int SetMonitor(const std::string& monitorName);
    int WaitForVerticalBlank();
 };
