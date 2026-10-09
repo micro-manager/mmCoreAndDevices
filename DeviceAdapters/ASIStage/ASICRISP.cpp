@@ -7,6 +7,8 @@
 
 #include "ASICRISP.h"
 
+#include <cstdint>
+
 namespace {
 namespace Properties {
 
@@ -202,6 +204,7 @@ int CRISP::Initialize()
 
 	pAct = new CPropertyAction(this, &CRISP::OnCalGain);
 	CreateProperty(Props::CalibrationGain, "0", MM::Integer, false, pAct);
+	SetPropertyLimits(Props::CalibrationGain, INT16_MIN, INT16_MAX);
 
 	ret = GetCalRange(calibrationRange_);
 	if (ret != DEVICE_OK)
@@ -520,6 +523,10 @@ int CRISP::GetValue(const std::string& command, double& value) {
 
 		if (index >= answer.length()) {
 			return ERR_UNRECOGNIZED_ANSWER;
+		}
+
+		if (index > 0 && answer[index - 1] == '-') {
+			index--;
 		}
 
 		value = atof((answer.substr(index)).c_str());
