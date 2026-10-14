@@ -37,6 +37,4 @@ public:
    static void SleepMs(long ms);
    static void NapMicros(unsigned long microsecs);
    static std::string HexRep(std::vector<unsigned char>  );
-private:
-   static char m_pszBuffer[MM::MaxStrLength];
 };
