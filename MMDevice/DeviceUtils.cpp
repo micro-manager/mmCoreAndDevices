@@ -31,7 +31,9 @@
    #include <unistd.h>
 #endif
 
-char CDeviceUtils::m_pszBuffer[MM::MaxStrLength]={""};
+namespace {
+thread_local char convertBuffer[MM::MaxStrLength];
+}
 
 /**
  * Copies string up to MM::MaxStrLength - 1 characters, truncating if necessary
@@ -57,20 +59,20 @@ unsigned CDeviceUtils::GetMaxStringLength()
 /**
  * Convert long value to string.
  *
- * This function is not thread-safe, and the return value is only valid until
- * the next call to ConvertToString().
+ * The return value is only valid until the next call to ConvertToString() on
+ * the same thread.
  */
 const char* CDeviceUtils::ConvertToString(long lnVal)
 {
-   snprintf(m_pszBuffer, MM::MaxStrLength-1, "%ld", lnVal); 
-   return m_pszBuffer;
+   snprintf(convertBuffer, MM::MaxStrLength-1, "%ld", lnVal); 
+   return convertBuffer;
 }
 
 /**
  * Convert int value to string.
  *
- * This function is not thread-safe, and the return value is only valid until
- * the next call to ConvertToString().
+ * The return value is only valid until the next call to ConvertToString() on
+ * the same thread.
  */
 const char* CDeviceUtils::ConvertToString(int intVal)
 {
@@ -80,25 +82,25 @@ const char* CDeviceUtils::ConvertToString(int intVal)
 /**
  * Convert double value to string.
  *
- * This function is not thread-safe, and the return value is only valid until
- * the next call to ConvertToString().
+ * The return value is only valid until the next call to ConvertToString() on
+ * the same thread.
  */
 const char* CDeviceUtils::ConvertToString(double dVal)
 {
-   snprintf(m_pszBuffer, MM::MaxStrLength-1, "%.2f", dVal); 
-   return m_pszBuffer;
+   snprintf(convertBuffer, MM::MaxStrLength-1, "%.2f", dVal); 
+   return convertBuffer;
 }
 
 /**
  * Convert boolean value to string.
  *
- * This function is not thread-safe, and the return value is only valid until
- * the next call to ConvertToString().
+ * The return value is only valid until the next call to ConvertToString() on
+ * the same thread.
  */
 const char* CDeviceUtils::ConvertToString(bool val)
 {
-   snprintf(m_pszBuffer, MM::MaxStrLength-1, "%s", val ? "1" : "0"); 
-   return m_pszBuffer;
+   snprintf(convertBuffer, MM::MaxStrLength-1, "%s", val ? "1" : "0"); 
+   return convertBuffer;
 }
 
 
