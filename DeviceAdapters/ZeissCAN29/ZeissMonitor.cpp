@@ -110,7 +110,7 @@ ZeissMonitoringThread::ZeissMonitoringThread(MM::Device& device, MM::Core& core,
    stop_ (true),
    intervalUs_(10000) // check every 10 ms for new messages, 
 {
-   deviceInfo = deviceInfo_;
+   deviceInfo_ = deviceInfo;
 }
 
 ZeissMonitoringThread::~ZeissMonitoringThread()
