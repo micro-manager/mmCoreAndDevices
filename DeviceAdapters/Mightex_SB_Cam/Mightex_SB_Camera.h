@@ -160,7 +160,6 @@ private:
 	long cameraXSize_;
 	long cameraYSize_;
    double cam_T_;
-	std::string triggerDevice_;
 
    bool stopOnOverflow_;
 

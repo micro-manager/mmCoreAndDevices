@@ -131,7 +131,6 @@ private:
    bool sequenceRunning_;
    long imageCounter_;
    MMThreadLock imgPixelsLock_;
-   std::string triggerDevice_;
    std::string flipHorizontal_;
    std::string flipVertical_;
    bool fastImage_;

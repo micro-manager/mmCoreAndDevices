@@ -294,7 +294,6 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   int OnCameraCCDXSize(MM::PropertyBase* , MM::ActionType );
   int OnCameraCCDYSize(MM::PropertyBase* , MM::ActionType );
   int OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct);
-  int OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnDropPixels(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnFractionOfPixelsToDropOrSaturate(MM::PropertyBase* pProp, MM::ActionType eAct);
   int OnGainMaster(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -332,7 +331,6 @@ class CIDS_uEye : public CCameraBase<CIDS_uEye>
   MM::MMTime sequenceStartTime_;
   long imageCounter_;
   double ccdT_;
-  std::string triggerDevice_;
 
   UINT pixelClkMin_;                                            //minimal pixel clock (MHz)
   UINT pixelClkMax_;                                            //maximal pixel clock (MHz)

@@ -151,7 +151,6 @@ CIDS_uEye::CIDS_uEye() :
    ccdT_ (0.0),
    nComponents_(1),
    pDemoResourceLock_(0),
-   triggerDevice_(""),
    dropPixels_(false),
    fractionOfPixelsToDropOrSaturate_(0.002)
 {
@@ -532,10 +531,6 @@ int CIDS_uEye::Initialize()
    if (nRet != DEVICE_OK)
       return nRet;
 
-
-   // Trigger device
-   pAct = new CPropertyAction (this, &CIDS_uEye::OnTriggerDevice);
-   CreateProperty("TriggerDevice","", MM::String, false, pAct);
 
    pAct = new CPropertyAction (this, &CIDS_uEye::OnDropPixels);
    CreateProperty("DropPixels", "0", MM::Integer, false, pAct);
@@ -1352,15 +1347,6 @@ int CIDS_uEye::ThreadRun (void)
   
    int ret=DEVICE_ERR;
    
-   // Trigger
-   if (triggerDevice_.length() > 0) {
-      MM::Device* triggerDev = GetDevice(triggerDevice_.c_str());
-      if (triggerDev != 0) {
-      	LogMessage("trigger requested");
-      	triggerDev->SetProperty("Trigger","+");
-      }
-   }
-   
    ret = SnapImage();
    if (ret != DEVICE_OK)
    {
@@ -2108,21 +2094,6 @@ int CIDS_uEye::OnTrigger(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 
   return ret;
-}
-
-
-int CIDS_uEye::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-  
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(triggerDevice_.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      pProp->Get(triggerDevice_);
-   }
-   return DEVICE_OK;
 }
 
 

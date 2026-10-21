@@ -805,17 +805,6 @@ int AmScope::RunSequenceOnThread(MM::MMTime startTime)
 {
    int ret=DEVICE_ERR;
    
-   // Trigger
-   if (triggerDevice_.length() > 0)
-   {
-      MM::Device* triggerDev = GetDevice(triggerDevice_.c_str());
-      if (triggerDev != 0)
-	  {
-      	LogMessage("trigger requested");
-      	triggerDev->SetProperty("Trigger","+");
-      }
-   }
-
    //double exposure = GetSequenceExposure();
 
    if (!fastImage_)

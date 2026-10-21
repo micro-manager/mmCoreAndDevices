@@ -298,7 +298,6 @@ public:
    int OnErrorSimulation(MM::PropertyBase* , MM::ActionType );
    int OnCameraCCDXSize(MM::PropertyBase* , MM::ActionType );
    int OnCameraCCDYSize(MM::PropertyBase* , MM::ActionType );
-   int OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnDropPixels(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSaturatePixels(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFractionOfPixelsToDropOrSaturate(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -531,7 +530,6 @@ private:
 	long binSize_;
 	long cameraCCDXSize_;
 	long cameraCCDYSize_;
-	std::string triggerDevice_;
 	const char* cameraDeviceName_;
 	const char* cameraName_;
 	double triggerTimeout_;

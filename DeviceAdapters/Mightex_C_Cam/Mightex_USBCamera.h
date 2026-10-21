@@ -122,7 +122,6 @@ public:
    //int OnErrorSimulation(MM::PropertyBase* , MM::ActionType );
    //int OnCameraCCDXSize(MM::PropertyBase* , MM::ActionType );
    //int OnCameraCCDYSize(MM::PropertyBase* , MM::ActionType );
-   //int OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
    //int OnDropPixels(MM::PropertyBase* pProp, MM::ActionType eAct);
    //int OnFastImage(MM::PropertyBase* pProp, MM::ActionType eAct);
    //int OnSaturatePixels(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -174,7 +173,6 @@ private:
 	long cameraCCDXSize_;
 	long cameraCCDYSize_;
    double ccdT_;
-	std::string triggerDevice_;
 
    bool stopOnOverflow_;
 
