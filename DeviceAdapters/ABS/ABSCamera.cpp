@@ -187,7 +187,6 @@ binSize_(1),
 cameraCCDXSize_(512),
 cameraCCDYSize_(512),
 nComponents_(1),
-triggerDevice_(""),
 dropPixels_(false),
 saturatePixels_(false),
 fractionOfPixelsToDropOrSaturate_(0.002)
@@ -1312,17 +1311,6 @@ int CABSCamera::ThreadRun (void)
         // restore buffer mode
         img_.setBufferType( eType );
       }
-    }
-  }
-
-  // Trigger
-  if (triggerDevice_.length() > 0) {
-    MM::Device* triggerDev = GetDevice(triggerDevice_.c_str());
-    if (triggerDev != 0) {
-      //char label[256];
-      //triggerDev->GetLabel(label);
-      LogMessage("trigger requested");
-      triggerDev->SetProperty("Trigger","+");
     }
   }
 
@@ -2955,19 +2943,6 @@ int CABSCamera::OnTemperature(MM::PropertyBase* pProp, MM::ActionType eAct)
   else if (eAct == MM::AfterSet)
   {
     return convertApiErrorCode( retFUNCSET, __FUNCTION__ );
-  }
-  return DEVICE_OK;
-}
-
-int CABSCamera::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-  if (eAct == MM::BeforeGet)
-  {
-    pProp->Set(triggerDevice_.c_str());
-  }
-  else if (eAct == MM::AfterSet)
-  {
-    pProp->Get(triggerDevice_);
   }
   return DEVICE_OK;
 }

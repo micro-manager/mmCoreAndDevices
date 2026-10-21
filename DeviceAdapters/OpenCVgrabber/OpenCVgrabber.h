@@ -125,7 +125,6 @@ public:
 
    int OnCameraCCDXSize(MM::PropertyBase* , MM::ActionType );
    int OnCameraCCDYSize(MM::PropertyBase* , MM::ActionType );
-   int OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct);
    MM::MMTime CurrentTime(void) { return GetCurrentMMTime(); };
    int OnResolution(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnFlipX(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -159,7 +158,6 @@ private:
    int nComponents_;
    bool xFlip_;
    bool yFlip_;
-	std::string triggerDevice_;
    bool stopOnOverFlow_;
 
    MMThreadLock imgPixelsLock_;

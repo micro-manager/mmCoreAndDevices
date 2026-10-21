@@ -937,7 +937,6 @@ CRaptorEPIX::CRaptorEPIX(int nCameraType) :
 	cameraCCDYSize_(888),
    nComponents_(1),
    pDemoResourceLock_(0),
-   triggerDevice_(""),
 	dropPixels_(false),
 	saturatePixels_(false),
 	fractionOfPixelsToDropOrSaturate_(0.002),
@@ -3212,10 +3211,6 @@ int CRaptorEPIX::Initialize()
    osCCDY << cameraCCDYSize_ ;
    CreateProperty("CCD X Pixels", osCCDX.str().c_str(), MM::Integer, true);
    CreateProperty("CCD Y Pixels", osCCDY.str().c_str(), MM::Integer, true);
-
-   // Trigger device
-//   pAct = new CPropertyAction (this, &CRaptorEPIX::OnTriggerDevice); 
-//   CreateProperty("TriggerDevice","", MM::String, false, pAct);
 
    // TE Cooler
    pAct = new CPropertyAction (this, &CRaptorEPIX::OnTECooler);
@@ -5937,17 +5932,6 @@ int CRaptorEPIX::ThreadRun (void)
 
 
 	int ret=DEVICE_ERR;
-   
-   // Trigger
-   if (triggerDevice_.length() > 0) {
-      MM::Device* triggerDev = GetDevice(triggerDevice_.c_str());
-      if (triggerDev != 0) {
-      	//char label[256];
-      	//triggerDev->GetLabel(label);
-      	LogMessage("trigger requested");
-      	triggerDev->SetProperty("Trigger","+");
-      }
-   }
    
 	
    MMThreadGuard g2(g_serialLock_[UNITSOPENMAP]);
@@ -10462,20 +10446,6 @@ int CRaptorEPIX::OnCameraCCDYSize(MM::PropertyBase* pProp, MM::ActionType eAct)
    }
 	return DEVICE_OK;
 
-}
-
-int CRaptorEPIX::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(triggerDevice_.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      pProp->Get(triggerDevice_);
-   }
-   return DEVICE_OK;
 }
 
 

@@ -152,7 +152,6 @@ COpenCVgrabber::COpenCVgrabber() :
    nComponents_(4),
    xFlip_(false),
    yFlip_(false),
-   triggerDevice_(""),
    stopOnOverFlow_(false)
 {
    // call the base class method to set-up default error codes/messages
@@ -845,17 +844,6 @@ int COpenCVgrabber::ThreadRun (void)
 {
    int ret=DEVICE_ERR;
    
-   // Trigger
-   if (triggerDevice_.length() > 0) {
-      MM::Device* triggerDev = GetDevice(triggerDevice_.c_str());
-      if (triggerDev != 0) {
-      	//char label[256];
-      	//triggerDev->GetLabel(label);
-      	LogMessage("trigger requested");
-      	triggerDev->SetProperty("Trigger","+");
-      }
-   }
-      
    ret = SnapImage();
    if (ret != DEVICE_OK) return ret;
 
@@ -1512,20 +1500,6 @@ int COpenCVgrabber::OnCameraCCDYSize(MM::PropertyBase* pProp, MM::ActionType eAc
    }
 	return DEVICE_OK;
 
-}
-
-int COpenCVgrabber::OnTriggerDevice(MM::PropertyBase* pProp, MM::ActionType eAct)
-{
-
-   if (eAct == MM::BeforeGet)
-   {
-      pProp->Set(triggerDevice_.c_str());
-   }
-   else if (eAct == MM::AfterSet)
-   {
-      pProp->Get(triggerDevice_);
-   }
-   return DEVICE_OK;
 }
 
 

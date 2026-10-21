@@ -165,7 +165,6 @@ public:
   int   OnBayerDemosaic   (MM::PropertyBase* pProp, MM::ActionType eAct);
   int   OnStdResolution   (MM::PropertyBase* pProp, MM::ActionType eAct);
   int   OnErrorSimulation (MM::PropertyBase* , MM::ActionType );
-  int   OnTriggerDevice   (MM::PropertyBase* pProp, MM::ActionType eAct);
   int   OnSaturatePixels  (MM::PropertyBase* pProp, MM::ActionType eAct);
   // io-ports
   int   OnTriggerInport   (MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -302,7 +301,6 @@ private:
   long          binSize_;
   long          cameraCCDXSize_;
   long          cameraCCDYSize_;
-  std::string   triggerDevice_;
 
   bool          dropPixels_;
   bool          saturatePixels_;
