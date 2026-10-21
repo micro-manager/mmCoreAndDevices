@@ -165,22 +165,6 @@ protected:
          return 0; // if no channel is provided (LED on 2-axis card) return 0
    }
 
-   static int double_cmp(const double d1, const double d2)
-   {
-      return double_cmp(d1, d2, 1e-6);
-   }
-
-   static int double_cmp(const double d1, const double d2, double precision)
-   {
-      // returns 0 if d1 and d2 are within precision of each other
-      // otherwise returns -1 if d1 is less than d2
-      // or returns 1 if d1 is greater than d2
-      if (fabs(d1 - d2) < fabs(precision))
-         return 0;
-      return (d1 < d2) ? -1 : 1;
-   }
-
-
 private:
    // does the dirty work of converting a two-character hex (e.g. F5) into the single character
    // only works for valid TG-1000 addresses
