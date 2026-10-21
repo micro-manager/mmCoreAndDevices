@@ -34,10 +34,10 @@
 
 namespace {
 
-// Returns 0 if d1 and d2 differ by less than precision,
+// Returns 0 if d1 and d2 differ by at most precision,
 // otherwise -1 if d1 < d2 or 1 if d1 > d2.
 int CompareDoubles(const double d1, const double d2, const double precision = 1e-6) {
-   if (std::fabs(d1 - d2) < std::fabs(precision)) {
+   if (std::fabs(d1 - d2) <= std::fabs(precision)) {
       return 0;
    }
    return (d1 < d2) ? -1 : 1;
