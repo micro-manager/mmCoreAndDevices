@@ -507,6 +507,8 @@ int CPiezo::Home()
 
 bool CPiezo::Busy()
 {
+   // TODO: implement after the WaitTime(ms) property is added: the controller reports a piezo
+   // axis busy only during its WT pause, so query "RS <axis>?" like CZStage::Busy() when WT > 0
    return false;
 }
 
