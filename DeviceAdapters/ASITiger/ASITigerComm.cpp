@@ -405,10 +405,3 @@ int CTigerCommHub::TalkToTiger()
    }
    return ret;
 }
-
-bool CTigerCommHub::Busy()
-{
-   // this is a query that the MM core can make of our device, i.e. it's a required part of our public API
-   // define the hub to never be busy, i.e. it can always accept a new command or query
-   return false;
-}
