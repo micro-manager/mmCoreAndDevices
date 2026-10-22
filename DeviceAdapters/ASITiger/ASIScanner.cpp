@@ -658,11 +658,6 @@ int CScanner::Initialize() {
    return DEVICE_OK;
 }
 
-bool CScanner::Busy()
-{
-   return false;
-}
-
 // will not change the position of an axis unless single-axis functions are inactive
 // also will not change the position if the beam is turned off, but it will change the
 // cached positions that are used when the beam is turned back on

@@ -415,11 +415,6 @@ int CLens::Home()
    return DEVICE_OK;
 }
 
-bool CLens::Busy()
-{
-   return false;
-}
-
 int CLens::SetOrigin()
 {
    std::ostringstream command;

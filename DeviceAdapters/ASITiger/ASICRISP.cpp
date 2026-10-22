@@ -223,11 +223,6 @@ int CCRISP::Initialize() {
     return DEVICE_OK;
 }
 
-bool CCRISP::Busy() {
-    // not sure how to define it, Nico's ASIStage adapter hard-codes it false so I'll do same thing
-    return false;
-}
-
 int CCRISP::SetContinuousFocusing(bool state) {
     bool isFocusing = false;
     // will update focusState_

@@ -33,7 +33,6 @@ public:
 
     // Device API
     int Initialize();
-    bool Busy() { return false; }
 
     // DAC API
     // Note: added axisLetter to deal with multiple axes

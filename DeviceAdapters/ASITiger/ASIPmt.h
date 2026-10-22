@@ -34,7 +34,6 @@ public:
 
    // Device API
    int Initialize();
-   bool Busy(){return false;};
    
    // ADC API
    int SetGateOpen(bool open); //reset overload
