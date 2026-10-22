@@ -27,7 +27,6 @@
 #include "DeviceUtils.h"
 #include "DeviceBase.h"
 #include "MMDevice.h"
-#include <iostream>
 #include <string>
 
 CDACXYStage::CDACXYStage(const char* name) :

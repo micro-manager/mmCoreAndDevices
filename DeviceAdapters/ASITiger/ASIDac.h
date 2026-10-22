@@ -33,7 +33,6 @@ public:
 
     // Device API
     int Initialize();
-    bool Busy() { return false; };
 
     // DAC API
     int SetGateOpen(bool open);

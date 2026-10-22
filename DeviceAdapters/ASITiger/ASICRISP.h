@@ -75,7 +75,6 @@ public:
 
     // MM Device API
     int Initialize();
-    bool Busy();
 
     // MM Autofocus API
     int SetContinuousFocusing(bool state);

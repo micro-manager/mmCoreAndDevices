@@ -28,7 +28,6 @@
 #include "DeviceUtils.h"
 #include "DeviceBase.h"
 #include "MMDevice.h"
-#include <iostream>
 #include <cmath>
 #include <sstream>
 #include <string>
@@ -413,11 +412,6 @@ int CLens::Home()
    command << "! " << axisLetter_;
    RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
    return DEVICE_OK;
-}
-
-bool CLens::Busy()
-{
-   return false;
 }
 
 int CLens::SetOrigin()

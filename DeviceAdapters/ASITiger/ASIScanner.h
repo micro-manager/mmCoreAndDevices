@@ -33,7 +33,6 @@ public:
 
    // Device API
    int Initialize();
-   bool Busy();
 
    // Galvo API
    int SetPosition(double x, double y);

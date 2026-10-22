@@ -35,7 +35,6 @@ public:
 
    // Device API
    int Initialize();
-   bool Busy();
 
    // Lens API
    int Stop();

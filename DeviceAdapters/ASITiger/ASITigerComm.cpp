@@ -26,7 +26,6 @@
 #include "DeviceBase.h"
 #include "ModuleInterface.h"
 #include <cstdio>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -404,11 +403,4 @@ int CTigerCommHub::TalkToTiger()
       ret = DEVICE_NOT_SUPPORTED;
    }
    return ret;
-}
-
-bool CTigerCommHub::Busy()
-{
-   // this is a query that the MM core can make of our device, i.e. it's a required part of our public API
-   // define the hub to never be busy, i.e. it can always accept a new command or query
-   return false;
 }

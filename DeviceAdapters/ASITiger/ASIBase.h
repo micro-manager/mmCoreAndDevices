@@ -83,8 +83,9 @@ public:
         CDeviceUtils::CopyLimitedString(pszName, name);
     }
 
-    bool Busy() { 
-        // default: hardware is always ready; override in derived class if the hardware requires it
+    bool Busy() {
+        // default: hardware is always ready; override in derived class if the hardware requires it.
+        // The hub must keep this default: it is never busy and can always accept a new command or query.
         return false;
     }
 

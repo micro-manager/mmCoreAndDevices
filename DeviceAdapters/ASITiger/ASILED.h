@@ -33,7 +33,6 @@ public:
 
     // Device API
     int Initialize();
-    bool Busy() { return false; }
 
     // Shutter API
     int SetOpen(bool open = true);
