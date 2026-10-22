@@ -28,7 +28,6 @@
 #include "DeviceUtils.h"
 #include "DeviceBase.h"
 #include "MMDevice.h"
-#include <iostream>
 #include <cmath>
 #include <sstream>
 #include <string>

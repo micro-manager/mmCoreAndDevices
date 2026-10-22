@@ -26,7 +26,6 @@
 #include "MMDevice.h"
 #include "ModuleInterface.h"
 #include "DeviceUtils.h"
-#include <iostream>
 #include <vector>
 #include <string>
 
