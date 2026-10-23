@@ -93,6 +93,7 @@
     <ClCompile Include="NIAnalogInputPort.cpp" />
     <ClCompile Include="NIDAQ.cpp" />
     <ClCompile Include="NIAnalogOutputPort.cpp" />
+    <ClCompile Include="NIAnalogOutputBlankingPort.cpp" />
     <ClCompile Include="NIDigitalOutputPort.cpp" />
   </ItemGroup>
   <ItemGroup>
