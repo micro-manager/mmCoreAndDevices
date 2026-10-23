@@ -18,6 +18,11 @@ public:
       std::initializer_list<std::pair<std::string, MM::Device*>> il)
       : devices(il) {}
 
+   explicit MockAdapterWithDevices(
+      std::string name,
+      std::initializer_list<std::pair<std::string, MM::Device*>> il)
+      : adapter_name(std::move(name)), devices(il) {}
+
    void InitializeModuleData(RegisterDeviceFunc registerDevice) override {
       for (auto name_device : devices) {
          const auto name = name_device.first;
