@@ -2318,8 +2318,8 @@ bool CMMCore::isExposureSequenceable(const char* cameraLabel) MMCORE_LEGACY_THRO
 
 
 /**
- * Starts an ongoing sequence of triggered exposures in a camera
- * This should only be called for cameras where exposure time is sequenceable
+ * Starts an ongoing sequence of triggered exposures in a camera.
+ * This should only be called for cameras where exposure time is sequenceable.
  * @param cameraLabel    the camera device label
  */
 void CMMCore::startExposureSequence(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError)
@@ -2335,8 +2335,8 @@ void CMMCore::startExposureSequence(const char* cameraLabel) MMCORE_LEGACY_THROW
 }
 
 /**
- * Stops an ongoing sequence of triggered exposures in a camera
- * This should only be called for cameras where exposure time is sequenceable
+ * Stops an ongoing sequence of triggered exposures in a camera.
+ * This should only be called for cameras where exposure time is sequenceable.
  * @param cameraLabel   the camera device label
  */
 void CMMCore::stopExposureSequence(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError)
@@ -2409,8 +2409,8 @@ void CMMCore::loadExposureSequence(const char* cameraLabel, std::vector<double> 
 }
 
 /**
-* Queries whether this stage uses callbacks to signal position changes
-* When false, use polling to stay updated about the positionf of the stage
+* Queries whether this stage uses callbacks to signal position changes.
+* When false, use polling to stay updated about the position of the stage.
 */
 bool CMMCore::isStageUsingCallbacks(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -2448,7 +2448,7 @@ bool CMMCore::isStageSequenceable(const char* label) MMCORE_LEGACY_THROW(CMMErro
 }
 
 /**
- * Queries if the stage can be used in a linear sequence
+ * Queries if the stage can be used in a linear sequence.
  * A linear sequence is defined by a stepsize and number of slices
  * @param label   the stage device label
  * @return   true if the stage supports linear sequences
@@ -2486,7 +2486,7 @@ void CMMCore::startStageSequence(const char* label) MMCORE_LEGACY_THROW(CMMError
 }
 
 /**
- * Stops an ongoing sequence of triggered events in a stage
+ * Stops an ongoing sequence of triggered events in a stage.
  * This should only be called for stages that are sequenceable
  * @param label    the stage device label
  */
@@ -2585,8 +2585,8 @@ void CMMCore::setStageLinearSequence(const char* label, double dZ_um, int nSlice
 
 
 /**
-* Queries whether this XYStage uses callbacks to signal position changes
-* When false, use polling to stay updated about the positionf of the stage
+* Queries whether this XYStage uses callbacks to signal position changes.
+* When false, use polling to stay updated about the position of the stage.
 */
 bool CMMCore::isXYStageUsingCallbacks(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -2642,7 +2642,7 @@ void CMMCore::startXYStageSequence(const char* label) MMCORE_LEGACY_THROW(CMMErr
 }
 
 /**
- * Stops an ongoing sequence of triggered events in an XY stage
+ * Stops an ongoing sequence of triggered events in an XY stage.
  * This should only be called for stages that are sequenceable
  * @param label     the XY stage device label
  */
@@ -2729,7 +2729,8 @@ void CMMCore::loadXYStageSequence(const char* label,
 
 /**
  * Acquires a single image with current settings.
- * Snap is not allowed while the acquisition thread is run
+ *
+ * @throws CMMError if the camera is running a sequence acquisition
  */
 void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -2811,8 +2812,8 @@ void CMMCore::snapImage() MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * If this option is enabled Shutter automatically opens and closes when the image
- * is acquired.
+ * If this option is enabled, the shutter automatically opens and closes when
+ * an image is acquired.
  * @param state      true for enabled
  */
 void CMMCore::setAutoShutter(bool state)
@@ -2916,7 +2917,7 @@ bool CMMCore::getShutterOpen() MMCORE_LEGACY_THROW(CMMError)
  * supported by the UI yet), RGB_32 (8 bits per component, 4 components), RGB_64
  * (16 bits per component, 4 components, not supported by UI yet).  
  * RGB buffers are expected to be in big endian ARGB format (ARGB8888), which means that
- * on little endian the format is BGRA888 
+ * on little endian the format is BGRA8888
  * (see: https://en.wikipedia.org/wiki/RGBA_color_model).
  *
  * @return a pointer to the internal image buffer.
@@ -3294,8 +3295,8 @@ void CMMCore::stopSequenceAcquisition() MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * Check if the current camera is acquiring the sequence
- * Returns false when the sequence is done
+ * Check if the current camera is acquiring the sequence.
+ * Returns false when the sequence is done.
  */
 bool CMMCore::isSequenceRunning() MMCORE_NOEXCEPT
 {
@@ -3316,8 +3317,8 @@ bool CMMCore::isSequenceRunning() MMCORE_NOEXCEPT
 };
 
 /**
- * Check if the specified camera is acquiring the sequence
- * Returns false when the sequence is done
+ * Check if the specified camera is acquiring the sequence.
+ * Returns false when the sequence is done.
  */
 bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3364,15 +3365,15 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
 }
 
 /**
- * Returns a pointer to the pixels of the image that was last inserted into the circular buffer
- * Also provides all metadata associated with that image
+ * Returns a pointer to the pixels of the image that was last inserted into the circular buffer.
+ * Also provides all metadata associated with that image.
  *
  * Supported data types are byte (8 bits per pixel, 1 component), short 
  * (16 bits per pixel, 1 component), float (32 bits per pixel, 1 component, not
  * supported by the UI yet), RGB_32 (8 bits per component, 4 components), RGB_64
  * (16 bits per component, 4 components, not supported by UI yet).  
  * RGB buffers are expected to be in big endian ARGB format (ARGB8888), which means that
- * on little endian the format is BGRA888 
+ * on little endian the format is BGRA8888
  * (see: https://en.wikipedia.org/wiki/RGBA_color_model).
  */
 void* CMMCore::getLastImageMD(Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
@@ -3381,15 +3382,15 @@ void* CMMCore::getLastImageMD(Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * Returns a pointer to the pixels of the image that was inserted n images ago
- * Also provides all metadata associated with that image
+ * Returns a pointer to the pixels of the image that was inserted n images ago.
+ * Also provides all metadata associated with that image.
  *
  * Supported data types are byte (8 bits per pixel, 1 component), short 
  * (16 bits per pixel, 1 component), float (32 bits per pixel, 1 component, not
  * supported by the UI yet), RGB_32 (8 bits per component, 4 components), RGB_64
  * (16 bits per component, 4 components, not supported by UI yet).  
  * RGB buffers are expected to be in big endian ARGB format (ARGB8888), which means that
- * on little endian the format is BGRA888 
+ * on little endian the format is BGRA8888
  * (see: https://en.wikipedia.org/wiki/RGBA_color_model).
  */
 void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
@@ -3412,7 +3413,7 @@ void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const MMCORE
  * supported by the UI yet), RGB_32 (8 bits per component, 4 components), RGB_64
  * (16 bits per component, 4 components, not supported by UI yet).  
  * RGB buffers are expected to be in big endian ARGB format (ARGB8888), which means that
- * on little endian the format is BGRA888 
+ * on little endian the format is BGRA8888
  * (see: https://en.wikipedia.org/wiki/RGBA_color_model).
  *
  * @throws CMMError if the circular buffer is empty
@@ -3429,8 +3430,8 @@ void* CMMCore::popNextImage() MMCORE_LEGACY_THROW(CMMError)
 /**
  * Gets and removes the next image (and metadata) from the circular buffer
  *
- * channel has not been implemented and shoudl always be 0.
- * slice has not been implement and should always be 0.
+ * channel has not been implemented and should always be 0.
+ * slice has not been implemented and should always be 0.
  */
 void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3533,7 +3534,7 @@ unsigned CMMCore::getCircularBufferMemoryFootprint()
 }
 
 /**
- * Returns number ofimages available in the Circular Buffer
+ * Returns the number of images available in the circular buffer.
  */
 long CMMCore::getRemainingImageCount()
 {
@@ -3711,7 +3712,7 @@ void CMMCore::setImageProcessorDevice(const char* procLabel) MMCORE_LEGACY_THROW
 }
 
 /**
- * Sets the current slm device.
+ * Sets the current SLM device.
  */
 void CMMCore::setSLMDevice(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4138,7 +4139,7 @@ long CMMCore::getPropertySequenceMaxLength(const char* label, const char* propNa
 
 
 /**
- * Starts an ongoing sequence of triggered events in a property of a device
+ * Starts an ongoing sequence of triggered events in a property of a device.
  * This should only be called for device-properties that are sequenceable
  * @param label      the device label
  * @param propName   the property name
@@ -4156,7 +4157,7 @@ void CMMCore::startPropertySequence(const char* label, const char* propName) MMC
 }
 
 /**
- * Stops an ongoing sequence of triggered events in a property of a device
+ * Stops an ongoing sequence of triggered events in a property of a device.
  * This should only be called for device-properties that are sequenceable
  * @param label     the device label
  * @param propName  the property name
@@ -4174,7 +4175,7 @@ void CMMCore::stopPropertySequence(const char* label, const char* propName) MMCO
 }
 
 /**
- * Transfer a sequence of events/states/whatever to the device
+ * Transfer a sequence of events/states/whatever to the device.
  * This should only be called for device-properties that are sequenceable
  * @param label           the device label
  * @param propName        the property name
@@ -5145,7 +5146,7 @@ std::string CMMCore::getStateLabel(const char* deviceLabel) MMCORE_LEGACY_THROW(
 }
 
 /**
- * Defines a label for the specific state/
+ * Defines a label for the specific state.
  *
  * @param deviceLabel    the device label
  * @param state          the state to be labeled
@@ -5509,7 +5510,7 @@ void CMMCore::setPixelSizedydz(const char* resolutionID, double dydz)  MMCORE_LE
 }
 
 /**
- * Sets the opimal Z stepSize (in microns).
+ * Sets the optimal Z step size (in microns).
  * There is no magic here, this number is provided by the person configuring the
  * microscope, to be used by the person using the microscope.
  *
@@ -5800,7 +5801,7 @@ Configuration CMMCore::getConfigData(const char* groupName, const char* configNa
 }
 
 /**
- * Returns the configuration object for a give pixel size preset.
+ * Returns the configuration object for a given pixel size preset.
  * @return The configuration object
  */
 Configuration CMMCore::getPixelSizeConfigData(const char* configName) MMCORE_LEGACY_THROW(CMMError)
@@ -6088,10 +6089,10 @@ std::vector<double> CMMCore::getPixelSizeAffineByID(const char* resolutionID) MM
 }
 
 /**
- * Returns the product of all Magnifiers in the system or 1.0 when none is found
- * This is used internally by getPixelSizeUm
+ * Returns the product of all Magnifiers in the system or 1.0 when none is found.
+ * This is used internally by getPixelSizeUm.
  *
- * @return products of all magnifier devices in the system or 1.0 when none is found
+ * @return product of all magnifier devices in the system or 1.0 when none is found
  */
 double CMMCore::getMagnificationFactor() const
 {
@@ -6263,10 +6264,10 @@ double CMMCore::getPixelSizedydz(const char* resolutionID) MMCORE_LEGACY_THROW(C
 }
 
 /**
- * Returns the optimal z step size in um
+ * Returns the optimal z step size in um.
  * There is no magic to this number, but lets the system configuration
- * communicate to the end user what the optimal Z step size is for this 
- * pixel size configuration
+ * communicate to the end user what the optimal Z step size is for this
+ * pixel size configuration.
  */
 double CMMCore::getPixelSizeOptimalZUm() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6274,10 +6275,10 @@ double CMMCore::getPixelSizeOptimalZUm() MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * Returns the optimal z step size in um, optionally using cached pixel configuration
+ * Returns the optimal z step size in um, optionally using cached pixel configuration.
  * There is no magic to this number, but lets the system configuration
- * communicate to the end user what the optimal Z step size is for this 
- * pixel size configuration
+ * communicate to the end user what the optimal Z step size is for this
+ * pixel size configuration.
  *
  * @param cached   Uses System state cache to find active pixel size config when true
  */
@@ -6545,8 +6546,8 @@ void CMMCore::displaySLMImage(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMEr
 }
 
 /**
- * For SLM devices with build-in light source (such as projectors)
- * this will set the exposure time, but not (yet) start the illumination
+ * For SLM devices with built-in light source (such as projectors)
+ * this will set the exposure time, but not (yet) start the illumination.
  */
 void CMMCore::setSLMExposure(const char* deviceLabel, double exposure_ms) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6605,8 +6606,8 @@ unsigned CMMCore::getSLMHeight(const char* deviceLabel) MMCORE_LEGACY_THROW(CMME
 }
 
 /**
- * Returns the number of components (usually these depict colors) of the SLM
- * For instance, an RGB projector will return 3, but a grey scale SLM returns 1
+ * Returns the number of components (usually these depict colors) of the SLM.
+ * For instance, an RGB projector will return 3, but a grey scale SLM returns 1.
  *
  * @param deviceLabel name of the SLM
  */
@@ -7171,7 +7172,7 @@ bool CMMCore::isPumpDirectionInverted(const char* deviceLabel) MMCORE_LEGACY_THR
 }
 
 /**
-* Sets the volume of fluid in the pump in uL. Note it does not withdraw upto
+* Sets the volume of fluid in the pump in uL. Note it does not withdraw up to
 * this amount. It is merely to inform MM of the volume in a prefilled pump.
 */
 void CMMCore::setPumpVolume(const char* deviceLabel, double volUl) MMCORE_LEGACY_THROW(CMMError)
@@ -8219,7 +8220,7 @@ void CMMCore::incrementalFocus() MMCORE_LEGACY_THROW(CMMError)
 
 
 /**
- * Applies offset the one-shot focusing device.
+ * Applies an offset to the one-shot focusing device.
  */
 void CMMCore::setAutoFocusOffset(double offset) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -8758,7 +8759,7 @@ std::string CMMCore::getDeviceErrorText(int deviceCode, std::shared_ptr<mmi::Dev
 }
 
 /**
- * Returns a pre-defined error test with the given error code
+ * Returns a pre-defined error text with the given error code.
  */
 std::string CMMCore::getCoreErrorText(int code) const
 {
@@ -8813,8 +8814,8 @@ bool CMMCore::supportsDeviceDetection(const char* label)
 
 /**
  * Tries to communicate to a device through a given serial port
- * Used to automate discovery of correct serial port
- * Also configures the serial port correctly
+ * Used to automate discovery of correct serial port.
+ * Also configures the serial port correctly.
  *
  * For legacy reasons, an exception is not thrown if there is an error.
  * Instead, MM::Unimplemented is returned if label is not a valid device.
