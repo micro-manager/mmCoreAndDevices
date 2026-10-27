@@ -27,12 +27,25 @@
 #include "DeviceUtils.h"
 #include "DeviceBase.h"
 #include "MMDevice.h"
-#include <iostream>
 #include <cmath>
 #include <sstream>
 #include <string>
 
-// as of mid-2017 assume that have only single (two-axis) mmTarget device per Tiger card
+namespace {
+
+// Returns 0 if d1 and d2 differ by at most precision,
+// otherwise -1 if d1 < d2 or 1 if d1 > d2.
+int CompareDoubles(const double d1, const double d2, const double precision = 1e-6) {
+   if (std::fabs(d1 - d2) <= std::fabs(precision)) {
+      return 0;
+   }
+   return (d1 < d2) ? -1 : 1;
+}
+
+} // namespace
+
+// Assumes each Tiger card has at most one two-axis Scanner device using the
+// MM_TARGET (phototargeting) firmware module (as of mid-2017).
 
 CScanner::CScanner(const char* name) :
     ASIPeripheralBase< ::CGalvoBase, CScanner >(name) {
@@ -644,11 +657,6 @@ int CScanner::Initialize() {
    return DEVICE_OK;
 }
 
-bool CScanner::Busy()
-{
-   return false;
-}
-
 // will not change the position of an axis unless single-axis functions are inactive
 // also will not change the position if the beam is turned off, but it will change the
 // cached positions that are used when the beam is turned back on
@@ -677,14 +685,14 @@ int CScanner::SetPosition(double x, double y)
       // except don't do anything if we are setting position to blanking position
       // this way we can update just one of the two cached positions by passing
       // the other axis as the corresponding blanking position
-      if (double_cmp(x, shutterX_) != 0
-            && double_cmp(x, upperLimitX_) < 0
-            && double_cmp(x, lowerLimitX_) > 0) {
+      if (CompareDoubles(x, shutterX_) != 0
+            && CompareDoubles(x, upperLimitX_) < 0
+            && CompareDoubles(x, lowerLimitX_) > 0) {
          lastX_ = x;
       }
-      if (double_cmp(y, shutterY_) != 0
-            && double_cmp(y, upperLimitY_) < 0
-            && double_cmp(y, lowerLimitY_) > 0) {
+      if (CompareDoubles(y, shutterY_) != 0
+            && CompareDoubles(y, upperLimitY_) < 0
+            && CompareDoubles(y, lowerLimitY_) > 0) {
          lastY_ = y;
       }
    }

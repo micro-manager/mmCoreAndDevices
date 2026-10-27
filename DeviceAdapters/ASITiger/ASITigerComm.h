@@ -47,7 +47,6 @@ public:
 
     // Device API
     int Initialize();
-    bool Busy();
 
     // Hub API
     bool SupportsDeviceDetection();
