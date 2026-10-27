@@ -441,7 +441,8 @@ void CMMCore::stopSecondaryLogFile(int handle) MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * Displays core version.
+ * Returns the MMCore version as a string of the form
+ * "MMCore version X.Y.Z".
  */
 std::string CMMCore::getVersionInfo() const
 {
@@ -981,7 +982,11 @@ void CMMCore::reset() MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Calls Initialize() method for each loaded device.
- * Parallel implemnetation should be faster
+ *
+ * If the ParallelDeviceInitialization feature is enabled (the default),
+ * serial ports are initialized first, then devices from different device
+ * adapters are initialized in parallel. Otherwise, devices are initialized
+ * one at a time. See enableFeature().
  */
 void CMMCore::initializeAllDevices() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1190,7 +1195,8 @@ CMMCore::getDeviceInitializationState(const char* label) const MMCORE_LEGACY_THR
 
 
 /**
- * Updates the state of the entire hardware.
+ * Updates the system state cache by reading all property values from all
+ * devices.
  */
 void CMMCore::updateSystemStateCache()
 {
@@ -1408,7 +1414,8 @@ bool CMMCore::deviceBusy(const char* label) MMCORE_LEGACY_THROW(CMMError)
 /**
  * Sets the timeout for all wait commands.
  *
- * @param timeoutMs the timeout in milliseconds (must be positive)
+ * @param timeoutMs the timeout in milliseconds; values of 0 or less are
+ *                  ignored
  */
 void CMMCore::setTimeoutMs(long timeoutMs)
 {
@@ -2066,7 +2073,7 @@ void CMMCore::setOriginX(const char* label) MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * Zero the given XY stage's X coordinate at the current position.
+ * Zero the current XY stage's X coordinate at the current position.
  *
  * The current position becomes the new X = 0.
  */
@@ -2100,7 +2107,7 @@ void CMMCore::setOriginY(const char* label) MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * Zero the given XY stage's Y coordinate at the current position.
+ * Zero the current XY stage's Y coordinate at the current position.
  *
  * The current position becomes the new Y = 0.
  */
@@ -2462,8 +2469,8 @@ bool CMMCore::isStageLinearSequenceable(const char* label) MMCORE_LEGACY_THROW(C
 }
 
 /**
- * Starts an ongoing sequence of triggered events in a stage
- * This should only be called for stages
+ * Starts an ongoing sequence of triggered events in a stage.
+ * This should only be called for stages that are sequenceable.
  * @param label    the stage device label
  */
 void CMMCore::startStageSequence(const char* label) MMCORE_LEGACY_THROW(CMMError)
@@ -2516,9 +2523,9 @@ long CMMCore::getStageSequenceMaxLength(const char* label) MMCORE_LEGACY_THROW(C
 }
 
 /**
- * Transfer a sequence of events/states/whatever to the device
- * This should only be called for device-properties that are sequenceable
- * @param label              the device label
+ * Transfer a sequence of positions to the stage.
+ * This should only be called for stages that are sequenceable.
+ * @param label              the stage device label
  * @param positionSequence   a sequence of positions that the stage will execute in response to external triggers
  */
 void CMMCore::loadStageSequence(const char* label, std::vector<double> positionSequence) MMCORE_LEGACY_THROW(CMMError)
@@ -2554,13 +2561,11 @@ void CMMCore::loadStageSequence(const char* label, std::vector<double> positionS
 }
 
 /**
- * Loads a linear sequence (defined by stepsize and nr. of steps) into
- * the device.  Why was it not called loadStageLinearSequence???
- * @param label   Name of the stage device
- * @param dZ_um   Step size between slices in microns
- * @param nSlices    Number of slices fo ethis sequence
- *                   Presumably the sequence will repeat after this
- *                   number of TTLs was received
+ * Loads a linear sequence (defined by step size and number of steps) into
+ * the stage.
+ * @param label    the stage device label
+ * @param dZ_um    step size between slices in microns
+ * @param nSlices  number of slices in the sequence
  */
 void CMMCore::setStageLinearSequence(const char* label, double dZ_um, int nSlices) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -2620,8 +2625,8 @@ bool CMMCore::isXYStageSequenceable(const char* label) MMCORE_LEGACY_THROW(CMMEr
 
 
 /**
- * Starts an ongoing sequence of triggered events in an XY stage
- * This should only be called for stages
+ * Starts an ongoing sequence of triggered events in an XY stage.
+ * This should only be called for stages that are sequenceable.
  * @param label       the XY stage device label
  */
 void CMMCore::startXYStageSequence(const char* label) MMCORE_LEGACY_THROW(CMMError)
@@ -3325,7 +3330,8 @@ bool CMMCore::isSequenceRunning(const char* label) MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Gets the last image from the circular buffer.
- * Returns 0 if the buffer is empty.
+ *
+ * @throws CMMError if the circular buffer is empty
  */
 void* CMMCore::getLastImage() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3400,7 +3406,6 @@ void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const MMCORE
 
 /**
  * Gets and removes the next image from the circular buffer.
- * Returns 0 if the buffer is empty.
  *
  * Supported data types are byte (8 bits per pixel, 1 component), short 
  * (16 bits per pixel, 1 component), float (32 bits per pixel, 1 component, not
@@ -3409,6 +3414,8 @@ void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const MMCORE
  * RGB buffers are expected to be in big endian ARGB format (ARGB8888), which means that
  * on little endian the format is BGRA888 
  * (see: https://en.wikipedia.org/wiki/RGBA_color_model).
+ *
+ * @throws CMMError if the circular buffer is empty
  */
 void* CMMCore::popNextImage() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4082,8 +4089,8 @@ double CMMCore::getPropertyUpperLimit(const char* label, const char* propName) M
 
 /**
  * Queries device if the specific property has limits.
- * @param label      the device name
- * @param propName   the property label
+ * @param label      the device label
+ * @param propName   the property name
  */
 bool CMMCore::hasPropertyLimits(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4098,8 +4105,8 @@ bool CMMCore::hasPropertyLimits(const char* label, const char* propName) MMCORE_
 
 /**
  * Queries device if the specified property can be used in a sequence
- * @param label      the device name
- * @param propName   the property label
+ * @param label      the device label
+ * @param propName   the property name
  */
 bool CMMCore::isPropertySequenceable(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4115,8 +4122,8 @@ bool CMMCore::isPropertySequenceable(const char* label, const char* propName) MM
 
 /**
  * Queries device property for the maximum number of events that can be put in a sequence
- * @param label      the device name
- * @param propName   the property label
+ * @param label      the device label
+ * @param propName   the property name
  */
 long CMMCore::getPropertySequenceMaxLength(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4133,8 +4140,8 @@ long CMMCore::getPropertySequenceMaxLength(const char* label, const char* propNa
 /**
  * Starts an ongoing sequence of triggered events in a property of a device
  * This should only be called for device-properties that are sequenceable
- * @param label      the device name
- * @param propName   the property label
+ * @param label      the device label
+ * @param propName   the property name
  */
 void CMMCore::startPropertySequence(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4169,8 +4176,8 @@ void CMMCore::stopPropertySequence(const char* label, const char* propName) MMCO
 /**
  * Transfer a sequence of events/states/whatever to the device
  * This should only be called for device-properties that are sequenceable
- * @param label           the device name
- * @param propName        the property label
+ * @param label           the device label
+ * @param propName        the property name
  * @param eventSequence   the sequence of events/states that the device will execute in response to external triggers
  */
 void CMMCore::loadPropertySequence(const char* label, const char* propName, std::vector<std::string> eventSequence) MMCORE_LEGACY_THROW(CMMError)
@@ -4737,10 +4744,10 @@ void CMMCore::setBinning(const char* label, long binning) MMCORE_LEGACY_THROW(CM
  * The coordinates are in units of binned pixels. That is, conceptually,
  * binning is applied before the ROI.
  *
- * @param x      coordinate of the top left corner
- * @param y      coordinate of the top left corner
+ * @param x      x coordinate of the top left corner
+ * @param y      y coordinate of the top left corner
  * @param xSize  number of horizontal pixels
- * @param ySize  number of horizontal pixels
+ * @param ySize  number of vertical pixels
  */
 void CMMCore::setROI(int x, int y, int xSize, int ySize) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4817,10 +4824,10 @@ void CMMCore::getROI(int& x, int& y, int& xSize, int& ySize) MMCORE_LEGACY_THROW
 * binning is applied before the ROI.
 *
 * @param label  camera label
-* @param x      coordinate of the top left corner
-* @param y      coordinate of the top left corner
+* @param x      x coordinate of the top left corner
+* @param y      y coordinate of the top left corner
 * @param xSize  number of horizontal pixels
-* @param ySize  number of horizontal pixels
+* @param ySize  number of vertical pixels
 */
 void CMMCore::setROI(const char* label, int x, int y, int xSize, int ySize) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5348,7 +5355,7 @@ void CMMCore::defineConfig(const char* groupName, const char* configName, const 
  * property settings. The new setting will override previously defined ones if it
  * refers to the same property name.
  *
- * @param resolutionID identifier for one unique property setting
+ * @param resolutionID the pixel size configuration (preset) name
  * @param deviceLabel device label
  * @param propName property name
  * @param value property value
@@ -5412,13 +5419,17 @@ void CMMCore::setPixelSizeUm(const char* resolutionID, double pixSize)  MMCORE_L
 }
 
 /**
- * Sets the raw affine transform for the specific pixel size configuration
+ * Sets the raw affine transform for the specific pixel size configuration.
  * The affine transform consists of the first two rows of a 3x3 matrix,
- * the third row is alsways assumed to be 0.0 0.0 1.0.
+ * the third row is always assumed to be 0.0 0.0 1.0.
  * The transform should be valid for binning 1 and no magnification device
- * (as given by the getMagnification() function).
- * Order: row[0]col[0] row[0]c[1] row[0]c[2] row[1]c[0] row[1]c[1] row[1]c[2]
- * The given vector has to have 6 doubles, or bad stuff will happen
+ * (as given by the getMagnificationFactor() function).
+ * Order: row[0]col[0] row[0]col[1] row[0]col[2] row[1]col[0] row[1]col[1]
+ * row[1]col[2].
+ *
+ * @param resolutionID  the pixel size configuration (preset) name
+ * @param affine        the 6 values of the affine transform
+ * @throws CMMError if affine does not have exactly 6 values
  */
 void CMMCore::setPixelSizeAffine(const char* resolutionID, std::vector<double> affine)  MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5452,7 +5463,7 @@ void CMMCore::setPixelSizeAffine(const char* resolutionID, std::vector<double> a
  * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  *
- * @param resolutionID   The pixel size configuration group name
+ * @param resolutionID   The pixel size configuration (preset) name
  * @param dxdz       Angle of the Z-stage axis with the camera axis (dimensionless)
  */
 void CMMCore::setPixelSizedxdz(const char* resolutionID, double dxdz)  MMCORE_LEGACY_THROW(CMMError)
@@ -5479,7 +5490,7 @@ void CMMCore::setPixelSizedxdz(const char* resolutionID, double dxdz)  MMCORE_LE
  * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  *
- * @param resolutionID   The pixel size configuration group name
+ * @param resolutionID   The pixel size configuration (preset) name
  * @param dydz       Angle of the Z-stage axis with the camera axis (dimensionless)
  */
 void CMMCore::setPixelSizedydz(const char* resolutionID, double dydz)  MMCORE_LEGACY_THROW(CMMError)
@@ -5502,7 +5513,7 @@ void CMMCore::setPixelSizedydz(const char* resolutionID, double dydz)  MMCORE_LE
  * There is no magic here, this number is provided by the person configuring the
  * microscope, to be used by the person using the microscope.
  *
- * @param resolutionID   The pixel size configuration group name
+ * @param resolutionID   The pixel size configuration (preset) name
  * @param optimalZ       Optimal z step in microns
  */
 void CMMCore::setPixelSizeOptimalZUm(const char* resolutionID, double optimalZ)  MMCORE_LEGACY_THROW(CMMError)
@@ -5524,7 +5535,7 @@ void CMMCore::setPixelSizeOptimalZUm(const char* resolutionID, double optimalZ) 
  * Applies a Pixel Size Configuration. The command will fail if the
  * configuration was not previously defined.
  *
- * @param resolutionID   the pixel size configuration group name
+ * @param resolutionID   the pixel size configuration (preset) name
  */
 void CMMCore::setPixelSizeConfig(const char* resolutionID) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5985,7 +5996,9 @@ double CMMCore::getPixelSizeUm(bool cached)
 }
 
 /**
- * Returns the pixel size in um for the requested pixel size group
+ * Returns the pixel size in um for the requested pixel size configuration.
+ *
+ * @param resolutionID  the pixel size configuration (preset) name
  */
 double CMMCore::getPixelSizeUmByID(const char* resolutionID) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5999,8 +6012,11 @@ double CMMCore::getPixelSizeUmByID(const char* resolutionID) MMCORE_LEGACY_THROW
 }
 
 /**
- * Returns the current Affine Transform to related camera pixels with stage movement..
+ * Returns the current affine transform that relates camera pixels to stage
+ * movement.
  * This function returns the stored affine transform corrected for binning
+ * and known magnification devices. Returns all zeros if no pixel size
+ * configuration matches the current state.
  */
 std::vector<double> CMMCore::getPixelSizeAffine() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6008,9 +6024,14 @@ std::vector<double> CMMCore::getPixelSizeAffine() MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * Returns the current Affine Transform to related camera pixels with stage movement..
+ * Returns the current affine transform that relates camera pixels to stage
+ * movement.
  * This function returns the stored affine transform corrected for binning
- * and known magnification devices
+ * and known magnification devices. Returns all zeros if no pixel size
+ * configuration matches the current state.
+ *
+ * @param cached  use the system state cache to find the current pixel size
+ *                configuration when true, otherwise query the hardware
  */
 std::vector<double> CMMCore::getPixelSizeAffine(bool cached) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6046,10 +6067,12 @@ std::vector<double> CMMCore::getPixelSizeAffine(bool cached) MMCORE_LEGACY_THROW
 }
 
 /**
- * Returns the  Affine Transform to related camera pixels with stage movement
- * for the requested pixel size group
+ * Returns the affine transform that relates camera pixels to stage movement
+ * for the requested pixel size configuration.
  * The raw affine transform without correction for binning and magnification
  * will be returned.
+ *
+ * @param resolutionID  the pixel size configuration (preset) name
  */
 std::vector<double> CMMCore::getPixelSizeAffineByID(const char* resolutionID) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6152,7 +6175,7 @@ double CMMCore::getPixelSizedxdz(bool cached) MMCORE_LEGACY_THROW(CMMError)
  * to the pixel size configuration).  
  * See: https://github.com/micro-manager/micro-manager/issues/1984
  *
- * @param resolutionID   The pixel size configuration group name
+ * @param resolutionID   The pixel size configuration (preset) name
  * @return        Angle (dx/dz) of the Z-stage axis with the camera axis (dimensionless)
  */
 double CMMCore::getPixelSizedxdz(const char* resolutionID) MMCORE_LEGACY_THROW(CMMError)
@@ -6279,10 +6302,13 @@ double CMMCore::getPixelSizeOptimalZUm(bool cached) MMCORE_LEGACY_THROW(CMMError
 }
 
 /**
- * Returns the optimal z step size in um, optionally using cached pixel configuration
+ * Returns the optimal z step size in um for the given pixel size
+ * configuration.
  * There is no magic to this number, but lets the system configuration
- * communicate to the end user what the optimal Z step size is for this 
- * pixel size configuration
+ * communicate to the end user what the optimal Z step size is for this
+ * pixel size configuration.
+ *
+ * @param resolutionID  the pixel size configuration (preset) name
  */
 double CMMCore::getPixelSizeOptimalZUm(const char* resolutionID) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6341,9 +6367,12 @@ void CMMCore::setSerialProperties(const char* portName,
 }
 
 /**
- * Send string to the serial device and return an answer.
- * This command blocks until it receives an answer from the device terminated by the specified
- * sequence.
+ * Sends a command, followed by a terminator, to the serial port.
+ * Use getSerialPortAnswer() to read the reply.
+ *
+ * @param portLabel  the serial port device label
+ * @param command    the command to send
+ * @param term       the terminator to send after the command
  */
 void CMMCore::setSerialPortCommand(const char* portLabel, const char* command, const char* term) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6695,7 +6724,8 @@ void CMMCore::loadSLMSequence(const char* deviceLabel, std::vector<unsigned char
 /* GALVO CODE */
 
 /**
- * Set the Galvo to an x,y position and fire the laser for a predetermined duration.
+ * Set the Galvo to an x,y position and fire the laser for pulseTime_us
+ * microseconds.
  */
 void CMMCore::pointGalvoAndFire(const char* deviceLabel, double x, double y, double pulseTime_us) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7007,7 +7037,8 @@ void CMMCore::pressurePumpCalibrate(const char* deviceLabel) MMCORE_LEGACY_THROW
 }
 
 /**
-* Returns boolean whether the pump is operational before calibration
+* Returns true if the pump must be calibrated (see pressurePumpCalibrate())
+* before use.
 */
 bool CMMCore::pressurePumpRequiresCalibration(const char* deviceLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7345,9 +7376,8 @@ void CMMCore::saveSystemState(const char* fileName) MMCORE_LEGACY_THROW(CMMError
 }
 
 /**
- * Loads the system configuration from the text file conforming to the MM specific format.
- * The configuration contains a list of commands to build the desired system state from
- * read-write properties.
+ * Loads a system state file written by saveSystemState() and applies its
+ * property values.
  *
  * Format specification: the same as in loadSystemConfiguration() command
  */
@@ -7635,7 +7665,7 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
  * The first field in the line always specifies the command from the following set of values:
  *    Device - executes loadDevice()
  *    Label - executes defineStateLabel() command
- *    Property - executes setPropertyCommand()
+ *    Property - executes setProperty()
  *    Configuration - ignored for backward compatibility
  *
  * The remaining fields in the line will be used for corresponding command parameters.
@@ -8890,7 +8920,8 @@ MM::DeviceDetectionStatus CMMCore::detectDevice(const char* label)
 }
 
 /**
- * Performs auto-detection and loading of child devices that are attached to a Hub device.
+ * Detects the child devices attached to a Hub device and returns their names.
+ * Load them with loadDevice().
  * For example, if a motorized microscope is represented by a Hub device, it is capable of
  * discovering what specific child devices are currently attached. In that case this call might
  * report that Z-stage, filter changer and objective turret are currently installed and return three
