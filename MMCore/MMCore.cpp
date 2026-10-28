@@ -7053,10 +7053,10 @@ bool CMMCore::pressurePumpRequiresCalibration(const char* pumpLabel) MMCORE_LEGA
 /**
 * Gets the pressure of the pump in kPa
 */
-double CMMCore::getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CMMError)
+double CMMCore::getPumpPressureKPa(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
     std::shared_ptr<mmi::PressurePumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<mmi::PressurePumpInstance>(pumplabel);
+        deviceManager_->GetDeviceOfType<mmi::PressurePumpInstance>(pumpLabel);
     mmi::DeviceModuleLockGuard guard(pPump);
 
     double pressurekPa = 0;
@@ -7064,7 +7064,7 @@ double CMMCore::getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CM
 
     if (ret != DEVICE_OK)
     {
-        logError(pumplabel, getDeviceErrorText(ret, pPump).c_str());
+        logError(pumpLabel, getDeviceErrorText(ret, pPump).c_str());
         throw CMMError(getDeviceErrorText(ret, pPump));
     }
     return pressurekPa;
@@ -7073,17 +7073,17 @@ double CMMCore::getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CM
 /**
 * Sets the pressure of the pump in kPa
 */
-void CMMCore::setPumpPressureKPa(const char* pumplabel, double pressure) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::setPumpPressureKPa(const char* pumpLabel, double pressure) MMCORE_LEGACY_THROW(CMMError)
 {
     std::shared_ptr<mmi::PressurePumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<mmi::PressurePumpInstance>(pumplabel);
+        deviceManager_->GetDeviceOfType<mmi::PressurePumpInstance>(pumpLabel);
     mmi::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->SetPressureKPa(pressure);
 
     if (ret != DEVICE_OK)
     {
-        logError(pumplabel, getDeviceErrorText(ret, pPump).c_str());
+        logError(pumpLabel, getDeviceErrorText(ret, pPump).c_str());
         throw CMMError(getDeviceErrorText(ret, pPump));
     }
 }
@@ -7251,13 +7251,13 @@ double CMMCore::getPumpMaxVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMME
 /**
 * Sets the flowrate of the pump in uL per second
 */
-void CMMCore::setPumpFlowrate(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::setPumpFlowrate(const char* pumpLabel, double flowrate) MMCORE_LEGACY_THROW(CMMError)
 {
     std::shared_ptr<mmi::VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<mmi::VolumetricPumpInstance>(pumpLabel);
     mmi::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->SetFlowrateUlPerSecond(volume);
+    int ret = pPump->SetFlowrateUlPerSecond(flowrate);
 
     if (ret != DEVICE_OK)
     {

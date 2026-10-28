@@ -646,8 +646,8 @@ public:
    void pressurePumpStop(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    void pressurePumpCalibrate(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    bool pressurePumpRequiresCalibration(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
-   void setPumpPressureKPa(const char* pumplabel, double pressure) MMCORE_LEGACY_THROW(CMMError);
-   double getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CMMError);
+   void setPumpPressureKPa(const char* pumpLabel, double pressure) MMCORE_LEGACY_THROW(CMMError);
+   double getPumpPressureKPa(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    ///@}
 
    /** \name VolumetricPump control
@@ -664,7 +664,7 @@ public:
    double getPumpVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    void setPumpMaxVolume(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError);
    double getPumpMaxVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
-   void setPumpFlowrate(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError);
+   void setPumpFlowrate(const char* pumpLabel, double flowrate) MMCORE_LEGACY_THROW(CMMError);
    double getPumpFlowrate(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    void pumpStart(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    void pumpDispenseDurationSeconds(const char* pumpLabel, double seconds) MMCORE_LEGACY_THROW(CMMError);
