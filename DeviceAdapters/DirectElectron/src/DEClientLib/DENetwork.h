@@ -84,7 +84,7 @@ private:
 
 	bool createSocket(const char* ip, port no, tcp::socket* socket_);
 	
-	boost::asio::io_service io_service;
+	boost::asio::io_context io_context;
 	tcp::socket* read;
 	tcp::socket* write;
 
