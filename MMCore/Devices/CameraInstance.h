@@ -72,9 +72,7 @@ public:
    int StartSequenceAcquisition(double interval_ms);
    int StopSequenceAcquisition();
    bool IsCapturing();
-   std::string GetTags();
-   void AddTag(const char* key, const char* deviceLabel, const char* value);
-   void RemoveTag(const char* key);
+   MM::Camera* GetChannelCameraPtr(unsigned n);
    int IsExposureSequenceable(bool& isSequenceable) const;
    int GetExposureSequenceMaxLength(long& nrEvents) const;
    int StartExposureSequence();
