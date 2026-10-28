@@ -140,6 +140,10 @@ int ZeissHub::Initialize(MM::Device& device, MM::Core& core)
    }
 
    availableDevices_.clear();
+   // Clear cached presence flags from any previous scan so that a device
+   // that has since disappeared is not still reported as present.
+   for (int i = 0; i <= MAXNUMBERDEVICES; i++)
+      deviceInfo_[i].present = false;
    ret = FindDevices(device, core);
    if (ret != DEVICE_OK)
       return ret;
