@@ -22,7 +22,7 @@ else
 endif
     
    PYLONCPPFLAGS +=-I$(PYLON_ROOT)/include
-   PYLONLDLIBS =-lpylonbase -lpylonutility -lGenApi_gcc_v3_1_Basler_pylon -lGCBase_gcc_v3_1_Basler_pylon
+   PYLONLDLIBS =$(PYLON_LIBS)
 
    PLIBADD+=$(MMDEVAPI_LIBADD) $(PYLONLDLIBS)
    PLDFLAGS+=$(MMDEVAPI_LDFLAGS) $(PYLONLDLIBS) $(PYLONLDFLAGS)

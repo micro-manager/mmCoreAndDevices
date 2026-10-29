@@ -327,6 +327,20 @@ AM_COND_IF([PYLON64],
   AC_MSG_RESULT([not found])
 ])
 
+# BaslerPylon library names include the GenICam version, which changes
+# between pylon releases; ask pylon-config when it is available.
+AC_MSG_CHECKING(for Basler pylon libraries)
+PYLON_LIBS="-lpylonbase -lpylonutility -lGenApi_gcc_v3_1_Basler_pylon -lGCBase_gcc_v3_1_Basler_pylon"
+if test -x "/opt/pylon/bin/pylon-config" &&
+   pylon_config_libs=`/opt/pylon/bin/pylon-config --libs-only-l 2>/dev/null` &&
+   test -n "$pylon_config_libs"; then
+   PYLON_LIBS="$pylon_config_libs"
+   AC_MSG_RESULT([$PYLON_LIBS (from pylon-config)])
+else
+   AC_MSG_RESULT([$PYLON_LIBS (default)])
+fi
+AC_SUBST([PYLON_LIBS])
+
 # BaslerPylon4Mac
 AC_MSG_CHECKING(for Basler_Mac)
 AM_CONDITIONAL([BUILD_BASLER_MAC],[test -f "/Library/Frameworks/pylon.framework/Headers/PylonIncludes.h"])
