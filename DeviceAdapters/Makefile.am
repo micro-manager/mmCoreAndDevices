@@ -65,6 +65,9 @@ endif
 if BUILD_SPINNAKER
    SPINNAKER = Spinnaker
 endif
+if BUILD_SPINNAKERC
+   SPINNAKERC = SpinnakerC
+endif
 if BUILD_SPOT
    SPOT = Spot
 endif
@@ -102,6 +105,7 @@ SUBDIRS = \
 	$(SEQUENCE_TESTER) \
 	$(SIMPLECAM) \
         $(SPINNAKER) \
+	$(SPINNAKERC) \
 	$(SPOT) \
 	$(USBMANAGER) \
 	$(V4L) \
