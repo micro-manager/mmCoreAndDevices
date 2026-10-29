@@ -234,7 +234,7 @@ private:
         else
         {
             m_vmbFormat = VmbPixelFormatBgra8;
-            m_bitDepth = 32;
+            m_bitDepth = 8; // BGRA8: 8 bits per component
         }
     }
 
@@ -243,7 +243,7 @@ private:
      */
     void updateBytesPerPixel()
     {
-        m_bytesPerPixel = m_bitDepth / 8;
+        m_bytesPerPixel = m_isMono ? m_bitDepth / 8 : 4;
     }
 
     /**
