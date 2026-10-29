@@ -422,6 +422,15 @@ else
    AC_MSG_RESULT([not found])
 fi
 
+# Spinnaker C API (FLIR); installed with the Spinnaker SDK.
+AC_MSG_CHECKING(for Spinnaker C API)
+AM_CONDITIONAL([BUILD_SPINNAKERC],[test -f "/opt/spinnaker/include/spinc/SpinnakerC.h"])
+if test -f "/opt/spinnaker/include/spinc/SpinnakerC.h"; then
+   AC_MSG_RESULT([found])
+else
+   AC_MSG_RESULT([not found])
+fi
+
 
 # Vimba X (Allied Vision) SDK
 MM_ARG_WITH_OPTIONAL_LIB([Vimba X], [vimba-x], [VIMBA_X])
@@ -650,6 +659,7 @@ m4_define([device_adapter_dirs], [m4_strip([
    SouthPort
    SpectralLMM5
    Spinnaker
+   SpinnakerC
    Spot
    StarlightXpress
    SutterLambda
