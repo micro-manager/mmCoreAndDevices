@@ -111,7 +111,7 @@ private:
    spinError getEnumSymbolic(spinNodeHandle hNode, std::string& symbolic) const;
    spinError setEnumByName(spinNodeHandle hNode, const char* symbolic) const;
    spinError getEnumSymbolics(spinNodeHandle hNode, std::vector<std::string>& symbolics) const;
-   spinError getEnumIntValue(spinNodeHandle hNode, int64_t& value) const;
+   spinError getEnumEnumValue(spinNodeHandle hNode, int64_t& value) const;
    spinError getFloatValue(spinNodeHandle hNode, double& value) const;
    spinError setFloatValue(spinNodeHandle hNode, double value) const;
    spinError getIntValue(spinNodeHandle hNode, int64_t& value) const;

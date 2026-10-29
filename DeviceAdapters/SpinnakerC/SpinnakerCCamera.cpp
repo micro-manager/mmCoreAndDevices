@@ -223,13 +223,19 @@ spinError SpinnakerCCamera::getEnumSymbolics(spinNodeHandle hNode, std::vector<s
    return SPINNAKER_ERR_SUCCESS;
 }
 
-spinError SpinnakerCCamera::getEnumIntValue(spinNodeHandle hNode, int64_t& value) const
+// Returns the Spinnaker enum value (e.g. PixelFormat_Mono12p), not the
+// camera-defined integer that spinEnumerationEntryGetIntValue returns.
+spinError SpinnakerCCamera::getEnumEnumValue(spinNodeHandle hNode, int64_t& value) const
 {
    spinNodeHandle hEntry = nullptr;
    spinError err = spinEnumerationGetCurrentEntry(hNode, &hEntry);
    if (err != SPINNAKER_ERR_SUCCESS)
       return err;
-   return spinEnumerationEntryGetIntValue(hEntry, &value);
+   size_t enumValue = 0;
+   err = spinEnumerationEntryGetEnumValue(hEntry, &enumValue);
+   if (err == SPINNAKER_ERR_SUCCESS)
+      value = static_cast<int64_t>(enumValue);
+   return err;
 }
 
 spinError SpinnakerCCamera::getFloatValue(spinNodeHandle hNode, double& value) const
@@ -860,7 +866,7 @@ int64_t SpinnakerCCamera::getPixelFormatEnumValue() const
    if (getNodeHandle(NODE_PIXEL_FORMAT, &hNode) != SPINNAKER_ERR_SUCCESS)
       return -1;
    int64_t val = -1;
-   getEnumIntValue(hNode, val);
+   getEnumEnumValue(hNode, val);
    return val;
 }
 
