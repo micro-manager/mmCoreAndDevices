@@ -386,7 +386,7 @@ bool SpectraPhysicsHub::Busy()
     }
     else if (model_ == INSIGHT)
     {
-		if (lastCommand_ == "ON")
+		if (lastStateChangingCommand_ == "ON")
 		{
 			int state{};
 			int ret = LaserState(state);
@@ -394,18 +394,18 @@ bool SpectraPhysicsHub::Busy()
 				return false;
 			return state != 50;
 		}
-		else if (lastCommand_.rfind("WAV ", 0) == 0) {
+		else if (lastStateChangingCommand_.rfind("WAV ", 0) == 0) {
 			int state{};
 			int ret = LaserState(state);
 			if (ret != 0)
 				return false;
 			return state != 25;
 		}
-		else if (lastCommand_ == "SHUT 1")
+		else if (lastStateChangingCommand_ == "SHUT 1")
 		{
 			// From the manual: "it is normal for the system to return 0 for approximately 1 second
 			// after issuing the SHUTter 1 command"
-			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastCommandTime_;
+			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastStateChangingCommandTime_;
 			if (elapsed < std::chrono::seconds(1))
 				return true;
 			// Now return busy until the Main Status Bit is True
@@ -415,7 +415,7 @@ bool SpectraPhysicsHub::Busy()
 				return false;
 			return !open;
 		}
-		else if (lastCommand_ == "SHUT 0")
+		else if (lastStateChangingCommand_ == "SHUT 0")
 		{
 			// NOTE: The manual doesn't explicitly suggest that we need to wait for 1 second here.
 			// But that could be an oversight in the manual.
@@ -427,11 +427,11 @@ bool SpectraPhysicsHub::Busy()
 				return false;
 			return open;
 		}
-		else if (lastCommand_ == "IRSHUT 1")
+		else if (lastStateChangingCommand_ == "IRSHUT 1")
 		{
 			// From the manual: "it is normal for the system to return 0 for approximately 1 second
 			// after issuing the IRSHUTter 1 command"
-			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastCommandTime_;
+			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastStateChangingCommandTime_;
 			if (elapsed < std::chrono::seconds(1))
 				return true;
 			// Now return busy until the IRShutter Status Bit is True
@@ -441,11 +441,11 @@ bool SpectraPhysicsHub::Busy()
 				return false;
 			return !open;
 		}
-		else if (lastCommand_ == "IRSHUT 0")
+		else if (lastStateChangingCommand_ == "IRSHUT 0")
 		{
 			// From the manual: "it is normal for the system to return 1 for approximately 1 second
 			// after issuing the IRSHUTter 0 command."
-			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastCommandTime_;
+			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastStateChangingCommandTime_;
 			if (elapsed < std::chrono::seconds(1))
 				return true;
 			// Now return busy until the IRShutter Status Bit is False
@@ -907,10 +907,12 @@ int SpectraPhysicsHub::SendCommand(const std::string& cmd)
     int ret = SendSerialCommand(port_.c_str(), cmd.c_str(), "\r");
     if (ret != 0)
         return ret;
-    // Update state for Busy checks
-    lastCommand_ = cmd;
-	lastCommandTime_ = std::chrono::steady_clock::now();
-
+    // Update state for Busy checks, ignoring commands that do not
+    // change state (which always have a "?" at the end)
+    if (!cmd.empty() && cmd.back() != '?') {
+        lastStateChangingCommand_ = cmd;
+        lastStateChangingCommandTime_ = std::chrono::steady_clock::now();
+    }
     return DEVICE_OK;
 }
 

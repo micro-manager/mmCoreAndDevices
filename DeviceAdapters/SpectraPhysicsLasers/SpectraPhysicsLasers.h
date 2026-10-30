@@ -83,9 +83,9 @@ private:
 	bool initialized_;
 	LaserModel model_;
 	std::string port_;
-	std::string lastCommand_;
+	std::string lastStateChangingCommand_;
 	std::string onClose_;
-	std::chrono::steady_clock::time_point lastCommandTime_;
+	std::chrono::steady_clock::time_point lastStateChangingCommandTime_;
 	std::mutex serialMutex_;
 	Watchdog watchdog_;
 	
