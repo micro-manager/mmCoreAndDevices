@@ -67,7 +67,6 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 // HUB DEVICE
 ////////////////////////////////////////////////////////////////////////////////////
 
-// Implementation of MyNewDevice methods
 SpectraPhysicsHub::SpectraPhysicsHub() :
     port_("Undefined"),
     onClose_(g_Hibernate),
