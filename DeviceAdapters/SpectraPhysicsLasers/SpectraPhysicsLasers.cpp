@@ -380,7 +380,7 @@ bool SpectraPhysicsHub::Busy()
         bool isBusy{};
         int ret = StatusBit(6, isBusy);
         if (ret != 0) {
-            return ret;
+            return false;
         }
         return isBusy;
     }
