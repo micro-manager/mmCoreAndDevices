@@ -21,7 +21,9 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
+#include <map>
 #include <mutex>
+#include <string>
 #include <thread>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -60,6 +62,12 @@ private:
     std::thread thread_;
 };
 
+// A state-changing command that Busy() may need to wait on
+struct PendingCommand {
+    std::string cmd;
+    std::chrono::steady_clock::time_point issued;
+};
+
 class SpectraPhysicsHub : public HubBase<SpectraPhysicsHub>
 {
     friend class Watchdog;
@@ -83,9 +91,11 @@ private:
 	bool initialized_;
 	LaserModel model_;
 	std::string port_;
-	std::string lastStateChangingCommand_;
 	std::string onClose_;
-	std::chrono::steady_clock::time_point lastStateChangingCommandTime_;
+	// Keyed by command kind (e.g. "SHUT"), so that a newer command of the same kind
+	// (e.g. "SHUT 0" after "SHUT 1") replaces the older one.
+	std::map<std::string, PendingCommand> pendingCommands_;
+	std::mutex pendingMutex_;
 	std::mutex serialMutex_;
 	Watchdog watchdog_;
 	
@@ -122,6 +132,7 @@ private:
 	int SendCommand(const std::string& cmd);
 	int StatusBit(unsigned int bitNumber, bool& bit);
 	int LaserState(int& state);
+	int IsPending(const PendingCommand& pending, bool& isPending);
 };
 
 class SpectraPhysicsMain : public CShutterBase<SpectraPhysicsMain>

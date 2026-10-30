@@ -30,6 +30,22 @@ const char* g_Off = "Off";
 const char* g_Standby = "Maintain laser emission";
 const char* g_Hibernate = "Turn off laser";
 
+/**
+ * Returns the key under which Busy() tracks the given command, or an empty
+ * string if Busy() does not need to wait on it. Commands that supersede each
+ * other (e.g. "SHUT 1" and "SHUT 0") share a key.
+ */
+static std::string PendingCommandKey(const std::string& cmd)
+{
+    // "OFF" replaces a pending "ON", which would otherwise never complete
+    if (cmd == "ON" || cmd == "OFF")
+        return "ON";
+    std::string prefix = cmd.substr(0, cmd.find(' '));
+    if (prefix == "WAV" || prefix == "SHUT" || prefix == "IRSHUT")
+        return prefix;
+    return "";
+}
+
 MODULE_API void InitializeModuleData()
 {
     RegisterDevice(g_DeviceNameHub, MM::HubDevice, "Spectra-Physics Ultrafast Laser System");
@@ -386,77 +402,122 @@ bool SpectraPhysicsHub::Busy()
     }
     else if (model_ == INSIGHT)
     {
-		if (lastStateChangingCommand_ == "ON")
+		// Copy the pending commands so we don't hold the lock during serial I/O
+		std::map<std::string, PendingCommand> pending;
 		{
-			int state{};
-			int ret = LaserState(state);
-			if (ret != 0)
-				return false;
-			return state != 50;
+			std::lock_guard<std::mutex> lock(pendingMutex_);
+			pending = pendingCommands_;
 		}
-		else if (lastStateChangingCommand_.rfind("WAV ", 0) == 0) {
-			int state{};
-			int ret = LaserState(state);
-			if (ret != 0)
-				return false;
-			return state != 25;
-		}
-		else if (lastStateChangingCommand_ == "SHUT 1")
-		{
-			// From the manual: "it is normal for the system to return 0 for approximately 1 second
-			// after issuing the SHUTter 1 command"
-			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastStateChangingCommandTime_;
-			if (elapsed < std::chrono::seconds(1))
-				return true;
-			// Now return busy until the Main Status Bit is True
-			bool open;
-			int ret = StatusBit(2, open);
-			if (ret != 0)
-				return false;
-			return !open;
-		}
-		else if (lastStateChangingCommand_ == "SHUT 0")
-		{
-			// NOTE: The manual doesn't explicitly suggest that we need to wait for 1 second here.
-			// But that could be an oversight in the manual.
 
-			// Return busy until the Main Shutter Status Bit is False
-			bool open;
-			int ret = StatusBit(2, open);
-			if (ret != 0)
-				return false;
-			return open;
-		}
-		else if (lastStateChangingCommand_ == "IRSHUT 1")
+		bool busy = false;
+		for (const auto& entry : pending)
 		{
-			// From the manual: "it is normal for the system to return 0 for approximately 1 second
-			// after issuing the IRSHUTter 1 command"
-			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastStateChangingCommandTime_;
-			if (elapsed < std::chrono::seconds(1))
-				return true;
-			// Now return busy until the IRShutter Status Bit is True
-			bool open;
-			int ret = StatusBit(3, open);
+			bool isPending{};
+			int ret = IsPending(entry.second, isPending);
 			if (ret != 0)
-				return false;
-			return !open;
+				continue;
+			if (isPending)
+			{
+				busy = true;
+				continue;
+			}
+			// No need to wait on this command anymore. Only remove it if it has not
+			// been replaced by a newer command while we were checking.
+			std::lock_guard<std::mutex> lock(pendingMutex_);
+			auto it = pendingCommands_.find(entry.first);
+			if (it != pendingCommands_.end() && it->second.issued == entry.second.issued)
+				pendingCommands_.erase(it);
 		}
-		else if (lastStateChangingCommand_ == "IRSHUT 0")
-		{
-			// From the manual: "it is normal for the system to return 1 for approximately 1 second
-			// after issuing the IRSHUTter 0 command."
-			std::chrono::duration elapsed = std::chrono::steady_clock::now() - lastStateChangingCommandTime_;
-			if (elapsed < std::chrono::seconds(1))
-				return true;
-			// Now return busy until the IRShutter Status Bit is False
-			bool open;
-			int ret = StatusBit(3, open);
-			if (ret != 0)
-				return false;
-			return open;
-		}
+		return busy;
     }
     return false;
+}
+
+/**
+ * Determines whether Busy() should still wait on the given command.
+ */
+int SpectraPhysicsHub::IsPending(const PendingCommand& pending, bool& isPending)
+{
+	const std::string& cmd = pending.cmd;
+	auto elapsed = std::chrono::steady_clock::now() - pending.issued;
+	isPending = false;
+	if (cmd == "ON")
+	{
+		int state{};
+		int ret = LaserState(state);
+		if (ret != 0)
+			return ret;
+		isPending = state != 50;
+	}
+	else if (cmd.rfind("WAV ", 0) == 0) {
+		int state{};
+		int ret = LaserState(state);
+		if (ret != 0)
+			return ret;
+		isPending = state != 25;
+	}
+	else if (cmd == "SHUT 1")
+	{
+		// From the manual: "it is normal for the system to return 0 for approximately 1 second
+		// after issuing the SHUTter 1 command"
+		if (elapsed < std::chrono::seconds(1))
+		{
+			isPending = true;
+			return DEVICE_OK;
+		}
+		// Now wait until the Main Status Bit is True
+		bool open;
+		int ret = StatusBit(2, open);
+		if (ret != 0)
+			return ret;
+		isPending = !open;
+	}
+	else if (cmd == "SHUT 0")
+	{
+		// NOTE: The manual doesn't explicitly suggest that we need to wait for 1 second here.
+		// But that could be an oversight in the manual.
+
+		// Wait until the Main Shutter Status Bit is False
+		bool open;
+		int ret = StatusBit(2, open);
+		if (ret != 0)
+			return ret;
+		isPending = open;
+	}
+	else if (cmd == "IRSHUT 1")
+	{
+		// From the manual: "it is normal for the system to return 0 for approximately 1 second
+		// after issuing the IRSHUTter 1 command"
+		if (elapsed < std::chrono::seconds(1))
+		{
+			isPending = true;
+			return DEVICE_OK;
+		}
+		// Now wait until the IRShutter Status Bit is True
+		bool open;
+		int ret = StatusBit(3, open);
+		if (ret != 0)
+			return ret;
+		isPending = !open;
+	}
+	else if (cmd == "IRSHUT 0")
+	{
+		// From the manual: "it is normal for the system to return 1 for approximately 1 second
+		// after issuing the IRSHUTter 0 command."
+		if (elapsed < std::chrono::seconds(1))
+		{
+			isPending = true;
+			return DEVICE_OK;
+		}
+		// Now wait until the IRShutter Status Bit is False
+		bool open;
+		int ret = StatusBit(3, open);
+		if (ret != 0)
+			return ret;
+		isPending = open;
+	}
+	// Any other command (e.g. "OFF") has nothing to wait on
+	return DEVICE_OK;
 }
 
 int SpectraPhysicsHub::DetectInstalledDevices()
@@ -907,11 +968,12 @@ int SpectraPhysicsHub::SendCommand(const std::string& cmd)
     int ret = SendSerialCommand(port_.c_str(), cmd.c_str(), "\r");
     if (ret != 0)
         return ret;
-    // Update state for Busy checks, ignoring commands that do not
-    // change state (which always have a "?" at the end)
-    if (!cmd.empty() && cmd.back() != '?') {
-        lastStateChangingCommand_ = cmd;
-        lastStateChangingCommandTime_ = std::chrono::steady_clock::now();
+    // Record commands that Busy() needs to wait on
+    // Note that on MAITAI they get added to and overwritten but never removed
+    std::string key = PendingCommandKey(cmd);
+    if (!key.empty()) {
+        std::lock_guard<std::mutex> lock(pendingMutex_);
+        pendingCommands_[key] = PendingCommand{ cmd, std::chrono::steady_clock::now() };
     }
     return DEVICE_OK;
 }
