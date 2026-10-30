@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <system_error>
 
 const char* g_DeviceNameHub = "Spectra-Physics Laser";
 const char* g_DeviceNameShutter = "Spectra-Physics Main Shutter";
@@ -79,6 +80,7 @@ SpectraPhysicsHub::SpectraPhysicsHub() :
     SetErrorText(ERR_WAVELENGTH_CHANGING, "Cannot turn on the pump laser before the wavelength is stable");
     SetErrorText(ERR_NO_HUB, "Cannot obtain the SpectraPhysics MMCore Hub device");
     SetErrorText(ERR_INVALID_MODEL, "This Spectra-Physics Laser cannot perform the requested functionality");
+    SetErrorText(ERR_WATCHDOG_START_FAILED, "Cannot start the watchdog thread");
 
     // COM port property
 	CPropertyAction* pActPort = new CPropertyAction (this, &SpectraPhysicsHub::OnPort);
@@ -339,7 +341,9 @@ int SpectraPhysicsHub::Initialize()
 
 	// Start the watchdog thread. We Start it after setting initialized_ so Shutdown cleans it up.
     LogMessage("Starting watchdog thread...");
-	watchdogThread_.Start();
+	ret = watchdogThread_.Start();
+	if (ret != DEVICE_OK)
+		return ret;
     LogMessage("Started watchdog thread");
 
     return DEVICE_OK;
@@ -1270,27 +1274,43 @@ WatchdogThread::~WatchdogThread() {
     Stop();
 }
 
-void WatchdogThread::Start()
+int WatchdogThread::Start()
 {
-    stop_ = false;
-    activate();
+    if (thread_.joinable())
+        return DEVICE_OK; // Already running
+
+    {
+        std::lock_guard<std::mutex> lock(stopMutex_);
+        stop_ = false;
+    }
+    try
+    {
+        thread_ = std::thread(&WatchdogThread::Run, this);
+    }
+    catch (const std::system_error&)
+    {
+        return ERR_WATCHDOG_START_FAILED;
+    }
+    return DEVICE_OK;
 }
 
 /*
  * This function tells the thread to cease sending keepalive commands
  * and blocks until the last keepalive command has been sent.
+ * It is safe to call this function if the thread was never started or has already been stopped.
  */
 void WatchdogThread::Stop()
 {
     {
-        std::unique_lock<std::mutex> lock(stopMutex_);
+        std::lock_guard<std::mutex> lock(stopMutex_);
         stop_ = true;
     }
     timerCV_.notify_all();
-    wait();
+    if (thread_.joinable())
+        thread_.join();
 }
 
-int WatchdogThread::svc() {
+void WatchdogThread::Run() {
     while (true)
     {
         {
@@ -1311,6 +1331,4 @@ int WatchdogThread::svc() {
 		std::string status;
 		device_.ExecuteCommand("*STB?", status);
     }
-
-    return 0;
 }

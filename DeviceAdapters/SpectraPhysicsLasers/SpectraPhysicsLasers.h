@@ -19,8 +19,10 @@
 #include "DeviceBase.h"
 
 #include <chrono>
+#include <condition_variable>
 #include <cstring>
 #include <mutex>
+#include <thread>
 
 //////////////////////////////////////////////////////////////////////////////
 // Error codes
@@ -31,6 +33,7 @@
 #define ERR_PUMP_LASER_TURNING_ON       10004
 #define ERR_NO_HUB				        10005
 #define ERR_INVALID_MODEL               10006
+#define ERR_WATCHDOG_START_FAILED       10007
 
 // Forward declaration
 class SpectraPhysicsHub;
@@ -40,20 +43,21 @@ enum LaserModel {
 	MAITAI
 };
 
-class WatchdogThread : public MMDeviceThreadBase
+class WatchdogThread
 {
 public:
-    WatchdogThread(SpectraPhysicsHub& device);
+    explicit WatchdogThread(SpectraPhysicsHub& device);
     ~WatchdogThread();
-    int svc() override;
-    void Start();
+    int Start();
     void Stop();
 private:
+    void Run();
     SpectraPhysicsHub& device_;
     std::mutex stopMutex_;
     std::condition_variable timerCV_;
     bool stop_;
     std::chrono::steady_clock::duration interval_;
+    std::thread thread_;
 };
 
 class SpectraPhysicsHub : public HubBase<SpectraPhysicsHub>
