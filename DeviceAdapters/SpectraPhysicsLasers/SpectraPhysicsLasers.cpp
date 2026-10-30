@@ -116,12 +116,12 @@ int SpectraPhysicsHub::Initialize()
     if (id.find("InSight") != std::string::npos) {
         // TODO: If we want to support DeepSee commands, we could enable them iff "Insight DeepSee" is
         // present in this string.
-        LogMessage("Spectra Insight: Controlling device with id \"" + id + "\"");
+        LogMessage("Controlling device with id \"" + id + "\"");
         model_ = INSIGHT;
     }
     else if (id.find("MaiTai") != std::string::npos) {
         // TODO: MaiTai's id string doesn't differ for DeepSee, according to the manuals...
-        LogMessage("Spectra MaiTai: Controlling device with id \"" + id + "\"");
+        LogMessage("Controlling device with id \"" + id + "\"");
         model_ = MAITAI;
     }
     else {
@@ -885,7 +885,7 @@ int SpectraPhysicsHub::ExecuteCommand(const std::string& cmd, std::string& answe
 }
 
 /**
- * This function sends the command to the Spectra InSight
+ * This function sends the command to the laser
  */
 int SpectraPhysicsHub::ExecuteCommand(const std::string& cmd)
 {
@@ -894,13 +894,13 @@ int SpectraPhysicsHub::ExecuteCommand(const std::string& cmd)
 }
 
 /**
- * This function actually the command to the Spectra InSight.
+ * This function actually sends the command to the laser.
  * It should not be called directly - call ExecuteCommand instead!
  */
 int SpectraPhysicsHub::SendCommand(const std::string& cmd)
 {
 	// Send command
-	LogMessage("Spectra Insight: Sending command " + cmd, true);
+	LogMessage("Sending command " + cmd, true);
     int ret = SendSerialCommand(port_.c_str(), cmd.c_str(), "\r");
     if (ret != 0)
         return ret;
@@ -1303,12 +1303,12 @@ int WatchdogThread::svc() {
             timerCV_.wait_for(lock, interval_, [this] { return stop_; });
             if (stop_)
             {
-                device_.LogMessage("Spectra Insight Watchdog Thread: Stop requested, exiting", true);
+                device_.LogMessage("Watchdog: stop requested, exiting", true);
                 break;
             }
         }
         // Send a benign serial command to the laser.
-		device_.LogMessage("Spectra Insight Watchdog Thread: Pinging laser", true);
+		device_.LogMessage("Watchdog: pinging laser", true);
 		std::string status;
 		device_.ExecuteCommand("*STB?", status);
     }
