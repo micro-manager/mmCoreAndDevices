@@ -72,7 +72,7 @@ SpectraPhysicsHub::SpectraPhysicsHub() :
     port_("Undefined"),
     onClose_(g_Hibernate),
     initialized_(false),
-    watchdogThread_(*this)
+    watchdog_(*this)
 {
     InitializeDefaultErrorMessages();
     SetErrorText(ERR_PORT_CHANGE_FORBIDDEN, "Cannot change port after initialization");
@@ -341,7 +341,7 @@ int SpectraPhysicsHub::Initialize()
 
 	// Start the watchdog thread. We Start it after setting initialized_ so Shutdown cleans it up.
     LogMessage("Starting watchdog thread...");
-	ret = watchdogThread_.Start();
+	ret = watchdog_.Start();
 	if (ret != DEVICE_OK)
 		return ret;
     LogMessage("Started watchdog thread");
@@ -353,7 +353,7 @@ int SpectraPhysicsHub::Shutdown()
 {
     if (initialized_)
     {
-		watchdogThread_.Stop();
+		watchdog_.Stop();
 
         if (onClose_ == g_Standby) {
             // Disable the watchdog timer
@@ -1263,18 +1263,18 @@ int SpectraPhysicsInsight1040::OnState(MM::PropertyBase * pProp, MM::ActionType 
 // WATCHDOG THREAD
 ////////////////////////////////////////////////////////////////////////////////////
 
-WatchdogThread::WatchdogThread(SpectraPhysicsHub& device) :
+Watchdog::Watchdog(SpectraPhysicsHub& device) :
     device_(device),
     stop_(false),
     interval_(std::chrono::seconds(1))
 {
 }
 
-WatchdogThread::~WatchdogThread() {
+Watchdog::~Watchdog() {
     Stop();
 }
 
-int WatchdogThread::Start()
+int Watchdog::Start()
 {
     if (thread_.joinable())
         return DEVICE_OK; // Already running
@@ -1285,7 +1285,7 @@ int WatchdogThread::Start()
     }
     try
     {
-        thread_ = std::thread(&WatchdogThread::Run, this);
+        thread_ = std::thread(&Watchdog::Run, this);
     }
     catch (const std::system_error&)
     {
@@ -1299,7 +1299,7 @@ int WatchdogThread::Start()
  * and blocks until the last keepalive command has been sent.
  * It is safe to call this function if the thread was never started or has already been stopped.
  */
-void WatchdogThread::Stop()
+void Watchdog::Stop()
 {
     {
         std::lock_guard<std::mutex> lock(stopMutex_);
@@ -1310,7 +1310,7 @@ void WatchdogThread::Stop()
         thread_.join();
 }
 
-void WatchdogThread::Run() {
+void Watchdog::Run() {
     while (true)
     {
         {

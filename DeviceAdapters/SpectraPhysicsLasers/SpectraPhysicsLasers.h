@@ -43,11 +43,11 @@ enum LaserModel {
 	MAITAI
 };
 
-class WatchdogThread
+class Watchdog
 {
 public:
-    explicit WatchdogThread(SpectraPhysicsHub& device);
-    ~WatchdogThread();
+    explicit Watchdog(SpectraPhysicsHub& device);
+    ~Watchdog();
     int Start();
     void Stop();
 private:
@@ -62,7 +62,7 @@ private:
 
 class SpectraPhysicsHub : public HubBase<SpectraPhysicsHub>
 {
-    friend class WatchdogThread;
+    friend class Watchdog;
     friend class SpectraPhysicsMain;
     friend class SpectraPhysicsInsight1040;
 public:
@@ -87,7 +87,7 @@ private:
 	std::string onClose_;
 	std::chrono::steady_clock::time_point lastCommandTime_;
 	std::mutex serialMutex_;
-	WatchdogThread watchdogThread_;
+	Watchdog watchdog_;
 	
 	// Pre-Init Actions
 	int OnPort(MM::PropertyBase * pProp, MM::ActionType eAct);
