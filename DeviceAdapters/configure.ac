@@ -19,7 +19,6 @@ AX_BOOST_BASE([1.69.0], [],
 AX_BOOST_THREAD
 AX_BOOST_CHRONO
 AX_BOOST_DATE_TIME
-AX_BOOST_FILESYSTEM
 
 # Find Micro-Manager headers
 micromanager_cpp_path=${ac_pwd}/..
