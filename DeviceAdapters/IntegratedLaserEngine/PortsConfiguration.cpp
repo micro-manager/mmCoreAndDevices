@@ -10,7 +10,6 @@
 #include <Windows.h>
 #include <Shlobj.h>
 #include <fstream>
-#include "boost\filesystem.hpp"
 
 
 #if defined(WIN32) || defined(_WIN32) 
@@ -114,10 +113,10 @@ bool CPortsConfiguration::TestFileWriteAccess( const std::string& FileName, std:
   //if ( GetFusionConfigFolderPath( &vPath ) )
   //{
   //  std::wstring vwPath( vPath.begin(), vPath.end() );
-  //  boost::filesystem::path vDirectory( vwPath.c_str() );
-  //  if ( !boost::filesystem::exists( vDirectory ) )
+  //  std::filesystem::path vDirectory( vwPath.c_str() );
+  //  if ( !std::filesystem::exists( vDirectory ) )
   //  {
-  //    if ( !boost::filesystem::create_directory( vDirectory ) )
+  //    if ( !std::filesystem::create_directory( vDirectory ) )
   //    {
   //      return false;
   //    }

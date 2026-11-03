@@ -1,8 +1,10 @@
 #include "SRRFControl.h"
-#include <boost/filesystem/operations.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "DeviceUtils.h"
 #include "ImgBuffer.h"
+
+#include <filesystem>
+#include <system_error>
 
 #ifdef WIN32
 #include <windows.h>
@@ -14,9 +16,9 @@
 
 #include "SRRFCamera.h"
 
-using namespace boost::filesystem;
 using namespace boost::posix_time;
 using namespace std;
+namespace fs = std::filesystem;
 
 const char* SRRFControl::String_SRRF_Library_Name_ = "SRRF_Stream.dll";
 const char* SRRFControl::String_SRRF_Library_Version_ = "SRRF | Version Information";
@@ -304,7 +306,8 @@ int SRRFControl::OnRawDataPathChange(MM::PropertyBase* pProp, MM::ActionType eAc
    {
       string pathValue;
       pProp->Get(pathValue);
-      if (!exists(pathValue))
+      error_code ec;
+      if (!fs::exists(pathValue, ec))
       {
          return DEVICE_INVALID_PROPERTY_VALUE;
       }
@@ -634,9 +637,9 @@ string SRRFControl::GetFullPathNameForOriginalData()
    char pathValue[MM::MaxStrLength];
    camera_->GetProperty(String_OriginalDataPath_, pathValue);
    string s_uniqueFolderName = GenerateUniqueFolderWithDateTimestampMicroseconds();
-   path fullPath(pathValue);
+   fs::path fullPath(pathValue);
    fullPath /= s_uniqueFolderName;
-   bool b_succeeded = create_directories(fullPath);
+   bool b_succeeded = fs::create_directories(fullPath);
    if (b_succeeded)
    {
       fullPath += strFilename_;
