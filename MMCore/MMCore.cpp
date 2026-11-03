@@ -1089,7 +1089,7 @@ void CMMCore::initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError)
    }
 
    // second round, spin up threads to initialize non-port devices, one thread per module
-   std::vector<std::future<int>> futures;
+   std::vector<std::future<void>> futures;
    for (auto& moduleDevices : moduleMap) {
       auto f = std::async(std::launch::async, &CMMCore::initializeVectorOfDevices, this, moduleDevices.second);
       futures.push_back(std::move(f));
@@ -1132,14 +1132,13 @@ void CMMCore::initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError)
  * This helper function is executed by a single thread, allowing initializeAllDevices to operate multi-threaded.
  * All devices are supposed to originate from the same device adapter
  */
-int CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<mmi::DeviceInstance>, std::string>> pDevices) {
+void CMMCore::initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<mmi::DeviceInstance>, std::string>> pDevices) {
    for (auto& deviceLabel : pDevices) {
       mmi::DeviceModuleLockGuard guard(deviceLabel.first);
       LOG_INFO(coreLogger_) << "Will initialize device " << deviceLabel.second;
       deviceLabel.first->Initialize();
       LOG_INFO(coreLogger_) << "Did initialize device " << deviceLabel.second;
    }
-   return DEVICE_OK;
 }
 
 /**

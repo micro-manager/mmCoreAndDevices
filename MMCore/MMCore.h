@@ -788,7 +788,7 @@ private:
 
    void initializeAllDevicesSerial() MMCORE_LEGACY_THROW(CMMError);
    void initializeAllDevicesParallel() MMCORE_LEGACY_THROW(CMMError);
-   int initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<mmcore::internal::DeviceInstance>, std::string> > pDevices);
+   void initializeVectorOfDevices(std::vector<std::pair<std::shared_ptr<mmcore::internal::DeviceInstance>, std::string> > pDevices);
 
    void postNotification(
       mmcore::internal::Notification notification);
