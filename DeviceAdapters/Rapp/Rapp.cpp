@@ -74,7 +74,7 @@ MODULE_API void DeleteDevice(MM::Device* pDevice)
 }
 
 
-MM::DeviceDetectionStatus RappScannerDetect(MM::Device& /*device*/, MM::Core& /*core*/, std::string portToCheck, double /*answerTimeoutMs*/)
+MM::DeviceDetectionStatus RappScannerDetect(MM::Device& /*device*/, MM::Core& /*core*/, std::string /*portToCheck*/, double /*answerTimeoutMs*/)
 {
    // all conditions must be satisfied...
    MM::DeviceDetectionStatus result = MM::Misconfigured;
@@ -82,6 +82,48 @@ MM::DeviceDetectionStatus RappScannerDetect(MM::Device& /*device*/, MM::Core& /*
    return result;
 }
 
+static std::vector<std::string> ListOSSerialPorts()
+{
+   std::vector<std::string> ports;
+#ifdef _WIN32
+   HKEY key;
+   if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM",
+      0, KEY_READ, &key) == ERROR_SUCCESS)
+   {
+      for (DWORD i = 0; ; ++i)
+      {
+         char name[256];
+         BYTE data[256];
+         DWORD nameLen = sizeof(name), dataLen = sizeof(data), type;
+         LONG r = RegEnumValueA(key, i, name, &nameLen, NULL, &type, data, &dataLen);
+         if (r == ERROR_NO_MORE_ITEMS)
+            break;
+         if (r == ERROR_SUCCESS && type == REG_SZ)
+            ports.push_back(std::string(reinterpret_cast<char*>(data),
+               strnlen(reinterpret_cast<char*>(data), dataLen)));
+      }
+      RegCloseKey(key);
+   }
+#else
+   if (DIR* d = opendir("/dev"))
+   {
+      while (dirent* e = readdir(d))
+      {
+         const char* n = e->d_name;
+#ifdef __APPLE__
+         if (strncmp(n, "cu.", 3) == 0)
+#else
+         if (strncmp(n, "ttyS", 4) == 0 || strncmp(n, "ttyUSB", 6) == 0 ||
+            strncmp(n, "ttyACM", 6) == 0)
+#endif
+            ports.push_back(std::string("/dev/") + n);
+      }
+      closedir(d);
+   }
+#endif
+   std::sort(ports.begin(), ports.end());
+   return ports;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // RappScanner
@@ -104,28 +146,11 @@ RappScanner::RappScanner() :
 
    // Port
    CPropertyAction* pAct = new CPropertyAction (this, &RappScanner::OnPort);
-   
-   obsROE_Device* dev = new obsROE_Device();
 
-	std::vector<std::string> s = dev->SearchDevices();
-	// Other devices may have send signals to the UGA 40.  If we did not find any, try one more time.
-	if (s.size() <= 0)
-	{
-       s = dev->SearchDevices();
-	}
-	if (s.size() <= 0)
-	{
-       s.push_back(std::string("Undefined"));
-	}
-
-   // The following line crashes hardware wizard if compiled in a Debug configuration:
-   CreateProperty("VirtualComPort", s.at(0).c_str(), MM::String, false, pAct, true);
-	for (unsigned int i = 0; i < s.size(); i++)
-   {
-      AddAllowedValue("VirtualComPort", s.at(i).c_str());
-   }
-
-   delete dev;
+   CreateProperty("VirtualComPort", "Undefined", MM::String, false, pAct, true);
+   AddAllowedValue("VirtualComPort", "Undefined");
+   for (const std::string& p : ListOSSerialPorts())
+      AddAllowedValue("VirtualComPort", p.c_str());
 }  
 
 RappScanner::~RappScanner()
