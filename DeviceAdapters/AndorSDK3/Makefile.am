@@ -46,7 +46,7 @@ libmmgr_dal_AndorSDK3_la_SOURCES = \
 	stdafx.h \
 	targetver.h \
 	triggerremapper.h
-libmmgr_dal_AndorSDK3_la_LDFLAGS = $(MMDEVAPI_LDFLAGS) $(LIBATCORE) $(LIBATUTILITY) -lboost_filesystem -lboost_date_time
+libmmgr_dal_AndorSDK3_la_LDFLAGS = $(MMDEVAPI_LDFLAGS) $(LIBATCORE) $(LIBATUTILITY) -lboost_date_time
 libmmgr_dal_AndorSDK3_la_LIBADD = $(MMDEVAPI_LIBADD)
 
 EXTRA_DIST = AndorSDK3.vcproj license.txt
