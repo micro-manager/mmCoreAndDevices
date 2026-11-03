@@ -14,8 +14,8 @@ AX_CXX_COMPILE_STDCXX([17], [noext])
 MM_GMOCK([$srcdir/../../testing/googletest], [\$(top_srcdir)/../../testing/googletest])
 AM_CONDITIONAL([BUILD_CPP_TESTS], [test "x$have_gmock" = xyes])
 
-# TODO: Following should decide whether adapters depending on BOOST get build
-AX_BOOST_BASE([1.48.0])
+AX_BOOST_BASE([1.66.0], [],
+   [AC_MSG_ERROR([Boost >= 1.66 is required; use --with-boost=DIR if it is installed in a nonstandard location])])
 AX_BOOST_THREAD
 AX_BOOST_ASIO
 AX_BOOST_SYSTEM
