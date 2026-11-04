@@ -29,6 +29,9 @@
 #include "WriteCompactTiffRGB.h"
 
 #include <cstdio>
+#include <cstdlib>
+#include <exception>
+#include <stdexcept>
 #include <string>
 #include <math.h>
 #include <sstream>
@@ -410,6 +413,9 @@ int CDemoCamera::Initialize()
    AddAllowedValue("SimulateCrash", "");
    AddAllowedValue("SimulateCrash", "Dereference Null Pointer");
    AddAllowedValue("SimulateCrash", "Divide by Zero");
+   AddAllowedValue("SimulateCrash", "Throw C++ Exception");
+   AddAllowedValue("SimulateCrash", "Call std::terminate()");
+   AddAllowedValue("SimulateCrash", "Call std::abort()");
 
    // synchronize all properties
    // --------------------------
@@ -1833,9 +1839,6 @@ int CDemoCamera::OnReadNoise(MM::PropertyBase* pProp, MM::ActionType eAct)
 
 int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
-   AddAllowedValue("SimulateCrash", "");
-   AddAllowedValue("SimulateCrash", "Dereference Null Pointer");
-   AddAllowedValue("SimulateCrash", "Divide by Zero");
    if (eAct == MM::BeforeGet)
    {
       pProp->Set("");
@@ -1844,6 +1847,10 @@ int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
    {
       std::string choice;
       pProp->Get(choice);
+      if (!choice.empty())
+      {
+         LogMessage("SimulateCrash: " + choice, false);
+      }
       if (choice == "Dereference Null Pointer")
       {
          int* p = 0;
@@ -1852,10 +1859,23 @@ int CDemoCamera::OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct)
       }
       else if (choice == "Divide by Zero")
       {
+         // Traps on x86/x64 only; on ARM64, integer division by zero yields 0.
          volatile int i = 1, j = 0;
          volatile int k = i / j;
          // to suppress compiler warning
          (void) k;
+      }
+      else if (choice == "Throw C++ Exception")
+      {
+         throw std::runtime_error("Simulated uncaught exception");
+      }
+      else if (choice == "Call std::terminate()")
+      {
+         std::terminate();
+      }
+      else if (choice == "Call std::abort()")
+      {
+         std::abort();
       }
    }
    return DEVICE_OK;
