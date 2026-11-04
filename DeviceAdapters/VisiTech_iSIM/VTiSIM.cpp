@@ -165,6 +165,11 @@ hAotfControl_(0),
 
 VTiSIMHub::~VTiSIMHub()
 {
+	// Release the VisiSDK handles even if MMCore did not call Shutdown()
+	// (for example, when unloading was aborted by an error from another
+	// device). Leaving the handles open can prevent the hardware from being
+	// found by the next session.
+	Shutdown();
 }
 
 
@@ -214,15 +219,22 @@ int VTiSIMHub::Initialize()
 
 int VTiSIMHub::Shutdown()
 {
-	int lastErr = DEVICE_OK;
+	// Errors are logged but not returned: MMCore stops unloading at the first
+	// device whose Shutdown() fails, which leaves other devices (and their
+	// hardware connections) open.
 
 	if (hScanAndMotorControl_)
 	{
 		DWORD err = vti_UnInitialise(&hScanAndMotorControl_);
 		if (err != VTI_SUCCESS)
 		{
-			lastErr = err;
+			char s[MM::MaxStrLength + 1];
+			snprintf(s, MM::MaxStrLength,
+				"vti_UnInitialise (scan/motor) failed with error %lu",
+				(unsigned long)err);
+			LogMessage(s);
 		}
+		hScanAndMotorControl_ = 0;
 	}
 
 	if (hAotfControl_)
@@ -230,11 +242,16 @@ int VTiSIMHub::Shutdown()
 		DWORD err = vti_UnInitialise(&hAotfControl_);
 		if (err != VTI_SUCCESS)
 		{
-			lastErr = err;
+			char s[MM::MaxStrLength + 1];
+			snprintf(s, MM::MaxStrLength,
+				"vti_UnInitialise (AOTF) failed with error %lu",
+				(unsigned long)err);
+			LogMessage(s);
 		}
+		hAotfControl_ = 0;
 	}
 
-	return lastErr;
+	return DEVICE_OK;
 }
 
 
@@ -326,8 +343,23 @@ int VTiSIMLaserShutter::Initialize()
 
 int VTiSIMLaserShutter::Shutdown()
 {
-	// Always turn off on shutdown
-	return SetOpen(false);
+	// If the hub never connected to the AOTF there is nothing to close, and
+	// calling into VisiSDK would only return an error.
+	VTiSIMHub* hub = VTiHub();
+	if (!hub || !hub->GetAOTFHandle())
+		return DEVICE_OK;
+
+	// Always turn off on shutdown. Log but do not return errors, so that
+	// MMCore goes on to shut down the remaining devices.
+	int err = SetOpen(false);
+	if (err != DEVICE_OK)
+	{
+		char s[MM::MaxStrLength + 1];
+		snprintf(s, MM::MaxStrLength,
+			"Failed to close laser shutter during shutdown (error %d)", err);
+		LogMessage(s);
+	}
+	return DEVICE_OK;
 }
 
 
@@ -901,7 +933,23 @@ int VTiSIMScanner::Initialize()
 
 int VTiSIMScanner::Shutdown()
 {
-	return DoStartStopScan(false);
+	// If the hub never connected to the scanner there is nothing to stop, and
+	// calling into VisiSDK would return VTI_ERR_NOT_INITIALISED.
+	VTiSIMHub* hub = VTiHub();
+	if (!hub || !hub->GetScanAndMotorHandle())
+		return DEVICE_OK;
+
+	// Log but do not return errors, so that MMCore goes on to shut down the
+	// remaining devices.
+	int err = DoStartStopScan(false);
+	if (err != DEVICE_OK)
+	{
+		char s[MM::MaxStrLength + 1];
+		snprintf(s, MM::MaxStrLength,
+			"Failed to stop scanning during shutdown (error %d)", err);
+		LogMessage(s);
+	}
+	return DEVICE_OK;
 }
 
 
