@@ -27,6 +27,8 @@
 struct MockDeviceAdapter {
    using RegisterDeviceFunc = std::function<void(const char*, MM::DeviceType, const char*)>;
 
+   virtual ~MockDeviceAdapter() = default;
+
    virtual void InitializeModuleData(RegisterDeviceFunc registerDevice) = 0;
    virtual MM::Device* CreateDevice(const char* name) = 0;
    virtual void DeleteDevice(MM::Device* device) = 0;
