@@ -161,8 +161,6 @@ CMMCore::~CMMCore()
 
    try
    {
-      // TODO We should attempt to continue cleanup beyond the first device
-      // that throws an error.
       reset();
    }
    catch (...)

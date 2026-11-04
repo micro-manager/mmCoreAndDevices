@@ -24,6 +24,7 @@
 #include "LoadableModules/LoadedDeviceAdapter.h"
 
 #include <algorithm>
+#include <exception>
 
 namespace mmcore {
 namespace internal {
@@ -127,17 +128,38 @@ DeviceManager::UnloadAllDevices()
    // DeviceInstance.
    // TODO We need a mechanism to ensure automatic Shutdown (1:1 with
    // Initialize()).
+   // Shut down every device even if some fail, so that one failing device
+   // does not leave the others (and their hardware connections) open. Each
+   // failure is logged by DeviceInstance; the first one is rethrown after
+   // all devices have been unloaded.
+   std::exception_ptr firstError;
    for (std::vector< std::shared_ptr<DeviceInstance> >::reverse_iterator
          it = nonSerialDevices.rbegin(), end = nonSerialDevices.rend();
          it != end; ++it)
    {
-      (*it)->Shutdown();
+      try
+      {
+         (*it)->Shutdown();
+      }
+      catch (const CMMError&)
+      {
+         if (!firstError)
+            firstError = std::current_exception();
+      }
    }
    for (std::vector< std::shared_ptr<DeviceInstance> >::reverse_iterator
          it = serialDevices.rbegin(), end = serialDevices.rend();
          it != end; ++it)
    {
-      (*it)->Shutdown();
+      try
+      {
+         (*it)->Shutdown();
+      }
+      catch (const CMMError&)
+      {
+         if (!firstError)
+            firstError = std::current_exception();
+      }
    }
 
    deviceRawPtrIndex_.clear();
@@ -153,6 +175,9 @@ DeviceManager::UnloadAllDevices()
    {
       serialDevices.pop_back();
    }
+
+   if (firstError)
+      std::rethrow_exception(firstError);
 }
 
 

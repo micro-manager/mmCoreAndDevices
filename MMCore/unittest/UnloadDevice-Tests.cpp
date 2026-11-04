@@ -119,3 +119,34 @@ TEST_CASE("Unload all devices with a magnifier loaded", "[regression]") {
 
    c.unloadAllDevices();
 }
+
+namespace {
+
+struct ShutdownTrackingDevice : StubGeneric {
+   int shutdownResult = DEVICE_OK;
+   bool shutdownCalled = false;
+   int Shutdown() override {
+      shutdownCalled = true;
+      return shutdownResult;
+   }
+};
+
+} // namespace
+
+TEST_CASE("Unload all devices shuts down every device even if one fails",
+      "[regression]") {
+   ShutdownTrackingDevice first;
+   ShutdownTrackingDevice failing;
+   ShutdownTrackingDevice last;
+   failing.shutdownResult = DEVICE_ERR;
+   MockAdapterWithDevices adapter{
+      {"first", &first}, {"failing", &failing}, {"last", &last}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   CHECK_THROWS_AS(c.unloadAllDevices(), CMMError);
+   CHECK(first.shutdownCalled);
+   CHECK(failing.shutdownCalled);
+   CHECK(last.shutdownCalled);
+   CHECK(c.getLoadedDevices() == std::vector<std::string>{"Core"});
+}
