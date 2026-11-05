@@ -18,9 +18,11 @@
 
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <functional>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -72,6 +74,29 @@ LevelColorReset(LogLevel level)
       case LogLevelInfo: return "";
       default: return "\033[m";
    }
+}
+
+
+const char* const ColorReset = "\033[m";
+
+
+inline const char*
+ThreadIdColorCode(ThreadIdType tid)
+{
+   static const char* const palette[] = {
+      "\033[38;5;26m",  "\033[38;5;30m",  "\033[38;5;34m",
+      "\033[38;5;64m",  "\033[38;5;67m",  "\033[38;5;70m",
+      "\033[38;5;98m",  "\033[38;5;127m", "\033[38;5;133m",
+      "\033[38;5;162m", "\033[38;5;32m",  "\033[38;5;37m",
+   };
+   std::uint64_t h = std::hash<ThreadIdType>()(tid);
+   // splitmix64 finalizer; raw tids (esp. pthread_t) have low-entropy low bits
+   h ^= h >> 30;
+   h *= 0xbf58476d1ce4e5b9ULL;
+   h ^= h >> 27;
+   h *= 0x94d049bb133111ebULL;
+   h ^= h >> 31;
+   return palette[h % (sizeof(palette) / sizeof(palette[0]))];
 }
 
 
@@ -141,11 +166,24 @@ MetadataFormatter::FormatLinePrefix(std::ostream& stream,
    buf_ = FormatLocalTime(metadata.GetStampData().GetTimestamp());
    buf_ += " tid";
    sstrm_.str(std::string());
-   sstrm_ << metadata.GetStampData().GetThreadId();
+   const auto tid = metadata.GetStampData().GetThreadId();
+   sstrm_ << tid;
+   std::size_t escapeLen = 0;
+   if (useColor_)
+   {
+      const char* code = ThreadIdColorCode(tid);
+      buf_ += code;
+      escapeLen += std::strlen(code);
+   }
    buf_ += sstrm_.str();
+   if (useColor_)
+   {
+      buf_ += ColorReset;
+      escapeLen += std::strlen(ColorReset);
+   }
    buf_ += ' ';
 
-   openBracketCol_ = buf_.size();
+   openBracketCol_ = buf_.size() - escapeLen;
    buf_ += '[';
 
    const auto level = metadata.GetEntryData().GetLevel();
