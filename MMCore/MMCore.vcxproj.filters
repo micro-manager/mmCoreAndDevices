@@ -150,7 +150,7 @@
     <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplRegular.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
-    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplMock.cpp">
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplClient.cpp">
       <Filter>Source Files\LoadableModules</Filter>
     </ClCompile>
   </ItemGroup>
@@ -356,10 +356,10 @@
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplRegular.h">
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
-    <ClInclude Include="MockDeviceAdapter.h">
+    <ClInclude Include="ClientDeviceAdapter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplMock.h">
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplClient.h">
       <Filter>Header Files\LoadableModules</Filter>
     </ClInclude>
   </ItemGroup>

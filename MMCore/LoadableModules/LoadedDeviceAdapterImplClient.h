@@ -21,19 +21,24 @@
 
 #include "LoadedDeviceAdapterImpl.h"
 
-#include "../MockDeviceAdapter.h"
+#include "../ClientDeviceAdapter.h"
 
 #include "RegisteredDeviceCollection.h"
+
+#include <memory>
+#include <utility>
 
 
 namespace mmcore {
 namespace internal {
 
-class LoadedDeviceAdapterImplMock : public LoadedDeviceAdapterImpl
+class LoadedDeviceAdapterImplClient : public LoadedDeviceAdapterImpl
 {
 public:
-   explicit LoadedDeviceAdapterImplMock(MockDeviceAdapter* impl)
-      : impl_(impl) {}
+   explicit LoadedDeviceAdapterImplClient(std::shared_ptr<ClientDeviceAdapter> impl)
+      : impl_(std::move(impl)) {}
+
+   // Do not release impl_ here; devices may still be using it.
 
    void Unload() override {};
 
@@ -49,7 +54,7 @@ public:
    void DeleteDevice(MM::Device* device) override;
 
 private:
-   MockDeviceAdapter* impl_;
+   std::shared_ptr<ClientDeviceAdapter> impl_;
    MM::internal::RegisteredDeviceCollection registeredDevices_;
 };
 
