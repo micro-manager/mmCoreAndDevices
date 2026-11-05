@@ -528,7 +528,7 @@ TEST_CASE("Core Initialize property") {
       MockAdapterWithDevices adapter{{"cam", &cam}, {"sh", &sh}};
       CMMCore c;
       // Load without initializing (manually)
-      c.loadMockDeviceAdapter("mock", &adapter);
+      adapter.LoadAdapterIntoCore(c, "mock");
       c.loadDevice("cam", "mock", "cam");
       c.loadDevice("sh", "mock", "sh");
 
@@ -556,7 +556,7 @@ TEST_CASE("Core Initialize property") {
       StubCamera cam;
       MockAdapterWithDevices adapter{{"cam", &cam}};
       CMMCore c;
-      c.loadMockDeviceAdapter("mock", &adapter);
+      adapter.LoadAdapterIntoCore(c, "mock");
       c.loadDevice("cam", "mock", "cam");
 
       c.setProperty("Core", "Initialize", "1");
@@ -567,7 +567,7 @@ TEST_CASE("Core Initialize property") {
       StubCamera cam;
       MockAdapterWithDevices adapter{{"cam", &cam}};
       CMMCore c;
-      c.loadMockDeviceAdapter("mock", &adapter);
+      adapter.LoadAdapterIntoCore(c, "mock");
       c.loadDevice("cam", "mock", "cam");
 
       c.setProperty("Core", "Initialize", "1");

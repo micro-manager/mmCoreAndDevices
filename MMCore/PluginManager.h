@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "MockDeviceAdapter.h"
+#include "ClientDeviceAdapter.h"
 
 #include <map>
 #include <memory>
@@ -58,7 +58,8 @@ public:
    std::shared_ptr<LoadedDeviceAdapter>
    GetDeviceAdapter(const char* moduleName);
 
-   void LoadMockAdapter(const std::string& name, MockDeviceAdapter* impl);
+   void LoadClientAdapter(const std::string& name,
+         std::shared_ptr<ClientDeviceAdapter> impl);
 
 private:
    static std::vector<std::string> GetDefaultSearchPaths();

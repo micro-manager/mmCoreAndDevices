@@ -1,6 +1,7 @@
 #include "MMCore.h"
 
 #include <initializer_list>
+#include <memory>
 #include <utility>
 #include <string>
 
@@ -8,8 +9,8 @@
 // This is intended for tests where we're not testing device creation and
 // destruction, and each device is only loaded once. This class does not own
 // the devices; the caller is responsible for that (usually, the devices should
-// just be created on the stack).
-class MockAdapterWithDevices : public MockDeviceAdapter {
+// just be created on the stack). The adapter itself must outlive the Core.
+class MockAdapterWithDevices : public ClientDeviceAdapter {
    std::string adapter_name = "mock_adapter";
    std::vector<std::pair<std::string, MM::Device*>> devices;
 
@@ -38,9 +39,15 @@ public:
 
    void DeleteDevice(MM::Device *device) override { (void)device; }
 
+   // Load the adapter only (non-owning)
+   void LoadAdapterIntoCore(CMMCore &core, const char *name) {
+      core.loadClientDeviceAdapter(name,
+         std::shared_ptr<ClientDeviceAdapter>(this, [](ClientDeviceAdapter*) {}));
+   }
+
    // Convenience for loading all the devices
    void LoadIntoCore(CMMCore &core) {
-      core.loadMockDeviceAdapter(adapter_name.c_str(), this);
+      LoadAdapterIntoCore(core, adapter_name.c_str());
       for (auto name_device : devices) {
          const auto name = name_device.first;
          core.loadDevice(name.c_str(), adapter_name.c_str(), name.c_str());
