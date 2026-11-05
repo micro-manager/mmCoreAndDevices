@@ -107,6 +107,41 @@
  *   Returns: 35 followed by 1 byte with the number of digital output pins
  *   Available as of version 5
  *
+ * Get DA channel voltage range and resolution: 36x
+ *   Where x is the DA channel (0-based).
+ *   Returns: 36 followed by channel, then min voltage, max voltage, and the
+ *   maximum digital code for that channel:
+ *     - min voltage: signed long (int32_t), microvolts, 4 bytes, highbyte first
+ *     - max voltage: signed long (int32_t), microvolts, 4 bytes, highbyte first
+ *     - max digital code: unsigned long (uint32_t), 4 bytes, highbyte first
+ *       (e.g. 4095 for a 12-bit DAC channel)
+ *   A min/max voltage of 0/0 means the voltage range is not known.
+ *   Available as of version 6
+ *
+ * Get max number of DA sequence events per channel: 37
+ *   Returns: 37 followed by the max number of events per channel, unsigned int, 2 bytes, highbyte first
+ *   Available as of version 6
+ *
+ * Upload a DA voltage sequence for one channel: 38xccvv...
+ *   Where x is the DA channel (0-based), cc is the number of events (unsigned int, 2 bytes,
+ *   highbyte first), and vv... is cc pairs of bytes, each pair a 12-bit significant number
+ *   (msb, lsb) as in command 3.
+ *   Controller returns 38, channel, then the number of events actually stored (2 bytes,
+ *   highbyte first) - a value less than cc means the upload was truncated (e.g. timed out).
+ *   Available as of version 6
+ *
+ * Start DA (analog) triggered sequence output: 39
+ *   Every DA channel with a non-empty uploaded sequence advances to its next value on each
+ *   transition (rising or falling) of the trigger input pin (the same pin used for digital
+ *   triggered mode, command 8). All channels share one step index, so channels with
+ *   sequences of equal length stay in lock-step. Controller returns 39.
+ *   Available as of version 6
+ *
+ * Stop DA (analog) triggered sequence output: 43
+ *   Controller returns 43x where x is the number of triggers received during the last DA
+ *   sequence run. Output is left at its last value (not forced to zero).
+ *   Available as of version 6
+ *
  *
  * Read digital state of analogue input pins 0-5: 40
  *   Returns raw value of PINC (two high bits are not used)
@@ -121,24 +156,74 @@
  *   Get digital patterm
  *   Get Number of digital patterns
  */
- 
-   unsigned int version_ = 5;
 
-// If you have one of these DA chips attached, uncomment the appropriate define
+
+ /************* For DA accessory chips, edit this section ********/
+
+// If you have one of these DA chips attached, uncomment the appropriate define.
+// WARNING: if none of these are defined, numDAChannels_ below becomes 0 and every
+// DA channel silently does nothing - single-value writes (command 3) and sequence
+// uploads (command 38) will report "success" or "0 events stored" respectively,
+// with no error, even though the host may already have "Volts"/"MaxVolt"/"Sequence"
+// properties configured for DA channels from a previous session. Double-check this
+// matches your attached hardware before troubleshooting anything else DA-related.
+// The same applies when a DAC is compiled in but fails to initialize at runtime;
+// command 34 then reports 0 channels (see availableDAChannels() below), so the
+// host refuses to initialize DA devices instead of writing into a void.
 // #define TLV5618
 // #define TLV56x8
+// #define MCP4728
+
+// Voltage range and resolution of the DA channels, reported to the host via
+// command 36.  Currently the same fixed values are used for all channels;
+// change these if the attached DAC hardware differs.
+const int32_t DA_MIN_VOLTAGE_MICROV = 0;          // 0 V
+const int32_t DA_MAX_VOLTAGE_MICROV = 5000000L;   // 5 V
+const uint32_t DA_NUM_STEPS = 4095;               // max digital code (12-bit)
+
+/**************** End editing DA accessory chips section ********/
+
+const unsigned int version_ = 6;
+
+#ifdef MCP4728
+#include <Wire.h>
+#include <Adafruit_MCP4728.h>
+#include <EEPROM.h>
+#endif
+
+ 
+#if defined TLV5618
+const uint8_t numDAChannels_ = 2;
+#elif defined TLV56x8
+const uint8_t numDAChannels_ = 4;
+#elif defined MCP4728
+const uint8_t numDAChannels_ = 4;
+#else
+const uint8_t numDAChannels_ = 0;
+#endif
 
 
-  // const uint8_t numDAChannels_ = 0;  // Set to appropriate number depending on attached DA chip
-  #if defined TLV5618
-  const uint8_t numDAChannels_ = 2;
-  #elif defined TLV56x8
-  const uint8_t numDAChannels_ = 4;
-  #else
-  const uint8_t numDAChannels_ = 0;
-  #endif
+#ifdef MCP4728
+static const uint8_t MCP4728_ADDR   = 0x60;
+static const uint8_t LDAC_PIN       = 4;
+static const uint8_t RDY_PIN        = 3;
+Adafruit_MCP4728 mcp;
+bool mcp_ok = false;
+#endif
 
-  const uint8_t numDigitalPins_ = 6;
+// Number of DA channels actually usable right now.  This is the compile-time
+// numDAChannels_, except that a DAC which failed to initialize (MCP4728 not
+// found on the I2C bus) has no usable channels: analogueOut() discards every
+// write to it, so reporting the compile-time count to the host would make it
+// create DA devices whose writes are silently dropped.
+uint8_t availableDAChannels() {
+#ifdef MCP4728
+  if (!mcp_ok) return 0;
+#endif
+  return numDAChannels_;
+}
+
+const uint8_t numDigitalPins_ = 6;
    
    // pin on which to receive the trigger (2 and 3 can be used with interrupts, although this code does not use interrupts)
    int inPin_ = 2;
@@ -146,9 +231,11 @@
    int inPinBit_ = 1 << inPin_;  // bit mask 
    
    // pin connected to DIN of TLV5618
+   #if defined TLV5618 || defined TLV56x8
    int dataPin = 3;
    // pin connected to SCLK of TLV5618
    int clockPin = 4;
+   #endif
    // pin connected to CS of TLV5618
    #ifdef TLV5618
    int latchPin = 5;
@@ -173,14 +260,28 @@
    bool blankOnHigh_ = false;
    bool triggerMode_ = false;
    boolean triggerState_ = false;
- 
+
+   // Analog (DA) voltage sequence support - mirrors the digital pattern sequence above, but
+   // stores a 12-bit code sequence per DA channel and is driven off the same trigger pin
+   // (inPin_) via a single shared step index (see command 39's doc comment).
+   const uint8_t MAX_DA_CHANNELS_ = 4;      // largest numDAChannels_ across all chip branches
+   const uint16_t DA_SEQUENCELENGTH = 32;   // per channel; increase with care - see SEQUENCELENGTH comment above
+   uint16_t daSequence_[MAX_DA_CHANNELS_][DA_SEQUENCELENGTH];
+   uint16_t daSequenceLength_[MAX_DA_CHANNELS_] = {0, 0, 0, 0};
+   volatile long daTriggerNr_;    // total # of triggers in this DA-sequence run
+   volatile long daSequenceNr_;   // shared step index into every channel's daSequence_[]
+   bool daTriggerMode_ = false;
+   boolean daTriggerState_ = false;
+
  void setup() {
    // Higher speeds do not appear to be reliable
    Serial.begin(57600);
   
    pinMode(inPin_, INPUT);
+   #if defined TLV5618 || defined TLV56x8
    pinMode (dataPin, OUTPUT);
    pinMode (clockPin, OUTPUT);
+   #endif
    #ifdef TLV5618
    pinMode (latchPin, OUTPUT);
    #endif
@@ -206,6 +307,28 @@
    #ifdef TLV56x8
    digitalWrite(CS1, HIGH);
    digitalWrite(CS2, HIGH);
+   #endif
+
+   #ifdef MCP4728
+   pinMode(LDAC_PIN, OUTPUT);
+   digitalWrite(LDAC_PIN, LOW);
+   pinMode(RDY_PIN, INPUT_PULLUP);
+   Wire.begin();
+   mcp_ok = mcp.begin(MCP4728_ADDR);
+   {
+     const int INIT_FLAG_ADDR = 0;
+     const byte INIT_DONE = 0xA5;
+     if (mcp_ok) {
+       byte initFlag = EEPROM.read(INIT_FLAG_ADDR);
+       if (initFlag != INIT_DONE) {
+         mcp.fastWrite(0, 0, 0, 0);
+         if (mcp.saveToEEPROM())
+           EEPROM.update(INIT_FLAG_ADDR, INIT_DONE);
+       } else {
+         mcp.fastWrite(0, 0, 0, 0);
+       }
+     }
+   }
    #endif
 
    for (unsigned int i = 0; i < SEQUENCELENGTH; i++) {
@@ -246,7 +369,8 @@
               msb &= B00001111;
               if (waitForSerial(timeOut_)) {
                 byte lsb = Serial.read();
-                analogueOut(channel, msb, lsb);
+                if (channel >= 0 && channel < availableDAChannels() && channel < MAX_DA_CHANNELS_)
+                  analogueOut(channel, msb, lsb);
                 Serial.write( byte(3));
                 Serial.write( channel);
                 Serial.write(msb);
@@ -433,13 +557,83 @@
        // Returns the number of DA channels
        case 34:
          Serial.write(byte(34));
-         Serial.write(byte(numDAChannels_));
+         Serial.write(byte(availableDAChannels()));
          break;
 
        // Returns the number of digital output pins
        case 35:
          Serial.write(byte(35));
          Serial.write(byte(numDigitalPins_));
+         break;
+
+       // Returns the voltage range and max digital code (signed V, unsigned steps) of the given DA channel
+       case 36:
+         if (waitForSerial(timeOut_)) {
+           int channel = Serial.read();
+           int32_t minMicroV = 0, maxMicroV = 0;
+           uint32_t numSteps = 0;
+           getDaVoltageRangeMicroV(channel, minMicroV, maxMicroV, numSteps);
+           Serial.write(byte(36));
+           Serial.write(byte(channel));
+           Serial.write(byte((minMicroV >> 24) & 0xFF));
+           Serial.write(byte((minMicroV >> 16) & 0xFF));
+           Serial.write(byte((minMicroV >> 8) & 0xFF));
+           Serial.write(byte(minMicroV & 0xFF));
+           Serial.write(byte((maxMicroV >> 24) & 0xFF));
+           Serial.write(byte((maxMicroV >> 16) & 0xFF));
+           Serial.write(byte((maxMicroV >> 8) & 0xFF));
+           Serial.write(byte(maxMicroV & 0xFF));
+           Serial.write(byte((numSteps >> 24) & 0xFF));
+           Serial.write(byte((numSteps >> 16) & 0xFF));
+           Serial.write(byte((numSteps >> 8) & 0xFF));
+           Serial.write(byte(numSteps & 0xFF));
+         }
+         break;
+
+       // Returns the maximum number of DA sequence events that can be uploaded per channel
+       case 37:
+         Serial.write(byte(37));
+         Serial.write(highByte(DA_SEQUENCELENGTH));
+         Serial.write(lowByte(DA_SEQUENCELENGTH));
+         break;
+
+       // Uploads a DA voltage sequence for one channel
+       case 38:
+         if (waitForSerial(timeOut_)) {
+           int channel = Serial.read();
+           if (waitForSerial(timeOut_)) {
+             unsigned int hi = Serial.read();
+             if (waitForSerial(timeOut_)) {
+               unsigned int lo = Serial.read();
+               unsigned int expectedCount = (hi << 8) | lo;
+               unsigned int count = 0;
+               if (channel >= 0 && channel < availableDAChannels() && channel < MAX_DA_CHANNELS_
+                   && expectedCount <= DA_SEQUENCELENGTH) {
+                 while (count < expectedCount && waitForSerial(timeOut_)) {
+                   byte msb = Serial.read();
+                   if (!waitForSerial(timeOut_)) break;
+                   byte lsb = Serial.read();
+                   daSequence_[channel][count] = (((uint16_t)(msb & 0x0F)) << 8) | (uint16_t) lsb;
+                   count++;
+                 }
+                 daSequenceLength_[channel] = count;
+               }
+               Serial.write(byte(38));
+               Serial.write(byte(channel));
+               Serial.write(highByte(count));
+               Serial.write(lowByte(count));
+             }
+           }
+         }
+         break;
+
+       // Starts DA (analog) triggered sequence output
+       case 39:
+         daSequenceNr_ = 0;
+         daTriggerNr_ = 0;
+         daTriggerState_ = digitalRead(inPin_) == HIGH;
+         daTriggerMode_ = true;
+         Serial.write(byte(39));
          break;
 
        case 40:
@@ -479,6 +673,13 @@
          }
          break;
 
+       // Stops DA (analog) triggered sequence output
+       case 43:
+         daTriggerMode_ = false;
+         Serial.write(byte(43));
+         Serial.write(daTriggerNr_);
+         break;
+
        }
     }
     
@@ -513,8 +714,23 @@
       }  else {
         if (! (PIND & inPinBit_))
           PORTB = 0;
-        else  
+        else
           PORTB = currentPattern_;
+      }
+    }
+
+    if (daTriggerMode_) {
+      boolean tmp = PIND & inPinBit_;
+      if (tmp != daTriggerState_) {
+        for (uint8_t ch = 0; ch < availableDAChannels() && ch < MAX_DA_CHANNELS_; ch++) {
+          if (daSequenceLength_[ch] > 0) {
+            uint16_t code = daSequence_[ch][daSequenceNr_ % daSequenceLength_[ch]];
+            analogueOut(ch, (byte)(code >> 8), (byte)(code & 0xFF));
+          }
+        }
+        daSequenceNr_++;
+        daTriggerNr_++;
+        daTriggerState_ = tmp;
       }
     }
 }
@@ -593,11 +809,43 @@ void analogueOut(int channel, byte msb, byte lsb)
     digitalWrite(CS1, HIGH);
     digitalWrite(CS2, HIGH);
 }
+
+#elif defined MCP4728
+
+void analogueOut(int channel, byte msb, byte lsb) {
+  if (!mcp_ok) return;
+  int ch = channel;
+  if (ch < 0 || ch > 3) return;
+  uint16_t value12 = ((uint16_t)(msb & 0x0F) << 8) | (uint16_t)lsb;
+  MCP4728_channel_t mcp_ch = MCP4728_CHANNEL_A;
+  if (ch == 1) mcp_ch = MCP4728_CHANNEL_B;
+  else if (ch == 2) mcp_ch = MCP4728_CHANNEL_C;
+  else if (ch == 3) mcp_ch = MCP4728_CHANNEL_D;
+  mcp.setChannelValue(mcp_ch, value12, MCP4728_VREF_VDD, MCP4728_GAIN_1X,
+                      MCP4728_PD_MODE_NORMAL, false);
+}
+
 #else
 
 void analogueOut(int channel, byte msb, byte lsb) {}; // noop
 
 #endif
+
+// Reports the fixed voltage range and resolution (DA_MIN_VOLTAGE_MICROV /
+// DA_MAX_VOLTAGE_MICROV / DA_NUM_STEPS) for the given channel, if a DA chip
+// is compiled in and the channel is valid; otherwise reports 0/0/0 (unknown).
+bool getDaVoltageRangeMicroV(int channel, int32_t &minMicroV, int32_t &maxMicroV, uint32_t &numSteps) {
+#if defined TLV5618 || defined TLV56x8 || defined MCP4728
+  if (channel < 0 || channel >= availableDAChannels()) { minMicroV = 0; maxMicroV = 0; numSteps = 0; return false; }
+  minMicroV = DA_MIN_VOLTAGE_MICROV;
+  maxMicroV = DA_MAX_VOLTAGE_MICROV;
+  numSteps = DA_NUM_STEPS;
+  return true;
+#else
+  minMicroV = 0; maxMicroV = 0; numSteps = 0;
+  return false;
+#endif
+}
 
 
 
