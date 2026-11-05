@@ -23,6 +23,7 @@
 
 #include "TCPIPPort.h"
 
+#include "boost/asio/deadline_timer.hpp"
 #include "boost/lexical_cast.hpp"
 #include "boost/format.hpp"
 #include "boost/lambda/bind.hpp"
@@ -41,7 +42,7 @@ TCPIPPort::TCPIPPort(int index) :
 	host_("127.0.0.1"),
 	port_(0),
 	initialized_(false),
-	sock_(ios_),
+	sock_(ioctx_),
 	answerTimeoutMs_(500)
 {
 	SetErrorText(ERR_BUFFER_OVERRUN, "Buffer overrun occured during read");
@@ -74,19 +75,17 @@ ERRH_START
 	if (initialized_)
 		return DEVICE_OK;
 
-	tcp::endpoint endpoint(boost::asio::ip::address::from_string(host_), port_);
-
-	tcp::resolver::iterator it = tcp::resolver(ios_).resolve(endpoint);
+	tcp::endpoint endpoint(boost::asio::ip::make_address(host_), port_);
 
 	boost::system::error_code ec = boost::asio::error::would_block;
 
-	boost::asio::deadline_timer deadline(ios_);
+	boost::asio::deadline_timer deadline(ioctx_);
 	deadline.expires_from_now(boost::posix_time::millisec(answerTimeoutMs_));
 	deadline.async_wait(boost::lambda::bind(&TCPIPPort::close_sock, this));
 	
-	boost::asio::async_connect(sock_, it, boost::lambda::var(ec) = boost::lambda::_1);
+	sock_.async_connect(endpoint, boost::lambda::var(ec) = boost::lambda::_1);
 
-	do ios_.run_one(); while (ec == boost::asio::error::would_block);
+	do ioctx_.run_one(); while (ec == boost::asio::error::would_block);
 
 	if (ec || !sock_.is_open())
 		return ERR_TERM_TIMEOUT;
