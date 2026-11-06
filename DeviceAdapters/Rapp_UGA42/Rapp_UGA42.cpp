@@ -981,6 +981,12 @@ int RappUGA42Scanner::AddLaser()
    if (ret != RETCODE::OK)
       return ERR_LASER_SETUP_FAILED;
 
+   // A newly added laser has the SDK default intensity; SetLaserONOFF uses the stored value
+   ret = device_->SetLaserIntensity(laserID_, currentIntensity_);
+   LogMessage("UGA42 AddLaser: SetLaserIntensity returned " + std::to_string(ret), true);
+   if (ret != RETCODE::OK)
+      return ERR_LASER_SETUP_FAILED;
+
    // Reset calibration to identity (1:1 mapping)
    ret = device_->ResetCalibration(laserID_);
    LogMessage("UGA42 AddLaser: ResetCalibration returned " + std::to_string(ret), true);
@@ -1167,6 +1173,15 @@ int SetIlluminationCommand::Execute(RappUGA42Scanner& device)
 {
    device.LogMessage("UGA42 SetIllumination: on=" + std::string(on_ ? "true" : "false") +
                      ", laserID=" + std::to_string(device.laserID_), true);
+   if (on_)
+   {
+      // SetLaserONOFF uses the stored intensity, unlike sequences which carry it per point
+      UINT32 iret = device.device_->SetLaserIntensity(device.laserID_, device.currentIntensity_);
+      device.LogMessage("UGA42 SetIllumination: SetLaserIntensity returned " +
+                        std::to_string(iret), true);
+      if (iret != RETCODE::OK)
+         return device.MapRetCode(iret);
+   }
    UINT32 ret = device.device_->SetLaserONOFF(device.laserID_, on_ ? TRUE : FALSE);
    device.LogMessage("UGA42 SetIllumination: SetLaserONOFF returned " + std::to_string(ret), true);
    return device.MapRetCode(ret);
