@@ -108,7 +108,7 @@ namespace notif = mmcore::internal::notification;
  * (Keep the 3 numbers on one line to make it easier to look at diffs when
  * merging/rebasing.)
  */
-const int MMCore_versionMajor = 12, MMCore_versionMinor = 5, MMCore_versionPatch = 1;
+const int MMCore_versionMajor = 12, MMCore_versionMinor = 6, MMCore_versionPatch = 0;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1238,7 +1238,7 @@ std::string CMMCore::getDeviceLibrary(const char* label) MMCORE_LEGACY_THROW(CMM
  * We do not currently have support for unloading regular device adapters that
  * are loaded from libraries (DLLs).
  *
- * Only mock device adapters can be unloaded.
+ * Only adapters loaded with loadClientDeviceAdapter() can be unloaded.
  *
  * Any devices from the adapter will be unloaded first. Do not call this
  * function when devices from other adapters (e.g. Utilities) may be depending
@@ -8964,22 +8964,27 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
 }
 
 /**
- * \brief Testing only: load a mock device adapter.
- * 
- * This function is designed for unit testing of MMCore itself, and its
- * interface is subject to change. It is also not designed for language
- * bindings (Java, Python) in mind (at least for now).
- * 
- * Do not use this in production code.
- * 
- * The caller is responsible for keeping \p implementation valid until this
- * Core is destroyed (or until unloadLibrary(name) is called, but that is
- * not recommended.)
+ * \brief Experimental: load a device adapter implemented by the client.
+ *
+ * The adapter becomes available under \p name, as if it were a device adapter
+ * library, and its devices can be loaded with loadDevice(). See
+ * ClientDeviceAdapter for the requirements on the implementation.
+ *
+ * This function is experimental and subject to change. It is a C++ API and is
+ * not designed to be exposed as-is in language bindings.
+ *
+ * The Core keeps a reference to \p adapter until the adapter has been
+ * unloaded (by unloadLibrary() or destruction of the Core) and all of its
+ * devices have been deleted. The reference may be released on whichever
+ * thread performs the unloading or destruction.
+ *
+ * \throws CMMError if \p name is null or empty, \p adapter is null, or an
+ * adapter named \p name is already loaded.
  */
-void CMMCore::loadMockDeviceAdapter(const char* name,
-      MockDeviceAdapter* implementation) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::loadClientDeviceAdapter(const char* name,
+      std::shared_ptr<ClientDeviceAdapter> adapter) MMCORE_LEGACY_THROW(CMMError)
 {
    if (!name)
       throw CMMError("Null device adapter name");
-   pluginManager_->LoadMockAdapter(name, implementation);
+   pluginManager_->LoadClientAdapter(name, std::move(adapter));
 }

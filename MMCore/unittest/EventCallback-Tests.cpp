@@ -954,7 +954,7 @@ TEST_CASE("onPropertyChanged from Initialize", "[EventCallback]") {
    MockAdapterWithDevices adapter{{"dev", &dev}};
    RecordingCallback cb;
    CMMCore c;
-   c.loadMockDeviceAdapter("mock", &adapter);
+   adapter.LoadAdapterIntoCore(c, "mock");
    c.loadDevice("dev", "mock", "dev");
    c.registerCallback(&cb);
 
