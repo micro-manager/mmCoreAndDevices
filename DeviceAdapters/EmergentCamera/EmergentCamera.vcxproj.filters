@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) 2026, Dr. Volodymyr Cherkas; SPDX-License-Identifier: BSD-3-Clause -->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{B9C41448-A6F8-4109-91DD-E5AFAC7FCBD6}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{64C0EA06-2DBB-4ECC-A2AB-58BB9FB4E56E}</UniqueIdentifier>
+      <Extensions>h;hpp</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\EmergentCamera.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\EmergentSettings.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="src\Module.cpp"><Filter>Source Files</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\EmergentCamera.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+</Project>

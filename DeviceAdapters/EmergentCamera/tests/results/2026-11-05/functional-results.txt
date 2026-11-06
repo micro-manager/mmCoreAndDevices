@@ -1,0 +1,173 @@
+PASS: read Camera = HE-25000SBL-T-M | SN 2017395 | 192.168.206.206
+PASS: read Camera IP Address = 192.168.206.206
+PASS: read Camera Info - Company = Advanced Optical Devices
+PASS: read Camera Info - Connection Speed = 10 Gbit/s (host NIC)
+PASS: read Camera Info - Developer = Dr. Volodymyr Cherkas
+PASS: read Camera Info - Developer Website = www.ao-devices.com
+PASS: read Camera Info - Discovered Cameras = HE-25000SBL-T-M | SN 2017395 | 192.168.206.206
+PASS: read Camera Info - Firmware = 3.35
+PASS: read Camera Info - IP Address = 192.168.206.206
+PASS: read Camera Info - Manufacturer = Emergent
+PASS: read Camera Info - Manufacturer Website = www.emergentvisiontec.com
+PASS: read Camera Info - Model = HE-25000SBL-T-M
+PASS: read Camera Info - Network Interface = Ethernet 2
+PASS: read Camera Info - Serial Number = 2017395
+PASS: read Description = Emergent camera via eSDK; Dr. Volodymyr Cherkas; Advanced Optical Devices (www.ao-devices.com)
+PASS: read Temperature - Camera (C) = 58
+PASS: read Temperature - Network PHY (C) = 72
+PASS: read Temperature - Sensor (C) = 58
+PASS: read Acquisition - Fast Trigger = Off
+PASS: read Acquisition - Frame Count = 1
+PASS: read Acquisition - Frame Rate (fps) = 664
+PASS: read Acquisition - Frame Rate Limit = Off
+PASS: read Acquisition - Mode = Continuous
+PASS: read Exposure - Auto = Off
+PASS: read Exposure - Auto I Gain = 4
+PASS: read Exposure - Auto Maximum (us) = 500
+PASS: read Exposure - Auto Target = 128
+PASS: read Exposure - Time (ms) = 0.1000
+PASS: read Auto Control ROI - Height = 32
+PASS: read Auto Control ROI - Offset X = 0
+PASS: read Auto Control ROI - Offset Y = 0
+PASS: read Auto Control ROI - Width = 240
+PASS: read Gain - Analog (dB) = 0.0000
+PASS: read Gain - Auto = Off
+PASS: read Gain - Auto I Gain = 16
+PASS: read Gain - Auto Target = 128
+PASS: read Gain - Offset = 0
+PASS: read Gain - PGA = 0
+PASS: read Readout - ADC Mode = 10-bit (Bit10)
+PASS: read Readout - Pixel Type = 12-bit (Mono12)
+PASS: read Binning = 1
+PASS: read ROI - Center X = Idle
+PASS: read ROI - Center Y = Idle
+PASS: read ROI - Height = 32
+PASS: read ROI - Offset X = 1640
+PASS: read ROI - Offset Y = 2048
+PASS: read ROI - Width = 240
+PASS: read Trigger - Delay (us) = 0
+PASS: read Trigger - End Exposure Edge = Rising_Edge
+PASS: read Trigger - End Exposure Input = Internal
+PASS: read Trigger - GPIO - Test Generator Frame Time (us) = 16666
+PASS: read Trigger - GPIO 0 - Direction = Output (fixed)
+PASS: read Trigger - GPIO 0 - Output Polarity = Active low
+PASS: read Trigger - GPIO 0 - Output Signal = Exposure
+PASS: read Trigger - GPIO 1 - Direction = Output (fixed)
+PASS: read Trigger - GPIO 1 - Output Polarity = Active high
+PASS: read Trigger - GPIO 1 - Output Signal = Exposure
+PASS: read Trigger - GPIO 2 - Direction = Input (fixed)
+PASS: read Trigger - GPIO 2 - Input Debounce Count = 50
+PASS: read Trigger - GPIO 2 - Input Mode = Exposure
+PASS: read Trigger - GPIO 2 - Input State = Low
+PASS: read Trigger - GPIO 3 - Direction = Input (fixed)
+PASS: read Trigger - GPIO 3 - Input Debounce Count = 50
+PASS: read Trigger - GPIO 3 - Input Mode = Exposure
+PASS: read Trigger - GPIO 3 - Input State = High
+PASS: read Trigger - Mode = Internal
+PASS: read Trigger - Start Edge = Rising_Edge
+PASS: read Trigger - Start Input = GPI_2
+PASS: read PTP - Camera Clock (ns) = 0
+PASS: read PTP - Mode = TwoStep
+PASS: read PTP - Offset (ns) = 0
+PASS: read PTP - Status = Listening
+PASS: read Image LUT - Enabled = Off
+PASS: read Image LUT - Index = 0
+PASS: read Image LUT - Value = 0
+PASS: read Image Orientation - Reverse X = Off
+PASS: read Image Orientation - Reverse Y = Off
+PASS: read Settings - Active File = S:\Projects\Emergent\EmergentCamera-validation\build\Release\x64\Emergent.ini
+PASS: read Settings - File = S:\Projects\Emergent\EmergentCamera-validation\build\Release\x64\Emergent.ini
+PASS: read Settings - Remember = Off
+PASS: read Settings - Save = Idle
+PASS: read Settings - Status = Disabled
+PASS: read TransposeCorrection = 0
+PASS: read TransposeMirrorX = 0
+PASS: read TransposeMirrorY = 0
+PASS: read TransposeXY = 0
+PASS: numeric browser order Readout - ADC Mode = [8-bit (Bit8), 10-bit (Bit10)]
+PASS: numeric browser order Readout - Pixel Type = [8-bit (Mono8), 10-bit (Mono10), 12-bit (Mono12)]
+PASS: unnumbered properties, camera information, fixed GPIO directions and requested default routing
+PASS: requested group enumeration order and frame-rate limit Off default
+PASS: snap bin=1 10-bit (Mono10) 5328x4608 bytes=2 bits=10
+PASS: snap bin=1 12-bit (Mono12) 5328x4608 bytes=2 bits=12
+PASS: snap bin=1 8-bit (Mono8) 5328x4608 bytes=1 bits=8
+PASS: snap bin=2 10-bit (Mono10) 2664x2304 bytes=2 bits=10
+PASS: snap bin=2 12-bit (Mono12) 2664x2304 bytes=2 bits=12
+PASS: snap bin=2 8-bit (Mono8) 2664x2304 bytes=1 bits=8
+PASS: main-window/Core binning and dynamic ROI limits
+PASS: snap aligned ROI 512x256 bytes=1 bits=8
+PASS: snap clear ROI 2664x2304 bytes=1 bits=8
+PASS: snap recovery after invalid ROI 2664x2304 bytes=1 bits=8
+PASS: ROI, centering, clear, invalid input recovery
+Exposure request=3.125 Core=3.12 property=3.1200
+PASS: snap frame-rate limit on 2664x2304 bytes=1 bits=8
+PASS: snap frame-rate limit off 2664x2304 bytes=1 bits=8
+PASS: exposure and frame rate
+PASS: snap acquisition=0 trigger=0 512x256 bytes=1 bits=8
+PASS: sequence acquisition=0 trigger=0 frames=7
+PASS: snap acquisition=0 trigger=1 512x256 bytes=1 bits=8
+PASS: sequence acquisition=0 trigger=1 frames=7
+PASS: snap acquisition=1 trigger=0 512x256 bytes=1 bits=8
+PASS: sequence acquisition=1 trigger=0 frames=7
+PASS: snap acquisition=1 trigger=1 512x256 bytes=1 bits=8
+PASS: sequence acquisition=1 trigger=1 frames=7
+Burst test frame rate=30
+PASS: sequence multiple hardware bursts at 30 fps frames=1003
+PASS: snap after MultiFrame live stopped 64x32 bytes=1 bits=8
+PASS: sequence restart 0 frames=2
+PASS: sequence restart 1 frames=2
+PASS: sequence restart 2 frames=2
+PASS: sequence restart 3 frames=2
+PASS: sequence restart 4 frames=2
+PASS: snap after external wait canceled 64x32 bytes=1 bits=8
+PASS: live, stop, busy protection, external-wait cancellation
+PASS: snap auto exposure 2664x2304 bytes=1 bits=8
+PASS: auto exposure hardware/Core readback
+PASS: write/read/restore Acquisition - Fast Trigger
+PASS: write/read/restore Acquisition - Frame Count
+PASS: write/read/restore Exposure - Auto
+PASS: write/read/restore Exposure - Auto I Gain
+PASS: write/read/restore Exposure - Auto Maximum (us)
+PASS: write/read/restore Exposure - Auto Target
+PASS: write/read/restore Auto Control ROI - Height
+PASS: write/read/restore Auto Control ROI - Offset X
+PASS: write/read/restore Auto Control ROI - Offset Y
+PASS: write/read/restore Auto Control ROI - Width
+PASS: write/read/restore Gain - Analog (dB)
+PASS: write/read/restore Gain - Auto
+PASS: write/read/restore Gain - Auto I Gain
+PASS: write/read/restore Gain - Auto Target
+PASS: write/read/restore Gain - Offset
+PASS: write/read/restore Gain - PGA
+PASS: write/read/restore Trigger - Delay (us)
+PASS: write/read/restore Trigger - End Exposure Edge
+PASS: write/read/restore Trigger - End Exposure Input
+PASS: write/read/restore Trigger - GPIO - Test Generator Frame Time (us)
+PASS: write/read/restore Trigger - GPIO 0 - Output Polarity
+PASS: write/read/restore Trigger - GPIO 0 - Output Signal
+PASS: write/read/restore Trigger - GPIO 1 - Output Polarity
+PASS: write/read/restore Trigger - GPIO 1 - Output Signal
+PASS: write/read/restore Trigger - GPIO 2 - Input Debounce Count
+PASS: write/read/restore Trigger - GPIO 2 - Input Mode
+PASS: write/read/restore Trigger - GPIO 3 - Input Debounce Count
+PASS: write/read/restore Trigger - GPIO 3 - Input Mode
+PASS: write/read/restore Trigger - Mode
+PASS: write/read/restore Trigger - Start Edge
+PASS: write/read/restore Trigger - Start Input
+PASS: write/read/restore PTP - Mode
+PASS: write/read/restore Image LUT - Enabled
+PASS: snap Image Orientation - Reverse X=Off 2664x2304 bytes=1 bits=8
+PASS: snap Image Orientation - Reverse X=On 2664x2304 bytes=1 bits=8
+PASS: write/read/restore Image Orientation - Reverse X
+PASS: snap Image Orientation - Reverse Y=Off 2664x2304 bytes=1 bits=8
+PASS: snap Image Orientation - Reverse Y=On 2664x2304 bytes=1 bits=8
+PASS: write/read/restore Image Orientation - Reverse Y
+PASS: snap ADC=10-bit (Bit10) 10-bit (Mono10) 2664x2304 bytes=2 bits=10
+PASS: snap ADC=10-bit (Bit10) 12-bit (Mono12) 2664x2304 bytes=2 bits=12
+PASS: snap ADC=10-bit (Bit10) 8-bit (Mono8) 2664x2304 bytes=1 bits=8
+PASS: snap ADC=8-bit (Bit8) 10-bit (Mono10) 2664x2304 bytes=2 bits=10
+PASS: snap ADC=8-bit (Bit8) 12-bit (Mono12) 2664x2304 bytes=2 bits=12
+PASS: snap ADC=8-bit (Bit8) 8-bit (Mono8) 2664x2304 bytes=1 bits=8
+PASS: LUT index/value/restore
+PASS: restored original camera settings and ROI
+RESULT: failures=0

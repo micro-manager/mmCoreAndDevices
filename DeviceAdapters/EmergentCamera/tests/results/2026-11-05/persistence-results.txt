@@ -1,0 +1,7 @@
+PASS: explicit Save now, serial isolation, and other-camera section preservation
+PASS: automatic clean-shutdown save and startup restore of ROI, binning, exposure, gain, format, frame rate and trigger/GPIO
+PASS: unsupported file version reported; camera still captures; file preserved
+PASS: invalid numeric/ROI entries skipped; acquisition remains usable
+PASS: settings write failure reported without preventing acquisition
+PASS: restored starting camera settings; prepared initial Emergent.ini
+RESULT: failures=0

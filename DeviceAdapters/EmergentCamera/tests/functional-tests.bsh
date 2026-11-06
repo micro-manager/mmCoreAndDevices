@@ -1,0 +1,290 @@
+// Copyright (c) 2026, Dr. Volodymyr Cherkas
+// SPDX-License-Identifier: BSD-3-Clause
+
+import mmcorej.*;
+import java.util.*;
+import java.io.*;
+
+work = System.getenv("EMERGENT_TEST_OUTPUT");
+out = new PrintWriter(new FileWriter(work+"/functional-results.txt"), true);
+failures = new ArrayList();
+void log(String text) { print(text); out.println(text); }
+void check(boolean condition, String message) { if (!condition) throw new Exception(message); }
+void failed(String name, Exception e) { failures.add(name); log("FAIL: " + name + " : " + e); }
+void set(String name, String value) {
+  if(name.equals("Readout - Pixel Type") && value.startsWith("Mono")) value=value.substring(4)+"-bit ("+value+")";
+  if(name.equals("Readout - ADC Mode") && value.startsWith("Bit")) value=value.substring(3)+"-bit ("+value+")";
+  core.setProperty("Camera", name, value);
+}
+String get(String name) { return core.getProperty("Camera", name); }
+void snap(String label) {
+  core.snapImage();
+  image = core.getImage();
+  check(java.lang.reflect.Array.getLength(image) == core.getImageWidth()*core.getImageHeight(), label+" image size");
+  check(core.getNumberOfComponents()==1, label+" mono components");
+  log("PASS: snap "+label+" "+core.getImageWidth()+"x"+core.getImageHeight()+" bytes="+core.getBytesPerPixel()+" bits="+core.getImageBitDepth());
+}
+void sequence(String label, int count) {
+  core.clearCircularBuffer();
+  core.startSequenceAcquisition(count, 0, true);
+  double fps=Double.parseDouble(get("Acquisition - Frame Rate (fps)"));
+  long deadline = System.currentTimeMillis()+Math.max(12000L,(long)(count*1000.0/fps+8000));
+  int received = 0;
+  while ((core.isSequenceRunning() || core.getRemainingImageCount()>0) && System.currentTimeMillis()<deadline) {
+    if (core.getRemainingImageCount()>0) {
+      tagged = core.popNextTaggedImage(); image = tagged.pix;
+      check(tagged.tags.toString().contains("Emergent-HardwareTimestampNs"),label+" hardware timestamp metadata");
+      check(java.lang.reflect.Array.getLength(image)==core.getImageWidth()*core.getImageHeight(),label+" sequence image size");
+      received++;
+    } else Thread.sleep(2);
+  }
+  core.stopSequenceAcquisition();
+  check(received==count,label+" received "+received+"/"+count);
+  check(!core.isBufferOverflowed(),label+" overflow");
+  log("PASS: sequence "+label+" frames="+received);
+}
+core = new CMMCore();
+saved = new LinkedHashMap();
+savedROI = null;
+initialized = false;
+try {
+  core.setPrimaryLogFile(work+"/functional-core.log");
+  core.enableDebugLog(true);
+  paths = new StrVector(); paths.add(System.getenv("EMERGENT_ADAPTER_PATH"));
+  core.setDeviceAdapterSearchPaths(paths);
+  core.loadDevice("Camera", "EmergentCamera", "EmergentCamera");
+  set("Camera IP Address", System.getenv("EMERGENT_CAMERA_IP"));
+  set("Settings - Remember","Off");
+  core.initializeDevice("Camera");
+  core.setCameraDevice("Camera");
+  initialized = true;
+  savedROI = core.getROI();
+  properties = core.getDevicePropertyNames("Camera");
+  snapshot = new PrintWriter(new FileWriter(work+"/settings-before.txt"));
+  for(int i=0;i<properties.size();i++) {
+    p=properties.get(i);
+    try {
+      value=get(p);
+      check(!p.matches("^[0-9]+\\.[0-9]+.*"),"numbered property remains: "+p);
+      snapshot.println(p+"="+value);
+      if(!core.isPropertyReadOnly("Camera",p) && !core.isPropertyPreInit("Camera",p)) saved.put(p,value);
+      log("PASS: read "+p+" = "+value);
+    } catch(Exception e) { failed("read "+p,e); }
+  }
+  snapshot.close();
+  try {
+    for(p : new String[]{"Readout - ADC Mode","Readout - Pixel Type"}) {
+      item = new org.micromanager.internal.utils.PropertyItem();
+      item.type=PropertyType.String;
+      item.allowed=core.getAllowedPropertyValues("Camera",p).toArray();
+      item.sort();
+      int previous=0;
+      for(int n=0;n<item.allowed.length;n++) {
+        depth=Integer.parseInt(item.allowed[n].substring(0,item.allowed[n].indexOf('-')));
+        check(depth>previous,p+" browser order"); previous=depth;
+      }
+      log("PASS: numeric browser order "+p+" = "+Arrays.toString(item.allowed));
+    }
+    check(get("Camera Info - IP Address").equals(System.getenv("EMERGENT_CAMERA_IP")),"connected IP");
+    check(get("Camera Info - Connection Speed").contains("Gbit/s"),"connection speed unavailable");
+    check(get("Camera Info - Manufacturer").equals("Emergent"),"manufacturer");
+    check(get("Camera Info - Manufacturer Website").equals("www.emergentvisiontec.com"),"manufacturer website");
+    check(get("Camera Info - Developer Website").equals("www.ao-devices.com"),"developer website");
+    for(int line=0;line<4;line++) {
+      p="Trigger - GPIO "+line+" - Direction";
+      check(core.isPropertyReadOnly("Camera",p),"fixed direction must be read-only");
+      check(get(p).equals(line<2?"Output (fixed)":"Input (fixed)"),"direction "+line);
+    }
+    check(get("Trigger - Start Input").equals("GPI_2"),"default acquisition start GPI2");
+    check(get("Trigger - GPIO 2 - Input Mode").equals("Exposure"),"GPI2 default function");
+    check(get("Trigger - GPIO 1 - Output Signal").equals("Exposure"),"default exposure-active GPO1");
+    check(get("Trigger - GPIO 1 - Output Polarity").equals("Active high"),"default output active high");
+    log("PASS: unnumbered properties, camera information, fixed GPIO directions and requested default routing");
+  } catch(Exception e) { failed("property presentation and GPIO defaults",e); }
+  set("Trigger - Mode","Internal");
+  set("PTP - Mode","Off");
+  set("Trigger - End Exposure Input","Internal");
+  set("Exposure - Auto","Off");
+  set("Gain - Auto","Off");
+  set("Acquisition - Frame Rate Limit","Off");
+  core.setExposure(2);
+
+  try {
+    check(get("Acquisition - Frame Rate Limit").equals("Off"),"frame-rate limit defaults Off");
+    names=Arrays.asList(properties.toArray());
+    check(names.indexOf("Camera Info - Model") < names.indexOf("Temperature - Sensor (C)"),"info before temperatures");
+    check(names.indexOf("Temperature - Sensor (C)") < names.indexOf("Acquisition - Mode"),"temperatures before acquisition");
+    check(names.indexOf("Acquisition - Mode") < names.indexOf("Exposure - Time (ms)"),"acquisition before exposure");
+    check(names.indexOf("Exposure - Time (ms)") < names.indexOf("Gain - Analog (dB)"),"exposure before gain");
+    check(names.contains("Trigger - GPIO 1 - Output Signal") && !names.contains("GPIO 1 - Output Signal"),"GPIO under Trigger");
+    log("PASS: requested group enumeration order and frame-rate limit Off default");
+    bins=core.getAllowedPropertyValues("Camera",MMCoreJ.getG_Keyword_Binning());
+    check(Arrays.asList(bins.toArray()).containsAll(Arrays.asList(new String[]{"1","2"})),"main-window binning options");
+    for(int b=1;b<=2;b++) {
+      core.setBinning(b);
+      core.clearROI();
+      check(core.getBinning()==b,"Core binning getter");
+      check(get("Binning").equals(""+b),"binning property/Core agreement");
+      check(core.getImageWidth()==5328/b && core.getImageHeight()==4608/b,"full-frame geometry after binning");
+      check(core.getPropertyUpperLimit("Camera","ROI - Width")==5328/b,"ROI width limit after binning");
+      check(core.getPropertyUpperLimit("Camera","ROI - Height")==4608/b,"ROI height limit after binning");
+      formats=core.getAllowedPropertyValues("Camera","Readout - Pixel Type");
+      for(int f=0;f<formats.size();f++) {
+        format=formats.get(f); set("Readout - Pixel Type",format);
+        check(core.getBytesPerPixel()==(format.startsWith("8-")?1:2),"pixel bytes "+format);
+        check(core.getImageBitDepth()==Integer.parseInt(format.substring(0,format.indexOf('-'))),"pixel depth "+format);
+        snap("bin="+b+" "+format);
+      }
+    }
+    set("Binning","1"); check(get("Binning").equals("1") && core.getBinning()==1,"property to Core binning");
+    log("PASS: main-window/Core binning and dynamic ROI limits");
+  } catch(Exception e) { failed("binning and pixel formats",e); }
+
+  try {
+    core.setBinning(2); core.clearROI();
+    core.setROI(19,35,517,263);
+    roi=core.getROI();
+    check(roi.x==16 && roi.y==32 && roi.width==512 && roi.height==256,"ROI alignment: "+roi);
+    snap("aligned ROI");
+    set("ROI - Center X","Center now");
+    set("ROI - Center Y","Center now");
+    roi=core.getROI();
+    check(Math.abs(roi.x-(2664-512)/2)<=8 && Math.abs(roi.y-(2304-256)/2)<=16,"ROI centering "+roi);
+    check(get("ROI - Center X").equals("Idle"),"center command reset");
+    core.clearROI(); check(core.getImageWidth()==2664 && core.getImageHeight()==2304,"clear ROI");
+    snap("clear ROI");
+    boolean rejected=false; try { core.setROI(99999,0,32,32); } catch(Exception expected) { rejected=true; }
+    check(rejected,"invalid ROI rejected"); snap("recovery after invalid ROI");
+    log("PASS: ROI, centering, clear, invalid input recovery");
+  } catch(Exception e) { failed("ROI",e); }
+
+  try {
+    set("Acquisition - Frame Rate Limit","Off");
+    core.setExposure(3.125);
+    log("Exposure request=3.125 Core="+core.getExposure()+" property="+get("Exposure - Time (ms)"));
+    check(Math.abs(core.getExposure()-3.125)<0.02,"Core exposure actual="+core.getExposure());
+    check(Math.abs(Double.parseDouble(get("Exposure - Time (ms)"))-core.getExposure())<0.0001,"property exposure readback matches Core");
+    set("Exposure - Time (ms)","4.5"); check(Math.abs(core.getExposure()-4.5)<0.002,"property to Core exposure");
+    set("Acquisition - Frame Rate Limit","On");
+    set("Acquisition - Frame Rate (fps)","10");
+    check(get("Acquisition - Frame Rate (fps)").equals("10"),"frame rate limit");
+    snap("frame-rate limit on");
+    set("Acquisition - Frame Rate Limit","Off");
+    snap("frame-rate limit off");
+    log("PASS: exposure and frame rate");
+  } catch(Exception e) { failed("exposure/frame rate",e); }
+
+  try {
+    core.setROI(0,0,512,256); set("Readout - Pixel Type","Mono8");
+    core.setCircularBufferMemoryFootprint(64);
+    for(int a=0;a<2;a++) {
+      set("Acquisition - Mode",a==0?"Continuous":"MultiFrame");
+      for(int t=0;t<2;t++) {
+        set("Trigger - Mode",t==0?"Internal":"Software");
+        snap("acquisition="+a+" trigger="+t);
+        sequence("acquisition="+a+" trigger="+t,7);
+      }
+    }
+    set("Acquisition - Mode","MultiFrame"); set("Trigger - Mode","Software");
+    core.setROI(0,0,64,32);
+    set("Acquisition - Frame Rate Limit","On"); set("Acquisition - Frame Rate (fps)","30");
+    log("Burst test frame rate="+get("Acquisition - Frame Rate (fps)"));
+    sequence("multiple hardware bursts at 30 fps",1003);
+    core.startContinuousSequenceAcquisition(0); Thread.sleep(250); core.stopSequenceAcquisition();
+    check(core.getRemainingImageCount()>0,"MultiFrame live frames");
+    snap("after MultiFrame live stopped");
+    set("Acquisition - Mode","Continuous"); set("Trigger - Mode","Internal");
+    for(int i=0;i<5;i++) sequence("restart "+i,2);
+    core.startContinuousSequenceAcquisition(0); Thread.sleep(400);
+    check(core.getRemainingImageCount()>0,"live frames");
+    boolean rejected=false; try { core.setBinning(1); } catch(Exception expected) { rejected=true; }
+    check(rejected,"binning blocked during live");
+    core.stopSequenceAcquisition(); check(!core.isSequenceRunning(),"live stopped");
+    set("Trigger - Mode","External");
+    core.startContinuousSequenceAcquisition(0); Thread.sleep(200);
+    long started=System.currentTimeMillis(); core.stopSequenceAcquisition();
+    check(System.currentTimeMillis()-started<1500,"interrupt external trigger wait");
+    set("Trigger - Mode","Internal"); snap("after external wait canceled");
+    log("PASS: live, stop, busy protection, external-wait cancellation");
+  } catch(Exception e) { core.stopSequenceAcquisition(); failed("acquisition",e); }
+  set("Acquisition - Mode","Continuous"); set("Trigger - Mode","Internal");
+  core.clearROI();
+  try {
+    oldExposure=get("Exposure - Time (ms)");
+    set("Exposure - Auto","On"); snap("auto exposure");
+    actual=core.getExposure(); check(Math.abs(actual-Double.parseDouble(get("Exposure - Time (ms)")))<0.0001,"auto exposure Core readback");
+    set("Exposure - Auto","Off"); set("Exposure - Time (ms)",oldExposure);
+    log("PASS: auto exposure hardware/Core readback");
+  } catch(Exception e) { failed("auto exposure",e); set("Exposure - Auto","Off"); }
+
+  // Exercise every remaining exposed feature with safe representative values.
+  skip = Arrays.asList(new String[]{"Binning","Binning","Exposure - Time (ms)","Readout - ADC Mode","Readout - Pixel Type","Acquisition - Frame Rate Limit","Acquisition - Frame Rate (fps)","Acquisition - Mode","Image LUT - Index","Image LUT - Value"});
+  iter=saved.keySet().iterator();
+  while(iter.hasNext()) {
+    p=iter.next();
+    if(skip.contains(p) || p.startsWith("ROI - ") || p.startsWith("Settings - ") || p.startsWith("Transpose")) continue;
+    try {
+      original=get(p);
+      values=core.getAllowedPropertyValues("Camera",p);
+      if(values.size()>0) {
+        for(int j=0;j<values.size();j++) {
+          value=values.get(j); set(p,value); check(get(p).equals(value),"enum readback "+value);
+          if(p.startsWith("Image Orientation - Reverse")) snap(p+"="+value);
+        }
+      } else if(core.hasPropertyLimits("Camera",p)) {
+        low=core.getPropertyLowerLimit("Camera",p); high=core.getPropertyUpperLimit("Camera",p);
+        value=core.getPropertyType("Camera",p)==PropertyType.Float ? ""+(low+(high-low)/4) : ""+(long)(low+(high-low)/4);
+        set(p,value); actual=Double.parseDouble(get(p)); check(actual>=low && actual<=high,"numeric readback");
+      } else set(p,original);
+      set(p,original);
+      log("PASS: write/read/restore "+p);
+    } catch(Exception e) { failed("feature "+p,e); try { set(p,saved.get(p)); } catch(Exception ignored) {} }
+  }
+
+  try {
+    adcValues=core.getAllowedPropertyValues("Camera","Readout - ADC Mode");
+    for(int i=0;i<adcValues.size();i++) {
+      set("Readout - ADC Mode",adcValues.get(i));
+      check(get("Readout - ADC Mode").equals(adcValues.get(i)),"ADC readback");
+      formats=core.getAllowedPropertyValues("Camera","Readout - Pixel Type");
+      for(int f=0;f<formats.size();f++) { set("Readout - Pixel Type",formats.get(f)); snap("ADC="+adcValues.get(i)+" "+formats.get(f)); }
+    }
+  } catch(Exception e) { failed("ADC modes",e); }
+
+  try {
+    oldIndex=get("Image LUT - Index");
+    set("Image LUT - Index","17"); oldValue=get("Image LUT - Value");
+    set("Image LUT - Value","123"); check(get("Image LUT - Value").equals("123"),"LUT readback");
+    set("Image LUT - Value",oldValue); set("Image LUT - Index",oldIndex);
+    log("PASS: LUT index/value/restore");
+  } catch(Exception e) { failed("LUT",e); }
+} catch(Exception e) { failed("initialization or test harness",e); }
+finally {
+  if(initialized) {
+    try {
+      core.stopSequenceAcquisition();
+      set("Trigger - Mode","Internal"); set("Trigger - End Exposure Input","Internal");
+      set("Exposure - Auto","Off"); set("Gain - Auto","Off");
+      set("Acquisition - Frame Rate Limit","On");
+      set("Acquisition - Frame Rate (fps)","1");
+      set("Readout - ADC Mode",saved.get("Readout - ADC Mode"));
+      set("Readout - Pixel Type",saved.get("Readout - Pixel Type"));
+      set("Binning",saved.get("Binning")); core.clearROI();
+      core.setROI(savedROI.x,savedROI.y,savedROI.width,savedROI.height);
+      iter=saved.keySet().iterator();
+      while(iter.hasNext()) {
+        p=iter.next();
+        if(p.startsWith("Settings - ") || p.startsWith("ROI - ") || p.equals("Binning") || p.equals("Acquisition - Frame Rate Limit") || p.equals("Acquisition - Frame Rate (fps)") || p.equals("Exposure - Time (ms)") || p.equals("Exposure - Auto") || p.equals("Gain - Auto") || p.equals("Readout - ADC Mode") || p.equals("Readout - Pixel Type") || p.equals("Image LUT - Value")) continue;
+        try { get(p); set(p,saved.get(p)); } catch(Exception e) { failed("restore "+p,e); }
+      }
+      set("Exposure - Time (ms)",saved.get("Exposure - Time (ms)"));
+      set("Acquisition - Frame Rate Limit","On");
+      set("Acquisition - Frame Rate (fps)",saved.get("Acquisition - Frame Rate (fps)"));
+      set("Acquisition - Frame Rate Limit",saved.get("Acquisition - Frame Rate Limit"));
+      set("Exposure - Auto",saved.get("Exposure - Auto")); set("Gain - Auto",saved.get("Gain - Auto"));
+      log("PASS: restored original camera settings and ROI");
+    } catch(Exception e) { failed("restore settings",e); }
+  }
+  core.unloadAllDevices(); core.delete();
+  log("RESULT: failures="+failures.size()); out.close();
+}

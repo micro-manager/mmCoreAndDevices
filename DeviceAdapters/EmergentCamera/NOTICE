@@ -1,0 +1,24 @@
+EmergentCamera Micro-Manager device adapter
+
+Copyright (c) 2026, Dr. Volodymyr Cherkas
+Original author: Dr. Volodymyr Cherkas
+Author profile: https://github.com/VolodymyrCherkas
+Original project: https://github.com/VolodymyrCherkas/mmCoreAndDevices/tree/main/DeviceAdapters/EmergentCamera
+
+The original adapter code, build files, test scripts, and accompanying
+original documentation are licensed under BSD-3-Clause. See LICENSE.
+
+Public forks and redistributed modified versions must retain the original
+author's copyright notice, the license conditions, and the disclaimer as
+required by LICENSE. Binary redistributions must reproduce them in their
+documentation and/or other accompanying materials. Modifiers may add their
+own copyright notices without removing the original author's notice.
+
+This NOTICE identifies the original author and summarizes the standard
+license; it does not add conditions beyond BSD-3-Clause. The author's name
+may not be used to imply endorsement of a fork or modification without
+specific prior written permission.
+
+Micro-Manager MMDevice support code retains its existing BSD-3-Clause terms
+and copyright, reproduced in licenses/MMDevice-BSD-3-Clause.txt.
+The Emergent eSDK is not included and remains subject to the vendor's terms.
