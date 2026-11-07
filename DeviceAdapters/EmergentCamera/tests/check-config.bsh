@@ -1,0 +1,13 @@
+// Copyright (c) 2026, Dr. Volodymyr Cherkas
+// SPDX-License-Identifier: BSD-3-Clause
+
+import mmcorej.*;
+core=new CMMCore();
+try {
+  core.setPrimaryLogFile(System.getenv("EMERGENT_TEST_OUTPUT")+"/config-check-core.log");
+  paths=new StrVector(); paths.add(System.getenv("EMERGENT_ADAPTER_PATH")); core.setDeviceAdapterSearchPaths(paths);
+  core.loadSystemConfiguration(System.getenv("EMERGENT_TEST_OUTPUT")+"/EmergentCam-migrated.cfg");
+  core.snapImage();
+  print("PASS: migrated configuration loads and captures "+core.getImageWidth()+"x"+core.getImageHeight());
+  print("Connection: "+core.getProperty("EmergentCamera","Camera Info - IP Address")+"; "+core.getProperty("EmergentCamera","Camera Info - Connection Speed"));
+} finally { core.unloadAllDevices(); core.delete(); }

@@ -1,0 +1,97 @@
+// Copyright (c) 2026, Dr. Volodymyr Cherkas
+// SPDX-License-Identifier: BSD-3-Clause
+
+import mmcorej.*;
+import java.io.*;
+import java.util.*;
+import java.nio.file.*;
+
+work=System.getenv("EMERGENT_TEST_OUTPUT");
+out=new PrintWriter(new FileWriter(work+"/persistence-results.txt"),true);
+failures=new ArrayList(); core=null; baselineReady=false;
+void log(String text) { print(text); out.println(text); }
+void check(boolean valid,String label) { if(!valid) throw new Exception(label); }
+void file(String path,String text) { writer=new FileWriter(path); writer.write(text); writer.close(); }
+String contents(String path) { return new String(Files.readAllBytes(new File(path).toPath()),"UTF-8"); }
+CMMCore open(String path,boolean remember) {
+  c=new CMMCore();
+  c.setPrimaryLogFile(work+"/persistence-core.log");
+  paths=new StrVector(); paths.add(System.getenv("EMERGENT_ADAPTER_PATH")); c.setDeviceAdapterSearchPaths(paths);
+  c.loadDevice("Camera","EmergentCamera","EmergentCamera");
+  c.setProperty("Camera","Camera IP Address",System.getenv("EMERGENT_CAMERA_IP"));
+  c.setProperty("Camera","Settings - File",path);
+  c.setProperty("Camera","Settings - Remember",remember?"On":"Off");
+  c.initializeDevice("Camera"); c.setCameraDevice("Camera"); return c;
+}
+void close(CMMCore c) { if(c!=null) { c.unloadAllDevices(); c.delete(); } }
+String get(String p) { return core.getProperty("Camera",p); }
+void set(String p,String v) { core.setProperty("Camera",p,v); }
+baseline=work+"/persistence-baseline-"+System.currentTimeMillis()+".ini";
+path=work+"/persistence-roundtrip.ini";
+try {
+  core=open(baseline,false); set("Settings - Save","Save now");
+  check(get("Settings - Status").startsWith("Saved"),"baseline snapshot");
+  baselineReady=true; close(core); core=null;
+  file(path,"[Emergent]\nFormatVersion=1\n\n[Camera:unconnected]\nModel=another-camera\nUnrelated=keep-me\n");
+  core=open(path,true);
+  check(get("Acquisition - Frame Rate Limit").equals("Off"),"default frame-rate limit Off without matching serial");
+  set("PTP - Mode","Off"); set("Exposure - Auto","Off"); set("Gain - Auto","Off");
+  core.setBinning(2); core.setROI(24,48,512,256);
+  set("Readout - Pixel Type","10-bit (Mono10)");
+  core.setExposure(3.125); set("Gain - Analog (dB)","2");
+  set("Trigger - GPIO 0 - Output Signal","GPO"); set("Trigger - GPIO 0 - Output Polarity","Active high");
+  set("Trigger - GPIO 1 - Output Polarity","Active low");
+  set("Acquisition - Frame Rate Limit","On"); set("Acquisition - Frame Rate (fps)","10");
+  set("Trigger - Mode","Software");
+  set("Settings - Save","Save now");
+  check(contents(path).contains("Unrelated=keep-me"),"other camera section preserved");
+  check(contents(path).contains("[Camera:2017395]"),"section keyed by real camera serial");
+  check(get("Settings - Status").startsWith("Saved"),"explicit save status");
+  log("PASS: explicit Save now, serial isolation, and other-camera section preservation");
+  // Change after the explicit save: only shutdown can persist this value.
+  core.setExposure(4.5);
+  expected=new LinkedHashMap();
+  for(p : new String[]{"Binning","Readout - ADC Mode","Readout - Pixel Type","Exposure - Time (ms)","Gain - Analog (dB)","Acquisition - Frame Rate Limit","Acquisition - Frame Rate (fps)","Trigger - Mode","Trigger - GPIO 0 - Output Signal","Trigger - GPIO 0 - Output Polarity","Trigger - GPIO 1 - Output Polarity"}) expected.put(p,get(p));
+  roi=core.getROI(); close(core); core=null;
+  core=open(path,true);
+  check(get("Settings - Status").startsWith("Restored"),"automatic startup restore status: "+get("Settings - Status"));
+  iterator=expected.keySet().iterator();
+  while(iterator.hasNext()) {
+    p=iterator.next(); check(get(p).equals(expected.get(p)),"restore "+p+" expected="+expected.get(p)+" actual="+get(p));
+  }
+  check(core.getROI().equals(roi),"ROI restore");
+  core.snapImage(); check(core.getImageWidth()==512 && core.getImageHeight()==256,"capture after restore");
+  log("PASS: automatic clean-shutdown save and startup restore of ROI, binning, exposure, gain, format, frame rate and trigger/GPIO");
+  close(core); core=null;
+  malformed=work+"/persistence-future.ini"; original="[Emergent]\nFormatVersion=99\n"; file(malformed,original);
+  core=open(malformed,true);
+  check(get("Settings - Status").startsWith("Restore failed"),"unsupported file version reported");
+  core.snapImage(); close(core); core=null;
+  check(contents(malformed).equals(original),"unsupported file preserved on shutdown");
+  log("PASS: unsupported file version reported; camera still captures; file preserved");
+  invalid=work+"/persistence-invalid-values.ini";
+  file(invalid,"[Emergent]\nFormatVersion=1\n[Camera:2017395]\nModel=HE-25000SBL-T-M\nExposure - Time (ms)=nan\nROI - Offset X=0\nROI - Offset Y=0\nROI - Width=invalid\nROI - Height=256\n");
+  core=open(invalid,true);
+  check(get("Settings - Status").contains("skipped"),"invalid scalar/ROI values reported");
+  check(!Double.isNaN(core.getExposure()),"invalid exposure rejected");
+  core.snapImage(); close(core); core=null;
+  log("PASS: invalid numeric/ROI entries skipped; acquisition remains usable");
+  core=open(work+"/missing-settings-directory/Emergent.ini",true);
+  rejected=false; try { set("Settings - Save","Save now"); } catch(Exception expectedError) { rejected=true; }
+  check(rejected && get("Settings - Status").startsWith("Save failed"),"file-write error reported");
+  core.snapImage(); close(core); core=null;
+  log("PASS: settings write failure reported without preventing acquisition");
+} catch(Exception e) { failures.add(e.toString()); log("FAIL: "+e); }
+finally {
+  try { close(core); core=null; } catch(Exception e) { failures.add(e.toString()); log("FAIL: cleanup "+e); }
+  if(baselineReady) {
+    try {
+      core=open(baseline,true);
+      check(get("Settings - Status").startsWith("Restored"),"baseline restore");
+      close(core); core=null;
+      Files.copy(new File(baseline).toPath(),new File(work+"/startup-settings.ini").toPath(),new CopyOption[]{StandardCopyOption.REPLACE_EXISTING});
+      log("PASS: restored starting camera settings; prepared initial Emergent.ini");
+    } catch(Exception e) { failures.add(e.toString()); log("FAIL: baseline restore "+e); }
+  }
+  log("RESULT: failures="+failures.size()); out.close();
+}

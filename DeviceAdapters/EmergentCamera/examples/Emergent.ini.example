@@ -1,0 +1,58 @@
+; EmergentCamera settings, UTF-8. Saved on clean shutdown or Settings - Save.
+
+[Camera:2017395]
+Acquisition - Fast Trigger=Off
+Acquisition - Frame Count=1
+Acquisition - Frame Rate (fps)=664
+Acquisition - Frame Rate Limit=Off
+Acquisition - Mode=Continuous
+Auto Control ROI - Height=32
+Auto Control ROI - Offset X=0
+Auto Control ROI - Offset Y=0
+Auto Control ROI - Width=240
+Binning=1
+Exposure - Auto=Off
+Exposure - Auto I Gain=4
+Exposure - Auto Maximum (us)=500
+Exposure - Auto Target=128
+Exposure - Time (ms)=0.1000
+Gain - Analog (dB)=0.0000
+Gain - Auto=Off
+Gain - Auto I Gain=16
+Gain - Auto Target=128
+Gain - Offset=0
+Gain - PGA=0
+Image LUT - Enabled=Off
+Image Orientation - Reverse X=Off
+Image Orientation - Reverse Y=Off
+Model=HE-25000SBL-T-M
+PTP - Mode=TwoStep
+ROI - Height=32
+ROI - Offset X=1640
+ROI - Offset Y=2048
+ROI - Width=240
+Readout - ADC Mode=10-bit (Bit10)
+Readout - Pixel Type=12-bit (Mono12)
+RequestedFrameRate=664
+TransposeCorrection=0
+TransposeMirrorX=0
+TransposeMirrorY=0
+TransposeXY=0
+Trigger - Delay (us)=0
+Trigger - End Exposure Edge=Rising_Edge
+Trigger - End Exposure Input=Internal
+Trigger - GPIO - Test Generator Frame Time (us)=16666
+Trigger - GPIO 0 - Output Polarity=Active low
+Trigger - GPIO 0 - Output Signal=Exposure
+Trigger - GPIO 1 - Output Polarity=Active high
+Trigger - GPIO 1 - Output Signal=Exposure
+Trigger - GPIO 2 - Input Debounce Count=50
+Trigger - GPIO 2 - Input Mode=Exposure
+Trigger - GPIO 3 - Input Debounce Count=50
+Trigger - GPIO 3 - Input Mode=Exposure
+Trigger - Mode=Internal
+Trigger - Start Edge=Rising_Edge
+Trigger - Start Input=GPI_2
+
+[Emergent]
+FormatVersion=1

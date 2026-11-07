@@ -1,0 +1,168 @@
+[
+  {
+    "name": "PixelFormat",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "BayerRG8,BayerRG10,BayerRG10Packed,BayerRG12,BayerRG12Packed,Mono8,Mono10,Mono10Packed,Mono12,Mono12Packed,",
+    "value": "Mono12"
+  },
+  {
+    "name": "HasADCSwitch",
+    "type": 0,
+    "access": 3,
+    "error": 0,
+    "value": 1
+  },
+  {
+    "name": "ADC",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "Bit8,Bit10,",
+    "value": "Bit10"
+  },
+  {
+    "name": "LineTime",
+    "type": 0,
+    "access": 4,
+    "error": 0,
+    "value": 1447
+  },
+  {
+    "name": "LINE_COUNTS_MIN",
+    "type": 0,
+    "access": 3,
+    "error": 0,
+    "value": 63
+  },
+  {
+    "name": "LINE_COUNTS_MIN2",
+    "type": 0,
+    "access": 3,
+    "error": 0,
+    "value": 1447
+  },
+  {
+    "name": "LINE_COUNTS_MAX",
+    "type": 0,
+    "access": 3,
+    "error": 0,
+    "value": 1448
+  },
+  {
+    "name": "PHYTemp",
+    "type": 1,
+    "access": 3
+  },
+  {
+    "name": "PHYSNRMargin",
+    "type": 1,
+    "access": 3
+  },
+  {
+    "name": "HasDualADC",
+    "type": 0,
+    "access": 3,
+    "error": 0,
+    "value": 0
+  },
+  {
+    "name": "GPO_0_Mode",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "Exposure,Readout,GPO,Test_Gen_Uart_Txd,Test_Generator,Strobe,",
+    "value": "Exposure"
+  },
+  {
+    "name": "GPO_0_Polarity",
+    "type": 2,
+    "access": 4
+  },
+  {
+    "name": "GPO_1_Mode",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "Exposure,Readout,GPO,Test_Gen_Uart_Txd,Test_Generator,Strobe,",
+    "value": "Exposure"
+  },
+  {
+    "name": "GPO_1_Polarity",
+    "type": 2,
+    "access": 4
+  },
+  {
+    "name": "GPI_3_Mode",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "Exposure,Test_Gen_Uart_Rxd,",
+    "value": "Exposure"
+  },
+  {
+    "name": "GPI_3_Polarity",
+    "type": 2,
+    "access": 3
+  },
+  {
+    "name": "GPI_3_Debounce_Count",
+    "type": 0,
+    "access": 4,
+    "error": 0,
+    "value": 50
+  },
+  {
+    "name": "GPI_2_Mode",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "Exposure,Test_Gen_Uart_Rxd,",
+    "value": "Exposure"
+  },
+  {
+    "name": "GPI_2_Polarity",
+    "type": 2,
+    "access": 3
+  },
+  {
+    "name": "GPI_2_Debounce_Count",
+    "type": 0,
+    "access": 4,
+    "error": 0,
+    "value": 50
+  },
+  {
+    "name": "GPI_Start_Exp_Mode",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "GPI_2,GPI_3,",
+    "value": "GPI_2"
+  },
+  {
+    "name": "GPI_Start_Exp_Event",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "Rising_Edge,Falling_Edge,",
+    "value": "Rising_Edge"
+  },
+  {
+    "name": "GPI_End_Exp_Mode",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "GPI_2,GPI_3,Internal,",
+    "value": "Internal"
+  },
+  {
+    "name": "GPI_End_Exp_Event",
+    "type": 6,
+    "access": 4,
+    "error": 0,
+    "choices": "Rising_Edge,Falling_Edge,",
+    "value": "Rising_Edge"
+  }
+]

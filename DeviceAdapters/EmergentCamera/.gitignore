@@ -1,0 +1,29 @@
+# Local editors and generated builds
+.vs/
+.vscode/
+build/
+build-*/
+*.user
+*.suo
+*.obj
+*.o
+*.pdb
+*.exp
+*.lib
+*.dll
+*.so
+*.so.*
+*.pyc
+__pycache__/
+
+# Only these deliberately distributed binaries belong in Git
+!/binaries/windows-x64/mmgr_dal_EmergentCamera.dll
+!/binaries/linux-x86_64/libmmgr_dal_EmergentCamera.so.0
+
+# Local camera settings and new hardware-test output
+Emergent.ini
+tests/*.ini
+tests/*.log
+tests/*-results.txt
+tests/settings-before.txt
+tests/camera-capabilities.json

@@ -1,0 +1,42 @@
+{
+  "ubuntu-noble-updates-Packages.xz": {
+    "url": "https://archive.ubuntu.com/ubuntu/dists/noble-updates/main/binary-amd64/Packages.xz",
+    "sha256": "62e7ae4b685beeb76a521200b1464b29e2ac583c0ef22200af5ab7cc9b747f5f"
+  },
+  "libc6_2.39-0ubuntu8.9_amd64.deb": {
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.39-0ubuntu8.9_amd64.deb",
+    "sha256": "ff5557d99b51f761c4b7c92368b9cc45565eda17df9bf9eb4b134d09825008be"
+  },
+  "libc6-dev_2.39-0ubuntu8.9_amd64.deb": {
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6-dev_2.39-0ubuntu8.9_amd64.deb",
+    "sha256": "e13d5fcc1b2a86f75bca8e0026a8e39f24fe97ca86e92be79991f8697eb1306f"
+  },
+  "libgcc-13-dev_13.3.0-6ubuntu2~24.04.1_amd64.deb": {
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13/libgcc-13-dev_13.3.0-6ubuntu2~24.04.1_amd64.deb",
+    "sha256": "cd689db2691edaa10f37329307292796bb599e722e0505c79e14caaa1fe9a93a"
+  },
+  "libgcc-s1_14.2.0-4ubuntu2~24.04.1_amd64.deb": {
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-14/libgcc-s1_14.2.0-4ubuntu2~24.04.1_amd64.deb",
+    "sha256": "aa7fadbe33b78bcf99885318040601c550c208929565b179891d9a3cc2aa68cd"
+  },
+  "libstdc++-13-dev_13.3.0-6ubuntu2~24.04.1_amd64.deb": {
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-13/libstdc++-13-dev_13.3.0-6ubuntu2~24.04.1_amd64.deb",
+    "sha256": "ee5633e863e19c3381ed97842ce35ed32ede96a3d1ae4e94c051d3036fe21347"
+  },
+  "libstdc++6_14.2.0-4ubuntu2~24.04.1_amd64.deb": {
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-14/libstdc++6_14.2.0-4ubuntu2~24.04.1_amd64.deb",
+    "sha256": "a51f8de7829211db961a31f02158058ad1a95f92ac6d0a5dff6350e2821c54c0"
+  },
+  "linux-libc-dev_6.8.0-147.147_amd64.deb": {
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/l/linux/linux-libc-dev_6.8.0-147.147_amd64.deb",
+    "sha256": "fec8e4a308c03cd98dace67370a8d5a8031c36741796065c9f6e3f9548ab0cd2"
+  },
+  "zig-0.14.1.zip": {
+    "url": "https://ziglang.org/download/0.14.1/zig-x86_64-windows-0.14.1.zip",
+    "sha256": "554f5378228923ffd558eac35e21af020c73789d87afeabf4bfd16f2e6feed2c"
+  },
+  "emergent_camera.4.08.05.2_14_02_RMAX.deb": {
+    "local_source": "S:\\Inst\\eSDK_4_08_05_eCap_2_14_02_Ubuntu_24_04_6_17_0_x64\\emergent_camera.4.08.05.2_14_02_RMAX.deb",
+    "sha256": "0f8ecfb3649aa6a1816fce57346a85c3d6fc3eb0f979ae7f27df5f474279d3ab"
+  }
+}

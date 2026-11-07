@@ -1,0 +1,16 @@
+* text=auto eol=lf
+# Normalize source/documentation while keeping supplied binaries byte-exact
+*.cpp text eol=lf
+*.h text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.bsh text eol=lf
+*.ps1 text eol=crlf
+*.vcxproj text eol=crlf
+*.filters text eol=crlf
+CMakeLists.txt text eol=lf
+*.dll binary
+*.so binary
+*.so.* binary
