@@ -26,7 +26,7 @@
 #include "Error.h"
 #include "LibraryInfo/LibraryPaths.h"
 #include "LoadableModules/LoadedDeviceAdapter.h"
-#include "LoadableModules/LoadedDeviceAdapterImplMock.h"
+#include "LoadableModules/LoadedDeviceAdapterImplClient.h"
 #include "LoadableModules/LoadedDeviceAdapterImplRegular.h"
 #include "PluginManager.h"
 
@@ -170,8 +170,13 @@ CPluginManager::GetDeviceAdapter(const char* moduleName)
 }
 
 void
-CPluginManager::LoadMockAdapter(const std::string& name, MockDeviceAdapter* impl)
+CPluginManager::LoadClientAdapter(const std::string& name,
+      std::shared_ptr<ClientDeviceAdapter> impl)
 {
+   if (!impl)
+   {
+      throw CMMError("Null device adapter");
+   }
    if (name.empty())
    {
       throw CMMError("Empty device adapter module name");
@@ -184,7 +189,7 @@ CPluginManager::LoadMockAdapter(const std::string& name, MockDeviceAdapter* impl
    }
 
    moduleMap_[name] = std::make_shared<LoadedDeviceAdapter>(
-      name, std::make_unique<LoadedDeviceAdapterImplMock>(impl));
+      name, std::make_unique<LoadedDeviceAdapterImplClient>(std::move(impl)));
 }
 
 

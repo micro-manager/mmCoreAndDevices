@@ -103,7 +103,7 @@
     <ClCompile Include="FrameBuffer.cpp" />
     <ClCompile Include="LibraryInfo\LibraryPaths.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapter.cpp" />
-    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplMock.cpp" />
+    <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplClient.cpp" />
     <ClCompile Include="LoadableModules\LoadedDeviceAdapterImplRegular.cpp" />
     <ClCompile Include="LoadableModules\LoadedModule.cpp" />
     <ClCompile Include="LoadableModules\LoadedModuleImpl.cpp" />
@@ -120,6 +120,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CircularBuffer.h" />
+    <ClInclude Include="ClientDeviceAdapter.h" />
     <ClInclude Include="ConfigGroup.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="CoreCallback.h" />
@@ -155,7 +156,7 @@
     <ClInclude Include="LibraryInfo\LibraryPaths.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapter.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImpl.h" />
-    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplMock.h" />
+    <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplClient.h" />
     <ClInclude Include="LoadableModules\LoadedDeviceAdapterImplRegular.h" />
     <ClInclude Include="LoadableModules\LoadedModule.h" />
     <ClInclude Include="LoadableModules\LoadedModuleImpl.h" />
@@ -178,7 +179,6 @@
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="MMCore.h" />
     <ClInclude Include="MMEventCallback.h" />
-    <ClInclude Include="MockDeviceAdapter.h" />
     <ClInclude Include="Notification.h" />
     <ClInclude Include="NotificationQueue.h" />
     <ClInclude Include="PluginManager.h" />

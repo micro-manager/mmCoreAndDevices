@@ -12,6 +12,7 @@ libMMCore_la_SOURCES = \
 	../MMDevice/ModuleInterface.h \
 	CircularBuffer.cpp \
 	CircularBuffer.h \
+	ClientDeviceAdapter.h \
 	ConfigGroup.h \
 	Configuration.cpp \
 	Configuration.h \
@@ -71,8 +72,8 @@ libMMCore_la_SOURCES = \
 	LoadableModules/LoadedDeviceAdapter.cpp \
 	LoadableModules/LoadedDeviceAdapter.h \
 	LoadableModules/LoadedDeviceAdapterImpl.h \
-	LoadableModules/LoadedDeviceAdapterImplMock.cpp \
-	LoadableModules/LoadedDeviceAdapterImplMock.h \
+	LoadableModules/LoadedDeviceAdapterImplClient.cpp \
+	LoadableModules/LoadedDeviceAdapterImplClient.h \
 	LoadableModules/LoadedDeviceAdapterImplRegular.cpp \
 	LoadableModules/LoadedDeviceAdapterImplRegular.h \
 	LoadableModules/LoadedModule.cpp \
@@ -101,7 +102,6 @@ libMMCore_la_SOURCES = \
 	Logging/MetadataFormatter.h \
 	MMCore.cpp \
 	MMCore.h \
-	MockDeviceAdapter.h \
 	Notification.h \
 	NotificationQueue.h \
 	PluginManager.cpp \
