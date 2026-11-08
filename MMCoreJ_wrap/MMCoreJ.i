@@ -83,8 +83,8 @@
 
 
 // output arguments
-%apply double &OUTPUT { double &x_stage };
-%apply double &OUTPUT { double &y_stage };
+%apply double &OUTPUT { double &xPos };
+%apply double &OUTPUT { double &yPos };
 %apply int &OUTPUT { int &x };
 %apply int &OUTPUT { int &y };
 %apply int &OUTPUT { int &xSize };

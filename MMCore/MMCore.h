@@ -530,8 +530,8 @@ public:
          double dx, double dy) MMCORE_LEGACY_THROW(CMMError);
    void setRelativeXYPosition(double dx, double dy) MMCORE_LEGACY_THROW(CMMError);
    void getXYPosition(const char* xyStageLabel,
-         double &x_stage, double &y_stage) MMCORE_LEGACY_THROW(CMMError);
-   void getXYPosition(double &x_stage, double &y_stage) MMCORE_LEGACY_THROW(CMMError);
+         double &xPos, double &yPos) MMCORE_LEGACY_THROW(CMMError);
+   void getXYPosition(double &xPos, double &yPos) MMCORE_LEGACY_THROW(CMMError);
    double getXPosition(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError);
    double getYPosition(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError);
    double getXPosition() MMCORE_LEGACY_THROW(CMMError);
@@ -620,7 +620,7 @@ public:
    void setGalvoPosition(const char* galvoLabel, double x, double y)
       MMCORE_LEGACY_THROW(CMMError);
    void getGalvoPosition(const char* galvoLabel,
-         double &x_stage, double &y_stage) MMCORE_LEGACY_THROW(CMMError); // using x_stage to get swig to work
+         double &xPos, double &yPos) MMCORE_LEGACY_THROW(CMMError);
    void setGalvoIlluminationState(const char* galvoLabel, bool on)
       MMCORE_LEGACY_THROW(CMMError);
    double getGalvoXRange(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError);
