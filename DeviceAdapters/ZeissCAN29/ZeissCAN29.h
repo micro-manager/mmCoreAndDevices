@@ -406,15 +406,19 @@ class ZeissHub
 
       ZeissUByte GetCommandGroup(ZeissUByte devId) {return commandGroup_[devId];};
       // adds device to map used to direct callbacks
-      void AddCallback(ZeissUByte devId, ZeissPositionReporter* device) 
-      { 
-         usedDevices_.emplace(devId, device); 
+      // Locked with mutex_ since the MonitoringThread reads/writes
+      // usedDevices_ under that same lock (see SetModelPosition etc.)
+      void AddCallback(ZeissUByte devId, ZeissPositionReporter* device)
+      {
+         MMThreadGuard guard(mutex_);
+         usedDevices_.emplace(devId, device);
       }
-      void RemoveCallback(ZeissUByte devId) 
-      { 
-         auto found = usedDevices_.find(devId); 
-         if (found != usedDevices_.end()) 
-            usedDevices_.erase(usedDevices_.find(devId)); 
+      void RemoveCallback(ZeissUByte devId)
+      {
+         MMThreadGuard guard(mutex_);
+         auto found = usedDevices_.find(devId);
+         if (found != usedDevices_.end())
+            usedDevices_.erase(found);
       }
       bool HasDefiniteFocus() { return hasDefiniteFocus_; }
       bool HasColibri() { return hasColibri_; }
@@ -654,6 +658,10 @@ class ZeissScope : public HubBase<ZeissScope>
       bool initialized_;
       std::string port_;
       std::map<ZeissUByte, MM::Device*> deviceMap_;
+      // Guards against DetectInstalledDevices() being invoked more than
+      // once on this instance; a second run would double-delete the
+      // deviceMap_-owned pointers installed by the first run.
+      bool devicesDetected_;
 };
 
 
