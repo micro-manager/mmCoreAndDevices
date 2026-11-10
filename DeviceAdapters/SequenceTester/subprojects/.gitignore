@@ -1,0 +1,14 @@
+/packagecache/
+
+/MMDevice/
+/mmdevice/
+
+# Subprojects installed by meson wrap
+/*-*/
+
+# Ignore *.wrap by default (may be auto-installed transitive dependencies)
+/*.wrap
+
+# Do not ignore wraps we provide
+!/mmdevice.wrap
+!/msgpackc-cxx.wrap
