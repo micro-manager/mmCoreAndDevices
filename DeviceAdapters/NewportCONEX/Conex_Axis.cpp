@@ -451,6 +451,7 @@ void Conex_AxisBase::test()
 
 Axis::Axis(const char* axis) :
    Conex_AxisBase(this),
+   homeOnStartup_(false),
    negativeLimit_(0.0),
    positiveLimit_(0.0),
    speed_(0.0),
@@ -467,6 +468,11 @@ Axis::Axis(const char* axis) :
    // Port
    CPropertyAction* pAct = new CPropertyAction (this, &Axis::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);  
+   // Home on initialization
+   pAct = new CPropertyAction(this, &Axis::OnHomeOnStartup);
+   CreateProperty("HomeOnStartup", "No", MM::String, false, pAct, true);
+   AddAllowedValue("HomeOnStartup", "No");
+   AddAllowedValue("HomeOnStartup", "Yes");
 }
 
 Axis::~Axis()
@@ -524,6 +530,12 @@ int Axis::Initialize()
 
    pAct = new CPropertyAction(this, &Axis::OnAcceleration);
    ret = CreateFloatProperty("Acceleration", acceleration_, false, pAct);
+
+   if (homeOnStartup_) {
+      ret = BaseHome();
+      if (ret != DEVICE_OK)
+         return ret;
+   }
    
    initialized_ = true;
 
@@ -616,6 +628,21 @@ int Axis::GetLimits(double& min, double& max)
 // Action handlers
 // Handle changes and updates to property values.
 ///////////////////////////////////////////////////////////////////////////////
+
+int Axis::OnHomeOnStartup(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet)
+   {
+      pProp->Set(homeOnStartup_ ? "Yes" : "No");
+   }
+   else if (eAct == MM::AfterSet)
+   {
+      std::string val;
+      pProp->Get(val);
+      homeOnStartup_ = (val == "Yes");
+   }
+   return DEVICE_OK;
+}
 
 int Axis::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct)
 {
