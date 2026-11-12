@@ -120,6 +120,7 @@ public:
 
    // action interface
    // ----------------
+   int OnHomeOnStartup(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPort     (MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnSearchHomeNow(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnPosition(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -130,6 +131,7 @@ public:
 
 private:
    std::string axisDeviceName_;
+   bool homeOnStartup_;
    double negativeLimit_;
    double positiveLimit_;
    double speed_;
