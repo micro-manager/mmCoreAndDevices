@@ -37,6 +37,7 @@ const char* g_DeviceNameNIDAQHub = "NIDAQHub";
 const char* g_DeviceNameNIDAQAOPortPrefix = "NIDAQAO-";
 const char* g_DeviceNameNIDAQDOPortPrefix = "NIDAQDO-";
 const char* g_DeviceNameNIDAQAIPortPrefix = "NIDAQAI-";
+const char* g_DeviceNameNIDAQAOBlankPrefix = "NIDAQAOBlank-";
 
 const char* g_On = "On";
 const char* g_Off = "Off";
@@ -106,6 +107,8 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
          return new DigitalOutputPort(port);
       if (SplitDeviceNamePrefix(deviceName, g_DeviceNameNIDAQAIPortPrefix, port))
          return new NIAnalogInputPort(port);
+      if (SplitDeviceNamePrefix(deviceName, g_DeviceNameNIDAQAOBlankPrefix, port))
+         return new AnalogOutputBlankingPort(port);
    }
    catch (const std::exception&)
    {
@@ -137,6 +140,8 @@ NIDAQHub::NIDAQHub () :
    sampleRateHz_(10000.0),
    aoTask_(0),
    doTask_(0),
+   aoBlankTask_(0),
+   aoBlankDiTask_(0),
    doHub8_(0),
    doHub16_(0),
    doHub32_(0),
@@ -380,6 +385,9 @@ int NIDAQHub::ShutdownImpl()
 
    int err = StopTask(aoTask_);
 
+   StopTask(aoBlankTask_);
+   StopTask(aoBlankDiTask_);
+
    physicalAOChannels_.clear();
    aoChannelSequences_.clear();
 
@@ -441,6 +449,17 @@ int NIDAQHub::DetectInstalledDevices()
    {
        MM::Device* pDevice =
            ::CreateDevice((g_DeviceNameNIDAQAIPortPrefix + *it).c_str());
+       if (pDevice)
+       {
+           AddInstalledDevice(pDevice);
+       }
+   }
+
+   // One analog-output blanking device per board
+   if (!aoPorts.empty())
+   {
+       MM::Device* pDevice =
+           ::CreateDevice((g_DeviceNameNIDAQAOBlankPrefix + niDeviceName_).c_str());
        if (pDevice)
        {
            AddInstalledDevice(pDevice);
@@ -904,6 +923,271 @@ int NIDAQHub::StopDOBlankingAndSequence(const uInt32 portWidth)
       return doHub32_->StopDOBlankingAndSequence();
 
    return ERR_UNKNOWN_PINS_PER_PORT;
+}
+
+
+int NIDAQHub::ReadTriggerPinState(const std::string& triggerPort, bool& state)
+{
+   TaskHandle task = 0;
+   int32 nierr = DAQmxCreateTask("AOBlankReadPinTask", &task);
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+   nierr = DAQmxCreateDIChan(task, triggerPort.c_str(), "tIn", DAQmx_Val_ChanForAllLines);
+   if (nierr != 0)
+   {
+      DAQmxClearTask(task);
+      return TranslateNIError(nierr);
+   }
+   nierr = DAQmxStartTask(task);
+   if (nierr != 0)
+   {
+      DAQmxClearTask(task);
+      return TranslateNIError(nierr);
+   }
+   uInt8 readArray[1];
+   int32 read;
+   int32 bytesPerSample;
+   nierr = DAQmxReadDigitalLines(task, 1, 0, DAQmx_Val_GroupByChannel, readArray, 1, &read, &bytesPerSample, NULL);
+   DAQmxClearTask(task);
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+   state = readArray[0] != 0;
+   return DEVICE_OK;
+}
+
+
+/**
+* Gate a set of analog-output channels with a hardware trigger (no sequencing).
+*
+* Same scheme as NIDAQDOHub::StartDOBlankingAndOrSequence: a DI change-detection
+* task on triggerPort generates /Dev/ChangeDetectionEvent, which clocks an AO
+* task over channelList holding a regenerating 2-sample-per-channel buffer
+* {on, off}.  Each trigger edge advances the buffer, so the AO output follows
+* the trigger line.
+*/
+int NIDAQHub::StartAOBlanking(const std::string& channelList, const size_t numChannels,
+   const double onVolts, const double offVolts, const long state,
+   const bool blankOnLow, const std::string& triggerPort)
+{
+   if (numChannels == 0)
+      return ERR_INVALID_REQUEST;
+
+   // Release the previous tasks first; the pin read below needs the trigger line.
+   StopAOBlanking();
+
+   // Change detection only reports edges, so read the current level to
+   // phase-align the buffer.
+   bool triggerPinState;
+   int err = ReadTriggerPinState(triggerPort, triggerPinState);
+   if (err != DEVICE_OK)
+      return err;
+
+   // True: the trigger sits at its blanking level, the next edge turns on.
+   const bool firstSampleIsOn = (blankOnLow ^ triggerPinState);
+
+   // A clocked AO task does not drive the pins until its first clock edge, so
+   // first set the level matching the current trigger state statically, then
+   // release that on-demand task (AO holds its value across the clear).
+   err = SetAOPortState(channelList, numChannels, onVolts, offVolts,
+      firstSampleIsOn ? 0 : state);
+   if (err != DEVICE_OK)
+      return err;
+   StopAOBlanking();
+
+   int32 nierr = 0;
+   std::string niErrorMsg;
+
+   nierr = DAQmxCreateTask("AOBlankDITask", &aoBlankDiTask_);
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+   LogMessage("Created AO blanking DI task", true);
+
+   nierr = DAQmxCreateDIChan(aoBlankDiTask_, triggerPort.c_str(), "AOBlankDIChan", DAQmx_Val_ChanForAllLines);
+   if (nierr != 0)
+      goto error;
+   LogMessage("Created DI channel for: " + triggerPort, true);
+
+   nierr = DAQmxCfgChangeDetectionTiming(aoBlankDiTask_, triggerPort.c_str(),
+      triggerPort.c_str(), DAQmx_Val_ContSamps, 2);
+   if (nierr != 0)
+      goto error;
+   LogMessage("Configured change detection timing to use " + triggerPort, true);
+
+   // Nobody reads this task; let its buffer wrap instead of overflowing.
+   nierr = DAQmxSetReadOverWrite(aoBlankDiTask_, DAQmx_Val_OverwriteUnreadSamps);
+   if (nierr != 0)
+      goto error;
+
+   nierr = DAQmxStartTask(aoBlankDiTask_);
+   if (nierr != 0)
+      goto error;
+   LogMessage("Started AO blanking DI task", true);
+
+   nierr = DAQmxCreateTask("AOBlankTask", &aoBlankTask_);
+   if (nierr != 0)
+      goto error;
+   LogMessage("Created AO blanking task", true);
+
+   nierr = DAQmxCreateAOVoltageChan(aoBlankTask_, channelList.c_str(), "AOBlankChan",
+      minVoltsOut_, maxVoltsOut_, DAQmx_Val_Volts, NULL);
+   if (nierr != 0)
+      goto error;
+   LogMessage("Created AO voltage channel for: " + channelList, true);
+
+   nierr = DAQmxCfgSampClkTiming(aoBlankTask_, niChangeDetection_.c_str(),
+      sampleRateHz_, DAQmx_Val_Rising, DAQmx_Val_ContSamps, 2);
+   if (nierr != 0)
+      goto error;
+   LogMessage("Configured sample clock timing to use " + niChangeDetection_, true);
+
+   nierr = DAQmxSetWriteRegenMode(aoBlankTask_, DAQmx_Val_AllowRegen);
+   if (nierr != 0)
+      goto error;
+
+   err = WriteAOBlankingSamples(numChannels, onVolts, offVolts, state, firstSampleIsOn);
+   if (err != DEVICE_OK)
+   {
+      StopAOBlanking();
+      return err;
+   }
+   LogMessage("Wrote AO blanking samples", true);
+
+   nierr = DAQmxStartTask(aoBlankTask_);
+   if (nierr != 0)
+      goto error;
+   LogMessage("Started AO blanking task", true);
+
+   return DEVICE_OK;
+
+error:
+   niErrorMsg = GetNIDetailedErrorForMostRecentCall();
+   LogMessage(niErrorMsg.c_str());
+   StopAOBlanking();
+   err = TranslateNIError(nierr);
+   SetErrorText(err, niErrorMsg.c_str());
+   return err;
+}
+
+
+int NIDAQHub::StopAOBlanking()
+{
+   // Clear and null unconditionally (unlike StopTask), so a failed clear can
+   // never leave a stale handle that blocks the next StartAOBlanking.
+   if (aoBlankTask_) { DAQmxClearTask(aoBlankTask_); aoBlankTask_ = 0; }
+   if (aoBlankDiTask_) { DAQmxClearTask(aoBlankDiTask_); aoBlankDiTask_ = 0; }
+   return DEVICE_OK;
+}
+
+
+int NIDAQHub::GetAOBlankingEdgeCount(uInt64& count)
+{
+   count = 0;
+   if (!aoBlankDiTask_)
+      return DEVICE_OK;
+
+   // Count on the DI side: each detected change is one acquired sample.  The AO
+   // task's generated-sample counter is not usable here, as a 2-sample buffer is
+   // regenerated from onboard memory and that counter does not advance.
+   int32 nierr = DAQmxGetReadTotalSampPerChanAcquired(aoBlankDiTask_, &count);
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+   return DEVICE_OK;
+}
+
+
+int NIDAQHub::WriteAOBlankingSamples(const size_t numChannels, const double onVolts,
+   const double offVolts, const long state, const bool firstSampleIsOn)
+{
+   if (!aoBlankTask_)
+      return ERR_INVALID_REQUEST;
+
+   // Grouped by channel: [chan0 s0, chan0 s1, chan1 s0, ...].  Active channels
+   // alternate on/off, inactive ones stay off; firstSampleIsOn sets the phase.
+   boost::scoped_array<float64> samples(new float64[2 * numChannels]);
+   for (size_t c = 0; c < numChannels; ++c)
+   {
+      const bool active = ((state >> c) & 1L) != 0;
+      const double onValue = active ? onVolts : offVolts;
+      if (firstSampleIsOn)
+      {
+         samples[2 * c] = onValue;
+         samples[2 * c + 1] = offVolts;
+      }
+      else
+      {
+         samples[2 * c] = offVolts;
+         samples[2 * c + 1] = onValue;
+      }
+   }
+
+   int32 numWritten = 0;
+   int32 nierr = DAQmxWriteAnalogF64(aoBlankTask_, 2, false, DAQmx_Val_WaitInfinitely,
+      DAQmx_Val_GroupByChannel, samples.get(), &numWritten, NULL);
+   if (nierr != 0)
+   {
+      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+      return TranslateNIError(nierr);
+   }
+   if (numWritten != 2)
+   {
+      LogMessage("Failed to write complete AO blanking buffer");
+      return DEVICE_ERR;
+   }
+   return DEVICE_OK;
+}
+
+
+/**
+* Statically drive the AO blanking channels: active channels output onVolts,
+* inactive channels offVolts.  Used when blanking is off.
+*/
+int NIDAQHub::SetAOPortState(const std::string& channelList, const size_t numChannels,
+   const double onVolts, const double offVolts, const long state)
+{
+   if (numChannels == 0)
+      return ERR_INVALID_REQUEST;
+
+   if (aoBlankTask_) { DAQmxClearTask(aoBlankTask_); aoBlankTask_ = 0; }
+
+   int32 nierr = DAQmxCreateTask(NULL, &aoBlankTask_);
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+
+   nierr = DAQmxCreateAOVoltageChan(aoBlankTask_, channelList.c_str(), NULL,
+      minVoltsOut_, maxVoltsOut_, DAQmx_Val_Volts, NULL);
+   if (nierr != 0)
+      goto error;
+
+   {
+      boost::scoped_array<float64> samples(new float64[numChannels]);
+      for (size_t c = 0; c < numChannels; ++c)
+      {
+         const bool active = ((state >> c) & 1L) != 0;
+         samples[c] = active ? onVolts : offVolts;
+      }
+
+      int32 numWritten = 0;
+      nierr = DAQmxWriteAnalogF64(aoBlankTask_, 1, true, DAQmx_Val_WaitInfinitely,
+         DAQmx_Val_GroupByChannel, samples.get(), &numWritten, NULL);
+      if (nierr != 0)
+         goto error;
+      if (numWritten != 1)
+      {
+         LogMessage("Failed to write AO port state");
+         goto error;
+      }
+   }
+
+   return DEVICE_OK;
+
+error:
+   if (nierr != 0)
+      LogMessage(GetNIDetailedErrorForMostRecentCall().c_str());
+   DAQmxClearTask(aoBlankTask_);
+   aoBlankTask_ = 0;
+   if (nierr != 0)
+      return TranslateNIError(nierr);
+   return DEVICE_ERR;
 }
 
 
