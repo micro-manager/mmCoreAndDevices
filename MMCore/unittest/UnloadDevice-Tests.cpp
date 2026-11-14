@@ -144,9 +144,33 @@ TEST_CASE("Unload all devices shuts down every device even if one fails",
    CMMCore c;
    adapter.LoadIntoCore(c);
 
-   CHECK_THROWS_AS(c.unloadAllDevices(), CMMError);
+   using Catch::Matchers::ContainsSubstring;
+   CHECK_THROWS_WITH(c.unloadAllDevices(), ContainsSubstring("\"failing\""));
    CHECK(first.shutdownCalled);
    CHECK(failing.shutdownCalled);
    CHECK(last.shutdownCalled);
+   CHECK(c.getLoadedDevices() == std::vector<std::string>{"Core"});
+}
+
+TEST_CASE("Unload all devices reports every device that failed to shut down",
+      "[regression]") {
+   ShutdownTrackingDevice ok;
+   ShutdownTrackingDevice failing1;
+   ShutdownTrackingDevice failing2;
+   failing1.shutdownResult = DEVICE_ERR;
+   failing2.shutdownResult = DEVICE_NOT_CONNECTED;
+   MockAdapterWithDevices adapter{
+      {"failing1", &failing1}, {"ok", &ok}, {"failing2", &failing2}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   using Catch::Matchers::ContainsSubstring;
+   CHECK_THROWS_WITH(c.unloadAllDevices(),
+         ContainsSubstring("\"failing1\"") &&
+         ContainsSubstring("\"failing2\"") &&
+         !ContainsSubstring("\"ok\""));
+   CHECK(ok.shutdownCalled);
+   CHECK(failing1.shutdownCalled);
+   CHECK(failing2.shutdownCalled);
    CHECK(c.getLoadedDevices() == std::vector<std::string>{"Core"});
 }
