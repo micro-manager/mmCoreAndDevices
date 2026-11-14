@@ -30,6 +30,8 @@ public:
    AT_64 GetHeight();
    AT_64 GetLeftOffset();
    AT_64 GetTopOffset();
+   AT_64 GetSensorWidth();
+   AT_64 GetSensorHeight();
    unsigned GetBytesPerPixel();
    AT_64 GetStride();
    double GetBytesPerPixelF();
