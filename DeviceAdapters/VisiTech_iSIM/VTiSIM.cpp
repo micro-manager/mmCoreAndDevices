@@ -326,6 +326,9 @@ int VTiSIMLaserShutter::Initialize()
 
 int VTiSIMLaserShutter::Shutdown()
 {
+	// Nothing to do if the hub never connected to the AOTF
+	if (!VTiHub() || !VTiHub()->GetAOTFHandle())
+		return DEVICE_OK;
 	// Always turn off on shutdown
 	return SetOpen(false);
 }
@@ -901,6 +904,9 @@ int VTiSIMScanner::Initialize()
 
 int VTiSIMScanner::Shutdown()
 {
+	// Nothing to do if the hub never connected to the scanner
+	if (!VTiHub() || !VTiHub()->GetScanAndMotorHandle())
+		return DEVICE_OK;
 	return DoStartStopScan(false);
 }
 
