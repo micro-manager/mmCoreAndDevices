@@ -269,6 +269,8 @@ void CMMCore::setPrimaryLogFileRotation(long long maxFileSize, int maxBackupCoun
 
 /**
  * Record text message in the log file.
+ *
+ * @param msg  the message to log
  */
 void CMMCore::logMessage(const char* msg)
 {
@@ -278,6 +280,9 @@ void CMMCore::logMessage(const char* msg)
 
 /**
  * Record text message in the log file.
+ *
+ * @param msg        the message to log
+ * @param debugOnly  if true, log at debug level instead of info level
  */
 void CMMCore::logMessage(const char* msg, bool debugOnly)
 {
@@ -3011,9 +3016,11 @@ void* CMMCore::getImage(unsigned numChannel) MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
-* Returns the size of the internal image buffer.
+* Returns the size of the current camera's image buffer.
 *
-* @return buffer size
+* For a multi-channel camera, this is the size of one channel's image.
+*
+* @return buffer size in bytes, or 0 if there is no current camera
 */
 long CMMCore::getImageBufferSize()
 {
@@ -3345,6 +3352,15 @@ void* CMMCore::getLastImage() MMCORE_LEGACY_THROW(CMMError)
    }
 }
 
+/**
+ * Returns a pointer to the pixels of the image that was last inserted into the
+ * circular buffer, and provides its metadata.
+ *
+ * @param channel  not implemented; must be 0
+ * @param slice    not implemented; must be 0
+ * @param md       receives the metadata of the image
+ * @throws CMMError if the circular buffer is empty
+ */
 void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
 {
    if (channel != 0)
@@ -3472,9 +3488,10 @@ void CMMCore::clearCircularBuffer() MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Reserve memory for the circular buffer.
+ *
+ * @param sizeMB  the size of the circular buffer, in megabytes
  */
-void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB ///< n megabytes
-                                               ) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::setCircularBufferMemoryFootprint(unsigned sizeMB) MMCORE_LEGACY_THROW(CMMError)
 {
    LOG_DEBUG(coreLogger_) << "Will set circular buffer size to " <<
       sizeMB << " MB";
@@ -4556,6 +4573,15 @@ long CMMCore::getBinning(const char* label) MMCORE_LEGACY_THROW(CMMError)
    return binning;
 }
 
+/**
+ * Returns the binning values supported by the current camera.
+ *
+ * Values are read from the camera's Binning property; a value such as "2x2"
+ * is returned as 2.
+ *
+ * @throws CMMError if there is no current camera, or it has no Binning
+ *                  property
+ */
 std::vector<long> CMMCore::getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> camera = currentCameraDevice_.lock();
@@ -4574,6 +4600,15 @@ std::vector<long> CMMCore::getAllowedBinningValues() MMCORE_LEGACY_THROW(CMMErro
    }
 }
 
+/**
+ * Returns the binning values supported by the given camera.
+ *
+ * Values are read from the camera's Binning property; a value such as "2x2"
+ * is returned as 2.
+ *
+ * @param label  the camera device label
+ * @throws CMMError if the camera has no Binning property
+ */
 std::vector<long> CMMCore::getAllowedBinningValues(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::CameraInstance> pCamera =
@@ -5376,8 +5411,9 @@ void CMMCore::definePixelSizeConfig(const char* resolutionID, const char* device
 
 /**
  * Defines an empty pixel size entry.
+ *
+ * @param resolutionID  the name of the new pixel size configuration (preset)
 */
-
 void CMMCore::definePixelSizeConfig(const char* resolutionID) MMCORE_LEGACY_THROW(CMMError)
 {
    CheckConfigPresetName(resolutionID);
@@ -5391,6 +5427,7 @@ void CMMCore::definePixelSizeConfig(const char* resolutionID) MMCORE_LEGACY_THRO
 /**
  * Checks if the Pixel Size Resolution already exists
  *
+ * @param resolutionID  the pixel size configuration (preset) name
  * @return true if the configuration is already defined
  */
 bool CMMCore::isPixelSizeConfigDefined(const char* resolutionID) const MMCORE_LEGACY_THROW(CMMError)
@@ -5401,7 +5438,11 @@ bool CMMCore::isPixelSizeConfigDefined(const char* resolutionID) const MMCORE_LE
 }
 
 /**
- * Sets pixel size in microns for the specified resolution sensing configuration preset.
+ * Sets the pixel size in microns for the specified pixel size configuration.
+ *
+ * @param resolutionID  the pixel size configuration (preset) name
+ * @param pixSize       the pixel size in microns, at binning 1 and with no
+ *                      magnification (see getMagnificationFactor())
  */
 void CMMCore::setPixelSizeUm(const char* resolutionID, double pixSize)  MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5801,6 +5842,7 @@ Configuration CMMCore::getConfigData(const char* configGroup, const char* config
 
 /**
  * Returns the configuration object for a given pixel size preset.
+ * @param configName  the pixel size configuration (preset) name
  * @return The configuration object
  */
 Configuration CMMCore::getPixelSizeConfigData(const char* configName) MMCORE_LEGACY_THROW(CMMError)
@@ -5825,6 +5867,8 @@ Configuration CMMCore::getPixelSizeConfigData(const char* configName) MMCORE_LEG
  * Renames a pixel size configuration. The command will fail if the
  * configuration was not previously defined.
  *
+ * @param oldConfigName  the current pixel size configuration (preset) name
+ * @param newConfigName  the new name
  */
 void CMMCore::renamePixelSizeConfig(const char* oldConfigName, const char* newConfigName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5846,6 +5890,7 @@ void CMMCore::renamePixelSizeConfig(const char* oldConfigName, const char* newCo
  * Deletes a pixel size configuration. The command will fail if the
  * configuration was not previously defined.
  *
+ * @param configName  the pixel size configuration (preset) name
  */
 void CMMCore::deletePixelSizeConfig(const char* configName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5863,7 +5908,10 @@ void CMMCore::deletePixelSizeConfig(const char* configName) MMCORE_LEGACY_THROW(
 }
 
 /**
- * Get the current pixel configuration name
+ * Get the current pixel configuration name.
+ *
+ * Returns an empty string if no pixel size configuration matches the
+ * current state.
  **/
 std::string CMMCore::getCurrentPixelSizeConfig() MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5871,7 +5919,12 @@ std::string CMMCore::getCurrentPixelSizeConfig() MMCORE_LEGACY_THROW(CMMError)
 }
 
 /**
- * Get the current pixel configuration name
+ * Get the current pixel configuration name.
+ *
+ * Returns an empty string if no pixel size configuration matches the
+ * current state.
+ *
+ * @param cached  use the system state cache instead of querying the devices
  **/
 std::string CMMCore::getCurrentPixelSizeConfig(bool cached) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5950,6 +6003,8 @@ double CMMCore::getPixelSizeUm()
  * For legacy reasons, an exception is not thrown if there is an error.
  * Instead, 0.0 is returned if any property values cannot be read, or if no
  * pixel size preset matches the property values.
+ *
+ * @param cached  use the system state cache instead of querying the devices
  */
 double CMMCore::getPixelSizeUm(bool cached)
 {
@@ -6348,7 +6403,18 @@ bool CMMCore::isGroupDefined(const char* groupName)
 }
 
 /**
- * Sets all com port properties in a single call
+ * Sets all com port properties in a single call.
+ *
+ * Each value is passed to setProperty() for the corresponding property of
+ * the port device.
+ *
+ * @param portName             the serial port device label
+ * @param answerTimeout        AnswerTimeout, in milliseconds
+ * @param baudRate             BaudRate, e.g. "9600"
+ * @param delayBetweenCharsMs  DelayBetweenCharsMs, in milliseconds
+ * @param handshaking          Handshaking, e.g. "Off"
+ * @param parity               Parity, e.g. "None"
+ * @param stopBits             StopBits, e.g. "1"
  */
 void CMMCore::setSerialProperties(const char* portName,
                                   const char* answerTimeout,
@@ -6393,6 +6459,9 @@ void CMMCore::setSerialPortCommand(const char* portLabel, const char* command, c
 
 /**
  * Continuously read from the serial port until the terminating sequence is encountered.
+ *
+ * @param portLabel  the serial port device label
+ * @param term       the terminating sequence that ends the answer (must not be empty)
  */
 std::string CMMCore::getSerialPortAnswer(const char* portLabel, const char* term) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6416,6 +6485,9 @@ std::string CMMCore::getSerialPortAnswer(const char* portLabel, const char* term
 
 /**
  * Sends an array of characters to the serial port and returns immediately.
+ *
+ * @param portLabel  the serial port device label
+ * @param data       the bytes to send
  */
 void CMMCore::writeToSerialPort(const char* portLabel, const std::vector<char> &data) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6432,6 +6504,8 @@ void CMMCore::writeToSerialPort(const char* portLabel, const std::vector<char> &
 
 /**
  * Reads the contents of the Rx buffer.
+ *
+ * @param portLabel  the serial port device label
  */
 std::vector<char> CMMCore::readFromSerialPort(const char* portLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6459,6 +6533,9 @@ std::vector<char> CMMCore::readFromSerialPort(const char* portLabel) MMCORE_LEGA
 
 /**
  * Write an 8-bit monochrome image to the SLM.
+ *
+ * @param slmLabel  the SLM device label
+ * @param pixels    8-bit image of getSLMWidth() x getSLMHeight() pixels
  */
 void CMMCore::setSLMImage(const char* slmLabel, unsigned char* pixels) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6477,6 +6554,9 @@ void CMMCore::setSLMImage(const char* slmLabel, unsigned char* pixels) MMCORE_LE
 
 /**
  * Write a 32-bit color image to the SLM.
+ *
+ * @param slmLabel  the SLM device label
+ * @param pixels    32-bit RGB image of getSLMWidth() x getSLMHeight() pixels
  */
 void CMMCore::setSLMImage(const char* slmLabel, imgRGB32 pixels) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6495,6 +6575,9 @@ void CMMCore::setSLMImage(const char* slmLabel, imgRGB32 pixels) MMCORE_LEGACY_T
 
 /**
  * Set all SLM pixels to a single 8-bit intensity.
+ *
+ * @param slmLabel   the SLM device label
+ * @param intensity  the 8-bit intensity to set all pixels to
  */
 void CMMCore::setSLMPixelsTo(const char* slmLabel, unsigned char intensity) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6512,6 +6595,11 @@ void CMMCore::setSLMPixelsTo(const char* slmLabel, unsigned char intensity) MMCO
 
 /**
  * Set all SLM pixels to an RGB color.
+ *
+ * @param slmLabel  the SLM device label
+ * @param red       the red intensity (0-255)
+ * @param green     the green intensity (0-255)
+ * @param blue      the blue intensity (0-255)
  */
 void CMMCore::setSLMPixelsTo(const char* slmLabel, unsigned char red, unsigned char green, unsigned char blue) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6529,6 +6617,8 @@ void CMMCore::setSLMPixelsTo(const char* slmLabel, unsigned char red, unsigned c
 
 /**
  * Display the waiting image on the SLM.
+ *
+ * @param slmLabel  the SLM device label
  */
 void CMMCore::displaySLMImage(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6547,6 +6637,9 @@ void CMMCore::displaySLMImage(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError
 /**
  * For SLM devices with built-in light source (such as projectors)
  * this will set the exposure time, but not (yet) start the illumination.
+ *
+ * @param slmLabel     the SLM device label
+ * @param exposure_ms  the exposure time in milliseconds
  */
 void CMMCore::setSLMExposure(const char* slmLabel, double exposure_ms) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6564,6 +6657,9 @@ void CMMCore::setSLMExposure(const char* slmLabel, double exposure_ms) MMCORE_LE
 
 /**
  * Returns the exposure time that will be used by the SLM for illumination
+ *
+ * @param slmLabel  the SLM device label
+ * @return the exposure time in milliseconds
  */
 double CMMCore::getSLMExposure(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6726,6 +6822,11 @@ void CMMCore::loadSLMSequence(const char* slmLabel, std::vector<unsigned char *>
 /**
  * Set the Galvo to an x,y position and fire the laser for pulseTime_us
  * microseconds.
+ *
+ * @param galvoLabel    the galvo device label
+ * @param x             the x position, in the device's native units
+ * @param y             the y position, in the device's native units
+ * @param pulseTime_us  how long to fire the laser, in microseconds
  */
 void CMMCore::pointGalvoAndFire(const char* galvoLabel, double x, double y, double pulseTime_us) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6743,6 +6844,15 @@ void CMMCore::pointGalvoAndFire(const char* galvoLabel, double x, double y, doub
    }
 }
 
+/**
+ * Sets how long the galvo illuminates each spot.
+ *
+ * Despite the name, this is the illumination time of a single spot, not
+ * the interval between spots.
+ *
+ * @param galvoLabel    the galvo device label
+ * @param pulseTime_us  the illumination time per spot, in microseconds
+ */
 void CMMCore::setGalvoSpotInterval(const char* galvoLabel, double pulseTime_us) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::GalvoInstance> pGalvo =
@@ -6762,6 +6872,10 @@ void CMMCore::setGalvoSpotInterval(const char* galvoLabel, double pulseTime_us) 
 
 /**
  * Set the Galvo to an x,y position
+ *
+ * @param galvoLabel  the galvo device label
+ * @param x           the x position, in the device's native units
+ * @param y           the y position, in the device's native units
  */
 void CMMCore::setGalvoPosition(const char* galvoLabel, double x, double y) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6781,6 +6895,10 @@ void CMMCore::setGalvoPosition(const char* galvoLabel, double x, double y) MMCOR
 
 /**
  * Get the Galvo x,y position
+ *
+ * @param galvoLabel  the galvo device label
+ * @param x_stage     receives the x position, in the device's native units
+ * @param y_stage     receives the y position, in the device's native units
  */
 void CMMCore::getGalvoPosition(const char* galvoLabel, double &x_stage, double &y_stage) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6800,6 +6918,9 @@ void CMMCore::getGalvoPosition(const char* galvoLabel, double &x_stage, double &
 
 /**
  * Set the galvo's illumination state to on or off
+ *
+ * @param galvoLabel  the galvo device label
+ * @param on          true to switch the light source on, false to switch it off
  */
 void CMMCore::setGalvoIlluminationState(const char* galvoLabel, bool on) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6821,6 +6942,8 @@ void CMMCore::setGalvoIlluminationState(const char* galvoLabel, bool on) MMCORE_
 
 /**
  * Get the Galvo x range
+ *
+ * @param galvoLabel  the galvo device label
  */
 double CMMCore::getGalvoXRange(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6833,6 +6956,8 @@ double CMMCore::getGalvoXRange(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMEr
 
 /**
  * Get the Galvo x minimum
+ *
+ * @param galvoLabel  the galvo device label
  */
 double CMMCore::getGalvoXMinimum(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6845,6 +6970,8 @@ double CMMCore::getGalvoXMinimum(const char* galvoLabel) MMCORE_LEGACY_THROW(CMM
 
 /**
  * Get the Galvo y range
+ *
+ * @param galvoLabel  the galvo device label
  */
 double CMMCore::getGalvoYRange(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6857,6 +6984,8 @@ double CMMCore::getGalvoYRange(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMEr
 
 /**
  * Get the Galvo y minimum
+ *
+ * @param galvoLabel  the galvo device label
  */
 double CMMCore::getGalvoYMinimum(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6869,6 +6998,11 @@ double CMMCore::getGalvoYMinimum(const char* galvoLabel) MMCORE_LEGACY_THROW(CMM
 
 /**
  * Add a vertex to a galvo polygon.
+ *
+ * @param galvoLabel    the galvo device label
+ * @param polygonIndex  index of the polygon to add the vertex to
+ * @param x             the x position of the vertex, in the device's native units
+ * @param y             the y position of the vertex, in the device's native units
  */
 void CMMCore::addGalvoPolygonVertex(const char* galvoLabel, int polygonIndex, double x, double y) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6888,6 +7022,8 @@ void CMMCore::addGalvoPolygonVertex(const char* galvoLabel, int polygonIndex, do
 
 /**
  * Remove all added polygons
+ *
+ * @param galvoLabel  the galvo device label
  */
 void CMMCore::deleteGalvoPolygons(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6908,6 +7044,8 @@ void CMMCore::deleteGalvoPolygons(const char* galvoLabel) MMCORE_LEGACY_THROW(CM
 
 /**
  * Load a set of galvo polygons to the device
+ *
+ * @param galvoLabel  the galvo device label
  */
 void CMMCore::loadGalvoPolygons(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6927,6 +7065,9 @@ void CMMCore::loadGalvoPolygons(const char* galvoLabel) MMCORE_LEGACY_THROW(CMME
 
 /**
  * Set the number of times to loop galvo polygons
+ *
+ * @param galvoLabel   the galvo device label
+ * @param repetitions  number of times runGalvoPolygons() draws the polygons
  */
 void CMMCore::setGalvoPolygonRepetitions(const char* galvoLabel, int repetitions) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6947,6 +7088,8 @@ void CMMCore::setGalvoPolygonRepetitions(const char* galvoLabel, int repetitions
 
 /**
  * Run a loop of galvo polygons
+ *
+ * @param galvoLabel  the galvo device label
  */
 void CMMCore::runGalvoPolygons(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6966,6 +7109,8 @@ void CMMCore::runGalvoPolygons(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMEr
 
 /**
  * Run a sequence of galvo positions
+ *
+ * @param galvoLabel  the galvo device label
  */
 void CMMCore::runGalvoSequence(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -6985,6 +7130,8 @@ void CMMCore::runGalvoSequence(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMEr
 
 /**
  * Get the name of the active galvo channel (for a multi-laser galvo device).
+ *
+ * @param galvoLabel  the galvo device label
  */
 std::string CMMCore::getGalvoChannel(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7002,6 +7149,8 @@ std::string CMMCore::getGalvoChannel(const char* galvoLabel) MMCORE_LEGACY_THROW
 
 /**
 * Stops the pressure pump
+*
+* @param pumpLabel  the pressure pump device label
 */
 void CMMCore::pressurePumpStop(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7020,6 +7169,8 @@ void CMMCore::pressurePumpStop(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMErr
 
 /**
 * Calibrates the pump
+*
+* @param pumpLabel  the pressure pump device label
 */
 void CMMCore::pressurePumpCalibrate(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7039,6 +7190,8 @@ void CMMCore::pressurePumpCalibrate(const char* pumpLabel) MMCORE_LEGACY_THROW(C
 /**
 * Returns true if the pump must be calibrated (see pressurePumpCalibrate())
 * before use.
+*
+* @param pumpLabel  the pressure pump device label
 */
 bool CMMCore::pressurePumpRequiresCalibration(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7051,6 +7204,8 @@ bool CMMCore::pressurePumpRequiresCalibration(const char* pumpLabel) MMCORE_LEGA
 
 /**
 * Gets the pressure of the pump in kPa
+*
+* @param pumplabel  the pressure pump device label
 */
 double CMMCore::getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7071,6 +7226,9 @@ double CMMCore::getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CM
 
 /**
 * Sets the pressure of the pump in kPa
+*
+* @param pumplabel  the pressure pump device label
+* @param pressure   the pressure in kPa
 */
 void CMMCore::setPumpPressureKPa(const char* pumplabel, double pressure) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7089,6 +7247,8 @@ void CMMCore::setPumpPressureKPa(const char* pumplabel, double pressure) MMCORE_
 
 /**
 * Stops the volumetric pump
+*
+* @param pumpLabel  the volumetric pump device label
 */
 void CMMCore::volumetricPumpStop(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7107,6 +7267,8 @@ void CMMCore::volumetricPumpStop(const char* pumpLabel) MMCORE_LEGACY_THROW(CMME
 
 /**
 * Homes the pump
+*
+* @param pumpLabel  the volumetric pump device label
 */
 void CMMCore::volumetricPumpHome(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7123,6 +7285,12 @@ void CMMCore::volumetricPumpHome(const char* pumpLabel) MMCORE_LEGACY_THROW(CMME
     }
 }
 
+/**
+ * Returns true if the pump must be homed (see volumetricPumpHome()) before
+ * use.
+ *
+ * @param pumpLabel  the volumetric pump device label
+ */
 bool CMMCore::volumetricPumpRequiresHoming(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
     std::shared_ptr<mmi::VolumetricPumpInstance> pPump =
@@ -7134,6 +7302,9 @@ bool CMMCore::volumetricPumpRequiresHoming(const char* pumpLabel) MMCORE_LEGACY_
 
 /**
 * Sets whether the pump direction needs to be inverted
+*
+* @param pumpLabel  the volumetric pump device label
+* @param invert     true to invert the pump direction
 */
 void CMMCore::invertPumpDirection(const char* pumpLabel, bool invert) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7152,6 +7323,8 @@ void CMMCore::invertPumpDirection(const char* pumpLabel, bool invert) MMCORE_LEG
 
 /**
 * Gets whether the pump direction needs to be inverted
+*
+* @param pumpLabel  the volumetric pump device label
 */
 bool CMMCore::isPumpDirectionInverted(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7173,6 +7346,9 @@ bool CMMCore::isPumpDirectionInverted(const char* pumpLabel) MMCORE_LEGACY_THROW
 /**
 * Sets the volume of fluid in the pump in uL. Note it does not withdraw up to
 * this amount. It is merely to inform MM of the volume in a prefilled pump.
+*
+* @param pumpLabel  the volumetric pump device label
+* @param volume     the volume of fluid in the pump, in uL
 */
 void CMMCore::setPumpVolume(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7191,6 +7367,8 @@ void CMMCore::setPumpVolume(const char* pumpLabel, double volume) MMCORE_LEGACY_
 
 /**
 * Get the fluid volume in the pump in uL
+*
+* @param pumpLabel  the volumetric pump device label
 */
 double CMMCore::getPumpVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7211,6 +7389,9 @@ double CMMCore::getPumpVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMErro
 
 /**
 * Sets the max volume of the pump in uL
+*
+* @param pumpLabel  the volumetric pump device label
+* @param volume     the maximum volume of the pump, in uL
 */
 void CMMCore::setPumpMaxVolume(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7229,6 +7410,8 @@ void CMMCore::setPumpMaxVolume(const char* pumpLabel, double volume) MMCORE_LEGA
 
 /**
 * Gets the max volume of the pump in uL
+*
+* @param pumpLabel  the volumetric pump device label
 */
 double CMMCore::getPumpMaxVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7249,6 +7432,9 @@ double CMMCore::getPumpMaxVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMME
 
 /**
 * Sets the flowrate of the pump in uL per second
+*
+* @param pumpLabel  the volumetric pump device label
+* @param volume     the flow rate in uL per second
 */
 void CMMCore::setPumpFlowrate(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7267,6 +7453,8 @@ void CMMCore::setPumpFlowrate(const char* pumpLabel, double volume) MMCORE_LEGAC
 
 /**
 * Gets the flowrate of the pump in uL per second
+*
+* @param pumpLabel  the volumetric pump device label
 */
 double CMMCore::getPumpFlowrate(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7288,6 +7476,8 @@ double CMMCore::getPumpFlowrate(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMEr
 /**
 * Start dispensing at the set flowrate until syringe is empty, or manually
 * stopped (whichever occurs first).
+*
+* @param pumpLabel  the volumetric pump device label
 */
 void CMMCore::pumpStart(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7306,6 +7496,9 @@ void CMMCore::pumpStart(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 
 /**
 * Dispenses for the provided duration (in seconds) at the set flowrate
+*
+* @param pumpLabel  the volumetric pump device label
+* @param seconds    how long to dispense, in seconds
 */
 void CMMCore::pumpDispenseDurationSeconds(const char* pumpLabel, double seconds) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7324,6 +7517,9 @@ void CMMCore::pumpDispenseDurationSeconds(const char* pumpLabel, double seconds)
 
 /**
 * Dispenses the provided volume (in uL) at the set flowrate
+*
+* @param pumpLabel   the volumetric pump device label
+* @param microLiter  the volume to dispense, in uL
 */
 void CMMCore::pumpDispenseVolumeUl(const char* pumpLabel, double microLiter) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -8943,12 +9139,28 @@ std::vector<std::string> CMMCore::getInstalledDevices(const char* hubLabel) MMCO
    return pHub->GetInstalledPeripheralNames();
 }
 
+/**
+ * Returns the labels of the loaded devices whose parent is the given hub.
+ *
+ * Returns an empty vector if hubLabel is not a loaded hub device.
+ *
+ * @param hubLabel  the hub device label
+ */
 std::vector<std::string> CMMCore::getLoadedPeripheralDevices(const char* hubLabel) MMCORE_LEGACY_THROW(CMMError)
 {
    CheckDeviceLabel(hubLabel);
    return deviceManager_->GetLoadedPeripherals(hubLabel);
 }
 
+/**
+ * Returns the description of a peripheral device attached to a hub.
+ *
+ * Returns "N/A" if the device adapter provides no description.
+ *
+ * @param hubLabel         the hub device label
+ * @param peripheralLabel  the peripheral's device name, as returned by
+ *                         getInstalledDevices()
+ */
 std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const char* peripheralLabel) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::HubInstance> pHub =
