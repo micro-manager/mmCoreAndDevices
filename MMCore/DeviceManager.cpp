@@ -24,6 +24,8 @@
 #include "LoadableModules/LoadedDeviceAdapter.h"
 
 #include <algorithm>
+#include <string>
+#include <vector>
 
 namespace mmcore {
 namespace internal {
@@ -98,6 +100,34 @@ DeviceManager::UnloadDevice(std::shared_ptr<DeviceInstance> device)
 }
 
 
+namespace
+{
+
+// Shut down the given devices in reverse order, continuing past any that
+// fail. Errors thrown by Shutdown() are appended to 'errors'.
+void
+ShutdownDevicesInReverseOrder(
+      const std::vector< std::shared_ptr<DeviceInstance> >& devices,
+      std::vector<CMMError>& errors)
+{
+   for (std::vector< std::shared_ptr<DeviceInstance> >::const_reverse_iterator
+         it = devices.rbegin(), end = devices.rend();
+         it != end; ++it)
+   {
+      try
+      {
+         (*it)->Shutdown();
+      }
+      catch (const CMMError& e)
+      {
+         errors.push_back(e);
+      }
+   }
+}
+
+} // anonymous namespace
+
+
 void
 DeviceManager::UnloadAllDevices()
 {
@@ -127,18 +157,13 @@ DeviceManager::UnloadAllDevices()
    // DeviceInstance.
    // TODO We need a mechanism to ensure automatic Shutdown (1:1 with
    // Initialize()).
-   for (std::vector< std::shared_ptr<DeviceInstance> >::reverse_iterator
-         it = nonSerialDevices.rbegin(), end = nonSerialDevices.rend();
-         it != end; ++it)
-   {
-      (*it)->Shutdown();
-   }
-   for (std::vector< std::shared_ptr<DeviceInstance> >::reverse_iterator
-         it = serialDevices.rbegin(), end = serialDevices.rend();
-         it != end; ++it)
-   {
-      (*it)->Shutdown();
-   }
+   // Shut down every device even if some fail, so that one failing device
+   // does not leave the others (and their hardware connections) open. Each
+   // failure is logged by DeviceInstance as it occurs; the errors are
+   // collected and reported together once all devices have been unloaded.
+   std::vector<CMMError> shutdownErrors;
+   ShutdownDevicesInReverseOrder(nonSerialDevices, shutdownErrors);
+   ShutdownDevicesInReverseOrder(serialDevices, shutdownErrors);
 
    deviceRawPtrIndex_.clear();
    devices_.clear();
@@ -152,6 +177,23 @@ DeviceManager::UnloadAllDevices()
    while (serialDevices.size() > 0)
    {
       serialDevices.pop_back();
+   }
+
+   if (shutdownErrors.size() == 1)
+   {
+      throw shutdownErrors.front();
+   }
+   if (shutdownErrors.size() > 1)
+   {
+      std::string msg = "Errors occurred while shutting down " +
+         std::to_string(shutdownErrors.size()) + " devices: ";
+      for (size_t i = 0; i < shutdownErrors.size(); ++i)
+      {
+         if (i > 0)
+            msg += "; ";
+         msg += shutdownErrors[i].getFullMsg();
+      }
+      throw CMMError(msg);
    }
 }
 
