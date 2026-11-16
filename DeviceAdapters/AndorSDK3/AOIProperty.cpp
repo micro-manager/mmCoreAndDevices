@@ -325,6 +325,16 @@ AT_64 TAOIProperty::GetTopOffset()
    return aoi_top_->Get();
 }
 
+AT_64 TAOIProperty::GetSensorWidth()
+{
+   return sensor_width_->Get();
+}
+
+AT_64 TAOIProperty::GetSensorHeight()
+{
+   return sensor_height_->Get();
+}
+
 unsigned TAOIProperty::GetBytesPerPixel()
 {
    unsigned ret;
