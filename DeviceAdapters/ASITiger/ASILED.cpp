@@ -33,7 +33,7 @@
 #include <vector>
 
 CLED::CLED(const char* name) :
-    ASIPeripheralBase< ::CShutterBase, CLED >(name) {
+    ASIDevice<CShutterBase<CLED>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         channel_= GetChannelFromExtName(name); // figure out what channel we are on

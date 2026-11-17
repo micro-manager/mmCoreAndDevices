@@ -37,7 +37,7 @@
 //   Exception is save settings b/c focus device could be on the same card but they won't share any properties.
 
 CPiezo::CPiezo(const char* name) :
-    ASIPeripheralBase< ::CStageBase, CPiezo >(name) {
+    ASIDevice<CStageBase<CPiezo>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetter_ = GetAxisLetterFromExtName(name);

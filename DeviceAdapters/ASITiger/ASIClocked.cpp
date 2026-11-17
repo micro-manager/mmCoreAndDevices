@@ -32,7 +32,7 @@
 // Superclass for any clocked devices (except filterwheels which use a different command set)
 // includes turrets and filter sliders
 CClocked::CClocked(const char* name) :
-    ASIPeripheralBase< ::CStateDeviceBase, CClocked >(name) {
+    ASIDevice<CStateDeviceBase<CClocked>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetter_ = GetAxisLetterFromExtName(name);

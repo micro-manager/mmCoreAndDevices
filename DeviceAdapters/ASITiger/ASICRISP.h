@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include <optional>
@@ -68,7 +68,7 @@ struct CommandTable {
 
 // ASI CRISP Autofocus Device
 // Documentation: https://asiimaging.com/docs/crisp_manual
-class CCRISP : public ASIPeripheralBase<CAutoFocusBase, CCRISP> {
+class CCRISP : public ASIDevice<CAutoFocusBase<CCRISP>> {
 public:
     explicit CCRISP(const char* name);
     ~CCRISP() = default;

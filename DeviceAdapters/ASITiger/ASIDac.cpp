@@ -33,7 +33,7 @@
 #include <vector>
 
 CDAC::CDAC(const char* name) :
-    ASIPeripheralBase< ::CSignalIOBase, CDAC >(name) {
+    ASIDevice<CSignalIOBase<CDAC>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetter_ = GetAxisLetterFromExtName(name);

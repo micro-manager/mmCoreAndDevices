@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CLED : public ASIPeripheralBase<CShutterBase, CLED> {
+class CLED : public ASIDevice<CShutterBase<CLED>> {
 public:
     explicit CLED(const char* name);
     ~CLED() = default;

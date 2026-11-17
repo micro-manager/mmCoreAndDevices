@@ -23,11 +23,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CLens : public ASIPeripheralBase<CStageBase, CLens>
+class CLens : public ASIDevice<CStageBase<CLens>>
 {
 public:
     explicit CLens(const char* name);

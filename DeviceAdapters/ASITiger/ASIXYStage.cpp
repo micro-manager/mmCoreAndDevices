@@ -34,7 +34,7 @@
 // TODO faster busy check for typical case where axes are on same card by just querying card busy
 
 CXYStage::CXYStage(const char* name) :
-    ASIPeripheralBase< ::CXYStageBase, CXYStage >(name) {
+    ASIDevice<CXYStageBase<CXYStage>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetterX_ = GetAxisLetterFromExtName(name);

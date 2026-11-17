@@ -33,7 +33,7 @@
 #include <vector>
 
 CPMT::CPMT(const char* name) :
-    ASIPeripheralBase< ::CSignalIOBase, CPMT >(name) {
+    ASIDevice<CSignalIOBase<CPMT>>(name) {
     // figure out what channel we are on
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {

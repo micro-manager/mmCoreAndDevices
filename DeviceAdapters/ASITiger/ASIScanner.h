@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CScanner : public ASIPeripheralBase<CGalvoBase, CScanner> {
+class CScanner : public ASIDevice<CGalvoBase<CScanner>> {
 public:
     explicit CScanner(const char* name);
     ~CScanner() = default;

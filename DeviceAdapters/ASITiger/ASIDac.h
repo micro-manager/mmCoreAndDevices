@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CDAC : public ASIPeripheralBase<CSignalIOBase, CDAC> {
+class CDAC : public ASIDevice<CSignalIOBase<CDAC>> {
 public:
     explicit CDAC(const char* name);
     ~CDAC() = default;

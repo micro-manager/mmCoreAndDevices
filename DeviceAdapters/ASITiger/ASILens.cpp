@@ -34,7 +34,7 @@
 #include <vector>
 
 CLens::CLens(const char* name) :
-    ASIPeripheralBase< ::CStageBase, CLens >(name) {
+    ASIDevice<CStageBase<CLens>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetter_ = GetAxisLetterFromExtName(name);
