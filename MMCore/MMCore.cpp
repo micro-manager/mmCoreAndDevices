@@ -291,6 +291,9 @@ void CMMCore::logMessage(const char* msg, bool debugOnly)
 
 /**
  * Record text message in the log file at the specified level.
+ *
+ * @param msg    the message to log
+ * @param level  the log level
  */
 void CMMCore::log(const char* msg, mmcore::LogLevel level)
 {
@@ -301,6 +304,10 @@ void CMMCore::log(const char* msg, mmcore::LogLevel level)
 /**
  * Record text message in the log file at the specified level, with a
  * caller-specified logger name as the component label.
+ *
+ * @param msg         the message to log
+ * @param level       the log level
+ * @param loggerName  the component label to log under
  */
 void CMMCore::log(const char* msg, mmcore::LogLevel level,
       const char* loggerName)
@@ -316,6 +323,8 @@ void CMMCore::log(const char* msg, mmcore::LogLevel level,
  * 
  * It is not recommended to mix use of this function with enableDebugLog() and
  * debugLogEnabled().
+ *
+ * @param level  the lowest level of messages to record
  */
 void CMMCore::setPrimaryLogLevel(mmcore::LogLevel level)
 {
@@ -385,6 +394,8 @@ bool CMMCore::stderrLogEnabled()
  * 
  * It is not recommended to mix use of this function with enableDebugLog() and
  * debugLogEnabled().
+ *
+ * @param level  the lowest level of messages to display
  */
 void CMMCore::setStderrLogLevel(mmcore::LogLevel level)
 {
@@ -466,6 +477,8 @@ int CMMCore::getMMCoreVersionPatch() { return MMCore_versionPatch; }
 
 /**
  * Get available devices from the specified device library.
+ *
+ * @param library  the device adapter (library) name
  */
 std::vector<std::string>
 CMMCore::getAvailableDevices(const char* library) MMCORE_LEGACY_THROW(CMMError)
@@ -477,6 +490,8 @@ CMMCore::getAvailableDevices(const char* library) MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Get descriptions for available devices from the specified library.
+ *
+ * @param library  the device adapter (library) name
  */
 std::vector<std::string>
 CMMCore::getAvailableDeviceDescriptions(const char* library) MMCORE_LEGACY_THROW(CMMError)
@@ -498,6 +513,8 @@ CMMCore::getAvailableDeviceDescriptions(const char* library) MMCORE_LEGACY_THROW
 
 /**
  * Get type information for available devices from the specified library.
+ *
+ * @param library  the device adapter (library) name
  */
 std::vector<long>
 CMMCore::getAvailableDeviceTypes(const char* library) MMCORE_LEGACY_THROW(CMMError)
@@ -605,6 +622,9 @@ Configuration CMMCore::getSystemStateCache() const
 /**
  * Returns a partial state of the system, only for devices included in the
  * specified configuration.
+ *
+ * @param group   the configuration group name
+ * @param config  the configuration (preset) name
  */
 Configuration CMMCore::getConfigState(const char* group, const char* config) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -625,6 +645,8 @@ Configuration CMMCore::getConfigState(const char* group, const char* config) MMC
 /**
  * Returns the partial state of the system, only for the devices included in the
  * specified group. It will create a union of all devices referenced in a group.
+ *
+ * @param group  the configuration group name
  */
 Configuration CMMCore::getConfigGroupState(const char* group) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -634,6 +656,8 @@ Configuration CMMCore::getConfigGroupState(const char* group) MMCORE_LEGACY_THRO
 /**
  * Returns the partial state of the system cache, only for the devices included in the
  * specified group. It will create a union of all devices referenced in a group.
+ *
+ * @param group  the configuration group name
  */
 Configuration CMMCore::getConfigGroupStateFromCache(const char* group) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -643,6 +667,9 @@ Configuration CMMCore::getConfigGroupStateFromCache(const char* group) MMCORE_LE
 /**
  * Returns the partial state of the system, only for the devices included in the
  * specified group. It will create a union of all devices referenced in a group.
+ *
+ * @param group      the configuration group name
+ * @param fromCache  use the system state cache instead of querying the devices
  */
 Configuration CMMCore::getConfigGroupState(const char* group, bool fromCache) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -879,9 +906,10 @@ void CMMCore::removeAllDeviceRoles() {
 
 /**
  * Unloads the device from the core and adjusts all configuration data.
+ *
+ * @param label  the device label
  */
-void CMMCore::unloadDevice(const char* label///< the name of the device to unload
-                           ) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::unloadDevice(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
    // "Core" cannot be unloaded.
    if (label != nullptr && std::string(label) == MM::g_Keyword_CoreDevice)
@@ -1159,8 +1187,7 @@ MMCORE_DEPRECATED void CMMCore::updateCoreProperties() MMCORE_LEGACY_THROW(CMMEr
  *
  * @param label   the device label
  */
-void CMMCore::initializeDevice(const char* label ///< the device to initialize
-                               ) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::initializeDevice(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::DeviceInstance> pDevice = deviceManager_->GetDevice(label);
 
@@ -1210,6 +1237,8 @@ void CMMCore::updateSystemStateCache()
 
 /**
  * Returns device type.
+ *
+ * @param label  the device label
  */
 MM::DeviceType CMMCore::getDeviceType(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1223,6 +1252,8 @@ MM::DeviceType CMMCore::getDeviceType(const char* label) MMCORE_LEGACY_THROW(CMM
 
 /**
  * Returns device library (aka module, device adapter) name.
+ *
+ * @param label  the device label
  */
 std::string CMMCore::getDeviceLibrary(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1246,6 +1277,8 @@ std::string CMMCore::getDeviceLibrary(const char* label) MMCORE_LEGACY_THROW(CMM
  * Any devices from the adapter will be unloaded first. Do not call this
  * function when devices from other adapters (e.g. Utilities) may be depending
  * on them.
+ *
+ * @param moduleName  the device adapter (library) name
  */
 void CMMCore::unloadLibrary(const char* moduleName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1280,6 +1313,8 @@ void CMMCore::unloadLibrary(const char* moduleName) MMCORE_LEGACY_THROW(CMMError
  * Returns device name for a given device label.
  * "Name" is determined by the library and is immutable, while "label" is
  * user assigned and represents a high-level handle to a device.
+ *
+ * @param label  the device label
  */
 std::string CMMCore::getDeviceName(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1293,6 +1328,8 @@ std::string CMMCore::getDeviceName(const char* label) MMCORE_LEGACY_THROW(CMMErr
 
 /**
  * Returns parent device.
+ *
+ * @param peripheralLabel  the peripheral device label
  */
 std::string CMMCore::getParentLabel(const char* peripheralLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1306,6 +1343,9 @@ std::string CMMCore::getParentLabel(const char* peripheralLabel) MMCORE_LEGACY_T
 
 /**
  * Sets parent device label
+ *
+ * @param deviceLabel     the peripheral device label
+ * @param parentHubLabel  the hub device label, or an empty string for no parent
  */
 void CMMCore::setParentLabel(const char* deviceLabel, const char* parentHubLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -1330,6 +1370,8 @@ void CMMCore::setParentLabel(const char* deviceLabel, const char* parentHubLabel
 /**
  * Returns description text for a given device label.
  * "Description" is determined by the library and is immutable.
+ *
+ * @param label  the device label
  */
 std::string CMMCore::getDeviceDescription(const char* label) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -2252,6 +2294,8 @@ void CMMCore::setAdapterOriginXY(double newXUm, double newYUm) MMCORE_LEGACY_THR
  *
  * An exception is thrown if the direction has not been set and the device
  * encounters an error when determining the default direction.
+ *
+ * @param stageLabel  the focus stage device label
  */
 int CMMCore::getFocusDirection(const char* stageLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -2275,6 +2319,9 @@ int CMMCore::getFocusDirection(const char* stageLabel) MMCORE_LEGACY_THROW(CMMEr
  *
  * For legacy reasons, an exception is not thrown if there is an error.
  * Instead, nothing is done if stageLabel is not a valid focus stage.
+ *
+ * @param stageLabel  the focus stage device label
+ * @param sign        the focus direction: positive, negative, or 0 for unknown
  */
 void CMMCore::setFocusDirection(const char* stageLabel, int sign)
 {
@@ -2413,6 +2460,8 @@ void CMMCore::loadExposureSequence(const char* cameraLabel, std::vector<double> 
 /**
 * Queries whether this stage uses callbacks to signal position changes.
 * When false, use polling to stay updated about the position of the stage.
+*
+* @param stageLabel  the stage device label
 */
 bool CMMCore::isStageUsingCallbacks(const char* stageLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -2589,6 +2638,8 @@ void CMMCore::setStageLinearSequence(const char* stageLabel, double dZ_um, int n
 /**
 * Queries whether this XYStage uses callbacks to signal position changes.
 * When false, use polling to stay updated about the position of the stage.
+*
+* @param xyStageLabel  the XY stage device label
 */
 bool CMMCore::isXYStageUsingCallbacks(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3156,6 +3207,7 @@ void CMMCore::startSequenceAcquisition(const char* cameraLabel, long numImages, 
 /**
  * Deprecated and only checks that the camera is not running a sequence acquisition.
  *
+ * @param cameraLabel  the camera device label
  * @deprecated
  */
 MMCORE_DEPRECATED
@@ -3323,6 +3375,8 @@ bool CMMCore::isSequenceRunning() MMCORE_NOEXCEPT
 /**
  * Check if the specified camera is acquiring the sequence.
  * Returns false when the sequence is done.
+ *
+ * @param cameraLabel  the camera device label
  */
 bool CMMCore::isSequenceRunning(const char* cameraLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3388,6 +3442,8 @@ void* CMMCore::getLastImageMD(unsigned channel, unsigned slice, Metadata& md) co
  * RGB buffers are expected to be in big endian ARGB format (ARGB8888), which means that
  * on little endian the format is BGRA8888
  * (see: https://en.wikipedia.org/wiki/RGBA_color_model).
+ *
+ * @param md  receives the metadata of the image
  */
 void* CMMCore::getLastImageMD(Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3405,6 +3461,9 @@ void* CMMCore::getLastImageMD(Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
  * RGB buffers are expected to be in big endian ARGB format (ARGB8888), which means that
  * on little endian the format is BGRA8888
  * (see: https://en.wikipedia.org/wiki/RGBA_color_model).
+ *
+ * @param n   how many images before the last one (0 for the last image)
+ * @param md  receives the metadata of the image
  */
 void* CMMCore::getNBeforeLastImageMD(unsigned long n, Metadata& md) const MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3445,6 +3504,10 @@ void* CMMCore::popNextImage() MMCORE_LEGACY_THROW(CMMError)
  *
  * channel has not been implemented and should always be 0.
  * slice has not been implemented and should always be 0.
+ *
+ * @param channel  not implemented; must be 0
+ * @param slice    not implemented; must be 0
+ * @param md       receives the metadata of the image
  */
 void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3466,6 +3529,8 @@ void* CMMCore::popNextImageMD(unsigned channel, unsigned slice, Metadata& md) MM
 
 /**
  * Gets and removes the next image (and metadata) from the circular buffer
+ *
+ * @param md  receives the metadata of the image
  */
 void* CMMCore::popNextImageMD(Metadata& md) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3664,6 +3729,8 @@ std::string CMMCore::getAutoFocusDevice()
 
 /**
  * Sets the current auto-focus device.
+ *
+ * @param focusLabel  the autofocus device label, or an empty string for none
  */
 void CMMCore::setAutoFocusDevice(const char* focusLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3717,6 +3784,8 @@ std::string CMMCore::getGalvoDevice()
 
 /**
  * Sets the current image processor device.
+ *
+ * @param procLabel  the image processor device label, or an empty string for none
  */
 void CMMCore::setImageProcessorDevice(const char* procLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3727,6 +3796,8 @@ void CMMCore::setImageProcessorDevice(const char* procLabel) MMCORE_LEGACY_THROW
 
 /**
  * Sets the current SLM device.
+ *
+ * @param slmLabel  the SLM device label, or an empty string for none
  */
 void CMMCore::setSLMDevice(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3738,6 +3809,8 @@ void CMMCore::setSLMDevice(const char* slmLabel) MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Sets the current galvo device.
+ *
+ * @param galvoLabel  the galvo device label, or an empty string for none
  */
 void CMMCore::setGalvoDevice(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3748,6 +3821,8 @@ void CMMCore::setGalvoDevice(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMErro
 
 /**
  * Specifies the group determining the channel selection.
+ *
+ * @param channelGroup  the configuration group name, or an empty string for none
  */
 void CMMCore::setChannelGroup(const char* channelGroup) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -3789,6 +3864,8 @@ void CMMCore::setFocusDevice(const char* focusLabel) MMCORE_LEGACY_THROW(CMMErro
 
 /**
  * Sets the current XY device.
+ *
+ * @param xyStageLabel  the XY stage device label, or an empty string for none
  */
 void CMMCore::setXYStageDevice(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4026,6 +4103,9 @@ void CMMCore::setProperty(const char* label, const char* propName,
 /**
  * Checks if device has a property with a specified name.
  * The exception will be thrown in case device label is not defined.
+ *
+ * @param label     the device label
+ * @param propName  the property name
  */
 bool CMMCore::hasProperty(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4076,6 +4156,9 @@ bool CMMCore::isPropertyPreInit(const char* label, const char* propName) MMCORE_
 
 /**
  * Returns the property lower limit value, if the property has limits - 0 otherwise.
+ *
+ * @param label     the device label
+ * @param propName  the property name
  */
 double CMMCore::getPropertyLowerLimit(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4090,6 +4173,9 @@ double CMMCore::getPropertyLowerLimit(const char* label, const char* propName) M
 
 /**
  * Returns the property upper limit value, if the property has limits - 0 otherwise.
+ *
+ * @param label     the device label
+ * @param propName  the property name
  */
 double CMMCore::getPropertyUpperLimit(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4219,6 +4305,9 @@ void CMMCore::loadPropertySequence(const char* label, const char* propName, std:
 
 /**
  * Returns the intrinsic property type.
+ *
+ * @param label     the device label
+ * @param propName  the property name
  */
 MM::PropertyType CMMCore::getPropertyType(const char* label, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -4370,7 +4459,9 @@ unsigned CMMCore::getNumberOfCameraChannels()
 }
 
 /**
- * Returns the name of the requested channel as known by the default camera
+ * Returns the name of the requested channel as known by the default camera.
+ *
+ * @param channelNr  the channel index
  */
 std::string CMMCore::getCameraChannelName(unsigned int channelNr)
 {
@@ -5115,6 +5206,8 @@ long CMMCore::getState(const char* stateDeviceLabel) MMCORE_LEGACY_THROW(CMMErro
  *
  * For legacy reasons, an exception is not thrown on error.
  * Instead, -1 is returned if stateDeviceLabel is not a valid state device.
+ *
+ * @param stateDeviceLabel  the state device label
  */
 long CMMCore::getNumberOfStates(const char* stateDeviceLabel)
 {
@@ -5283,6 +5376,8 @@ long CMMCore::getStateFromLabel(const char* stateDeviceLabel, const char* stateL
 
 /**
  * Creates an empty configuration group.
+ *
+ * @param groupName  the name of the new configuration group
  */
 void CMMCore::defineConfigGroup(const char* groupName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5297,6 +5392,8 @@ void CMMCore::defineConfigGroup(const char* groupName) MMCORE_LEGACY_THROW(CMMEr
 
 /**
  * Deletes an entire configuration group.
+ *
+ * @param groupName  the configuration group name
  */
 void CMMCore::deleteConfigGroup(const char* groupName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5314,6 +5411,9 @@ void CMMCore::deleteConfigGroup(const char* groupName) MMCORE_LEGACY_THROW(CMMEr
 
 /**
  * Renames a configuration group.
+ *
+ * @param oldGroupName  the current configuration group name
+ * @param newGroupName  the new name
  */
 void CMMCore::renameConfigGroup(const char* oldGroupName, const char* newGroupName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5640,6 +5740,9 @@ void CMMCore::setConfig(const char* groupName, const char* configName) MMCORE_LE
  * Renames a configuration within a specified group. The command will fail if the
  * configuration was not previously defined.
  *
+ * @param groupName      the configuration group name
+ * @param oldConfigName  the current configuration (preset) name
+ * @param newConfigName  the new name
  */
 void CMMCore::renameConfig(const char* groupName, const char* oldConfigName, const char* newConfigName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5662,6 +5765,8 @@ void CMMCore::renameConfig(const char* groupName, const char* oldConfigName, con
  * Deletes a configuration from a group. The command will fail if the
  * configuration was not previously defined.
  *
+ * @param groupName   the configuration group name
+ * @param configName  the configuration (preset) name
  */
 void CMMCore::deleteConfig(const char* groupName, const char* configName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5685,6 +5790,10 @@ void CMMCore::deleteConfig(const char* groupName, const char* configName) MMCORE
  * Deletes a property from a configuration in the specified group. The command will fail if the
  * configuration was not previously defined.
  *
+ * @param groupName    the configuration group name
+ * @param configName   the configuration (preset) name
+ * @param deviceLabel  the device label of the setting to delete
+ * @param propName     the property name of the setting to delete
  */
 void CMMCore::deleteConfig(const char* groupName, const char* configName, const char* deviceLabel, const char* propName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -5713,11 +5822,12 @@ void CMMCore::deleteConfig(const char* groupName, const char* configName, const 
 
 
 /**
- * Returns all defined configuration names in a given group
+ * Returns all defined configuration names in a given group.
  *
  * For legacy reasons, an exception is not thrown if there is an error.
  * Instead, an empty vector is returned if configGroup is not a valid config group.
  *
+ * @param configGroup  the configuration group name
  * @return an array of configuration names
  */
 std::vector<std::string> CMMCore::getAvailableConfigs(const char* configGroup) const
@@ -5760,6 +5870,7 @@ std::vector<std::string> CMMCore::getAvailablePixelSizeConfigs() const
  * Also, in general it is possible that the system state fits multiple configurations.
  * This method will return only the first matching configuration, if any.
  *
+ * @param groupName  the configuration group name
  * @return The current configuration preset's name
  */
 std::string CMMCore::getCurrentConfig(const char* groupName) MMCORE_LEGACY_THROW(CMMError)
@@ -5790,6 +5901,7 @@ std::string CMMCore::getCurrentConfig(const char* groupName) MMCORE_LEGACY_THROW
  * Also, in general it is possible that the system state fits multiple configurations.
  * This method will return only the first matching configuration, if any.
  *
+ * @param groupName  the configuration group name
  * @return The cache's current configuration preset name
  */
 std::string CMMCore::getCurrentConfigFromCache(const char* groupName) MMCORE_LEGACY_THROW(CMMError)
@@ -5816,6 +5928,8 @@ std::string CMMCore::getCurrentConfigFromCache(const char* groupName) MMCORE_LEG
 /**
  * Returns the configuration object for a given group and name.
  *
+ * @param configGroup  the configuration group name
+ * @param configName   the configuration (preset) name
  * @return The configuration object
  */
 Configuration CMMCore::getConfigData(const char* configGroup, const char* configName) MMCORE_LEGACY_THROW(CMMError)
@@ -6377,6 +6491,8 @@ double CMMCore::getPixelSizeOptimalZUm(const char* resolutionID) MMCORE_LEGACY_T
 /**
  * Checks if the configuration already exists within a group.
  *
+ * @param groupName   the configuration group name
+ * @param configName  the configuration (preset) name
  * @return true if the configuration is already defined
  */
 bool CMMCore::isConfigDefined(const char* groupName, const char* configName)
@@ -6390,6 +6506,7 @@ bool CMMCore::isConfigDefined(const char* groupName, const char* configName)
 /**
  * Checks if the group already exists.
  *
+ * @param groupName  the configuration group name
  * @return true if the group is already defined
  */
 bool CMMCore::isGroupDefined(const char* groupName)
@@ -7541,6 +7658,8 @@ void CMMCore::pumpDispenseVolumeUl(const char* pumpLabel, double microLiter) MMC
  * Saves the current system state to a text file of the MM specific format.
  * The file records only read-write properties.
  * The file format is directly readable by the complementary loadSystemState() command.
+ *
+ * @param fileName  path of the file to write
  */
 void CMMCore::saveSystemState(const char* fileName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7574,6 +7693,8 @@ void CMMCore::saveSystemState(const char* fileName) MMCORE_LEGACY_THROW(CMMError
  * property values.
  *
  * Format specification: the same as in loadSystemConfiguration() command
+ *
+ * @param fileName  path of the file to read
  */
 void CMMCore::loadSystemState(const char* fileName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7646,6 +7767,8 @@ void CMMCore::loadSystemState(const char* fileName) MMCORE_LEGACY_THROW(CMMError
  * The configuration file records only the information essential to the hardware
  * setup: devices, labels, pre-initialization properties, and configurations.
  * The file format is the same as for the system state.
+ *
+ * @param fileName  path of the file to write
  */
 void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -7866,6 +7989,8 @@ void CMMCore::saveSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(
  * The number of parameters depends on the actual command used.
  *
  * This function is not thread-safe.
+ *
+ * @param fileName  path of the file to read
  */
 void CMMCore::loadSystemConfiguration(const char* fileName) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -8171,6 +8296,8 @@ void CMMCore::loadSystemConfigurationImpl(const char* fileName) MMCORE_LEGACY_TH
  * remains valid until it is unregistered.
  *
  * Must not be called from within a callback handler.
+ *
+ * @param cb  the callback object, or nullptr to unregister
  */
 void CMMCore::registerCallback(MMEventCallback* cb) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -8283,6 +8410,8 @@ double CMMCore::getCurrentFocusScore()
 
 /**
  * Enables or disables the operation of the continuous focusing hardware device.
+ *
+ * @param enable  true to enable continuous focus, false to disable it
  */
 void CMMCore::enableContinuousFocus(bool enable) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -8354,6 +8483,8 @@ bool CMMCore::isContinuousFocusLocked() MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Check if a stage has continuous focusing capability (positions can be set while continuous focus runs).
+ *
+ * @param stageLabel  the stage device label
  */
 bool CMMCore::isContinuousFocusDrive(const char* stageLabel) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -8414,6 +8545,8 @@ void CMMCore::incrementalFocus() MMCORE_LEGACY_THROW(CMMError)
 
 /**
  * Applies an offset to the one-shot focusing device.
+ *
+ * @param offset  the offset, in the autofocus device's units
  */
 void CMMCore::setAutoFocusOffset(double offset) MMCORE_LEGACY_THROW(CMMError)
 {
@@ -8953,6 +9086,8 @@ std::string CMMCore::getDeviceErrorText(int deviceCode, std::shared_ptr<mmi::Dev
 
 /**
  * Returns a pre-defined error text with the given error code.
+ *
+ * @param code  the MMCore error code
  */
 std::string CMMCore::getCoreErrorText(int code) const
 {
@@ -8989,6 +9124,8 @@ std::string CMMCore::getDeviceName(std::shared_ptr<mmcore::internal::DeviceInsta
  *
  * For legacy reasons, an exception is not thrown if there is an error.
  * Instead, false is returned if deviceLabel is not a valid device.
+ *
+ * @param deviceLabel  the device label
  */
 bool CMMCore::supportsDeviceDetection(const char* deviceLabel)
 {
@@ -9185,6 +9322,9 @@ std::string CMMCore::getInstalledDeviceDescription(const char* hubLabel, const c
  * The caller is responsible for keeping \p implementation valid until this
  * Core is destroyed (or until unloadLibrary(name) is called, but that is
  * not recommended.)
+ *
+ * @param name            the name to register the mock adapter under
+ * @param implementation  the mock adapter
  */
 void CMMCore::loadMockDeviceAdapter(const char* name,
       MockDeviceAdapter* implementation) MMCORE_LEGACY_THROW(CMMError)
