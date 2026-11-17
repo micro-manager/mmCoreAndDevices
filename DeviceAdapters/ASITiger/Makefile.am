@@ -21,7 +21,6 @@ libmmgr_dal_ASITiger_la_SOURCES = \
 	ASILED.h \
 	ASILens.cpp \
 	ASILens.h \
-	ASIPeripheralBase.h \
 	ASIPiezo.cpp \
 	ASIPiezo.h \
 	ASIPLogic.cpp \

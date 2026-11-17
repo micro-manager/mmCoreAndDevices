@@ -86,9 +86,6 @@
     <ClInclude Include="ASIDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ASIPeripheralBase.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ASIPiezo.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -120,7 +120,6 @@
     <ClInclude Include="ASIHub.h" />
     <ClInclude Include="ASILED.h" />
     <ClInclude Include="ASILens.h" />
-    <ClInclude Include="ASIPeripheralBase.h" />
     <ClInclude Include="ASIPiezo.h" />
     <ClInclude Include="ASIPLogic.h" />
     <ClInclude Include="ASIPmt.h" />
