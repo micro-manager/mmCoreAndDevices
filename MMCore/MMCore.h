@@ -51,7 +51,7 @@
 #include "ErrorCodes.h"
 #include "LogLevel.h"
 #include "Logging/Logger.h"
-#include "MockDeviceAdapter.h"
+#include "ClientDeviceAdapter.h"
 #include "Notification.h"
 
 #include "MMDevice.h"
@@ -690,10 +690,10 @@ public:
    ///@}
 
 #if !defined(SWIGJAVA) && !defined(SWIGPYTHON)
-   /** \name Testing */
+   /** \name Client device adapters (experimental) */
    ///@{
-   void loadMockDeviceAdapter(const char* name,
-         MockDeviceAdapter* implementation) MMCORE_LEGACY_THROW(CMMError);
+   void loadClientDeviceAdapter(const char* name,
+         std::shared_ptr<ClientDeviceAdapter> adapter) MMCORE_LEGACY_THROW(CMMError);
    ///@}
 #endif
 

@@ -17,7 +17,7 @@
 //
 // AUTHOR:        Mark Tsuchida
 
-#include "LoadedDeviceAdapterImplMock.h"
+#include "LoadedDeviceAdapterImplClient.h"
 
 #include "MMDevice.h"
 #include "ModuleInterface.h"
@@ -26,7 +26,7 @@
 namespace mmcore {
 namespace internal {
 
-void LoadedDeviceAdapterImplMock::InitializeModuleData()
+void LoadedDeviceAdapterImplClient::InitializeModuleData()
 {
    impl_->InitializeModuleData(
       [&](const char* name, MM::DeviceType type, const char* desc) {
@@ -35,50 +35,50 @@ void LoadedDeviceAdapterImplMock::InitializeModuleData()
 }
 
 
-long LoadedDeviceAdapterImplMock::GetModuleVersion() const
+long LoadedDeviceAdapterImplClient::GetModuleVersion() const
 {
    return MODULE_INTERFACE_VERSION;
 }
 
 
-long LoadedDeviceAdapterImplMock::GetDeviceInterfaceVersion() const
+long LoadedDeviceAdapterImplClient::GetDeviceInterfaceVersion() const
 {
    return DEVICE_INTERFACE_VERSION;
 }
 
 
-unsigned LoadedDeviceAdapterImplMock::GetNumberOfDevices() const
+unsigned LoadedDeviceAdapterImplClient::GetNumberOfDevices() const
 {
    return registeredDevices_.GetNumberOfDevices();
 }
 
 
-bool LoadedDeviceAdapterImplMock::GetDeviceName(unsigned index, char* buf, unsigned bufLen) const
+bool LoadedDeviceAdapterImplClient::GetDeviceName(unsigned index, char* buf, unsigned bufLen) const
 {
    return registeredDevices_.GetDeviceName(index, buf, bufLen);
 }
 
 
-bool LoadedDeviceAdapterImplMock::GetDeviceDescription(const char* deviceName,
+bool LoadedDeviceAdapterImplClient::GetDeviceDescription(const char* deviceName,
    char* buf, unsigned bufLen) const
 {
    return registeredDevices_.GetDeviceDescription(deviceName, buf, bufLen);
 }
 
 
-bool LoadedDeviceAdapterImplMock::GetDeviceType(const char* deviceName, int* type) const
+bool LoadedDeviceAdapterImplClient::GetDeviceType(const char* deviceName, int* type) const
 {
    return registeredDevices_.GetDeviceType(deviceName, type);
 }
 
 
-MM::Device* LoadedDeviceAdapterImplMock::CreateDevice(const char* deviceName)
+MM::Device* LoadedDeviceAdapterImplClient::CreateDevice(const char* deviceName)
 {
    return impl_->CreateDevice(deviceName);
 }
 
 
-void LoadedDeviceAdapterImplMock::DeleteDevice(MM::Device* device)
+void LoadedDeviceAdapterImplClient::DeleteDevice(MM::Device* device)
 {
    return impl_->DeleteDevice(device);
 }
