@@ -29,9 +29,7 @@
 #include <string>
 #include <vector>
 
-CTigerCommHub::CTigerCommHub() {
-    CreateProperty(MM::g_Keyword_Name, g_TigerCommHubName, MM::String, true);
-}
+CTigerCommHub::CTigerCommHub() : ASIHub(g_TigerCommHubName) {}
 
 int CTigerCommHub::Initialize()
 {

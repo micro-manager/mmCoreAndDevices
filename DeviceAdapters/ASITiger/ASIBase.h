@@ -3,7 +3,7 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   ASI generic device class templates
+// DESCRIPTION:   State and helpers shared by all ASI Tiger devices
 //
 // COPYRIGHT:     Applied Scientific Instrumentation, Eugene OR
 //
@@ -22,72 +22,23 @@
 
 #pragma once
 
-#include "MMDevice.h"
-#include "DeviceBase.h"
 #include "ASITiger.h"
+#include "MMDevice.h"
 #include <string>
 
+class ASIHub;
 
 ////////////////////////////////////////////////////////////////
-// *********** generic ASI device class templates **************
-// Purpose: to to take care of all common/generic ASI functionality.
-//
-// Here is how the class hierarchy looks (using CXYStage as an example):
-// MM::Device
-// MM::XYStage
-// CDeviceBase<MM::XYStage, CXYStage>
-// CXYStageBase<CXYStage>
-// ASIBase<CXYStageBase, CXYStage>
-// ASIPeripheralBase<CXYStageBase, CXYStage>
-// CXYStage
-//
-// In other words, we insert ASIBase<> and ASIPeripheralBase<> into the
-// inheritance chain just before the concrete device class. (In the case of
-// class ASIHub, we skip ASIPeripheralBase<> and inherit directly from
-// ASIBase<HubBase, ASIHub>.)
-//
-// Thus, ASIBase<> and ASIPeripheralBase<> can implement common functionality
-// by making use of CDeviceBase methods.
+// State and helpers shared by every ASI Tiger device, including the hub.
+// Devices inherit it through ASIDevice (see ASIDevice.h). It is not an
+// MM::Device, so it must not declare Shutdown(), GetName() or Busy();
+// those live in ASIDevice.
 ////////////////////////////////////////////////////////////////
 
-template <template <typename> class TDeviceBase, class UConcreteDevice>
-class ASIBase : public TDeviceBase<UConcreteDevice> {
+class ASIBase {
 public:
-    explicit ASIBase(const char* name) {
-        this->InitializeDefaultErrorMessages();
-        InitializeASIErrorMessages();
-
-        // Note: this name is different from the label that MM uses in e.g. SetProperty()
-
-        // name property will be used to re-create the object by calling CreateDevice again with this parameter
-        // if name isn't specified then skip this step (=> method for parent objects to delay setting name until child created)
-        if (strcmp(name, "") != 0) {
-            this->CreateProperty(MM::g_Keyword_Name, name, MM::String, true);
-        }
-    }
-
+    ASIBase() = default;
     virtual ~ASIBase() = default;
-
-    int Shutdown() {
-        initialized_ = false;
-        return DEVICE_OK;
-    }
-
-    void GetName(char* pszName) const {
-        char name[MM::MaxStrLength];
-        if (this->HasProperty(MM::g_Keyword_Name)) {
-            this->GetProperty(MM::g_Keyword_Name, name);
-        } else {
-            strcpy(name, "Undefined");
-        }
-        CDeviceUtils::CopyLimitedString(pszName, name);
-    }
-
-    bool Busy() {
-        // default: hardware is always ready; override in derived class if the hardware requires it.
-        // The hub must keep this default: it is never busy and can always accept a new command or query.
-        return false;
-    }
 
     // Return true if the firmware version is at least the minimum version.
     bool FirmwareVersionAtLeast(const double minVersion) const {
@@ -95,28 +46,30 @@ public:
     }
 
 protected:
-    void InitializeASIErrorMessages() {
-        this->SetErrorText(ERR_UNRECOGNIZED_ANSWER, g_Msg_ERR_UNRECOGNIZED_ANSWER);
-        this->SetErrorText(ERR_FILTER_WHEEL_NOT_READY, g_Msg_ERR_FILTER_WHEEL_NOT_READY);
-        this->SetErrorText(ERR_FILTER_WHEEL_SPINNING, g_Msg_ERR_FILTER_WHEEL_SPINNING);
-        this->SetErrorText(ERR_NOT_ENOUGH_AXES, g_Msg_ERR_NOT_ENOUGH_AXES);
-        this->SetErrorText(ERR_TOO_LARGE_ADDRESSES, g_Msg_ERR_TOO_LARGE_ADDRESSES);
-        this->SetErrorText(ERR_INFO_COMMAND_NOT_SUPPORTED, g_Msg_ERR_INFO_COMMAND_NOT_SUPPORTED);
-        this->SetErrorText(ERR_TIGER_PAIR_NOT_PRESENT, g_Msg_ERR_TIGER_PAIR_NOT_PRESENT);
-        this->SetErrorText(ERR_TIGER_DEV_NOT_SUPPORTED, g_Msg_ERR_TIGER_DEV_NOT_SUPPORTED);
-        this->SetErrorText(ERR_CRISP_NOT_CALIBRATED, g_Msg_ERR_CRISP_NOT_CALIBRATED);
-        this->SetErrorText(ERR_CRISP_NOT_LOCKED, g_Msg_ERR_CRISP_NOT_LOCKED);
-        this->SetErrorText(ERR_UNKNOWN_COMMAND, g_Msg_ERR_UNKNOWN_COMMAND);
-        this->SetErrorText(ERR_UNKNOWN_AXIS, g_Msg_ERR_UNKNOWN_AXIS);
-        this->SetErrorText(ERR_MISSING_PARAM, g_Msg_ERR_MISSING_PARAM);
-        this->SetErrorText(ERR_PARAM_OUT_OF_RANGE, g_Msg_ERR_PARAM_OUT_OF_RANGE);
-        this->SetErrorText(ERR_OPERATION_FAILED, g_Msg_ERR_OPERATION_FAILED);
-        this->SetErrorText(ERR_UNDEFINED_ERROR, g_Msg_ERR_UNDEFINED_ERROR);
-        this->SetErrorText(ERR_INVALID_ADDRESS, g_Msg_ERR_INVALID_ADDRESS);
-    }
+    // hub helpers
+    int AttachHub(MM::Hub* genericHub);            // static_casts genericHub and stores hub_
+    int QueryFirmwareInfo();                       // fills firmware fields below via the V/CD/BU commands
+    void RegisterWithHub(const MM::Device* self);   // adds this device to the hub's lookup table
+    void UnregisterFromHub(const MM::Device* self); // removes it again; safe to call if hub_ is null
 
-    bool initialized_ = false;
+    bool initialized_ = false;     // true once Initialize() has finished
     double firmwareVersion_ = 0.0; // firmware version
     std::string firmwareDate_{};   // firmware compile date
     std::string firmwareBuild_{};  // firmware build name
+
+    ASIHub* hub_ = nullptr; // for serial communication; stays null for the hub device itself
+    std::string addressString_ = g_EmptyCardAddressStr; // address within hub, in hex format, should be two characters (e.g. '31')
+    std::string addressChar_ = g_EmptyCardAddressChar;  // address within hub, in single character (allowed to be extended ASCII so use string to store)
+    bool refreshProps_ = false;    // true when property values should be read anew from controller each time
+    bool refreshOverride_ = false; // true when device wants to manually force refreshes temporarily
+
+    // helpers for "extended" device names containing address and axis letters
+    static bool IsExtendedName(const char* name);
+    static std::string GetAxisLetterFromExtName(const char* name, int position = 0); // returns single-character string
+    static std::string GetHexAddrFromExtName(const char* name);
+    static std::string ConvertToTigerRawAddress(const std::string& s);
+    static int GetChannelFromExtName(const char* name);
+
+private:
+    static std::string ConvertTwoCharStringToHexChar(const std::string& s);
 };

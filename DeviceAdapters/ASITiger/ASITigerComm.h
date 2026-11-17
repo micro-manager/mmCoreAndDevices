@@ -30,16 +30,6 @@
 // ***** TIGER-specific *******************************
 ///////////////////////////////////////////////////////
 
-// Because the comm card is also a device in the TG-1000 system it would
-// be nice if it also went through the ASIPeripheralBase class like the
-// other device adapters (and then ASIPeripheralBase and ASIBase could be
-// merged).  However, this was impossible because the other peripheral
-// adapters need to store a pointer to the hub device.  One solution would
-// be to remove ASIHub from the inheritance heirarchy and leave it as a
-// utility class, but some of its core commands require it to inherit from
-// HubBase in DeviceBase.h, at which point it would have to be merged
-// with TigerComm to work.  So that refactoring path was abandoned for now.
-// - Jon (14-May-2014)
 class CTigerCommHub : public ASIHub {
 public:
     CTigerCommHub();

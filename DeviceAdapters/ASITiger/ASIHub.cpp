@@ -31,8 +31,8 @@
 #include <vector>
 
 // ASIHub implements serial communication
-ASIHub::ASIHub() :
-    ASIBase< ::HubBase, ASIHub >("") { // Note: do not pass a name
+ASIHub::ASIHub(const char* name) :
+    ASIDevice<HubBase<ASIHub>>(name) {
 
    CPropertyAction* pAct = new CPropertyAction(this, &ASIHub::OnPort);
    CreateProperty(MM::g_Keyword_Port, "Undefined", MM::String, false, pAct, true);
