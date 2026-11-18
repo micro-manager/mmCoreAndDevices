@@ -48,7 +48,7 @@ public:
 protected:
     // hub helpers
     int AttachHub(MM::Hub* genericHub);            // static_casts genericHub and stores hub_
-    int QueryFirmwareInfo();                       // fills firmware fields below via the V/CD/BU commands
+    int QueryFirmwareInfo(ASIHub& hub);            // fills firmware fields below via V/CD/BU, sent through hub
     void RegisterWithHub(const MM::Device* self);   // adds this device to the hub's lookup table
     void UnregisterFromHub(const MM::Device* self); // removes it again; safe to call if hub_ is null
 

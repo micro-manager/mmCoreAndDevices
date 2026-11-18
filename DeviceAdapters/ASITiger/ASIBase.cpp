@@ -33,27 +33,27 @@ int ASIBase::AttachHub(MM::Hub* genericHub) {
     return hub_ ? DEVICE_OK : DEVICE_COMM_HUB_MISSING;
 }
 
-int ASIBase::QueryFirmwareInfo() {
+int ASIBase::QueryFirmwareInfo(ASIHub& hub) {
     // firmware version
-    if (const int status = hub_->QueryCommandVerify(addressChar_ + "V", ":A v"); status != DEVICE_OK) {
+    if (const int status = hub.QueryCommandVerify(addressChar_ + "V", ":A v"); status != DEVICE_OK) {
         return status;
     }
-    if (const int status = hub_->ParseAnswerAfterPosition(4, firmwareVersion_); status != DEVICE_OK) {
+    if (const int status = hub.ParseAnswerAfterPosition(4, firmwareVersion_); status != DEVICE_OK) {
         return status;
     }
 
     // firmware compile date; currently for user information only, stored as a string
     // so would need to convert it to proper type to use in comparisons, etc.
-    if (const int status = hub_->QueryCommand(addressChar_ + "CD"); status != DEVICE_OK) {
+    if (const int status = hub.QueryCommand(addressChar_ + "CD"); status != DEVICE_OK) {
         return status;
     }
-    firmwareDate_ = hub_->LastSerialAnswer();
+    firmwareDate_ = hub.LastSerialAnswer();
 
     // firmware build name
-    if (const int status = hub_->QueryCommand(addressChar_ + "BU"); status != DEVICE_OK) {
+    if (const int status = hub.QueryCommand(addressChar_ + "BU"); status != DEVICE_OK) {
         return status;
     }
-    firmwareBuild_ = hub_->LastSerialAnswer();
+    firmwareBuild_ = hub.LastSerialAnswer();
 
     return DEVICE_OK;
 }

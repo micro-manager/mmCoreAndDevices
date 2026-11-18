@@ -28,7 +28,12 @@
 #include <string>
 #include <vector>
 
-CTigerCommHub::CTigerCommHub() : ASIHub(g_TigerCommHubName) {}
+CTigerCommHub::CTigerCommHub() : ASIHub(g_TigerCommHubName)
+{
+   // the TigerComm card's Tiger address is '0' (hex 30)
+   addressString_ = "30";
+   addressChar_ = "0";
+}
 
 int CTigerCommHub::Initialize()
 {
@@ -42,31 +47,14 @@ int CTigerCommHub::Initialize()
    // newer firmware will set to Whizkid syntax (:A everywhere, inconsistent axis specifiers, etc.)
    RETURN_ON_MM_ERROR ( QueryCommand("VB F=0") );
 
-   // get version information from the controller, this is just for TigerComm (hub/serial card)
-   int ret = QueryCommandVerify("0 V", ":A v");  // N.B. this is different for non-Tiger controllers like MS/WK-2000
-   if (ret == ERR_UNRECOGNIZED_ANSWER)
-      ret = DEVICE_NOT_SUPPORTED;
-   RETURN_ON_MM_ERROR (ret);
-   RETURN_ON_MM_ERROR ( ParseAnswerAfterPosition(4, firmwareVersion_) );
-   std::stringstream command;
-   command << firmwareVersion_;
-   RETURN_ON_MM_ERROR ( CreateProperty(g_FirmwareVersionPropertyName, command.str().c_str(), MM::Float, true) );
-
-   // get compile date information from the controller, this is just for TigerComm (hub/serial card)
-   ret = QueryCommand("0 CD");  // N.B. this is different for non-Tiger controllers like MS/WK-2000
-   if (ret == ERR_UNRECOGNIZED_ANSWER)
-      ret = DEVICE_NOT_SUPPORTED;
-   RETURN_ON_MM_ERROR (ret);
-   firmwareDate_ = LastSerialAnswer();
-   RETURN_ON_MM_ERROR ( CreateProperty(g_FirmwareDatePropertyName, firmwareDate_.c_str(), MM::String, true) );
-
-   // get build name information from the controller, this is just for TigerComm (hub/serial card)
-   ret = QueryCommand("0 BU");  // N.B. this is different for non-Tiger controllers like MS/WK-2000
-   if (ret == ERR_UNRECOGNIZED_ANSWER)
-      ret = DEVICE_NOT_SUPPORTED;
-   RETURN_ON_MM_ERROR (ret);
-   firmwareBuild_ = LastSerialAnswer();
-   RETURN_ON_MM_ERROR ( CreateProperty(g_FirmwareBuildPropertyName, firmwareBuild_.c_str(), MM::String, true) );
+   // get version, compile date and build name from the controller, this is just for TigerComm (hub/serial card)
+   // N.B. this is different for non-Tiger controllers like MS/WK-2000
+   if (const int status = QueryFirmwareInfo(*this); status != DEVICE_OK) {
+      return (status == ERR_UNRECOGNIZED_ANSWER) ? DEVICE_NOT_SUPPORTED : status;
+   }
+   if (const int status = CreateFirmwareProperties(); status != DEVICE_OK) {
+      return status;
+   }
 
    // add a description
    RETURN_ON_MM_ERROR ( CreateProperty(MM::g_Keyword_Description, g_TigerCommHubDescription, MM::String, true) );
@@ -77,7 +65,7 @@ int CTigerCommHub::Initialize()
    // get build info for axis letters
    FirmwareBuild build;
    RETURN_ON_MM_ERROR ( GetBuildInfo("", build) );
-   command.str("");
+   std::stringstream command;
    for (unsigned int i=0; i<build.numAxes; ++i)
    {
       command << build.vAxesLetter[i];

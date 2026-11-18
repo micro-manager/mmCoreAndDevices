@@ -110,24 +110,32 @@ protected:
 
         // get the firmware version/date/build and expose them as read-only properties
         if (!skipFirmware) {
-            if (const int status = QueryFirmwareInfo(); status != DEVICE_OK) {
+            if (const int status = QueryFirmwareInfo(*hub_); status != DEVICE_OK) {
                 return status;
             }
-            if (const int status = this->CreateFloatProperty(
-                    g_FirmwareVersionPropertyName, firmwareVersion_, true); status != DEVICE_OK) {
-                return status;
-            }
-            if (const int status = this->CreateStringProperty(
-                    g_FirmwareDatePropertyName, firmwareDate_.c_str(), true); status != DEVICE_OK) {
-                return status;
-            }
-            if (const int status = this->CreateStringProperty(
-                    g_FirmwareBuildPropertyName, firmwareBuild_.c_str(), true); status != DEVICE_OK) {
+            if (const int status = CreateFirmwareProperties(); status != DEVICE_OK) {
                 return status;
             }
         }
 
         RegisterWithHub(this);
+        return DEVICE_OK;
+    }
+
+    // create the read-only firmware properties from the fields QueryFirmwareInfo() filled
+    int CreateFirmwareProperties() {
+        if (const int status = this->CreateFloatProperty(
+                g_FirmwareVersionPropertyName, firmwareVersion_, true); status != DEVICE_OK) {
+            return status;
+        }
+        if (const int status = this->CreateStringProperty(
+                g_FirmwareDatePropertyName, firmwareDate_.c_str(), true); status != DEVICE_OK) {
+            return status;
+        }
+        if (const int status = this->CreateStringProperty(
+                g_FirmwareBuildPropertyName, firmwareBuild_.c_str(), true); status != DEVICE_OK) {
+            return status;
+        }
         return DEVICE_OK;
     }
 
