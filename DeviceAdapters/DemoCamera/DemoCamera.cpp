@@ -79,6 +79,7 @@ const char* g_Sine_Wave = "Artificial Waves";
 const char* g_Norm_Noise = "Noise";
 const char* g_Color_Test = "Color Test Pattern";
 const char* g_Beads = "Fluorescent Beads";
+const char* g_MulticolorBeads = "Multicolor Beads";
 
 const char* g_PropImposedPressure = "Imposed Pressure";
 
@@ -367,6 +368,7 @@ int CDemoCamera::Initialize()
    AddAllowedValue(propName.c_str(), g_Norm_Noise);
    AddAllowedValue(propName.c_str(), g_Color_Test);
    AddAllowedValue(propName.c_str(), g_Beads);
+   AddAllowedValue(propName.c_str(), g_MulticolorBeads);
 
    // Photon Conversion Factor for Noise type camera
    pAct = new CPropertyAction(this, &CDemoCamera::OnPCF);
@@ -385,6 +387,14 @@ int CDemoCamera::Initialize()
    propName = "Photon Flux";
    CreateFloatProperty(propName.c_str(), photonFlux_, false, pAct);
    SetPropertyLimits(propName.c_str(), 2.0, 5000.0);
+
+   // Specimen simulation: 1 um per unbinned pixel at the reference 10X objective.
+   pAct = new CPropertyAction(this, &CDemoCamera::OnSamplePixelSize);
+   nRet = CreateFloatProperty("SamplePixelSizeUm", 1.0, true, pAct);
+   if (nRet != DEVICE_OK) return nRet;
+   pAct = new CPropertyAction(this, &CDemoCamera::OnSimulatedChannel);
+   nRet = CreateStringProperty("SimulatedChannel", "Unfiltered", true, pAct);
+   if (nRet != DEVICE_OK) return nRet;
 
    // Bead mode properties
    pAct = new CPropertyAction(this, &CDemoCamera::OnBeadDensity);
@@ -1767,6 +1777,9 @@ int CDemoCamera::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
          case MODE_BEADS:
             val = g_Beads;
             break;
+         case MODE_MULTICOLOR_BEADS:
+            val = g_MulticolorBeads;
+            break;
          default:
             val = g_Sine_Wave;
             break;
@@ -1783,6 +1796,11 @@ int CDemoCamera::OnMode(MM::PropertyBase* pProp, MM::ActionType eAct)
       else if (val == g_Color_Test)
       {
          mode_ = MODE_COLOR_TEST;
+      }
+      else if (val == g_MulticolorBeads)
+      {
+         mode_ = MODE_MULTICOLOR_BEADS;
+         beadsGenerated_ = false;
       }
       else if (val == g_Beads)
       {
@@ -1934,6 +1952,23 @@ int CDemoCamera::ResizeImageBuffer()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Bead mode property handlers
+
+int CDemoCamera::OnSamplePixelSize(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   if (eAct == MM::BeforeGet) pProp->Set(mode_ == MODE_MULTICOLOR_BEADS ? GetSamplePixelSizeUm() : 1.0);
+   return DEVICE_OK;
+}
+
+int CDemoCamera::OnSimulatedChannel(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+   static const char* names[] = {"DAPI", "FITC", "Rhodamine", "Cy5"};
+   if (eAct == MM::BeforeGet)
+   {
+      int channel = mode_ == MODE_MULTICOLOR_BEADS ? GetCurrentBeadChannel() : -1;
+      pProp->Set(channel < 0 ? "Unfiltered" : names[channel]);
+   }
+   return DEVICE_OK;
+}
 ///////////////////////////////////////////////////////////////////////////////
 
 int CDemoCamera::OnBeadDensity(MM::PropertyBase* pProp, MM::ActionType eAct)
