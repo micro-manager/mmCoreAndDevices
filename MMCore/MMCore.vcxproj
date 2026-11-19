@@ -113,6 +113,7 @@
     <ClCompile Include="MMCore.cpp" />
     <ClCompile Include="PluginManager.cpp" />
     <ClCompile Include="Semaphore.cpp" />
+    <ClCompile Include="SequenceAcquisition.cpp" />
     <ClCompile Include="Task.cpp" />
     <ClCompile Include="TaskSet.cpp" />
     <ClCompile Include="TaskSet_CopyMemory.cpp" />
@@ -183,6 +184,7 @@
     <ClInclude Include="NotificationQueue.h" />
     <ClInclude Include="PluginManager.h" />
     <ClInclude Include="Semaphore.h" />
+    <ClInclude Include="SequenceAcquisition.h" />
     <ClInclude Include="SynchronizedConfiguration.h" />
     <ClInclude Include="Task.h" />
     <ClInclude Include="TaskSet.h" />

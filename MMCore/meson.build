@@ -65,6 +65,7 @@ mmcore_sources = files(
     'MMCore.cpp',
     'PluginManager.cpp',
     'Semaphore.cpp',
+    'SequenceAcquisition.cpp',
     'Task.cpp',
     'TaskSet.cpp',
     'TaskSet_CopyMemory.cpp',

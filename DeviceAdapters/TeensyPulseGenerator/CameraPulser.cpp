@@ -646,6 +646,18 @@ int CameraPulser::Logical2Physical(int logical)
    return -1;
 }
 
+MM::Camera* CameraPulser::GetChannelCameraPtr(unsigned n)
+{
+   if (n >= nrCamerasInUse_)
+      return nullptr;
+   int ch = Logical2Physical(static_cast<int>(n));
+   if (ch < 0 || static_cast<unsigned>(ch) >= usedCameras_.size())
+      return nullptr;
+   if (usedCameras_[ch] == g_Undefined)
+      return nullptr;
+   return (MM::Camera*)GetDevice(usedCameras_[ch].c_str());
+}
+
 
 int CameraPulser::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct, long i)
 {
@@ -657,13 +669,6 @@ int CameraPulser::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct,
 
    else if (eAct == MM::AfterSet)
    {
-      MM::Camera* camera = (MM::Camera*)GetDevice(usedCameras_[i].c_str());
-      if (camera != 0)
-      {
-         camera->RemoveTag(MM::g_Keyword_CameraChannelName);
-         camera->RemoveTag(MM::g_Keyword_CameraChannelIndex);
-      }
-
       std::string cameraName;
       pProp->Get(cameraName);
 
@@ -671,15 +676,9 @@ int CameraPulser::OnPhysicalCamera(MM::PropertyBase* pProp, MM::ActionType eAct,
          usedCameras_[i] = g_Undefined;
       }
       else {
-         camera = (MM::Camera*)GetDevice(cameraName.c_str());
+         MM::Camera* camera = (MM::Camera*)GetDevice(cameraName.c_str());
          if (camera != 0) {
             usedCameras_[i] = cameraName;
-            std::ostringstream os;
-            os << i;
-            char myName[MM::MaxStrLength];
-            GetLabel(myName);
-            camera->AddTag(MM::g_Keyword_CameraChannelName, myName, usedCameras_[i].c_str());
-            camera->AddTag(MM::g_Keyword_CameraChannelIndex, myName, os.str().c_str());
          }
          else
             return ERR_INVALID_DEVICE_NAME;

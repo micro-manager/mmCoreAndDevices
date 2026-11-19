@@ -6,150 +6,8 @@
 #include "StubDevices.h"
 
 #include <chrono>
-#include <condition_variable>
-#include <mutex>
 #include <thread>
 #include <vector>
-
-// A camera that produces images asynchronously on its own thread.
-struct AsyncCamera : CCameraBase<AsyncCamera> {
-   std::string name = "AsyncCamera";
-   unsigned width = 64;
-   unsigned height = 64;
-   unsigned bytesPerPixel = 1;
-   unsigned nComponents = 1;
-   unsigned bitDepth = 8;
-   int binning = 1;
-   double exposure = 10.0;
-
-   int Initialize() override { return DEVICE_OK; }
-   int Shutdown() override { return DEVICE_OK; }
-   bool Busy() override { return false; }
-   void GetName(char* buf) const override {
-      CDeviceUtils::CopyLimitedString(buf, name.c_str());
-   }
-
-   int SnapImage() override {
-      imgBuf_.assign(
-         static_cast<size_t>(width) * height * bytesPerPixel, 0);
-      return DEVICE_OK;
-   }
-   const unsigned char* GetImageBuffer() override {
-      return imgBuf_.data();
-   }
-   long GetImageBufferSize() const override {
-      return static_cast<long>(width) * height * bytesPerPixel;
-   }
-   unsigned GetImageWidth() const override { return width; }
-   unsigned GetImageHeight() const override { return height; }
-   unsigned GetImageBytesPerPixel() const override { return bytesPerPixel; }
-   unsigned GetNumberOfComponents() const override { return nComponents; }
-   unsigned GetBitDepth() const override { return bitDepth; }
-   int GetBinning() const override { return binning; }
-   int SetBinning(int b) override { binning = b; return DEVICE_OK; }
-   void SetExposure(double e) override { exposure = e; }
-   double GetExposure() const override { return exposure; }
-   int SetROI(unsigned, unsigned, unsigned, unsigned) override {
-      return DEVICE_OK;
-   }
-   int GetROI(unsigned& x, unsigned& y, unsigned& w, unsigned& h) override {
-      x = 0; y = 0; w = width; h = height;
-      return DEVICE_OK;
-   }
-   int ClearROI() override { return DEVICE_OK; }
-   int IsExposureSequenceable(bool& seq) const override {
-      seq = false;
-      return DEVICE_OK;
-   }
-
-   int StartSequenceAcquisition(long numImages, double /*unused*/, bool /*stopOnOverflow*/) override {
-      GetCoreCallback()->PrepareForAcq(this);
-      {
-         std::lock_guard<std::mutex> lk(mu_);
-         running_ = true;
-         stopRequested_ = false;
-      }
-      thread_ = std::thread([this, numImages] {
-         AcqThread(numImages);
-      });
-      return DEVICE_OK;
-   }
-
-   int StartSequenceAcquisition(double /*unused*/) override {
-      GetCoreCallback()->PrepareForAcq(this);
-      {
-         std::lock_guard<std::mutex> lk(mu_);
-         running_ = true;
-         stopRequested_ = false;
-      }
-      thread_ = std::thread([this] {
-         AcqThread(-1);
-      });
-      return DEVICE_OK;
-   }
-
-   ~AsyncCamera() {
-      {
-         std::lock_guard<std::mutex> lk(mu_);
-         stopRequested_ = true;
-      }
-      cv_.notify_one();
-      if (thread_.joinable())
-         thread_.join();
-   }
-
-   int StopSequenceAcquisition() override {
-      {
-         std::lock_guard<std::mutex> lk(mu_);
-         stopRequested_ = true;
-      }
-      cv_.notify_one();
-      if (thread_.joinable())
-         thread_.join();
-      return DEVICE_OK;
-   }
-
-   bool IsCapturing() override {
-      std::lock_guard<std::mutex> lk(mu_);
-      return running_;
-   }
-
-private:
-   void AcqThread(long numImages) {
-      std::vector<unsigned char> buf(
-         static_cast<size_t>(width) * height * bytesPerPixel, 0);
-      long count = 0;
-      while (numImages < 0 || count < numImages) {
-         {
-            std::lock_guard<std::mutex> lk(mu_);
-            if (stopRequested_)
-               break;
-         }
-         GetCoreCallback()->InsertImage(this, buf.data(),
-            width, height, bytesPerPixel, nComponents, "{}");
-         ++count;
-         {
-            std::unique_lock<std::mutex> lk(mu_);
-            cv_.wait_for(lk, std::chrono::microseconds(100),
-               [this] { return stopRequested_; });
-            if (stopRequested_)
-               break;
-         }
-      }
-      GetCoreCallback()->AcqFinished(this, 0);
-      {
-         std::lock_guard<std::mutex> lk(mu_);
-         running_ = false;
-      }
-   }
-
-   bool running_ = false;
-   bool stopRequested_ = false;
-   std::mutex mu_;
-   std::condition_variable cv_;
-   std::thread thread_;
-   std::vector<unsigned char> imgBuf_;
-};
 
 // --- Lifecycle error handling ---
 
@@ -170,6 +28,96 @@ TEST_CASE("startSequenceAcquisition throws when already capturing",
    REQUIRE(c.isSequenceRunning());
    CHECK_THROWS_AS(c.startSequenceAcquisition(10, 0.0, true), CMMError);
    c.stopSequenceAcquisition();
+}
+
+// --- Participant-level conflict detection ---
+
+TEST_CASE("Standalone camera conflicts with running composite that uses it",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("composite", 10, 0.0, true);
+   REQUIRE(c.isSequenceRunning("composite"));
+
+   // Hide IsCapturing() so the acquisitions_ check is the one that fires.
+   p1.reportCapturing = false;
+   CHECK_THROWS_AS(
+      c.startSequenceAcquisition("p1", 10, 0.0, true), CMMError);
+
+   CHECK(c.isSequenceRunning("composite"));
+   c.stopSequenceAcquisition("composite");
+}
+
+TEST_CASE("Composite conflicts with running standalone that shares a physical",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("p1", 10, 0.0, true);
+   REQUIRE(c.isSequenceRunning("p1"));
+
+   CHECK_THROWS_AS(
+      c.startSequenceAcquisition("composite", 10, 0.0, true), CMMError);
+
+   CHECK(c.isSequenceRunning("p1"));
+   c.stopSequenceAcquisition("p1");
+}
+
+TEST_CASE("Two composites sharing a physical camera conflict",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   SyncCamera p3("p3");
+   MockCompositeCamera compositeA({&p1, &p2});
+   MockCompositeCamera compositeB({&p1, &p3});
+   compositeB.name = "compositeB";
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"p3", &p3},
+      {"compositeA", &compositeA}, {"compositeB", &compositeB}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("compositeA", 10, 0.0, true);
+   REQUIRE(c.isSequenceRunning("compositeA"));
+
+   // Hide IsCapturing() on the physicals that compositeB would check.
+   p1.reportCapturing = false;
+   p3.reportCapturing = false;
+   CHECK_THROWS_AS(
+      c.startSequenceAcquisition("compositeB", 10, 0.0, true), CMMError);
+
+   CHECK(c.isSequenceRunning("compositeA"));
+   c.stopSequenceAcquisition("compositeA");
+}
+
+TEST_CASE("Independent cameras do not conflict",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockAdapterWithDevices adapter{{"p1", &p1}, {"p2", &p2}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("p1", 10, 0.0, true);
+   REQUIRE(c.isSequenceRunning("p1"));
+
+   c.startSequenceAcquisition("p2", 10, 0.0, true);
+   CHECK(c.isSequenceRunning("p1"));
+   CHECK(c.isSequenceRunning("p2"));
+
+   c.stopSequenceAcquisition("p1");
+   c.stopSequenceAcquisition("p2");
 }
 
 TEST_CASE("startContinuousSequenceAcquisition throws when no camera set",
@@ -237,6 +185,92 @@ TEST_CASE("isSequenceRunning (by label) tracks acquisition lifecycle",
    CHECK(c.isSequenceRunning("cam") == false);
 }
 
+TEST_CASE("isSequenceRunning (by label) is true for a composite participant",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   c.startSequenceAcquisition("composite", 10, 0.0, true);
+   CHECK(c.isSequenceRunning("composite"));
+   CHECK(c.isSequenceRunning("p1"));
+   CHECK(c.isSequenceRunning("p2"));
+   c.stopSequenceAcquisition("composite");
+   CHECK_FALSE(c.isSequenceRunning("p1"));
+   CHECK_FALSE(c.isSequenceRunning("p2"));
+}
+
+TEST_CASE("isSequenceRunning is true when tracking finished but device still "
+          "reports capturing",
+          "[SequenceAcquisition]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   cam.TriggerSelfFinish();  // RecordFinish runs; AllParticipantsFinished() true.
+   // Simulate a device that has not yet returned to !IsCapturing (e.g.
+   // post-AcqFinished cleanup window or out-of-band activity).
+   cam.capturing = true;
+   CHECK(c.isSequenceRunning("cam"));
+   CHECK(c.isSequenceRunning());
+   cam.capturing = false;
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("isSequenceRunning is true while in-flight even if device IsCapturing "
+          "transiently reports false",
+          "[SequenceAcquisition]") {
+   SyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   // Tracking entry exists and has unfinished participant; tracking is
+   // authoritative even if the device reports !IsCapturing.
+   cam.reportCapturing = false;
+   CHECK(c.isSequenceRunning("cam"));
+   CHECK(c.isSequenceRunning());
+   cam.reportCapturing = true;
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("isSequenceRunning (default) is true when current camera is a "
+          "composite participant of another acquisition",
+          "[SequenceAcquisition]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+
+   // Set current camera to a physical, then start the composite acquisition
+   // by named label (so the current camera does not change).
+   c.setCameraDevice("p1");
+   c.startSequenceAcquisition("composite", 10, 0.0, true);
+   // Hide device-level capturing so only tracking can answer affirmatively.
+   p1.reportCapturing = false;
+   CHECK(c.isSequenceRunning());
+   p1.reportCapturing = true;
+   c.stopSequenceAcquisition("composite");
+}
+
+TEST_CASE("isSequenceRunning (by label) throws on unknown camera label",
+          "[SequenceAcquisition]") {
+   CMMCore c;
+   CHECK_THROWS_AS(c.isSequenceRunning("noSuchCamera"), CMMError);
+}
+
 // --- Buffer initialization side effects ---
 
 TEST_CASE("startSequenceAcquisition clears pre-existing images from buffer",
@@ -246,10 +280,14 @@ TEST_CASE("startSequenceAcquisition clears pre-existing images from buffer",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+
+   c.startSequenceAcquisition(10, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(c.getRemainingImageCount() == 2);
+   c.stopSequenceAcquisition();
+   REQUIRE(c.getRemainingImageCount() == 2);
+
    c.startSequenceAcquisition(10, 0.0, true);
    CHECK(c.getRemainingImageCount() == 0);
    c.stopSequenceAcquisition();
@@ -313,9 +351,12 @@ TEST_CASE("Named-camera startSequenceAcquisition initializes and clears buffer",
    CMMCore c;
    adapter.LoadIntoCore(c);
    c.setCameraDevice("cam");
-   c.initializeCircularBuffer();
+
+   c.startSequenceAcquisition("cam", 10, 0.0, true);
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    REQUIRE(c.getRemainingImageCount() == 1);
+   c.stopSequenceAcquisition("cam");
+
    c.startSequenceAcquisition("cam", 10, 0.0, true);
    CHECK(c.getRemainingImageCount() == 0);
    c.stopSequenceAcquisition("cam");
@@ -531,6 +572,180 @@ TEST_CASE("Camera self-finish does not touch shutter when autoShutter is off",
    c.stopSequenceAcquisition();
 }
 
+// --- Async shutter close paths ---
+
+TEST_CASE("Async same-module shutter closes on stopSequenceAcquisition without "
+          "deadlock",
+          "[SequenceAcquisition]") {
+   AsyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.open == true);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Async same-module shutter closes on camera self-finish",
+          "[SequenceAcquisition]") {
+   AsyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(3, 0.0, true);
+   REQUIRE(shutter.open == true);
+
+   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+   while (c.isSequenceRunning() &&
+          std::chrono::steady_clock::now() < deadline) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+   }
+   REQUIRE_FALSE(c.isSequenceRunning());
+   CHECK(shutter.open == false);
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Async same-module shutter not touched when autoShutter is off",
+          "[SequenceAcquisition]") {
+   AsyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(false);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   shutter.open = true;
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == true);
+}
+
+TEST_CASE("Async different-module shutter closes on stopSequenceAcquisition "
+          "without deadlock",
+          "[SequenceAcquisition]") {
+   AsyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices camAdapter{"cam_adapter", {{"cam", &cam}}};
+   MockAdapterWithDevices shutterAdapter{"shutter_adapter",
+      {{"shutter", &shutter}}};
+   CMMCore c;
+   camAdapter.LoadIntoCore(c);
+   shutterAdapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.open == true);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Natural completion with contended same-module lock closes shutter "
+          "via worker (no stop ever called)",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   ConcurrentStubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(shutter.GetOpenSync() == true);
+
+   // Hold the camera adapter module lock from another thread, by parking
+   // it inside SetExposure() (called via c.setExposure under the module
+   // lock). Once WaitForSetExposureBlocked returns, the holder provably
+   // holds the module lock until UnblockSetExposure.
+   cam.blockSetExposure = true;
+   std::thread holder([&] { c.setExposure("cam", 10.0); });
+   REQUIRE(cam.WaitForSetExposureBlocked());
+
+   // Drive natural completion. AcqFinished's try_lock fails (holder owns
+   // the module lock); stop was not requested, so AcqFinished spawns the
+   // worker, which then blocks waiting for the module lock.
+   cam.TriggerSelfFinish();
+
+   cam.UnblockSetExposure();
+   holder.join();
+
+   // Worker may now acquire the lock and close the shutter. Synchronize on
+   // the SetOpen(false) call; this provides happens-before for the
+   // subsequent open/count reads.
+   REQUIRE(shutter.WaitForSetOpenFalse(1));
+   CHECK(shutter.GetOpenSync() == false);
+   CHECK(shutter.GetSetOpenFalseCount() == 1);
+}
+
+TEST_CASE("stopSequenceAcquisition holds module lock; concurrent AcqFinished "
+          "defers and stopper drains the deferred shutter close",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   ConcurrentStubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(1000000, 0.0, true);
+   REQUIRE(shutter.GetOpenSync() == true);
+
+   // Force the stopper to park inside camera->StopSequenceAcquisition
+   // while holding the camera adapter module lock. MarkStopRequested
+   // has already run on the stopper (it precedes the module-lock scope
+   // in CMMCore::stopSequenceAcquisition), so stopRequested_ is true
+   // and observable to a concurrent AcqFinished.
+   cam.blockStopSeqAcq = true;
+   std::thread stopper([&] { c.stopSequenceAcquisition(); });
+   const auto stopperTid = stopper.get_id();
+   REQUIRE(cam.WaitForStopBlocked());
+
+   // Fire AcqFinished from a different thread. try_lock on the module
+   // lock fails (stopper holds it). SpawnOrDeferShutterClose observes
+   // stopRequested_ == true and takes the defer branch: it sets
+   // shutterCloseDeferred_ and returns Deferred without spawning a
+   // worker. AcqFinished returns; the shutter is not yet closed.
+   std::thread acqFin([&] { cam.TriggerSelfFinish(); });
+   acqFin.join();
+
+   // Stopper is still parked; the deferred close has not yet been
+   // drained.
+   CHECK(shutter.GetSetOpenFalseCount() == 0);
+   CHECK(shutter.GetOpenSync() == true);
+
+   // Release the stopper. It exits the module-lock scope, calls
+   // TakeDeferredShutterClose (returns true), and closes the shutter
+   // on its own thread.
+   cam.ReleaseStopBlocked();
+   stopper.join();
+
+   CHECK(shutter.GetOpenSync() == false);
+   CHECK(shutter.GetSetOpenFalseCount() == 1);
+   // The close ran on the stopper thread. This is what proves the defer
+   // branch was actually taken: a spawn-branch close would happen on
+   // the worker thread spawned inside SpawnOrDeferShutterClose, not on
+   // the stopper.
+   CHECK(shutter.GetSetOpenFalseThreadId() == stopperTid);
+}
+
 TEST_CASE("startSequenceAcquisition after camera self-finish without "
           "intervening stop succeeds",
           "[SequenceAcquisition]") {
@@ -549,5 +764,263 @@ TEST_CASE("startSequenceAcquisition after camera self-finish without "
    REQUIRE(cam.InsertTestImage() == DEVICE_OK);
    CHECK(c.getRemainingImageCount() == 1);
    CHECK(c.popNextImage() != nullptr);
+   c.stopSequenceAcquisition();
+}
+
+// --- Open-side autoshutter: inline (synchronous) PrepareForAcq ---
+
+TEST_CASE("Inline open: shutter opens before startSequenceAcquisition returns "
+          "(same adapter as camera)",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+   REQUIRE(shutter.open == false);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Inline open: shutter opens when shutter is in a different adapter",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices camAdapter{"cam_adapter", {{"cam", &cam}}};
+   MockAdapterWithDevices shutterAdapter{"shutter_adapter",
+      {{"shutter", &shutter}}};
+   CMMCore c;
+   camAdapter.LoadIntoCore(c);
+   shutterAdapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.open == false);
+}
+
+// --- Open-side autoshutter: deferred (async) PrepareForAcq ---
+
+TEST_CASE("Deferred open: shutter opens before worker's PrepareForAcq returns "
+          "(same adapter as camera)",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+   REQUIRE(shutter.open == false);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   // After startSequenceAcquisition returns, the deferred open must have
+   // executed and the shutter is open.
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+
+   // The worker thread's PrepareForAcq returned with DEVICE_OK after the
+   // shutter was opened.
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(cam.PrepareReturnValue() == DEVICE_OK);
+
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Deferred open: ShutterOpenChanged + SequenceAcquisitionStarted "
+          "fire exactly once",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(shutter.setOpenTrueCount == 1);
+   c.stopSequenceAcquisition();
+   CHECK(shutter.setOpenTrueCount == 1);
+}
+
+// --- Composite autoshutter ---
+
+TEST_CASE("Composite (sync physicals): only the FirstOpener calls SetOpen(true)",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera p1("p1");
+   SyncCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+   c.stopSequenceAcquisition("composite");
+   CHECK(shutter.open == false);
+}
+
+TEST_CASE("Composite (async physicals): exactly one SetOpen(true), all "
+          "participants released",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera p1("p1");
+   WorkerThreadCamera p2("p2");
+   MockCompositeCamera composite({&p1, &p2});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"p1", &p1}, {"p2", &p2}, {"composite", &composite},
+      {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(p1.WaitForPrepareReturned());
+   REQUIRE(p2.WaitForPrepareReturned());
+   CHECK(p1.PrepareReturnValue() == DEVICE_OK);
+   CHECK(p2.PrepareReturnValue() == DEVICE_OK);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+
+   c.stopSequenceAcquisition("composite");
+}
+
+TEST_CASE("Composite (mixed sync + async): inline FirstOpener wins, async "
+          "sibling sees AlreadyOpened",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera pSync("pSync");
+   WorkerThreadCamera pAsync("pAsync");
+   // Composite starts physicals in order; pSync first ensures inline
+   // FirstOpener opens the shutter on the calling thread before pAsync's
+   // worker reaches PrepareForAcq.
+   MockCompositeCamera composite({&pSync, &pAsync});
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{
+      {"pSync", &pSync}, {"pAsync", &pAsync},
+      {"composite", &composite}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("composite");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(pAsync.WaitForPrepareReturned());
+   CHECK(pAsync.PrepareReturnValue() == DEVICE_OK);
+   CHECK(shutter.open == true);
+   CHECK(shutter.setOpenTrueCount == 1);
+
+   c.stopSequenceAcquisition("composite");
+}
+
+// --- Failure paths ---
+
+TEST_CASE("Inline open: SetOpen failure propagates as start error",
+          "[SequenceAcquisition][Autoshutter]") {
+   SyncCamera cam;
+   StubShutter shutter;
+   shutter.setOpenTrueReturnValue = DEVICE_ERR;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(10, 0.0, true), CMMError);
+   CHECK(shutter.open == false);
+   CHECK(shutter.setOpenTrueCount == 1);
+   CHECK(shutter.setOpenFalseCount == 0);
+}
+
+TEST_CASE("Deferred open: startDevice failure releases parked worker without "
+          "opening shutter",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   cam.startReturnValue = DEVICE_ERR;
+   cam.waitForPrepareCalledBeforeStartReturns = true;
+   // Give the worker time to enter PrepareForAcq, defer, and park on the CV
+   // before StartSequenceAcquisition returns failure.
+   cam.extraSleepBeforeStartReturns = std::chrono::milliseconds(50);
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(true);
+
+   CHECK_THROWS_AS(c.startSequenceAcquisition(10, 0.0, true), CMMError);
+   // Worker must have been released; PrepareForAcq returned DEVICE_ERR.
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(cam.PrepareReturnValue() == DEVICE_ERR);
+   // Shutter never opened, so neither SetOpen(true) nor SetOpen(false) ran.
+   CHECK(shutter.open == false);
+   CHECK(shutter.setOpenTrueCount == 0);
+   CHECK(shutter.setOpenFalseCount == 0);
+
+   // Drive the worker thread to exit. cam dtor would also do this, but be
+   // explicit.
+   cam.StopSequenceAcquisition();
+}
+
+// --- Negative cases (no autoshutter, no shutter) ---
+
+TEST_CASE("Deferred-open machinery is inert when autoShutter is off",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   StubShutter shutter;
+   MockAdapterWithDevices adapter{{"cam", &cam}, {"shutter", &shutter}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setShutterDevice("shutter");
+   c.setAutoShutter(false);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(cam.PrepareReturnValue() == DEVICE_OK);
+   CHECK(shutter.open == false);
+   CHECK(shutter.setOpenTrueCount == 0);
+   c.stopSequenceAcquisition();
+}
+
+TEST_CASE("Deferred-open machinery is inert when no shutter is set",
+          "[SequenceAcquisition][Autoshutter]") {
+   WorkerThreadCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.setAutoShutter(true);
+
+   c.startSequenceAcquisition(10, 0.0, true);
+   REQUIRE(cam.WaitForPrepareReturned());
+   CHECK(cam.PrepareReturnValue() == DEVICE_OK);
    c.stopSequenceAcquisition();
 }

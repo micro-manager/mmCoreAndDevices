@@ -4,6 +4,10 @@
 #include "MockDeviceUtils.h"
 #include "StubDevices.h"
 
+#include <chrono>
+#include <thread>
+#include <vector>
+
 TEST_CASE("Unload the current camera", "[regression]") {
    StubCamera cam;
    MockAdapterWithDevices adapter{{"cam", &cam}};
@@ -173,4 +177,26 @@ TEST_CASE("Unload all devices reports every device that failed to shut down",
    CHECK(failing1.shutdownCalled);
    CHECK(failing2.shutdownCalled);
    CHECK(c.getLoadedDevices() == std::vector<std::string>{"Core"});
+}
+
+TEST_CASE("unloadAllDevices during sequence acquisition does not crash",
+          "[Unload]") {
+   AsyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.startContinuousSequenceAcquisition(0.0);
+   CHECK_NOTHROW(c.unloadAllDevices());
+}
+
+TEST_CASE("unloadDevice during sequence acquisition does not crash",
+          "[Unload]") {
+   AsyncCamera cam;
+   MockAdapterWithDevices adapter{{"cam", &cam}};
+   CMMCore c;
+   adapter.LoadIntoCore(c);
+   c.setCameraDevice("cam");
+   c.startContinuousSequenceAcquisition(0.0);
+   CHECK_NOTHROW(c.unloadDevice("cam"));
 }

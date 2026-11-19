@@ -995,10 +995,6 @@ int BitFlowCamera::LiveThread::svc()
          break;
       }
 
-      char label[MM::MaxStrLength];
-      cam_->GetLabel(label);
-      std::string labelStr = label;
-
       MM::MMTime timestamp = cam_->GetCurrentMMTime();
       MM::CameraImageMetadata md;
       std::string prefix = "TwoPhoton-";
@@ -1010,17 +1006,12 @@ int BitFlowCamera::LiveThread::svc()
       md.AddTag(prefix + MM::g_Keyword_Metadata_ImageNumber,
          CDeviceUtils::ConvertToString(imageCounter_));
 
-	  // insert all channels
+	  // MMCore stamps CameraChannelName based on CameraChannelIndex.
 	  for (unsigned i=0; i<cam_->GetNumberOfChannels(); i++)
 	  {
 		  char buf[MM::MaxStrLength];
 		  snprintf(buf, MM::MaxStrLength, "%d", i);
 		  md.AddTag(MM::g_Keyword_CameraChannelIndex, buf);
-		  md.AddTag(labelStr + "-" + MM::g_Keyword_CameraChannelIndex, buf); // compat
-
-		  cam_->GetChannelName(i, buf);
-		  md.AddTag(MM::g_Keyword_CameraChannelName, buf);
-		  md.AddTag(labelStr + "-" + MM::g_Keyword_CameraChannelName, buf); // compat
 
 		  ret = cam_->GetCoreCallback()->InsertImage(cam_, cam_->GetImageBuffer(i),
 			  cam_->GetImageWidth(),
