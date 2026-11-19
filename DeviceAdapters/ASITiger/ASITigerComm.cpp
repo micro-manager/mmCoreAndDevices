@@ -50,7 +50,7 @@ int CTigerCommHub::Initialize()
    // get version, compile date and build name from the controller, this is just for TigerComm (hub/serial card)
    // N.B. this is different for non-Tiger controllers like MS/WK-2000
    if (const int status = QueryFirmwareInfo(*this); status != DEVICE_OK) {
-      return (status == ERR_UNRECOGNIZED_ANSWER) ? DEVICE_NOT_SUPPORTED : status;
+      return status;
    }
    if (const int status = CreateFirmwareProperties(); status != DEVICE_OK) {
       return status;
