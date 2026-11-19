@@ -46,7 +46,7 @@ constexpr unsigned int PLOGIC_PHYSICAL_IO_NUM = PLOGIC_PHYSICAL_IO_END_ADDRESS -
 
 // ASI Tiger Programmable Logic Card
 CPLogic::CPLogic(const char* name) :
-    ASIPeripheralBase< ::CShutterBase, CPLogic >(name) {
+    ASIDevice<CShutterBase<CPLogic>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetter_ = GetAxisLetterFromExtName(name);

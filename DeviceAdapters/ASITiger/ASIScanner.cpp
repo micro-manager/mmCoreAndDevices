@@ -48,7 +48,7 @@ int CompareDoubles(const double d1, const double d2, const double precision = 1e
 // MM_TARGET (phototargeting) firmware module (as of mid-2017).
 
 CScanner::CScanner(const char* name) :
-    ASIPeripheralBase< ::CGalvoBase, CScanner >(name) {
+    ASIDevice<CGalvoBase<CScanner>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetterX_ = GetAxisLetterFromExtName(name);

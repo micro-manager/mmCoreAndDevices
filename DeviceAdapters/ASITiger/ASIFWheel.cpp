@@ -32,7 +32,7 @@
 // shared properties not implemented for filter wheel except for save settings because no shared properties
 
 CFWheel::CFWheel(const char* name) :
-    ASIPeripheralBase< ::CStateDeviceBase, CFWheel >(name) {
+    ASIDevice<CStateDeviceBase<CFWheel>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         wheelNumber_ = GetAxisLetterFromExtName(name);

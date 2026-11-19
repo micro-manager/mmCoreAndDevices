@@ -32,7 +32,7 @@
 #include <string>
 
 CZStage::CZStage(const char* name) :
-    ASIPeripheralBase< ::CStageBase, CZStage >(name) {
+    ASIDevice<CStageBase<CZStage>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name))  {
         axisLetter_ = GetAxisLetterFromExtName(name);

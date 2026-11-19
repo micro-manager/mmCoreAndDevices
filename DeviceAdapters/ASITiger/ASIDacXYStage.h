@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CDACXYStage : public ASIPeripheralBase<CXYStageBase, CDACXYStage> {
+class CDACXYStage : public ASIDevice<CXYStageBase<CDACXYStage>> {
 public:
     explicit CDACXYStage(const char* name);
     ~CDACXYStage() = default;

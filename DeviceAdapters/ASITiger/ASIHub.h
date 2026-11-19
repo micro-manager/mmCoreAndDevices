@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "ASIBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
@@ -37,9 +37,9 @@
 // inherits from this class.
 ////////////////////////////////////////////////////////////////
 
-class ASIHub : public ASIBase<HubBase, ASIHub> {
+class ASIHub : public ASIDevice<HubBase<ASIHub>> {
 public:
-    explicit ASIHub();
+    explicit ASIHub(const char* name);
     ~ASIHub() = default;
 
    // Clear the serial buffers.
@@ -160,7 +160,7 @@ private:
     MMThreadLock threadLock_; // used to lock thread during serial transaction
 
     std::map<std::string, std::string> deviceMap_{}; // to implement properties shared between devices
-    // key is the device name, value is the Tiger address (normally a single character, see note about addressChar_ in ASIPeripheralBase
+    // key is the device name, value is the Tiger address (normally a single character, see note about addressChar_ in ASIBase
 
     std::string serialAnswer_{};       // last answer received from any communication with the controller
     std::string manualSerialAnswer_{}; // last answer received when the SerialCommand property was used

@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ASIBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="ASIClocked.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -80,7 +83,7 @@
     <ClInclude Include="ASIHub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ASIPeripheralBase.h">
+    <ClInclude Include="ASIDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ASIPiezo.h">

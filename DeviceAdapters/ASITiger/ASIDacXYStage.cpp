@@ -30,7 +30,7 @@
 #include <string>
 
 CDACXYStage::CDACXYStage(const char* name) :
-    ASIPeripheralBase< ::CXYStageBase, CDACXYStage >(name) {
+    ASIDevice<CXYStageBase<CDACXYStage>>(name) {
     // only set up these properties if we have the required information in the name
     if (IsExtendedName(name)) {
         axisLetterX_ = GetAxisLetterFromExtName(name);

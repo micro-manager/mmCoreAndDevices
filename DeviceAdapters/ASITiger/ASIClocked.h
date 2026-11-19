@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CClocked : public ASIPeripheralBase<CStateDeviceBase, CClocked> {
+class CClocked : public ASIDevice<CStateDeviceBase<CClocked>> {
 public:
     explicit CClocked(const char* name);
     ~CClocked() = default;

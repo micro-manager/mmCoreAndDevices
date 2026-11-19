@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CPiezo : public ASIPeripheralBase<CStageBase, CPiezo> {
+class CPiezo : public ASIDevice<CStageBase<CPiezo>> {
 public:
     explicit CPiezo(const char* name);
     ~CPiezo() = default;

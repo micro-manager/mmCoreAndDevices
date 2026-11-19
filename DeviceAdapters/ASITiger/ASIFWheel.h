@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CFWheel : public ASIPeripheralBase<CStateDeviceBase, CFWheel>
+class CFWheel : public ASIDevice<CStateDeviceBase<CFWheel>>
 {
 public:
     explicit CFWheel(const char* name);

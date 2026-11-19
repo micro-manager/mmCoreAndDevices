@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CPMT : public ASIPeripheralBase<CSignalIOBase, CPMT>
+class CPMT : public ASIDevice<CSignalIOBase<CPMT>>
 {
 public:
     explicit CPMT(const char* name);

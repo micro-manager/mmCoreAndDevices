@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CZStage : public ASIPeripheralBase<CStageBase, CZStage> {
+class CZStage : public ASIDevice<CStageBase<CZStage>> {
 public:
     explicit CZStage(const char* name);
     ~CZStage() = default;

@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "ASIPeripheralBase.h"
+#include "ASIDevice.h"
 #include "MMDevice.h"
 #include "DeviceBase.h"
 
-class CPLogic : public ASIPeripheralBase<CShutterBase, CPLogic>
+class CPLogic : public ASIDevice<CShutterBase<CPLogic>>
 {
 public:
     explicit CPLogic(const char* name);
