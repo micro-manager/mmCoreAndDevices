@@ -3,7 +3,7 @@
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   ASI generic device shim providing the MM::Device boilerplate
+// DESCRIPTION:   ASI generic device template providing the MM::Device boilerplate
 //
 // COPYRIGHT:     Applied Scientific Instrumentation, Eugene OR
 //
