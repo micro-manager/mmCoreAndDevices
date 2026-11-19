@@ -180,6 +180,37 @@ std::vector<std::string> BitDepthDisplays(const std::vector<std::string>& native
       values.push_back(BitDepthDisplay(native));
    return values;
 }
+
+bool StartsWith(const std::string& text, const char* prefix)
+{
+   return text.compare(0, std::char_traits<char>::length(prefix), prefix) == 0;
+}
+
+int GroupRank(const std::string& name)
+{
+   if (StartsWith(name, "Camera Info - ") || name == "Description" ||
+       name == "Camera" || name == "Camera IP Address")
+      return 0;
+   if (StartsWith(name, "Temperature - "))
+      return 1;
+   if (StartsWith(name, "Acquisition - "))
+      return 2;
+   if (StartsWith(name, "Exposure - "))
+      return 3;
+   if (StartsWith(name, "Gain - ") || StartsWith(name, "Auto Control ROI - "))
+      return 4;
+   if (StartsWith(name, "Readout - "))
+      return 5;
+   if (StartsWith(name, "ROI - ") || name == "Binning")
+      return 6;
+   if (StartsWith(name, "Trigger - "))
+      return 7;
+   if (StartsWith(name, "PTP - "))
+      return 8;
+   if (StartsWith(name, "Image "))
+      return 9;
+   return 10;
+}
 }
 
 EmergentCamera::EmergentCamera() :
@@ -197,11 +228,6 @@ EmergentCamera::EmergentCamera() :
    hardwareBinningSupported_(false),
    frameRateSupported_(false),
    frameRateLimitEnabled_(false),
-   rememberSettings_(true),
-   restoringSettings_(false),
-   settingsFileHealthy_(true),
-   settingsFile_(DefaultSettingsFile()),
-   settingsStatus_("No settings loaded"),
    sensorWidth_(0),
    sensorHeight_(0),
    width_(0),
@@ -239,7 +265,6 @@ EmergentCamera::EmergentCamera() :
    SetErrorText(ERR_INVALID_ROI, "The requested ROI is outside the camera sensor");
    SetErrorText(ERR_FRAME_FORMAT, "The received image does not match the configured image format");
    SetErrorText(ERR_ACQUISITION_STOPPED, "Image acquisition was stopped");
-   SetErrorText(ERR_SETTINGS_FILE, "Cannot read or write Emergent.ini; see Settings - Status and CoreLog");
 
    CreateProperty(MM::g_Keyword_Description,
       "Emergent camera via eSDK; Dr. Volodymyr Cherkas; Advanced Optical Devices (www.ao-devices.com)",
@@ -272,12 +297,6 @@ EmergentCamera::EmergentCamera() :
 
    CPropertyAction* ipAction = new CPropertyAction(this, &EmergentCamera::OnIPAddress);
    CreateProperty(kPropertyIPAddress, ipAddress_.c_str(), MM::String, false, ipAction, true);
-   CreateProperty("Settings - File", settingsFile_.c_str(), MM::String, false,
-      new CPropertyAction(this, &EmergentCamera::OnSettingsFile), true);
-   CreateProperty("Settings - Remember", "On", MM::String, false,
-      new CPropertyAction(this, &EmergentCamera::OnRememberSettings), true);
-   std::vector<std::string> rememberValues = {"Off", "On"};
-   SetAllowedValues("Settings - Remember", rememberValues);
 
    sequenceThread_.reset(new EmergentSequenceThread(this));
 }
@@ -290,6 +309,27 @@ EmergentCamera::~EmergentCamera()
 void EmergentCamera::GetName(char* name) const
 {
    CDeviceUtils::CopyLimitedString(name, g_EmergentCameraName);
+}
+
+bool EmergentCamera::GetPropertyName(unsigned index, char* name) const
+{
+   std::vector<std::string> names;
+   for (unsigned i = 0; i < GetNumberOfProperties(); ++i)
+   {
+      char propertyName[MM::MaxStrLength] = {};
+      if (CCameraBase<EmergentCamera>::GetPropertyName(i, propertyName))
+         names.emplace_back(propertyName);
+   }
+   std::stable_sort(names.begin(), names.end(), [](const std::string& a, const std::string& b) {
+      const int aRank = GroupRank(a), bRank = GroupRank(b);
+      if (aRank == 4 && bRank == 4 && StartsWith(a, "Gain - ") != StartsWith(b, "Gain - "))
+         return StartsWith(a, "Gain - ");
+      return aRank == bRank ? a < b : aRank < bRank;
+   });
+   if (index >= names.size())
+      return false;
+   CDeviceUtils::CopyLimitedString(name, names[index].c_str());
+   return true;
 }
 
 int EmergentCamera::Initialize()
@@ -329,12 +369,6 @@ int EmergentCamera::Initialize()
          return ret;
       }
 
-      // Restore only after every runtime property exists. Notifications are
-      // suppressed until initialization has finished.
-      if (rememberSettings_)
-         RestoreSettingsLocked();
-      else
-         settingsStatus_ = "Disabled";
       initialized_ = true;
    }
 
@@ -361,8 +395,6 @@ int EmergentCamera::Shutdown()
    MMThreadGuard guard(cameraLock_);
    if (acquisitionRunning_)
       StopAcquisitionLocked();
-   if (initialized_ && cameraOpen_ && rememberSettings_ && settingsFileHealthy_)
-      SaveSettingsLocked();
    CloseStreamLocked();
    if (cameraOpen_)
    {
@@ -482,8 +514,8 @@ int EmergentCamera::ReadCameraIdentityLocked()
 int EmergentCamera::ConfigureGpioDefaultsLocked()
 {
    // The Eros HE camera exposes fixed GPI2/GPI3 and GPO0/GPO1 directions.
-   // Route the user's chosen default input and exposure-active output, while
-   // leaving Trigger Mode internal until external triggering is selected.
+   // Default to GPI2 acquisition start and GPO1 exposure active. Trigger
+   // Mode remains Internal until external triggering is selected.
    const std::pair<const char*, const char*> defaults[] = {
       {"GPI_2_Mode", "Exposure"},
       {"GPI_Start_Exp_Mode", "GPI_2"},
@@ -653,7 +685,7 @@ unsigned EmergentCamera::UsableUInt32Maximum(const char* sdkName, unsigned maxim
 
 void EmergentCamera::PublishGeometryState()
 {
-   if (!initialized_ || restoringSettings_)
+   if (!initialized_)
       return;
    OnPropertyChanged(kPropertyBinning, CDeviceUtils::ConvertToString(binning_));
    OnPropertyChanged(kPropertyRoiX, CDeviceUtils::ConvertToString(static_cast<long>(offsetX_)));
@@ -1039,19 +1071,6 @@ int EmergentCamera::CreateRuntimeProperties()
          return ret;
    }
 
-   ret = CreateProperty("Settings - Active File", settingsFile_.c_str(), MM::String, true);
-   if (ret != DEVICE_OK)
-      return ret;
-   ret = CreateProperty("Settings - Status", settingsStatus_.c_str(), MM::String, true,
-      new CPropertyAction(this, &EmergentCamera::OnSettingsStatus));
-   if (ret != DEVICE_OK)
-      return ret;
-   ret = CreateProperty("Settings - Save", "Idle", MM::String, false,
-      new CPropertyAction(this, &EmergentCamera::OnSaveSettings));
-   if (ret != DEVICE_OK)
-      return ret;
-   std::vector<std::string> saveValues = {"Idle", "Save now"};
-   SetAllowedValues("Settings - Save", saveValues);
    propertiesCreated_ = true;
    return DEVICE_OK;
 }
@@ -1415,7 +1434,7 @@ int EmergentCamera::OnExposure(MM::PropertyBase* property, MM::ActionType action
       }
       if (frameRateSupported_)
          PublishFrameRateState();
-      if (ret == DEVICE_OK && initialized_ && !restoringSettings_)
+      if (ret == DEVICE_OK && initialized_)
          OnExposureChanged(exposureMs_);
       return ret;
    }
@@ -1497,7 +1516,7 @@ int EmergentCamera::RefreshExposureLimitsLocked(bool relaxFrameRate)
 
 void EmergentCamera::PublishFrameRateState()
 {
-   if (!frameRateSupported_ || !initialized_ || restoringSettings_)
+   if (!frameRateSupported_ || !initialized_)
       return;
    SetPropertyLimits(kPropertyFrameRate,
                      frameRateMinimumFps_, frameRateMaximumFps_);

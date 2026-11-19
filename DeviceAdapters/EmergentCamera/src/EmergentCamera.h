@@ -75,10 +75,6 @@ public:
    int OnIPAddress(MM::PropertyBase* property, MM::ActionType action);
    int OnCameraSelection(MM::PropertyBase* property, MM::ActionType action);
    int OnConnectionSpeed(MM::PropertyBase* property, MM::ActionType action);
-   int OnSettingsFile(MM::PropertyBase* property, MM::ActionType action);
-   int OnRememberSettings(MM::PropertyBase* property, MM::ActionType action);
-   int OnSettingsStatus(MM::PropertyBase* property, MM::ActionType action);
-   int OnSaveSettings(MM::PropertyBase* property, MM::ActionType action);
    int OnExposure(MM::PropertyBase* property, MM::ActionType action);
    int OnFrameRateLimit(MM::PropertyBase* property, MM::ActionType action);
    int OnFrameRate(MM::PropertyBase* property, MM::ActionType action);
@@ -130,17 +126,13 @@ private:
       ERR_ACQUISITION_TIMEOUT = 10004,
       ERR_INVALID_ROI = 10005,
       ERR_FRAME_FORMAT = 10006,
-      ERR_ACQUISITION_STOPPED = 10007,
-      ERR_SETTINGS_FILE = 10008
+      ERR_ACQUISITION_STOPPED = 10007
    };
 
    int FindCameraByIp(GigEVisionDeviceInfo& result);
    void DiscoverCameras();
    int ConfigureCameraLocked();
    int ConfigureGpioDefaultsLocked();
-   int SaveSettingsLocked();
-   int RestoreSettingsLocked();
-   static std::string DefaultSettingsFile();
    int CreateRuntimeProperties();
    int CreateAdditionalFeatureProperties();
    int ReadCameraIdentityLocked();
@@ -213,11 +205,6 @@ private:
    bool hardwareBinningSupported_;
    bool frameRateSupported_;
    bool frameRateLimitEnabled_;
-   bool rememberSettings_;
-   bool restoringSettings_;
-   bool settingsFileHealthy_;
-   std::string settingsFile_;
-   std::string settingsStatus_;
 
    unsigned sensorWidth_;
    unsigned sensorHeight_;
