@@ -86,11 +86,12 @@ extern const char* g_Sine_Wave;
 extern const char* g_Norm_Noise;
 extern const char* g_Color_Test;
 extern const char* g_Beads;
+extern const char* g_MulticolorBeads;
 
 // Global intensity factor (defined in DemoCamera.cpp)
 extern double g_IntensityFactor_;
 
-enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST, MODE_BEADS };
+enum { MODE_ARTIFICIAL_WAVES, MODE_NOISE, MODE_COLOR_TEST, MODE_BEADS, MODE_MULTICOLOR_BEADS };
 
 // Bead structure for fluorescent beads mode
 struct Bead {
@@ -98,6 +99,7 @@ struct Bead {
    double worldY;
    double intensityFactor; // Variation factor 0.8 to 1.2
    double sizeFactor;      // Variation factor 0.8 to 1.2
+   unsigned char channelMask; // DAPI=1, FITC=2, Rhodamine=4, Cy5=8
 };
 
 // Defines which segments in a seven-segment display are lit up for each of
@@ -252,6 +254,8 @@ public:
    int OnPhotonFlux(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnReadNoise(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnCrash(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSamplePixelSize(MM::PropertyBase* pProp, MM::ActionType eAct);
+   int OnSimulatedChannel(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBeadDensity(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBeadSize(MM::PropertyBase* pProp, MM::ActionType eAct);
    int OnBeadBrightness(MM::PropertyBase* pProp, MM::ActionType eAct);
@@ -276,10 +280,16 @@ private:
    bool GenerateColorTestPattern(ImgBuffer& img);
    int ResizeImageBuffer();
    void GenerateBeadPositions();
+   void GenerateMulticolorBeadPositions();
    void GenerateBeadsForTile(int tileX, int tileY, std::vector<Bead>& beads);
+   void GenerateMulticolorBeadsForTile(int tileX, int tileY, std::vector<Bead>& beads);
    unsigned int HashTileCoords(int tileX, int tileY);
    void RenderBeadToImage(ImgBuffer& img, const Bead& bead, double blurRadius, double stageX, double stageY);
+   void RenderMulticolorBeadToImage(ImgBuffer& img, const Bead& bead, double blurRadius, double stageX, double stageY, double pixelSizeUm, int channel);
+   double GetSamplePixelSizeUm();
+   int GetCurrentBeadChannel();
    void GenerateBeadsImage(ImgBuffer& img, double exposure);
+   void GenerateMulticolorBeadsImage(ImgBuffer& img, double exposure);
    double GetCurrentZPosition();
    void GetCurrentXYPosition(double& x, double& y);
 
