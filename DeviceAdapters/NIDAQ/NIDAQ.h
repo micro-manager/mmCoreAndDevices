@@ -37,6 +37,7 @@ extern const char* g_DeviceNameNIDAQHub;
 extern const char* g_DeviceNameNIDAQAOPortPrefix;
 extern const char* g_DeviceNameNIDAQDOPortPrefix;
 extern const char* g_DeviceNameNIDAQAIPortPrefix;
+extern const char* g_DeviceNameNIDAQAOBlankPrefix;
 extern const char* g_On;
 extern const char* g_Off;
 extern const char* g_Low;
@@ -267,6 +268,25 @@ public:
                         const long& pos, const bool blankingDirection, const std::string triggerPort);
    int StopDOBlankingAndSequence(const uInt32 portWidth);
 
+   // Analog-output blanking: gate a set of AO channels with a hardware trigger
+   // (no per-frame sequencing).  Active channels follow the trigger between
+   // onVolts and offVolts; inactive channels stay at offVolts.  "state" is a
+   // bitmask over the channels in channelList order.
+   //
+   // StartAOBlanking always does a full restart (the running, externally
+   // clocked AO buffer cannot be updated in place); call it again to change the
+   // active channels or voltages, ideally while the trigger line is idle.
+   int StartAOBlanking(const std::string& channelList, const size_t numChannels,
+                        const double onVolts, const double offVolts, const long state,
+                        const bool blankOnLow, const std::string& triggerPort);
+   int StopAOBlanking();
+   // Number of trigger edges the AO blanking task has clocked on so far (0 when
+   // not blanking).  Diagnostic: 2 per frame, even whenever the camera is idle.
+   int GetAOBlankingEdgeCount(uInt64& count);
+   // Static (non-gated) output of the same on/off pattern, used when blanking is off.
+   int SetAOPortState(const std::string& channelList, const size_t numChannels,
+                      const double onVolts, const double offVolts, const long state);
+
    int SetDOPortState(const std::string port, uInt32 portWidth, long state);
    const std::string GetTriggerPort() { return niTriggerPort_; }   
 
@@ -294,6 +314,15 @@ private:
    template<typename T> void GetLCMSequence(T* buffer, std::vector<std::vector<T>> sequences) const;
 
    int SwitchTriggerPortToReadMode();
+
+   // Read the current logic level of a digital input line (used to phase-align
+   // the AO blanking buffer at start).
+   int ReadTriggerPinState(const std::string& triggerPort, bool& state);
+
+   // Write the 2-sample-per-channel AO blanking buffer to the freshly created,
+   // not-yet-started aoBlankTask_.  firstSampleIsOn selects the phase.
+   int WriteAOBlankingSamples(const size_t numChannels, const double onVolts,
+                        const double offVolts, const long state, const bool firstSampleIsOn);
 
    int StartAOSequencingTask();
 
@@ -343,6 +372,8 @@ private:
 
    TaskHandle aoTask_;
    TaskHandle doTask_;
+   TaskHandle aoBlankTask_;   // AO blanking: voltage task gated by ChangeDetectionEvent
+   TaskHandle aoBlankDiTask_; // AO blanking: companion DI change-detection task
    // For memory safety reasons the the Input thread manages aiTask_
 
    NIDAQDOHub<uInt8> * doHub8_;
@@ -439,6 +470,90 @@ private:
 
    std::vector<double> unsentSequence_;
    std::vector<double> sentSequence_; // Pretend "sent" to device
+};
+
+
+/**
+* Analog-output blanking port (one per device).  Groups a contiguous block of AO
+* channels into a single task gated by a digital trigger input on port0 (via
+* /Dev/ChangeDetectionEvent): active channels switch between an "on" and an
+* "off" voltage with the trigger, inactive channels stay off.  No per-frame
+* sequencing.
+*
+* A state device whose State is a bitmask over the block: bit i == AO line
+* (First AO Line + i).  Per-channel 0/1 properties toggle the individual bits.
+*/
+class AnalogOutputBlankingPort : public CStateDeviceBase<AnalogOutputBlankingPort>,
+    ErrorTranslator<AnalogOutputBlankingPort>,
+    boost::noncopyable
+{
+public:
+    AnalogOutputBlankingPort(const std::string& deviceName);
+    virtual ~AnalogOutputBlankingPort();
+
+    virtual int Initialize();
+    virtual int Shutdown();
+
+    virtual void GetName(char* name) const;
+    virtual bool Busy() { return false; }
+
+    // State has numPos_ + 1 values.  The Core and the config wizard iterate over
+    // this count to create/save labels, so cap it for large blocks; states above
+    // the cap remain settable via "State", they just cannot carry a label.
+    virtual unsigned long GetNumberOfPositions() const
+    {
+       return static_cast<unsigned long>(numPos_) + 1 < maxLabeledPositions_ ?
+          static_cast<unsigned long>(numPos_) + 1 : maxLabeledPositions_;
+    }
+
+    // action interface
+    int OnState(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBlanking(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnBlankingTriggerDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnOnVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnOffVoltage(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnTriggerEdgeCount(MM::PropertyBase* pProp, MM::ActionType eAct);   // read-only diagnostic
+    int OnChannelLine(MM::PropertyBase* pProp, MM::ActionType eAct, long index); // per-channel slider
+    int OnFirstLine(MM::PropertyBase* pProp, MM::ActionType eAct);        // pre-init
+    int OnNumLines(MM::PropertyBase* pProp, MM::ActionType eAct);         // pre-init
+    int OnChannelNames(MM::PropertyBase* pProp, MM::ActionType eAct);     // pre-init
+    int OnTriggerInputLine(MM::PropertyBase* pProp, MM::ActionType eAct); // pre-init
+
+private:
+    NIDAQHub* GetHub() const
+    {
+       return static_cast<NIDAQHub*>(GetParentHub());
+    }
+    int TranslateHubError(int err);
+    // Apply an active-channel bitmask: restart the blanking tasks when blanking
+    // is on, otherwise drive the gate-honoring static level.
+    int ApplyState(long state);
+    // "state" with the shutter gate open, the Closed Position otherwise.
+    long GatedState(long state);
+    int ParseChannelSpec();
+
+    static const long maxLines_ = 31; // State is a signed 32-bit bitmask
+    static const unsigned long maxLabeledPositions_ = 256;
+
+    std::string deviceName_;      // e.g. "Dev1"
+    long firstLine_;              // first AO line
+    long numLines_;               // number of contiguous AO lines from firstLine_
+    std::string channelNamesSpec_; // optional ';'-separated slider names, one per channel
+    std::string physChannelList_; // expanded, e.g. "Dev1/ao0,Dev1/ao1,..."
+    std::vector<long> channelLines_; // AO line numbers in spec order; index == State bit
+    std::string triggerTerminal_; // e.g. "Dev1/port0/line0"
+    long inputLine_;              // line number on port0 used as trigger
+    size_t numChannels_;
+    bool initialized_;
+    bool blanking_;
+    bool blankOnLow_;
+    bool open_;
+    double onVolts_;
+    double offVolts_;
+    double minVolts_;
+    double maxVolts_;
+    long pos_;
+    long numPos_;
 };
 
 
