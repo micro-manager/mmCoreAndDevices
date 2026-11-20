@@ -1859,16 +1859,16 @@ void CMMCore::setRelativeXYPosition(double dx, double dy) MMCORE_LEGACY_THROW(CM
 /**
  * Obtains the current position of the XY stage in microns.
  * @param xyStageLabel the stage device label
- * @param x_stage      a return parameter yielding the X position in microns
- * @param y_stage      a return parameter yielding the Y position in microns
+ * @param xPos         a return parameter yielding the X position in microns
+ * @param yPos         a return parameter yielding the Y position in microns
  */
-void CMMCore::getXYPosition(const char* xyStageLabel, double& x_stage, double& y_stage) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::getXYPosition(const char* xyStageLabel, double& xPos, double& yPos) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::XYStageInstance> pXYStage =
       deviceManager_->GetDeviceOfType<mmi::XYStageInstance>(xyStageLabel);
 
    mmi::DeviceModuleLockGuard guard(pXYStage);
-   int ret = pXYStage->GetPositionUm(x_stage, y_stage);
+   int ret = pXYStage->GetPositionUm(xPos, yPos);
    if (ret != DEVICE_OK)
    {
       logError(pXYStage->GetName().c_str(), getDeviceErrorText(ret, pXYStage).c_str());
@@ -1879,12 +1879,12 @@ void CMMCore::getXYPosition(const char* xyStageLabel, double& x_stage, double& y
 /**
  * Obtains the current position of the XY stage in microns. Uses the current
  * XY stage device.
- * @param x_stage      a return parameter yielding the X position in microns
- * @param y_stage      a return parameter yielding the Y position in microns
+ * @param xPos         a return parameter yielding the X position in microns
+ * @param yPos         a return parameter yielding the Y position in microns
  */
-void CMMCore::getXYPosition(double& x_stage, double& y_stage) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::getXYPosition(double& xPos, double& yPos) MMCORE_LEGACY_THROW(CMMError)
 {
-    getXYPosition(getXYStageDevice().c_str(), x_stage, y_stage);
+    getXYPosition(getXYStageDevice().c_str(), xPos, yPos);
 }
 
 /**
@@ -7015,14 +7015,14 @@ void CMMCore::setGalvoPosition(const char* galvoLabel, double x, double y) MMCOR
  * @param x_stage     receives the x position, in the device's native units
  * @param y_stage     receives the y position, in the device's native units
  */
-void CMMCore::getGalvoPosition(const char* galvoLabel, double &x_stage, double &y_stage) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::getGalvoPosition(const char* galvoLabel, double &xPos, double &yPos) MMCORE_LEGACY_THROW(CMMError)
 {
    std::shared_ptr<mmi::GalvoInstance> pGalvo =
       deviceManager_->GetDeviceOfType<mmi::GalvoInstance>(galvoLabel);
 
    mmi::DeviceModuleLockGuard guard(pGalvo);
 
-   int ret = pGalvo->GetPosition(x_stage, y_stage);
+   int ret = pGalvo->GetPosition(xPos, yPos);
 
    if (ret != DEVICE_OK)
    {
@@ -7322,10 +7322,10 @@ bool CMMCore::pressurePumpRequiresCalibration(const char* pumpLabel) MMCORE_LEGA
 *
 * @param pumplabel  the pressure pump device label
 */
-double CMMCore::getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CMMError)
+double CMMCore::getPumpPressureKPa(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError)
 {
     std::shared_ptr<mmi::PressurePumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<mmi::PressurePumpInstance>(pumplabel);
+        deviceManager_->GetDeviceOfType<mmi::PressurePumpInstance>(pumpLabel);
     mmi::DeviceModuleLockGuard guard(pPump);
 
     double pressurekPa = 0;
@@ -7333,7 +7333,7 @@ double CMMCore::getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CM
 
     if (ret != DEVICE_OK)
     {
-        logError(pumplabel, getDeviceErrorText(ret, pPump).c_str());
+        logError(pumpLabel, getDeviceErrorText(ret, pPump).c_str());
         throw CMMError(getDeviceErrorText(ret, pPump));
     }
     return pressurekPa;
@@ -7345,17 +7345,17 @@ double CMMCore::getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CM
 * @param pumplabel  the pressure pump device label
 * @param pressure   the pressure in kPa
 */
-void CMMCore::setPumpPressureKPa(const char* pumplabel, double pressure) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::setPumpPressureKPa(const char* pumpLabel, double pressure) MMCORE_LEGACY_THROW(CMMError)
 {
     std::shared_ptr<mmi::PressurePumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<mmi::PressurePumpInstance>(pumplabel);
+        deviceManager_->GetDeviceOfType<mmi::PressurePumpInstance>(pumpLabel);
     mmi::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->SetPressureKPa(pressure);
 
     if (ret != DEVICE_OK)
     {
-        logError(pumplabel, getDeviceErrorText(ret, pPump).c_str());
+        logError(pumpLabel, getDeviceErrorText(ret, pPump).c_str());
         throw CMMError(getDeviceErrorText(ret, pPump));
     }
 }
@@ -7551,13 +7551,13 @@ double CMMCore::getPumpMaxVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMME
 * @param pumpLabel  the volumetric pump device label
 * @param volume     the flow rate in uL per second
 */
-void CMMCore::setPumpFlowrate(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError)
+void CMMCore::setPumpFlowrate(const char* pumpLabel, double flowrate) MMCORE_LEGACY_THROW(CMMError)
 {
     std::shared_ptr<mmi::VolumetricPumpInstance> pPump =
         deviceManager_->GetDeviceOfType<mmi::VolumetricPumpInstance>(pumpLabel);
     mmi::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->SetFlowrateUlPerSecond(volume);
+    int ret = pPump->SetFlowrateUlPerSecond(flowrate);
 
     if (ret != DEVICE_OK)
     {

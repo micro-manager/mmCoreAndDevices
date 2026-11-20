@@ -530,8 +530,8 @@ public:
          double dx, double dy) MMCORE_LEGACY_THROW(CMMError);
    void setRelativeXYPosition(double dx, double dy) MMCORE_LEGACY_THROW(CMMError);
    void getXYPosition(const char* xyStageLabel,
-         double &x_stage, double &y_stage) MMCORE_LEGACY_THROW(CMMError);
-   void getXYPosition(double &x_stage, double &y_stage) MMCORE_LEGACY_THROW(CMMError);
+         double &xPos, double &yPos) MMCORE_LEGACY_THROW(CMMError);
+   void getXYPosition(double &xPos, double &yPos) MMCORE_LEGACY_THROW(CMMError);
    double getXPosition(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError);
    double getYPosition(const char* xyStageLabel) MMCORE_LEGACY_THROW(CMMError);
    double getXPosition() MMCORE_LEGACY_THROW(CMMError);
@@ -620,7 +620,7 @@ public:
    void setGalvoPosition(const char* galvoLabel, double x, double y)
       MMCORE_LEGACY_THROW(CMMError);
    void getGalvoPosition(const char* galvoLabel,
-         double &x_stage, double &y_stage) MMCORE_LEGACY_THROW(CMMError); // using x_stage to get swig to work
+         double &xPos, double &yPos) MMCORE_LEGACY_THROW(CMMError);
    void setGalvoIlluminationState(const char* galvoLabel, bool on)
       MMCORE_LEGACY_THROW(CMMError);
    double getGalvoXRange(const char* galvoLabel) MMCORE_LEGACY_THROW(CMMError);
@@ -646,8 +646,8 @@ public:
    void pressurePumpStop(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    void pressurePumpCalibrate(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    bool pressurePumpRequiresCalibration(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
-   void setPumpPressureKPa(const char* pumplabel, double pressure) MMCORE_LEGACY_THROW(CMMError);
-   double getPumpPressureKPa(const char* pumplabel) MMCORE_LEGACY_THROW(CMMError);
+   void setPumpPressureKPa(const char* pumpLabel, double pressure) MMCORE_LEGACY_THROW(CMMError);
+   double getPumpPressureKPa(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    ///@}
 
    /** \name VolumetricPump control
@@ -664,7 +664,7 @@ public:
    double getPumpVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    void setPumpMaxVolume(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError);
    double getPumpMaxVolume(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
-   void setPumpFlowrate(const char* pumpLabel, double volume) MMCORE_LEGACY_THROW(CMMError);
+   void setPumpFlowrate(const char* pumpLabel, double flowrate) MMCORE_LEGACY_THROW(CMMError);
    double getPumpFlowrate(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    void pumpStart(const char* pumpLabel) MMCORE_LEGACY_THROW(CMMError);
    void pumpDispenseDurationSeconds(const char* pumpLabel, double seconds) MMCORE_LEGACY_THROW(CMMError);
