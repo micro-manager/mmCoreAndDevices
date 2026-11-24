@@ -988,9 +988,14 @@ int CScanner::RunPolygons()
       // no HW support via ring buffer => have to repeatedly call PointAndFire
       // ideally targetExposure_ will have been set by a call to SetSpotInterval before this
       // so that PointAndFire doesn't have to change/restore the exposure or "on" time
-      for (int j=0; j<polygonRepetitions_; ++j)
-         for (int i=0; i< (int) polygons_.size(); ++i)
-            PointAndFire(polygons_[i].first,polygons_[i].second, targetExposure_*1000.0);
+      for (int i = 0; i < polygonRepetitions_; ++i) {
+         for (const auto& point : polygons_) {
+            if (const int status = PointAndFire(point.first, point.second, targetExposure_*1000.0);
+                status != DEVICE_OK) {
+               return status;
+            }
+         }
+      }
    }
    return DEVICE_OK;
 }
