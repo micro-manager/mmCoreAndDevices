@@ -917,11 +917,10 @@ int CScanner::LoadPolygons()
       std::ostringstream command;
       command << addressChar_ << "RM X=0";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
-      for (int i=0; i< (int) polygons_.size(); ++i)
-      {
+      for (const auto& point : polygons_) {
          command.str("");
-         command << "LD " << axisLetterX_ << "=" << polygons_[i].first*unitMultX_
-               << " " << axisLetterY_ << "=" << polygons_[i].second*unitMultY_;
+         command << "LD " << axisLetterX_ << "=" << point.first*unitMultX_
+               << " " << axisLetterY_ << "=" << point.second*unitMultY_;
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
       }
       if (!mmTarget_)
@@ -960,7 +959,7 @@ int CScanner::RunPolygons()
 
       // trigger ring buffer requested number of times, sleeping until done
       // TODO support specified # of repeats in firmware directly
-      for (int j=0; j<polygonRepetitions_; ++j) {
+      for (int i = 0; i < polygonRepetitions_; ++i) {
          RETURN_ON_MM_ERROR ( SetProperty(g_RB_TriggerPropertyName, g_DoItState) );
          bool done = false;
          do {
