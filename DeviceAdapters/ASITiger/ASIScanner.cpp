@@ -990,7 +990,7 @@ int CScanner::RunPolygons()
       // so that PointAndFire doesn't have to change/restore the exposure or "on" time
       for (int j=0; j<polygonRepetitions_; ++j)
          for (int i=0; i< (int) polygons_.size(); ++i)
-            PointAndFire(polygons_[i].first,polygons_[i].second, targetExposure_*1000);
+            PointAndFire(polygons_[i].first,polygons_[i].second, targetExposure_*1000.0);
    }
    return DEVICE_OK;
 }
