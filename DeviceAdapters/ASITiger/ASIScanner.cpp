@@ -1804,7 +1804,7 @@ int CScanner::OnSAAmplitudeY(MM::PropertyBase* pProp, MM::ActionType eAct)
       response << ":A " << axisLetterY_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
-      tmp = tmp/unitMultX_;
+      tmp = tmp/unitMultY_;
       if (!pProp->Set(tmp))
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
@@ -1829,7 +1829,7 @@ int CScanner::OnSAOffsetY(MM::PropertyBase* pProp, MM::ActionType eAct)
       response << ":A " << axisLetterY_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
-      tmp = tmp/unitMultX_;
+      tmp = tmp/unitMultY_;
       if (!pProp->Set(tmp))
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
