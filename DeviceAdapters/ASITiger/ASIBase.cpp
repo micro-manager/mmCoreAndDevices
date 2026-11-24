@@ -23,8 +23,8 @@
 #include "ASIBase.h"
 #include "ASIHub.h"
 #include "DeviceUtils.h"
+#include <charconv>
 #include <cstdlib>
-#include <sstream>
 #include <vector>
 
 int ASIBase::AttachHub(MM::Hub* genericHub) {
@@ -106,30 +106,7 @@ int ASIBase::GetChannelFromExtName(const char* name) {
     return 0; // if no channel is provided (LED on 2-axis card) return 0
 }
 
-// does the dirty work of converting a two-character hex (e.g. F5) into the single character
-// only works for valid TG-1000 addresses
-// see ConvertToTigerRawAddress comments for more details
-std::string ASIBase::ConvertTwoCharStringToHexChar(const std::string& s) {
-    if (s.size() != 2) {
-        return g_EmptyCardAddressCode;
-    }
-
-    unsigned int code;
-    std::stringstream ss;
-    ss << std::hex << s;
-    ss >> code;
-    if ((code >= 0x31 && code <= 0x39) || (code >= 0x81 && code <= 0xF5)) {
-        ss.str("");
-        ss.clear(); // clears hex flag
-        ss << (char) code;
-        std::string s2;
-        ss >> s2;
-        return s2;
-    }
-    return g_EmptyCardAddressCode;
-}
-
-std::string ASIBase::ConvertToTigerRawAddress(const std::string& s) {
+std::string ASIBase::ConvertToTigerRawAddress(const std::string& hexAddr) {
     // Tiger addresses are 0x31 to 0x39 and then 0x81 to 0xF5 (i.e. '1' to '9' and then extended ASCII)
     // these addresses are prepended (in extended ASCII char) to serial commands that are addressed
     // MM doesn't handle names with extended ASCII, and we need to include address in MM's device name
@@ -137,15 +114,18 @@ std::string ASIBase::ConvertToTigerRawAddress(const std::string& s) {
     // use this function to get the serial char to send from a MM 2-digit hex string
     // returns g_EmptyCardAddressCode in case of error (set to space for minimum impact on Tiger operation)
 
-    // make sure the number of characters is even and strictly positive
-    if ((s.size() == 0) || (s.size() % 2)) {
+    if (hexAddr.size() != 2) {
         return g_EmptyCardAddressCode;
     }
 
-    std::string s2 = "";
-    for (std::string::size_type iii = 0; iii < s.size()/2; ++iii) {
-        // operate on chunks of two characters
-        s2.append(ConvertTwoCharStringToHexChar(s.substr(iii*2, 2)));
+    unsigned int code = 0;
+    const char* const end = hexAddr.data() + hexAddr.size();
+    if (const auto [ptr, ec] = std::from_chars(hexAddr.data(), end, code, 16);
+        ec != std::errc() || ptr != end) {
+        return g_EmptyCardAddressCode;
     }
-    return s2;
+    if ((code >= 0x31 && code <= 0x39) || (code >= 0x81 && code <= 0xF5)) {
+        return std::string(1, static_cast<char>(code));
+    }
+    return g_EmptyCardAddressCode;
 }

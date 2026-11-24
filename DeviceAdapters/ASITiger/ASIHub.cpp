@@ -620,7 +620,6 @@ int ASIHub::OnSerialCommandRepeatPeriod(MM::PropertyBase* pProp, MM::ActionType 
       // do nothing
    }
    else if (eAct == MM::AfterSet) {
-      MM::MMTime startTime = GetCurrentMMTime();
       long tmp = 0;
       pProp->Get(tmp);
       if (tmp < 0) tmp = 0;

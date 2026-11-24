@@ -946,7 +946,7 @@ int CXYStage::OnSpeedGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const
       else
       {
          lastSpeedY_ = tmp;
-         RETURN_ON_MM_ERROR( SetProperty(g_MotorSpeedYMicronsPerSecPropertyName, "1") );  // set to a dummy value, will read from lastSpeedX_ variable
+         RETURN_ON_MM_ERROR( SetProperty(g_MotorSpeedYMicronsPerSecPropertyName, "1") );  // set to a dummy value, will read from lastSpeedY_ variable
       }
    }
    else if (eAct == MM::AfterSet) {
@@ -967,7 +967,7 @@ int CXYStage::OnSpeedGeneric(MM::PropertyBase* pProp, MM::ActionType eAct, const
          else
          {
             lastSpeedY_ = tmp;
-            RETURN_ON_MM_ERROR( SetProperty(g_MotorSpeedYMicronsPerSecPropertyName, "1") );  // set to a dummy value, will read from lastSpeedX_ variable
+            RETURN_ON_MM_ERROR( SetProperty(g_MotorSpeedYMicronsPerSecPropertyName, "1") );  // set to a dummy value, will read from lastSpeedY_ variable
          }
       }
    }

@@ -917,11 +917,10 @@ int CScanner::LoadPolygons()
       std::ostringstream command;
       command << addressChar_ << "RM X=0";
       RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
-      for (int i=0; i< (int) polygons_.size(); ++i)
-      {
+      for (const auto& point : polygons_) {
          command.str("");
-         command << "LD " << axisLetterX_ << "=" << polygons_[i].first*unitMultX_
-               << " " << axisLetterY_ << "=" << polygons_[i].second*unitMultY_;
+         command << "LD " << axisLetterX_ << "=" << point.first*unitMultX_
+               << " " << axisLetterY_ << "=" << point.second*unitMultY_;
          RETURN_ON_MM_ERROR ( hub_->QueryCommandVerify(command.str(), ":A") );
       }
       if (!mmTarget_)
@@ -960,7 +959,7 @@ int CScanner::RunPolygons()
 
       // trigger ring buffer requested number of times, sleeping until done
       // TODO support specified # of repeats in firmware directly
-      for (int j=0; j<polygonRepetitions_; ++j) {
+      for (int i = 0; i < polygonRepetitions_; ++i) {
          RETURN_ON_MM_ERROR ( SetProperty(g_RB_TriggerPropertyName, g_DoItState) );
          bool done = false;
          do {
@@ -988,9 +987,14 @@ int CScanner::RunPolygons()
       // no HW support via ring buffer => have to repeatedly call PointAndFire
       // ideally targetExposure_ will have been set by a call to SetSpotInterval before this
       // so that PointAndFire doesn't have to change/restore the exposure or "on" time
-      for (int j=0; j<polygonRepetitions_; ++j)
-         for (int i=0; i< (int) polygons_.size(); ++i)
-            PointAndFire(polygons_[i].first,polygons_[i].second, targetExposure_*1000);
+      for (int i = 0; i < polygonRepetitions_; ++i) {
+         for (const auto& point : polygons_) {
+            if (const int status = PointAndFire(point.first, point.second, targetExposure_*1000.0);
+                status != DEVICE_OK) {
+               return status;
+            }
+         }
+      }
    }
    return DEVICE_OK;
 }
@@ -1804,7 +1808,7 @@ int CScanner::OnSAAmplitudeY(MM::PropertyBase* pProp, MM::ActionType eAct)
       response << ":A " << axisLetterY_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
-      tmp = tmp/unitMultX_;
+      tmp = tmp/unitMultY_;
       if (!pProp->Set(tmp))
          return DEVICE_INVALID_PROPERTY_VALUE;
    }
@@ -1829,7 +1833,7 @@ int CScanner::OnSAOffsetY(MM::PropertyBase* pProp, MM::ActionType eAct)
       response << ":A " << axisLetterY_ << "=";
       RETURN_ON_MM_ERROR( hub_->QueryCommandVerify(command.str(), response.str()));
       RETURN_ON_MM_ERROR( hub_->ParseAnswerAfterEquals(tmp) );
-      tmp = tmp/unitMultX_;
+      tmp = tmp/unitMultY_;
       if (!pProp->Set(tmp))
          return DEVICE_INVALID_PROPERTY_VALUE;
    }

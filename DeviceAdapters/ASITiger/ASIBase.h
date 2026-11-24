@@ -67,9 +67,6 @@ protected:
     static bool IsExtendedName(const char* name);
     static std::string GetAxisLetterFromExtName(const char* name, int position = 0); // returns single-character string
     static std::string GetHexAddrFromExtName(const char* name);
-    static std::string ConvertToTigerRawAddress(const std::string& s);
+    static std::string ConvertToTigerRawAddress(const std::string& hexAddr);
     static int GetChannelFromExtName(const char* name);
-
-private:
-    static std::string ConvertTwoCharStringToHexChar(const std::string& s);
 };
