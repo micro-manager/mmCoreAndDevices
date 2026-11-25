@@ -194,6 +194,36 @@ void SnapShotControl::poiseForSnapShot()
    cameraDevice->Release(pixelEncoding);
 }
 
+/**
+* Removes frames that were acquired before the upcoming snap but never
+* retrieved, e.g. because data arrived after getData timed out, or because
+* a snap was not followed by GetImageBuffer. With a single queued buffer such
+* a frame is otherwise returned by the next getData and every later snap
+* lags one frame behind its trigger.
+* Returns true if stale frames were discarded.
+*/
+bool SnapShotControl::discardStaleFrames()
+{
+   unsigned char * buffer = NULL;
+   int buffer_size = 0;
+   if (!bufferControl->Wait(buffer, buffer_size, 0))
+   {
+      return false;
+   }
+
+   // The camera may hold further frames that were waiting for a free buffer.
+   // Restarting the acquisition clears them along with the queued buffer.
+   stopAcquisitionCommand->Do();
+   bufferControl->Flush();
+   eventsManager_->ResetEvent(CEventsManager::EV_EXPOSURE_END_EVENT);
+   IInteger* imageSizeBytes = cameraDevice->GetInteger(L"ImageSizeBytes");
+   AT_64 ImageSize = imageSizeBytes->Get();
+   cameraDevice->Release(imageSizeBytes);
+   bufferControl->Queue(image_buffer_, static_cast<int>(ImageSize));
+   startAcquisitionCommand->Do();
+   return true;
+}
+
 bool SnapShotControl::takeSnapShot()
 {
    bool b_ret = false;
@@ -229,7 +259,7 @@ bool SnapShotControl::takeSnapShot()
    return b_ret;
 }
 
-void SnapShotControl::getData(unsigned char *& return_buffer)
+bool SnapShotControl::getData(unsigned char *& return_buffer)
 {
    int buffer_size = 0;
 
@@ -239,6 +269,7 @@ void SnapShotControl::getData(unsigned char *& return_buffer)
    {
       bufferControl->Queue(return_buffer, buffer_size);
    }
+   return got_image;
 }
 
 void SnapShotControl::resetCameraAcquiring()

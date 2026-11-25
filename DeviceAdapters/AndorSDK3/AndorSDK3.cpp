@@ -846,6 +846,17 @@ int CAndorSDK3Camera::SnapImage()
    }
    else
    {
+      try {
+         if (snapShotController_->discardStaleFrames())
+         {
+            LogMessage("[SnapImage] Discarded stale frame(s) left over from a previous snap");
+         }
+      }
+      catch (ComException & e) {
+         string s("[SnapImage] ComException thrown while discarding stale frames: ");
+         s += e.what();
+         LogMessage(s);
+      }
       ret = (snapShotController_->takeSnapShot() ? DEVICE_OK : DEVICE_SNAP_IMAGE_FAILED);
       if (ret == DEVICE_SNAP_IMAGE_FAILED) {
          LogMessage("Device Snap Image Failed (Event timeout)");
@@ -905,8 +916,12 @@ const unsigned char * CAndorSDK3Camera::GetImageBuffer()
    
    unsigned char * return_buffer = NULL;
 
-   snapShotController_->getData(return_buffer);
-   
+   if (!snapShotController_->getData(return_buffer))
+   {
+      // The frame may still arrive later; the next SnapImage discards it
+      LogMessage("[GetImageBuffer] Timed out waiting for image data, returning previous image");
+   }
+
    if (return_buffer)
    {
       timeStamp_ = GetTimeStamp(return_buffer);
