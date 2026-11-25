@@ -21,8 +21,9 @@ public:
    void setupTriggerModeSilently();
    void poiseForSnapShot();
    void leavePoisedMode();
+   bool discardStaleFrames();
    bool takeSnapShot();
-   void getData(unsigned char*& image_buffers);
+   bool getData(unsigned char*& image_buffers);
    void resetCameraAcquiring();
 
    bool isPoised(){return is_poised_;};
