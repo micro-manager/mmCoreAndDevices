@@ -200,10 +200,20 @@ void SnapShotControl::poiseForSnapShot()
 * a snap was not followed by GetImageBuffer. With a single queued buffer such
 * a frame is otherwise returned by the next getData and every later snap
 * lags one frame behind its trigger.
+* Only done for software-triggered snaps: there the frame of this snap cannot
+* exist before the trigger is sent. With external triggering the trigger may
+* legitimately arrive before SnapImage is called (e.g. from another camera's
+* fire output in a Multi Camera snap), so a waiting frame may be the one
+* intended for this snap.
 * Returns true if stale frames were discarded.
 */
 bool SnapShotControl::discardStaleFrames()
 {
+   if (!in_software_ || in_external_)
+   {
+      return false;
+   }
+
    unsigned char * buffer = NULL;
    int buffer_size = 0;
    if (!bufferControl->Wait(buffer, buffer_size, 0))

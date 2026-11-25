@@ -159,6 +159,8 @@ CAndorSDK3Camera::CAndorSDK3Camera()
   stopOnOverflow_(false),
   flipX_(false),
   flipY_(false),
+  snapCount_(0),
+  snapRetrieved_(true),
   SRRFControl_(nullptr),
   SRRFCamera_(nullptr)
 {
@@ -846,10 +848,23 @@ int CAndorSDK3Camera::SnapImage()
    }
    else
    {
+      if (!snapRetrieved_)
+      {
+         // An unretrieved snap leaves its frame in the SDK queue (e.g. an
+         // acquisition was aborted between snapImage and getImage)
+         ostringstream oss;
+         oss << "[SnapImage] Image of previous snap #" << snapCount_ << " was never retrieved";
+         LogMessage(oss.str());
+      }
+      ++snapCount_;
+      snapRetrieved_ = false;
+
       try {
          if (snapShotController_->discardStaleFrames())
          {
-            LogMessage("[SnapImage] Discarded stale frame(s) left over from a previous snap");
+            ostringstream oss;
+            oss << "[SnapImage] Snap #" << snapCount_ << ": discarded stale frame(s) left over from a previous snap";
+            LogMessage(oss.str());
          }
       }
       catch (ComException & e) {
@@ -857,9 +872,24 @@ int CAndorSDK3Camera::SnapImage()
          s += e.what();
          LogMessage(s);
       }
+
+      {
+         ostringstream oss;
+         oss << "[SnapImage] Snap #" << snapCount_ << ": triggering ("
+             << (snapShotController_->isExternal() ? "external" : "software") << " trigger)";
+         LogMessage(oss.str(), true);
+      }
+      MM::MMTime start = GetCurrentMMTime();
       ret = (snapShotController_->takeSnapShot() ? DEVICE_OK : DEVICE_SNAP_IMAGE_FAILED);
       if (ret == DEVICE_SNAP_IMAGE_FAILED) {
          LogMessage("Device Snap Image Failed (Event timeout)");
+      }
+      else
+      {
+         ostringstream oss;
+         oss << "[SnapImage] Snap #" << snapCount_ << ": exposure end after "
+             << (GetCurrentMMTime() - start).getMsec() << " ms";
+         LogMessage(oss.str(), true);
       }
    }
 
@@ -916,16 +946,28 @@ const unsigned char * CAndorSDK3Camera::GetImageBuffer()
    
    unsigned char * return_buffer = NULL;
 
+   MM::MMTime start = GetCurrentMMTime();
    if (!snapShotController_->getData(return_buffer))
    {
       // The frame may still arrive later; the next SnapImage discards it
-      LogMessage("[GetImageBuffer] Timed out waiting for image data, returning previous image");
+      ostringstream oss;
+      oss << "[GetImageBuffer] Snap #" << snapCount_ << ": timed out after "
+          << (GetCurrentMMTime() - start).getMsec() << " ms waiting for image data, returning previous image";
+      LogMessage(oss.str());
    }
 
    if (return_buffer)
    {
       timeStamp_ = GetTimeStamp(return_buffer);
       UnpackDataWithPadding(return_buffer);
+      snapRetrieved_ = true;
+
+      // The camera timestamp identifies the frame: if images are out of sync
+      // the timestamp lags the snap it is returned for
+      ostringstream oss;
+      oss << "[GetImageBuffer] Snap #" << snapCount_ << ": got frame with camera timestamp "
+          << timeStamp_ << " after waiting " << (GetCurrentMMTime() - start).getMsec() << " ms";
+      LogMessage(oss.str(), true);
    }
 
    MMThreadGuard g(imgPixelsLock_);

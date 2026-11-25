@@ -174,6 +174,9 @@ private:
    // ReverseX/ReverseY state, read by the acquisition thread for every frame
    std::atomic<bool> flipX_;
    std::atomic<bool> flipY_;
+   // Snap bookkeeping, used to log snaps whose image was never retrieved
+   long snapCount_;
+   bool snapRetrieved_;
 
    unsigned char** image_buffers_;
    unsigned int numImgBuffersAllocated_;
